@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>KareIQ Admin</title>
+<link rel="icon" href="/img/favicon-kareiq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/admin/admin.css?v=20261017d">
+</head>
+<body>
+<div class="shell">
+  <aside class="side">
+    <a href="/" class="brand"><img src="/img/kareiq-logo.png" alt="KareIQ" width="980" height="270"><span>Admin</span></a>
+    <nav class="nav" aria-label="Admin sections">
+      <button class="nav-btn active" data-view="overview"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Overview</button>
+      <button class="nav-btn" data-view="bookings"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>Bookings <b class="count" id="c-bookings">0</b></button>
+      <button class="nav-btn" data-view="enquiries"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 19.5 5.3 15A8 8 0 1 1 9 18.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Enquiries <b class="count" id="c-enquiries">0</b></button>
+      <button class="nav-btn" data-view="content"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16Z M13.5 6.5l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>Website content</button>
+    </nav>
+    <div class="side-foot">
+      <a href="/" target="_blank" rel="noopener">View KareIQ site ↗</a>
+      <a href="/kare-at-home" target="_blank" rel="noopener">View Kare@Home ↗</a>
+      <button type="button" class="signout" id="signout"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true"><path d="M15 4h3a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-3M10 16l-4-4 4-4M6 12h10" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Sign out</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <!-- ================= OVERVIEW ================= -->
+    <section class="view" id="view-overview">
+      <header class="vh">
+        <div><h1>Overview</h1><p class="sub" id="ovSub">Bookings and enquiries from both websites.</p></div>
+        <div class="seg" role="radiogroup" aria-label="Time range" id="range">
+          <button role="radio" data-days="7" aria-checked="false">7 days</button>
+          <button role="radio" data-days="30" aria-checked="true" class="on">30 days</button>
+          <button role="radio" data-days="90" aria-checked="false">90 days</button>
+          <button role="radio" data-days="0" aria-checked="false">All time</button>
+        </div>
+      </header>
+      <div class="kpis" id="kpis"></div>
+      <article class="card wide">
+        <div class="card-h"><div><h2>Requests over time</h2><p class="sub" id="trendSub"></p></div><button class="link" data-table="trend">Show table</button></div>
+        <div class="legend" id="trendLegend"></div>
+        <div class="chart" id="trendChart"></div>
+        <div class="tbl-wrap" id="trend-table" hidden></div>
+      </article>
+      <article class="card wide">
+        <div class="card-h"><div><h2>Booking pipeline</h2><p class="sub">Where every Kare@Home booking currently stands.</p></div></div>
+        <div id="pipeline"></div>
+      </article>
+      <div class="grid2" id="breakdowns"></div>
+    </section>
+
+    <!-- ================= BOOKINGS / ENQUIRIES ================= -->
+    <section class="view" id="view-list" hidden>
+      <header class="vh">
+        <div><h1 id="listTitle">Bookings</h1><p class="sub" id="listSub"></p></div>
+        <div class="tools">
+          <label class="search"><span class="sr">Search</span><input id="q" type="search" placeholder="Search name, phone, reference, area…" autocomplete="off"></label>
+          <label><span class="sr">Status</span><select id="statusFilter"><option value="">All statuses</option></select></label>
+          <a class="btn ghost" id="export" href="/api/admin/bookings/export.csv">Export CSV</a>
+          <button class="btn" id="refresh">Refresh</button>
+        </div>
+      </header>
+      <div class="card flush">
+        <div class="table-wrap">
+          <table><thead id="thead"></thead><tbody id="tbody"></tbody></table>
+          <p class="empty" id="empty" hidden></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= WEBSITE CONTENT ================= -->
+    <section class="view" id="view-content" hidden>
+      <header class="vh">
+        <div><h1>Website content</h1><p class="sub">Changes go live on the website as soon as you save. <span id="lastSaved"></span></p></div>
+        <div class="seg" role="tablist" id="ctabs">
+          <button role="tab" data-ctab="pricing" class="on" aria-selected="true">Pricing &amp; packages</button>
+          <button role="tab" data-ctab="contact" aria-selected="false">Contact details</button>
+          <button role="tab" data-ctab="headlines" aria-selected="false">Headlines</button>
+        </div>
+      </header>
+      <form id="cform" novalidate>
+        <div class="ctab" data-pane="pricing">
+          <article class="card">
+            <div class="card-h"><div><h2>Payment plan savings</h2><p class="sub">Shown under the 1 / 3 / 6 / 12 month switch on Kare@Home.</p></div></div>
+            <div class="row4" id="savings"></div>
+          </article>
+          <div id="pkgEditors"></div>
+          <article class="card">
+            <div class="card-h"><div><h2>Customised plan card</h2></div></div>
+            <div class="row2">
+              <label class="f"><span>Heading</span><input name="pricing.customized.lead" maxlength="80"></label>
+              <label class="f"><span>Text</span><input name="pricing.customized.text" maxlength="200"></label>
+            </div>
+          </article>
+          <article class="card">
+            <div class="card-h"><div><h2>Notes on the pricing section</h2></div></div>
+            <label class="f"><span>Payment plan note</span><input name="pricing.annualNote" maxlength="300"></label>
+            <label class="f"><span>Tax note</span><input name="pricing.gstNote" maxlength="200"></label>
+          </article>
+        </div>
+
+        <div class="ctab" data-pane="contact" hidden>
+          <article class="card">
+            <div class="card-h"><div><h2>Contact details</h2><p class="sub">Used for every Call, WhatsApp and email link on both websites.</p></div></div>
+            <div class="row2">
+              <label class="f"><span>Phone number (10 digits)</span><input name="contact.phone" inputmode="tel" maxlength="16"></label>
+              <label class="f"><span>Phone as shown on the site</span><input name="contact.phoneDisplay" maxlength="30"></label>
+              <label class="f"><span>WhatsApp number</span><input name="contact.whatsapp" inputmode="tel" maxlength="16"></label>
+              <label class="f"><span>Email</span><input name="contact.email" type="email" maxlength="120"></label>
+              <label class="f"><span>Instagram handle</span><input name="contact.instagram" maxlength="60" placeholder="kareiq"></label>
+            </div>
+          </article>
+        </div>
+
+        <div class="ctab" data-pane="headlines" hidden>
+          <article class="card">
+            <div class="card-h"><div><h2>KareIQ home page</h2><p class="sub">The large heading at the top. The highlighted words appear in the colour gradient.</p></div></div>
+            <div class="row2">
+              <label class="f"><span>Heading</span><input name="kareiq.heroTitle" maxlength="120"></label>
+              <label class="f"><span>Highlighted ending</span><input name="kareiq.heroHighlight" maxlength="120"></label>
+            </div>
+            <label class="f"><span>Intro paragraph</span><textarea name="kareiq.heroLead" rows="3" maxlength="400"></textarea></label>
+          </article>
+          <article class="card">
+            <div class="card-h"><div><h2>Kare@Home page</h2></div></div>
+            <div class="row2">
+              <label class="f"><span>Heading, line 1</span><input name="karehome.heroLine1" maxlength="120"></label>
+              <label class="f"><span>Heading, line 2</span><input name="karehome.heroLine2" maxlength="120"></label>
+            </div>
+            <label class="f"><span>Intro paragraph</span><textarea name="karehome.heroLead" rows="3" maxlength="400"></textarea></label>
+          </article>
+        </div>
+
+        <div class="errors" id="cerrors" role="alert" hidden></div>
+        <div class="savebar" id="savebar">
+          <span class="state" id="saveState">All changes saved</span>
+          <span class="grow"></span>
+          <span class="confirm" id="resetConfirm" hidden>Replace everything with the original website content? <button type="button" class="btn danger" id="resetYes">Yes, reset</button><button type="button" class="btn ghost" id="resetNo">Cancel</button></span>
+          <button type="button" class="btn ghost" id="resetBtn">Reset to original</button>
+          <button type="button" class="btn ghost" id="discard" disabled>Discard changes</button>
+          <button type="submit" class="btn primary" id="saveBtn" disabled>Save &amp; publish</button>
+        </div>
+      </form>
+    </section>
+  </main>
+</div>
+
+<div class="tip" id="tip" role="status" hidden></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="/admin/admin.js?v=20261017d"></script>
+</body>
+</html>

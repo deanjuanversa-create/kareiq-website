@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Kare@Home | Preventive Care at Your Doorstep</title>
+<meta name="description" content="Kare@Home by KareIQ brings trusted, preventive healthcare and everyday support to your doorstep, helping seniors live healthier, safer and more independently.">
+<meta name="theme-color" content="#11998e">
+<meta property="og:title" content="Kare@Home: Preventive Care. At Your Doorstep.">
+<meta property="og:description" content="Home care, health monitoring, physiotherapy and companionship for seniors, by KareIQ.">
+<meta property="og:image" content="/img/karehome-hero.jpg">
+<link rel="icon" type="image/png" href="/img/favicon-karehome.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
+<link rel="stylesheet" href="/css/karehome.css?v=20261017i">
+<script src="/api/content.js"></script>
+</head>
+<body>
+
+<!-- Icon set: line icons with the brand gradient -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id="kg" gradientUnits="userSpaceOnUse" x1="6" y1="6" x2="42" y2="42"><stop offset="0" stop-color="#11998e"/><stop offset=".5" stop-color="#4b6fd8"/><stop offset="1" stop-color="#e4609e"/></linearGradient>
+    <linearGradient id="kgl" gradientUnits="userSpaceOnUse" x1="4" y1="10" x2="44" y2="40"><stop offset="0" stop-color="#11998e"/><stop offset="1" stop-color="#5bc2a6"/></linearGradient>
+  </defs>
+  <symbol id="i-nurse" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M17 12.5 24 8l7 4.5v2.5H17z"/><path d="M24 9.6v3.4M22.3 11.3h3.4"/><path d="M17.5 15.5a6.5 6.5 0 1 0 13 0"/><path d="M9 41c0-8 6.5-13 15-13s15 5 15 13"/><path d="M19.5 28.8 24 35l4.5-6.2"/><path d="M24 35v6"/></g></symbol>
+  <symbol id="i-monitor" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="8" width="36" height="25" rx="4"/><path d="M17 40h14M24 33v7"/><path d="M11 21h6l2.5-6 4.5 12 2.5-6H37"/></g></symbol>
+  <symbol id="i-screening" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="9" width="28" height="33" rx="4"/><path d="M18 9V6h12v3"/><path d="M24 31s-6.5-3.8-6.5-8A3.4 3.4 0 0 1 24 21.2a3.4 3.4 0 0 1 6.5 1.8c0 4.2-6.5 8-6.5 8Z"/><path d="M17 37h14"/></g></symbol>
+  <symbol id="i-apple" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 16c-3.5-3-12.5-2.6-13.5 6.5C9.6 31 15.5 41 21 41c1.4 0 2-.9 3-.9s1.6.9 3 .9c5.5 0 11.4-10 10.5-18.5C36.5 13.4 27.5 13 24 16Z"/><path d="M24 16c0-4 1.6-7.4 4.5-9"/><path d="M25.5 12c2.8-3.4 7.2-3.6 8.8-1.6-2.2 3.2-6.2 3.6-8.8 1.6Z"/></g></symbol>
+  <symbol id="i-meds" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M11 9h16v6H11z"/><rect x="9" y="15" width="20" height="26" rx="3.5"/><path d="M15 28h8M19 24v8"/><rect x="30.5" y="23" width="9" height="19" rx="4.5" transform="rotate(32 35 32.5)"/><path d="M31 32.5l8 0" transform="rotate(32 35 32.5)"/></g></symbol>
+  <symbol id="i-physio" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="21" cy="9" r="4"/><path d="M21 15l-2.5 11 6 5 2 10"/><path d="M18.5 26 14 41"/><path d="M20 18l7 5 6-1"/><path d="M33 22v19"/><path d="M33 22c0-2 1.5-3.4 3.4-3.4"/></g></symbol>
+  <symbol id="i-companion" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="16" cy="15" r="5.5"/><circle cx="32" cy="15" r="5.5"/><path d="M5.5 37c0-6.5 4.5-11.5 10.5-11.5 2.6 0 4.8.8 6.5 2.2"/><path d="M42.5 37c0-6.5-4.5-11.5-10.5-11.5-2.6 0-4.8.8-6.5 2.2"/><path d="M24 42s-5.5-3.2-5.5-6.8A2.9 2.9 0 0 1 24 33.6a2.9 2.9 0 0 1 5.5 1.6c0 3.6-5.5 6.8-5.5 6.8Z"/></g></symbol>
+  <symbol id="i-person-heart" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="13" r="6.5"/><path d="M9 41c0-8 6.5-14 15-14s15 6 15 14"/><path d="M24 39s-5-3-5-6.3A2.7 2.7 0 0 1 24 31a2.7 2.7 0 0 1 5 1.7C29 36 24 39 24 39Z"/></g></symbol>
+  <symbol id="i-phone" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M16 7h-5a3.5 3.5 0 0 0-3.5 3.8C9 27.5 20.5 39 37.2 40.5A3.5 3.5 0 0 0 41 37v-5l-8.5-3.5-4 4c-5.2-2.4-9.6-6.8-12-12l4-4Z"/></g></symbol>
+  <symbol id="i-assess" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="9" width="25" height="32" rx="4"/><path d="M15 9V6h11v3"/><path d="M14 19h13M14 25h8"/><circle cx="33" cy="32" r="6.5"/><path d="M37.8 36.8 42 41"/></g></symbol>
+  <symbol id="i-hand-heart" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M25 24s-7-4.2-7-9a4 4 0 0 1 7-2.6 4 4 0 0 1 7 2.6c0 4.8-7 9-7 9Z"/><path d="M5 31h7l7 4h8a3 3 0 0 0 0-6h-6"/><path d="M27 33.5l9-5a3 3 0 0 1 3.5 4.8L30 40H12"/></g></symbol>
+  <symbol id="i-shield" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 5 9 10.5V21c0 10 6.5 17 15 21 8.5-4 15-11 15-21V10.5Z"/><path d="M17 23.5l5 5 9-10"/></g></symbol>
+  <symbol id="i-heart" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 40S7 30 7 18.5A9 9 0 0 1 24 13a9 9 0 0 1 17 5.5C41 30 24 40 24 40Z"/><path class="beat" d="M12 23h6l2.5-5 4 10 2.5-5h9"/></g></symbol>
+  <symbol id="i-house-heart" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22 24 6l19 16"/><path d="M10.5 18v22.5h27V18"/><path d="M24 35s-6-3.6-6-7.4A3.2 3.2 0 0 1 24 26a3.2 3.2 0 0 1 6 1.6C30 31.4 24 35 24 35Z"/></g></symbol>
+  <symbol id="i-person" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="13" r="7"/><path d="M9 42c0-8.5 6.5-15 15-15s15 6.5 15 15"/><path d="M24 27v7"/></g></symbol>
+  <symbol id="i-family" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="15" cy="19" r="5"/><circle cx="33" cy="19" r="5"/><path d="M5 41c0-7 4.5-12 10-12s10 5 10 12"/><path d="M23 41c0-7 4.5-12 10-12s10 5 10 12"/><path d="M24 13.5s-4-2.4-4-5.2A2.2 2.2 0 0 1 24 7a2.2 2.2 0 0 1 4 1.3c0 2.8-4 5.2-4 5.2Z"/></g></symbol>
+  <symbol id="i-house" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 23 24 7l19 16"/><path d="M10.5 19v22h27V19"/><path d="M20 41V30h8v11"/></g></symbol>
+  <symbol id="i-house-plus" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 23 24 7l19 16"/><path d="M10.5 19v22h27V19"/><path d="M24 25v10M19 30h10"/></g></symbol>
+  <symbol id="i-building" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 42V14l12-6v34"/><path d="M19 42V18h22v24"/><path d="M4 42h40"/><path d="M12 18v2M12 25v2M12 32v2M25 24h3M33 24h3M25 31h3M33 31h3"/></g></symbol>
+  <symbol id="i-leaf" viewBox="0 0 48 48"><g fill="none" stroke="url(#kg)" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 39C9 21 21 9 41 8c0 20-12 31-29 31"/><path d="M9 39 27 21"/></g></symbol>
+  <symbol id="i-calendar" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15.5" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4M8 14h2M14 14h2M8 17h2"/></g></symbol>
+  <symbol id="i-arrow" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5 5.3 15A8 8 0 1 1 9 18.7Z"/><path d="M9.2 9.3c.3 2.3 2.2 4.3 4.6 4.8l1-1.2 1.8.8-.4 1.7c-3.7.2-7.2-3.3-7-7l1.7-.4.8 1.8Z"/></g></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8.5A2.5 2.5 0 0 1 6.5 6H8l1.5-2h5L16 6h1.5A2.5 2.5 0 0 1 20 8.5v8a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 16.5Z"/><circle cx="12" cy="12.5" r="3.5"/></g></symbol>
+  <symbol id="i-call" viewBox="0 0 24 24"><path d="M8 3.5H5.6A1.8 1.8 0 0 0 3.8 5.4C4.6 13.7 10.3 19.4 18.6 20.2a1.8 1.8 0 0 0 1.9-1.8V16l-4.2-1.8-2 2c-2.6-1.2-4.8-3.4-6-6l2-2Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+</svg>
+
+<div class="progress" id="progress" aria-hidden="true"></div>
+
+<!-- Parent brand bar: always leads back to KareIQ -->
+<div class="parent-bar">
+  <div class="wrap pb-in">
+    <a href="/" class="pb-back"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to <img src="/img/kareiq-logo.png" alt="KareIQ" width="980" height="270"></a>
+    <span class="pb-tag">Kare@Home is a <b>KareIQ</b> brand · <a href="/#karenest">Explore KareNest</a></span>
+  </div>
+</div>
+
+<!-- ============ HEADER ============ -->
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a href="/" class="logo" aria-label="KareIQ home"><img src="/img/kareiq-logo.png" alt="KareIQ" width="980" height="270"></a>
+    <ul class="menu" id="menu">
+      <li><a href="#top" class="active">Home</a></li>
+      <li><a href="#about">About Us</a></li>
+      <li><a href="#services">Our Services</a></li>
+      <li><a href="#packages">Care Packages</a></li>
+      <li><a href="#why">Why Kare@Home</a></li>
+      <li><a href="#contact">Contact</a></li>
+      <li class="has-dd">
+        <a href="/" class="dd-trigger" aria-haspopup="true">KareIQ <svg viewBox="0 0 12 8" width="10" height="8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></a>
+        <div class="dd" role="menu">
+          <a href="/" class="dd-hero" role="menuitem"><img src="/img/kareiq-icon.svg" alt="" width="266" height="266"><span><b>KareIQ home</b><small>Our parent company</small></span></a>
+          <a href="/#about" role="menuitem">About KareIQ</a>
+          <a href="/#approach" role="menuitem">Our Approach</a>
+          <a href="/#what-we-do" role="menuitem">Our Care Ecosystem</a>
+          <a href="/#karenest" role="menuitem">KareNest</a>
+          <a href="/#team" role="menuitem">Our Team</a>
+        </div>
+      </li>
+    </ul>
+    <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
+  </div>
+  <nav class="drawer" id="drawer" aria-label="Mobile">
+    <div class="wrap">
+      <ul>
+        <li><a href="#top">Home</a></li>
+        <li><a href="#about">About Us</a></li>
+        <li><a href="#services">Our Services</a></li>
+        <li><a href="#packages">Care Packages</a></li>
+        <li><a href="#why">Why Kare@Home</a></li>
+        <li><a href="#contact">Contact</a></li>
+        <li class="dr-group">KareIQ</li>
+        <li><a href="/">KareIQ home</a></li>
+        <li><a href="/#about">About KareIQ</a></li>
+        <li><a href="/#karenest">KareNest</a></li>
+        <li><a href="/#team">Our Team</a></li>
+      </ul>
+      <button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
+    </div>
+  </nav>
+</header>
+
+<main id="top">
+  <!-- ============ HERO ============ -->
+  <section class="hero" id="about">
+    <div class="hero-photo">
+      <img id="heroImg" src="/img/karehome-hero.jpg" alt="A Kare@Home caregiver in a pink KareIQ uniform holding the hands of a smiling elderly woman at home" width="1168" height="850" fetchpriority="high">
+      <p class="note note-hero" aria-hidden="true"><span>Because<br>their well-being<br>matters —<br>every day.</span>
+        <svg class="note-heart" viewBox="0 0 40 34" width="28" height="28"><path d="M20 31S3 21 3 11a8 8 0 0 1 17-3 8 8 0 0 1 17 3c0 10-17 20-17 20Z"/></svg>
+      </p>
+    </div>
+    <div class="wrap hero-in">
+      <div class="hero-copy">
+        <img class="hero-logo load" style="--d:.05s" src="/img/karehome-logo.png" alt="Kare@Home: Preventive Care. At Your Doorstep." width="1407" height="395">
+        <div class="brand-by load" style="--d:.25s">
+          <i class="line"></i><span>A brand by</span><b class="sep"></b>
+          <a href="/" aria-label="KareIQ"><img src="/img/kareiq-logo.png" alt="KareIQ" width="980" height="270"></a>
+          <i class="line"></i>
+        </div>
+        <h1 class="load" style="--d:.4s"><span data-c="karehome.heroLine1">Compassionate care.</span><span data-c="karehome.heroLine2">Right where you are.</span></h1>
+        <p class="lead load" style="--d:.55s" data-c="karehome.heroLead">Kare@Home brings trusted, preventive healthcare and everyday support to your doorstep, helping seniors live healthier, safer and more independently, from the comfort of home.</p>
+        <div class="hero-ctas load" style="--d:.7s">
+          <button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
+          <a href="#services" class="btn btn-line">Learn More</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SERVICES ============ -->
+  <section class="services" id="services">
+    <div class="wrap services-in">
+      <div class="sec-intro rv">
+        <h2 class="sec-title"><svg class="sprig" viewBox="0 0 48 48" aria-hidden="true" width="28" height="28"><path d="M22 40C21 27 13 17 3 14.5c-.5 12 7 22.5 19 25.5Z" fill="url(#kgl)"/><path d="M24 40c1-14 9-24 20-27 .5 12-7 23.5-20 27Z" fill="url(#kgl)" opacity=".85"/></svg>Our Services</h2>
+        <p class="sec-sub">Comprehensive, preventive and personalised care, at home.</p>
+        <p class="sec-text">From routine health monitoring to daily support, our services are designed to keep your loved ones safe, healthy and independent, right at home.</p>
+        <p class="sec-hint">Tap a service to book it.</p>
+      </div>
+      <ul class="svc-grid">
+        <li class="rv" style="--d:.05s"><button class="svc" data-book data-service="home-care"><span class="ic"><svg width="24" height="24"><use href="#i-nurse"/></svg></span><b>Home Care Support</b><small>Trained caregivers for daily routines, hygiene and safety at home.</small></button></li>
+        <li class="rv" style="--d:.1s"><button class="svc" data-book data-service="health-monitoring"><span class="ic"><svg width="24" height="24"><use href="#i-monitor"/></svg></span><b>Health Monitoring &amp; Management</b><small>Regular BP, sugar and vitals checks, shared with your family.</small></button></li>
+        <li class="rv" style="--d:.15s"><button class="svc" data-book data-service="health-screening"><span class="ic"><svg width="24" height="24"><use href="#i-screening"/></svg></span><b>Preventive Health Screenings</b><small>Early tests at home to catch problems before they grow.</small></button></li>
+        <li class="rv" style="--d:.2s"><button class="svc" data-book data-service="nutrition"><span class="ic"><svg width="24" height="24"><use href="#i-apple"/></svg></span><b>Nutrition &amp; Diet Support</b><small>Meal plans suited to diabetes, BP and age-related needs.</small></button></li>
+        <li class="rv" style="--d:.25s"><button class="svc" data-book data-service="medication"><span class="ic"><svg width="24" height="24"><use href="#i-meds"/></svg></span><b>Medication Management</b><small>Right medicine, right dose, right time, with refill reminders.</small></button></li>
+        <li class="rv" style="--d:.3s"><button class="svc" data-book data-service="physiotherapy"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>Physiotherapy &amp; Mobility Support</b><small>Exercises at home to improve strength, balance and confidence.</small></button></li>
+        <li class="rv" style="--d:.35s"><button class="svc" data-book data-service="companionship"><span class="ic"><svg width="24" height="24"><use href="#i-companion"/></svg></span><b>Companionship &amp; Emotional Well-being</b><small>Conversation, outings and activities that lift the spirit.</small></button></li>
+        <li class="rv" style="--d:.4s"><button class="svc" data-book data-service="personal-care"><span class="ic"><svg width="24" height="24"><use href="#i-person-heart"/></svg></span><b>Personal Care Assistance</b><small>Bathing, grooming and dressing support with dignity.</small></button></li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ HOW IT WORKS ============ -->
+  <section class="how" id="how">
+    <div class="wrap how-in">
+      <div class="sec-intro rv">
+        <h2 class="sec-title">How It Works</h2>
+        <p class="sec-sub dark">Getting started is simple.</p>
+      </div>
+      <ol class="steps">
+        <li class="step rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-phone"/></svg></span><h3><span>1.</span> Book a Service</h3><p>Call or WhatsApp us with your requirements.</p></li>
+        <li class="step rv" style="--d:.2s"><span class="ic"><svg width="24" height="24"><use href="#i-assess"/></svg></span><h3><span>2.</span> Initiate Assessment</h3><p>We understand your needs and create a personalised care plan.</p></li>
+        <li class="step rv" style="--d:.35s"><span class="ic"><svg width="24" height="24"><use href="#i-nurse"/></svg></span><h3><span>3.</span> Care at Home</h3><p>Our trained caregivers visit you at home as per your chosen plan.</p></li>
+        <li class="step rv" style="--d:.5s"><span class="ic"><svg width="24" height="24"><use href="#i-hand-heart"/></svg></span><h3><span>4.</span> Ongoing Support</h3><p>Regular follow-ups and continuous monitoring for better health outcomes.</p></li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- ============ WHY ============ -->
+  <section class="why" id="why">
+    <div class="why-in">
+      <div class="why-photo rv l">
+        <img id="whyImg" src="/img/karehome-why.jpg" alt="A smiling elderly man in a blue shirt talking with his caregiver at home" width="1056" height="651" loading="lazy">
+        <p class="note note-why" aria-hidden="true"><span>Prevent today.<br>Live better<br>tomorrow.</span>
+          <svg class="note-heart" viewBox="0 0 40 34" width="28" height="28"><path d="M20 31S3 21 3 11a8 8 0 0 1 17-3 8 8 0 0 1 17 3c0 10-17 20-17 20Z"/></svg>
+        </p>
+      </div>
+      <div class="why-copy">
+        <div class="rv">
+          <h2 class="sec-title">Why Kare@Home</h2>
+          <p class="sec-sub dark">More than care. It's peace of mind.</p>
+        </div>
+        <ul class="reasons">
+          <li class="rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-shield"/></svg></span><b>Trusted &amp; Trained Caregivers</b><small>Background-verified and professionally trained.</small></li>
+          <li class="rv" style="--d:.12s"><span class="ic"><svg width="24" height="24"><use href="#i-heart"/></svg></span><b>Preventive Approach</b><small>Early detection. Better outcomes.</small></li>
+          <li class="rv" style="--d:.19s"><span class="ic"><svg width="24" height="24"><use href="#i-house-heart"/></svg></span><b>Comfort of Home</b><small>Familiar surroundings. Greater emotional well-being.</small></li>
+          <li class="rv" style="--d:.26s"><span class="ic"><svg width="24" height="24"><use href="#i-person"/></svg></span><b>Dignity &amp; Independence</b><small>Respecting choices. Supporting independence.</small></li>
+          <li class="rv" style="--d:.33s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Family Assurance</b><small>Stay connected. Always informed.</small></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ PACKAGES ============ -->
+  <section class="packages" id="packages">
+    <svg class="leaf leaf-l" viewBox="0 0 160 200" aria-hidden="true" width="140" height="175"><path d="M40 196c0-60 20-110 60-150 10 60-10 120-60 150Z" fill="#dff0ec"/><path d="M30 196C40 140 30 90 10 50 50 70 70 120 60 190Z" fill="#cfe7e1"/><path d="M40 196C60 140 80 90 100 46M30 196C34 140 26 90 10 50" fill="none" stroke="#b9dcd3" stroke-width="1.2"/></svg>
+    <div class="wrap">
+      <div class="pk-head rv">
+        <h2 class="sec-title">Our Care Packages</h2>
+        <p class="sec-sub dark">Preventive care packages to meet your loved one's day-to-day health needs.</p>
+        <p class="pk-note"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5M12 8v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span data-c="pricing.annualNote">All our packages are designed for annual duration. Choose the payment plan that works best for you.</span></p>
+        <div class="billing" role="radiogroup" aria-label="Payment plan">
+          <button type="button" role="radio" aria-checked="true" class="on" data-months="1">1 month</button>
+          <button type="button" role="radio" aria-checked="false" data-months="3">3 months</button>
+          <button type="button" role="radio" aria-checked="false" data-months="6">6 months</button>
+          <button type="button" role="radio" aria-checked="false" data-months="12">12 months</button>
+          <i class="pill" aria-hidden="true"></i>
+        </div>
+        <p class="save" id="saveMsg" aria-live="polite">Pay monthly, or save up to 10% with a longer payment plan.</p>
+      </div>
+      <div class="pk-grid">
+        <article class="pk rv" style="--d:.05s" data-plan="homestart">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-house"/></svg></span><h3>HomeStart</h3><span class="offer">Launch offer</span></header>
+          <div class="price-block">
+            <p class="price"><s class="mrp">₹3,499</s><span class="cur">₹</span><span class="num" data-price>2,599</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹2,599 billed monthly</p>
+          </div>
+          <p class="inc-title">Includes</p>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Weekly home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>4 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>10% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹1,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li></ul>
+          <button class="btn btn-outline" data-book data-package="homestart" aria-label="Choose HomeStart">Choose HomeStart <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+        </article>
+        <article class="pk popular rv" style="--d:.12s" data-plan="homeplus">
+          <span class="badge">Most Popular</span><header><span class="ic sm"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><h3>HomePlus</h3><span class="offer">Launch offer</span></header>
+          <div class="price-block">
+            <p class="price"><s class="mrp">₹6,999</s><span class="cur">₹</span><span class="num" data-price>4,999</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹4,999 billed monthly</p>
+          </div>
+          <p class="inc-title">Includes</p>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>3 home visits a week by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>6 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>15% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹2,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 2 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomeStart package</span></li></ul>
+          <button class="btn btn-grad" data-book data-package="homeplus" aria-label="Choose HomePlus">Choose HomePlus <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+        </article>
+        <article class="pk rv" style="--d:.19s" data-plan="homeelite">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-building"/></svg></span><h3>HomeElite</h3><span class="offer">Launch offer</span></header>
+          <div class="price-block">
+            <p class="price"><s class="mrp">₹12,999</s><span class="cur">₹</span><span class="num" data-price>9,999</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹9,999 billed monthly</p>
+          </div>
+          <p class="inc-title">Includes</p>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Daily home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>8 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>20% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹3,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 4 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomePlus package</span></li></ul>
+          <button class="btn btn-outline" data-book data-package="homeelite" aria-label="Choose HomeElite">Choose HomeElite <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+        </article>
+        <article class="pk custom rv" style="--d:.26s" data-plan="customized">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-leaf"/></svg></span><h3>Customised</h3></header>
+          <div class="price-block custom-block">
+            <p class="custom-lead" data-c="pricing.customized.lead">Need a tailored plan?</p>
+            <p class="billed" data-c="pricing.customized.text">Call us and we'll help create the perfect care package for you.</p>
+          </div>
+          <button class="btn btn-outline" data-book data-package="customized" aria-label="Get a quick estimate for a customised plan">Get a quick estimate <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+        </article>
+      </div>
+      <p class="gst" data-c="pricing.gstNote">All prices are exclusive of GST.</p>
+    </div>
+  </section>
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer class="foot" id="contact">
+  <div class="foot-band">
+    <div class="wrap foot-in">
+      <div class="f-brand">
+        <a href="/" aria-label="KareIQ home"><img src="/img/kareiq-logo-white.png" alt="KareIQ" width="980" height="270"></a>
+        <p>Healthier Lives. Brighter Tomorrows.</p>
+      </div>
+      <div class="f-call">
+        <a class="f-ring" href="tel:+918129345178" aria-label="Call Kare@Home"><svg width="24" height="24"><use href="#i-call"/></svg></a>
+        <div>
+          <small>Book a Service | Enquire Now</small>
+          <a class="f-num" href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a>
+          <small>(<a href="https://wa.me/918129345178" target="_blank" rel="noopener">WhatsApp</a> / <a href="tel:+918129345178">Call</a>)</small>
+        </div>
+      </div>
+      <div class="f-social">
+        <small>Follow Us</small>
+        <a href="https://instagram.com/kareiq" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-camera"/></svg>@kareiQ</a>
+      </div>
+      <div class="f-by">
+        <small>a brand by</small>
+        <a href="/" aria-label="KareIQ"><img src="/img/kareiq-logo-white.png" alt="KareIQ" width="980" height="270"></a>
+      </div>
+    </div>
+  </div>
+  <div class="foot-base">
+    <div class="wrap base-in">
+      <span>© <span id="year">2026</span> KareIQ Healthtech Pvt. Ltd. All rights reserved.</span>
+      <nav aria-label="Legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
+    </div>
+  </div>
+</footer>
+
+<a class="wa-float" href="https://wa.me/918129345178?text=Hi%20Kare%40Home%2C%20I%27d%20like%20to%20know%20more%20about%20home%20care." target="_blank" rel="noopener" aria-label="Chat with us on WhatsApp"><svg aria-hidden="true" width="24" height="24"><use href="#i-chat"/></svg><span>Chat with us</span></a>
+<button class="totop" id="totop" aria-label="Back to top"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path d="M12 19V5M6 11l6-6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+
+<!-- ============ BOOKING MODAL ============ -->
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="bTitle" hidden>
+  <div class="sheet">
+    <button class="x" id="mClose" aria-label="Close booking form">×</button>
+    <div id="bookView">
+      <div class="sheet-head">
+        <img src="/img/karehome-emblem.png" alt="" width="54" height="49">
+        <div><h3 id="bTitle">Book a home visit</h3><p>Two quick steps. A care coordinator calls you to confirm the details.</p></div>
+      </div>
+      <div class="stepper" aria-hidden="true"><span class="on" data-s="1"><i>1</i>Care needed</span><b></b><span data-s="2"><i>2</i>Your details</span></div>
+
+      <form id="bookForm" novalidate>
+        <div class="form-alert" role="alert" hidden></div>
+        <fieldset class="pane" data-pane="1">
+          <legend class="sr">Care needed</legend>
+          <div class="field">
+            <label for="b-service">Service</label>
+            <select id="b-service" name="service" required>
+              <option value="">Choose a service</option>
+              <option value="home-care">Home Care Support</option>
+              <option value="health-monitoring">Health Monitoring &amp; Management</option>
+              <option value="health-screening">Preventive Health Screenings</option>
+              <option value="nutrition">Nutrition &amp; Diet Support</option>
+              <option value="medication">Medication Management</option>
+              <option value="physiotherapy">Physiotherapy &amp; Mobility Support</option>
+              <option value="companionship">Companionship &amp; Emotional Well-being</option>
+              <option value="personal-care">Personal Care Assistance</option>
+              <option value="not-sure">Not sure yet, please guide me</option>
+            </select>
+            <span class="err"></span>
+          </div>
+          <div class="field">
+            <label for="b-package">Care package</label>
+            <select id="b-package" name="package" required>
+              <option value="undecided">Not decided yet</option>
+              <option value="homestart">HomeStart · from ₹2,291 / month</option>
+              <option value="homeplus">HomePlus · from ₹4,408 / month</option>
+              <option value="homeelite">HomeElite · from ₹8,816 / month</option>
+              <option value="customized">Customised plan · get an estimate</option>
+            </select>
+            <span class="err"></span>
+          </div>
+          <div class="field">
+            <label for="b-billing">Payment plan</label>
+            <select id="b-billing" name="billing">
+              <option value="1">Monthly (1 month)</option>
+              <option value="3">Quarterly (3 months) · save 5%</option>
+              <option value="6">Half-yearly (6 months) · save 7%</option>
+              <option value="12">Annual (12 months) · save 10%</option>
+            </select>
+            <span class="err"></span>
+          </div>
+          <div class="field">
+            <span class="lbl" id="careForLbl">Who is the care for?</span>
+            <div class="chips" role="radiogroup" aria-labelledby="careForLbl">
+              <label><input type="radio" name="careFor" value="parent" checked><span>My parent</span></label>
+              <label><input type="radio" name="careFor" value="grandparent"><span>Grandparent</span></label>
+              <label><input type="radio" name="careFor" value="spouse"><span>Spouse</span></label>
+              <label><input type="radio" name="careFor" value="self"><span>Myself</span></label>
+              <label><input type="radio" name="careFor" value="other"><span>Someone else</span></label>
+            </div>
+            <span class="err"></span>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="b-date">Preferred first visit <span class="opt">(optional)</span></label>
+              <input id="b-date" name="date" type="date">
+              <span class="err"></span>
+            </div>
+            <div class="field">
+              <label for="b-time">Time of day</label>
+              <select id="b-time" name="time">
+                <option value="morning">Morning (8am to 12pm)</option>
+                <option value="afternoon">Afternoon (12pm to 4pm)</option>
+                <option value="evening">Evening (4pm to 8pm)</option>
+              </select>
+              <span class="err"></span>
+            </div>
+          </div>
+        </fieldset>
+
+        <fieldset class="pane" data-pane="2" hidden>
+          <legend class="sr">Your details</legend>
+          <div class="field">
+            <label for="b-name">Your name</label>
+            <input id="b-name" name="name" autocomplete="name" placeholder="e.g. Priya Raman" required>
+            <span class="err"></span>
+          </div>
+          <div class="row2">
+            <div class="field">
+              <label for="b-phone">Mobile number</label>
+              <input id="b-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required>
+              <span class="err"></span>
+            </div>
+            <div class="field">
+              <label for="b-email">Email <span class="opt">(optional)</span></label>
+              <input id="b-email" name="email" type="email" autocomplete="email" placeholder="you@example.com">
+              <span class="err"></span>
+            </div>
+          </div>
+          <div class="field">
+            <label for="b-area">Area and city</label>
+            <input id="b-area" name="area" autocomplete="address-level2" placeholder="e.g. Adyar, Chennai" required>
+            <span class="err"></span>
+          </div>
+          <div class="field">
+            <label for="b-notes">Health needs or anything we should know <span class="opt">(optional)</span></label>
+            <textarea id="b-notes" name="notes" rows="3" maxlength="1000" placeholder="Age, conditions, mobility, language preference…"></textarea>
+          </div>
+          <div class="hp" aria-hidden="true"><label for="b-website">Leave this empty</label><input id="b-website" name="website" tabindex="-1" autocomplete="off"></div>
+          <div class="field check">
+            <label><input type="checkbox" name="consent" id="b-consent"> <span>I agree to be contacted by Kare@Home about this request. See our <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label>
+            <span class="err"></span>
+          </div>
+        </fieldset>
+
+        <div class="sheet-actions">
+          <button type="button" class="btn btn-line" id="bBack" hidden>Back</button>
+          <button type="button" class="btn btn-grad" id="bNext">Continue <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+          <button type="submit" class="btn btn-grad" id="bSubmit" hidden>Request booking <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
+        </div>
+      </form>
+    </div>
+
+    <div class="done" id="doneView" hidden>
+      <div class="tick"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <h3>Booking request received</h3>
+      <p>Thank you, <span id="doneName"></span>. A care coordinator will call you on <b id="donePhone"></b> within one working day to confirm your care assessment.</p>
+      <div class="ref">Your reference <b id="doneRef"></b></div>
+      <div class="done-actions">
+        <a class="btn btn-line" id="doneWa" href="https://wa.me/918129345178" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-chat"/></svg>Message us on WhatsApp</a>
+        <button class="btn btn-grad" id="doneClose">Done</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/js/forms.js?v=20261017i" defer></script>
+<script src="/js/content.js?v=20261017i" defer></script>
+<script src="/js/karehome.js?v=20261017i" defer></script>
+</body>
+</html>

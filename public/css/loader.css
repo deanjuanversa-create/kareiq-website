@@ -1,0 +1,42 @@
+/* KareIQ intro: logo draws in and shines, steps back, returns with the wordmark,
+   the letters slide back into the mark, the mark recedes and the site opens. */
+.kq-loader{position:fixed;inset:0;z-index:200;display:none;place-items:center;overflow:hidden;
+  background:radial-gradient(1200px 800px at 50% 40%,#ffffff 0%,#f6f9fb 55%,#eef2f6 100%);
+  color:#13304a}
+html.kq-intro .kq-loader{display:grid}
+html.kq-intro,html.kq-intro body{overflow:hidden}
+/* hero entrance waits for the intro */
+html.kq-intro .load,html.kq-intro .hero-photo img{animation-play-state:paused!important}
+
+.kq-loader::before,.kq-loader::after{content:"";position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(60px);opacity:.35;pointer-events:none}
+.kq-loader::before{left:-18vmax;top:-22vmax;background:radial-gradient(circle,#bfeae3,transparent 65%);animation:kqDrift 6s ease-in-out infinite alternate}
+.kq-loader::after{right:-20vmax;bottom:-24vmax;background:radial-gradient(circle,#f3cfe2,transparent 65%);animation:kqDrift 7s ease-in-out infinite alternate-reverse}
+@keyframes kqDrift{to{transform:translate(4vmax,3vmax) scale(1.08)}}
+
+.kq-stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:34px}
+.kq-group{position:relative;width:var(--mark);height:var(--mark);--mark:clamp(60px,15vw,104px);will-change:transform}
+.kq-mark{position:relative;width:100%;height:100%;will-change:transform,filter,opacity}
+.kq-mark svg{display:block;width:100%;height:100%;overflow:visible}
+.kq-mark .ln{fill:none}
+.kq-glow{position:absolute;inset:-45%;border-radius:50%;background:radial-gradient(circle,transparent 28%,rgba(124,92,196,.18) 40%,rgba(17,153,142,.10) 55%,transparent 72%);opacity:0;pointer-events:none}
+
+.kq-word{position:absolute;inset:0;pointer-events:none}
+.kq-l{position:absolute;display:block;height:auto;max-width:none;opacity:0;will-change:transform,opacity}
+
+.kq-bar{width:clamp(140px,22vw,200px);height:2px;border-radius:2px;background:rgba(19,48,74,.08);overflow:hidden}
+.kq-bar i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#11998e,#3f8fd0,#8a6fd6,#ea5f9c);transform-origin:left;transform:scaleX(0);transition:transform .6s cubic-bezier(.22,.8,.24,1)}
+.kq-skip{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);border:0;background:none;color:#7a8a99;font:500 12px "Outfit",system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:8px 12px;opacity:0;transition:opacity .6s}
+.kq-skip.show{opacity:1}
+.kq-skip:hover{color:#13304a}
+
+/* safety net: if the script never runs, the intro still clears itself */
+html.kq-intro .kq-loader{animation:kqFailsafe .6s 9s forwards}
+@keyframes kqFailsafe{to{opacity:0;visibility:hidden}}
+
+@media (prefers-reduced-motion:reduce){.kq-loader{display:none!important}}
+.kq-mark{opacity:0}
+.kq-mark .ln{stroke-dasharray:1;stroke-dashoffset:1}
+.kq-sweep{transform:translateX(-140px)}
+
+.kq-glint{opacity:0;transform-box:fill-box;transform-origin:center}
+.kq-stage{gap:clamp(26px,4vw,38px)}

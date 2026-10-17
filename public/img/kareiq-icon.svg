@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="64 76 266 266" width="266" height="266">
+  <defs>
+    <linearGradient id="gO" gradientUnits="userSpaceOnUse" x1="72" y1="0" x2="322" y2="0"><stop offset="0" stop-color="#2f8a5b"/><stop offset=".3" stop-color="#2f8a5b"/><stop offset=".62" stop-color="#5277d0"/><stop offset=".92" stop-color="#ef8b9f"/></linearGradient>
+    <linearGradient id="g1" gradientUnits="userSpaceOnUse" x1="155" y1="0" x2="271" y2="0"><stop offset="0" stop-color="#ef8b9f"/><stop offset=".45" stop-color="#5277d0"/><stop offset=".92" stop-color="#2f8a5b"/></linearGradient>
+    <linearGradient id="g2" gradientUnits="userSpaceOnUse" x1="124" y1="0" x2="246" y2="0"><stop offset="0" stop-color="#2f8a5b"/><stop offset=".3" stop-color="#2f8a5b"/><stop offset=".68" stop-color="#5277d0"/><stop offset="1" stop-color="#ef8b9f"/></linearGradient>
+    <linearGradient id="g3" gradientUnits="userSpaceOnUse" x1="160" y1="180" x2="240" y2="262"><stop offset="0" stop-color="#2f8a5b"/><stop offset=".4" stop-color="#2f8a5b"/><stop offset=".7" stop-color="#5277d0"/><stop offset="1" stop-color="#ef8b9f"/></linearGradient>
+  </defs>
+  <g fill="none" stroke-width="14" stroke-linejoin="miter">
+    <path stroke="url(#gO)" d="M78.5,327V149.5A60,60 0 0 1 138.5,89.5H315.5V267A60,60 0 0 1 255.5,327Z"/>
+    <path stroke="url(#g1)" d="M155,132.5H271V254"/>
+    <path stroke="url(#g2)" d="M124,169V282H246"/>
+    <path stroke="url(#g3)" d="M237,265V178.5H162.5V243.5H237"/>
+  </g>
+</svg>

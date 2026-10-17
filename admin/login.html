@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Sign in · KareIQ Admin</title>
+<link rel="icon" type="image/png" href="/img/favicon-kareiq.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;1,400&family=Outfit:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="/admin/login.css?v=20261017d">
+</head>
+<body>
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="/" aria-label="KareIQ website"><img src="/img/kareiq-logo.png" alt="KareIQ" width="980" height="270"><span>Admin</span></a>
+    <a class="view" href="/" target="_blank" rel="noopener">View website <svg viewBox="0 0 16 16" width="12" height="12" aria-hidden="true"><path d="M5 11 11 5M6 5h5v5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+  </div>
+</header>
+
+<main class="wrap">
+  <form class="card" id="loginForm" novalidate>
+    <img class="mark" src="/img/kareiq-icon.svg" alt="" width="266" height="266">
+    <h1>Sign in</h1>
+    <p class="sub">Enter your admin password from the <code>.env</code> file.</p>
+
+    <div class="notice" id="notConfigured" hidden>
+      <b>Admin sign-in is turned off.</b>
+      Add a line like <code>ADMIN_PASSWORD=choose-a-password</code> to the <code>.env</code> file in the project folder, then restart with <code>node server.js</code>.
+    </div>
+
+    <label class="sr" for="password">Admin password</label>
+    <div class="field">
+      <input id="password" name="password" type="password" autocomplete="current-password" placeholder="Admin password" required>
+      <button type="button" class="eye" id="eye" aria-label="Show password" aria-pressed="false">
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path class="slash" d="M4 20 20 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <p class="err" id="err" role="alert"></p>
+
+    <button class="btn" id="submit" type="submit">Sign in</button>
+    <p class="foot">Private area for the KareIQ team. You stay signed in for 12 hours on this device.</p>
+  </form>
+</main>
+<script src="/admin/login.js?v=20261017d"></script>
+</body>
+</html>
