@@ -12,7 +12,7 @@
   /* ---------- scroll reveal (only for content below the fold) ---------- */
   if (!reduce && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((entries) => entries.forEach((e) => {
-      if (e.isIntersecting) { const t = e.target; t.classList.remove('pre'); io.unobserve(t); setTimeout(() => t.classList.add('rv-done'), 1400); }
+      if (e.isIntersecting) { const t = e.target; t.classList.replace('pre', 'in'); io.unobserve(t); t.addEventListener('animationend', function done(ev) { if (ev.target === t) { t.classList.remove('in'); t.removeEventListener('animationend', done); } }); }
     }), { threshold: 0, rootMargin: '0px 0px 8% 0px' });
     $$('.rv').forEach((el) => {
       if (el.getBoundingClientRect().top > innerHeight * 0.9) { el.classList.add('pre'); io.observe(el); }

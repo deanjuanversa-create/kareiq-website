@@ -21,7 +21,7 @@ const { notify, emailEnabled } = require('./src/notify');
 const db = require('./src/db');
 const content = require('./src/content');
 
-const PORT = Number(process.env.PORT || 3001);
+const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';

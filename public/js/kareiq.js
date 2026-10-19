@@ -11,7 +11,7 @@
   /* ---------- scroll reveal (only content below the fold starts hidden) ---------- */
   if (!reduce && 'IntersectionObserver' in window) {
     const io = new IntersectionObserver((es) => es.forEach((e) => {
-      if (e.isIntersecting) { const t = e.target; t.classList.remove('pre'); io.unobserve(t); setTimeout(() => t.classList.add('rv-done'), 1400); }
+      if (e.isIntersecting) { const t = e.target; t.classList.replace('pre', 'in'); io.unobserve(t); t.addEventListener('animationend', function done(ev) { if (ev.target === t) { t.classList.remove('in'); t.removeEventListener('animationend', done); } }); }
     }), { threshold: 0, rootMargin: '0px 0px 8% 0px' });
     $$('.rv').forEach((el) => { if (el.getBoundingClientRect().top > innerHeight * 0.92) { el.classList.add('pre'); io.observe(el); } });
   }
@@ -74,16 +74,7 @@
     }, 3800);
   }
 
-  /* ---------- card tilt on desktop ---------- */
-  if (!reduce && matchMedia('(hover:hover)').matches) {
-    $$('.card').forEach((c) => {
-      c.addEventListener('mousemove', (e) => {
-        const r = c.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-        c.style.transform = 'translateY(-6px) perspective(1200px) rotateX(' + (-y * 3) + 'deg) rotateY(' + (x * 3) + 'deg)';
-      });
-      c.addEventListener('mouseleave', () => { c.style.transform = ''; });
-    });
-  }
+  /* (card tilt removed: it rewrote transform on every mousemove and fought the CSS hover transition) */
 
   /* ---------- enquiry modal ---------- */
   const modal = $('#modal'), form = $('#form'), F = form.elements, fv = $('#formView'), dv = $('#doneView'), submit = $('#fSubmit');

@@ -111,15 +111,42 @@
         await wait(320);
         if (done) return;
 
-        // 5. the letters slide back into the mark
-        var markCenter = mark.offsetWidth / 2;
-        var rev = all.slice().reverse();
-        anim(group, [{ transform: 'translateX(' + (-shift) + 'px)' }, { transform: 'translateX(0)' }], { duration: 780, delay: 140, easing: 'cubic-bezier(.65,0,.35,1)' });
-        await Promise.all(rev.map(function (l, i) {
-          var dx = markCenter - (l.offsetLeft + l.offsetWidth / 2);
-          var dy = markCenter - (l.offsetTop + l.offsetHeight / 2);
-          return anim(l, [{ opacity: 1, transform: 'translate(0,0) scale(1)', filter: 'blur(0px)' }, { opacity: 0, transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.2)', filter: 'blur(2px)' }], { duration: 520, delay: i * 60, easing: easeIn });
-        }));
+        // 5. the letters slide back BEHIND the mark, k first; the i leaves the way it came in.
+        // Anything left of the mark's right stroke is clipped, so the mark reads as a solid
+        // card the letters tuck behind (the clip moves with the group as it recentres).
+        var word = el.querySelector('.kq-word');
+        var M = mark.offsetWidth;
+        var P = function (sx, sy) { return ((sx - 64) / 266 * M).toFixed(1) + 'px ' + ((sy - 76) / 266 * M).toFixed(1) + 'px'; }; // svg units -> px
+        // visible area = everything right of the mark's outer stroke centre line, following its rounded bottom-right corner
+        var pts = [P(315.5, -3000), P(20000, -3000), P(20000, 3000), P(255.5, 3000), P(255.5, 327)];
+        for (var a = 90; a >= 0; a -= 10) pts.push(P(255.5 + 60 * Math.cos(a * Math.PI / 180), 267 + 60 * Math.sin(a * Math.PI / 180)));
+        word.style.clipPath = 'polygon(' + pts.join(',') + ')';
+        var edge = (315.5 - 64) / 266 * M; // letters travel until their right edge is under the stroke
+        var tuck = 'cubic-bezier(.6,0,.35,1)';
+        var slideBehind = function (l, delay) {
+          var dx = edge - (l.offsetLeft + l.offsetWidth) - 4; // right edge ends just past the mark's edge
+          return anim(l, [{ transform: 'translateX(0)' }, { transform: 'translateX(' + dx + 'px)' }], { duration: 760, delay: delay, easing: tuck });
+        };
+        anim(group, [{ transform: 'translateX(' + (-shift) + 'px)' }, { transform: 'translateX(0)' }], { duration: 900, delay: 160, easing: 'cubic-bezier(.65,0,.35,1)' });
+        await Promise.all([
+          slideBehind(L('k'), 0),
+          slideBehind(L('a'), 90),
+          slideBehind(L('r'), 180),
+          slideBehind(L('e'), 270),
+          // the i reverses its entrance: the stem swings back down and away, the dot hops and flies back up
+          anim(iStem, [
+            { opacity: 1, transform: 'translate(0,0) rotate(0deg)' },
+            { opacity: 1, transform: 'translate(' + (-4 * u) + 'px,' + (-8 * u) + 'px) rotate(8deg)', offset: .3 },
+            { opacity: 0, transform: 'translate(' + 30 * u + 'px,' + 120 * u + 'px) rotate(-70deg)' }
+          ], { duration: 700, delay: 330, easing: 'cubic-bezier(.7,0,.7,.3)' }),
+          anim(iDot, [
+            { opacity: 1, transform: 'translate(0,0) scale(1)' },
+            { opacity: 1, transform: 'translate(0,' + (-7 * u) + 'px) scale(.95,1.05)', offset: .2 },
+            { opacity: 1, transform: 'translate(0,' + 4 * u + 'px) scale(1.15,.85)', offset: .38 },
+            { opacity: 0, transform: 'translate(' + (-60 * u) + 'px,' + (-140 * u) + 'px) scale(.6)' }
+          ], { duration: 820, delay: 300, easing: 'cubic-bezier(.6,0,.55,1)' }),
+          slideBehind(L('Q'), 420)
+        ]);
         if (done) return;
         // the mark takes them in: a pulse and one more shine
         anim(sweep, [{ transform: 'translateX(-140px)' }, { transform: 'translateX(330px)' }], { duration: 600, fill: 'none' });

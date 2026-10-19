@@ -40,3 +40,5 @@ html.kq-intro .kq-loader{animation:kqFailsafe .6s 9s forwards}
 
 .kq-glint{opacity:0;transform-box:fill-box;transform-origin:center}
 .kq-stage{gap:clamp(26px,4vw,38px)}
+/* the mark sits in front of the wordmark so letters can slide behind it */
+.kq-mark{z-index:2}.kq-word{z-index:1}
