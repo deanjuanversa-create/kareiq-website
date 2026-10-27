@@ -1,0 +1,21 @@
+/* Kare@Home intro: a house draws itself, a heart appears inside and beats along a pulse line,
+   the Kare@Home logo rises in, then the screen closes into a circle and the page shows. */
+.kh-loader{position:fixed;inset:0;z-index:300;display:none;place-items:center;background:radial-gradient(120% 90% at 50% 35%,#ffffff 0%,#f2f8fc 55%,#fbf0f6 100%);clip-path:circle(150% at 50% 45%)}
+html.kh-intro .kh-loader{display:grid}
+html.kh-intro,html.kh-intro body{overflow:hidden}
+html.kh-intro .hero .load,html.kh-intro #heroImg{animation-play-state:paused!important}
+.kh-stage{display:flex;flex-direction:column;align-items:center;gap:18px;padding:0 24px;text-align:center}
+.kh-emblem{width:clamp(150px,34vw,190px);height:auto;overflow:visible}
+.kh-house{fill:none;stroke:url(#khGrad);stroke-width:5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1}
+.kh-heart{fill:url(#khGrad2);transform-box:fill-box;transform-origin:50% 60%;transform:scale(0)}
+.kh-pulse{fill:none;stroke:#e4609e;stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;opacity:.9}
+.kh-glow{fill:url(#khGlow);opacity:0}
+.kh-logo{width:min(300px,70vw);height:auto;opacity:0;transform:translateY(16px)}
+.kh-msg{font:500 13px/1.3 "Outfit",system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#5d6b7a;opacity:0}
+.kh-skip{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);border:0;background:none;color:#5d6b7a;font:600 12px "Outfit",system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:10px 14px;opacity:0;transition:opacity .5s}
+.kh-skip.show{opacity:1}
+.kh-skip:hover,.kh-skip:focus-visible{color:#16304a}
+/* safety net: if the script never runs, the intro clears itself */
+html.kh-intro .kh-loader{animation:khFailsafe .5s 7s forwards}
+@keyframes khFailsafe{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.kh-loader{display:none!important}}

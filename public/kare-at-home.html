@@ -13,10 +13,31 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
-<link rel="stylesheet" href="/css/karehome.css?v=20261027a">
-<script src="/js/api.js?v=20261027a"></script>
+<link rel="stylesheet" href="/css/auth-popup.css?v=20261027c">
+<link rel="stylesheet" href="/css/karehome-loader.css?v=20261027c">
+<script src="/js/karehome-loader.js?v=20261027c"></script>
+<link rel="stylesheet" href="/css/karehome.css?v=20261027c">
+<script src="/js/api.js?v=20261027c"></script>
 </head>
 <body data-page="home">
+<div class="kh-loader" id="khLoader" role="status" aria-label="Loading Kare@Home">
+  <div class="kh-stage">
+    <svg class="kh-emblem" viewBox="0 0 200 170" aria-hidden="true">
+      <defs>
+        <linearGradient id="khGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#11998e"/><stop offset=".55" stop-color="#4b6fd8"/><stop offset="1" stop-color="#e4609e"/></linearGradient>
+        <linearGradient id="khGrad2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e4609e"/><stop offset="1" stop-color="#8a63d2"/></linearGradient>
+        <radialGradient id="khGlow"><stop offset="0" stop-color="#dff1f4"/><stop offset="1" stop-color="#dff1f4" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle class="kh-glow" cx="100" cy="85" r="85"/>
+      <path class="kh-house" pathLength="1" d="M30 82 100 26l70 56M48 70v62h104V70"/>
+      <path class="kh-heart" d="M100 120s-26-15-26-33a13 13 0 0 1 26-5 13 13 0 0 1 26 5c0 18-26 33-26 33Z"/>
+      <path class="kh-pulse" pathLength="1" d="M8 150h52l8-14 10 26 10-34 10 22h94"/>
+    </svg>
+    <img class="kh-logo" src="/img/karehome-logo.png" alt="" width="1407" height="395">
+    <div class="kh-msg">Healthier Lives. Brighter Tomorrows.</div>
+  </div>
+  <button class="kh-skip" type="button">Skip intro</button>
+</div>
 
 <!-- Icon set: line icons with the brand gradient -->
 <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -394,9 +415,10 @@
 </div>
 
 
-<script src="/js/forms.js?v=20261027a" defer></script>
-<script src="/js/sites.js?v=20261027a" defer></script>
-<script src="/js/content.js?v=20261027a" defer></script>
-<script src="/js/karehome.js?v=20261027a" defer></script>
+<script src="/js/forms.js?v=20261027c" defer></script>
+<script src="/js/sites.js?v=20261027c" defer></script>
+<script src="/js/content.js?v=20261027c" defer></script>
+<script src="/js/karehome.js?v=20261027c" defer></script>
+<script src="/js/auth-popup.js?v=20261027c" data-brand="karehome" defer></script>
 </body>
 </html>

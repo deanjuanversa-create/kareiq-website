@@ -12,7 +12,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'public');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
-const VER = '20261027a';
+const VER = '20261027c';
 const BASE = '/kare-at-home';
 
 const between = (a, b, from = 0) => {
@@ -141,9 +141,29 @@ const TITLES = {
 
 // old one-page links (/kare-at-home#packages) are sent to the new pages by js/karehome.js
 
+// intro (see js/karehome-loader.js): only the markup lives here
+const LOADER = `<div class="kh-loader" id="khLoader" role="status" aria-label="Loading Kare@Home">
+  <div class="kh-stage">
+    <svg class="kh-emblem" viewBox="0 0 200 170" aria-hidden="true">
+      <defs>
+        <linearGradient id="khGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#11998e"/><stop offset=".55" stop-color="#4b6fd8"/><stop offset="1" stop-color="#e4609e"/></linearGradient>
+        <linearGradient id="khGrad2" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e4609e"/><stop offset="1" stop-color="#8a63d2"/></linearGradient>
+        <radialGradient id="khGlow"><stop offset="0" stop-color="#dff1f4"/><stop offset="1" stop-color="#dff1f4" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle class="kh-glow" cx="100" cy="85" r="85"/>
+      <path class="kh-house" pathLength="1" d="M30 82 100 26l70 56M48 70v62h104V70"/>
+      <path class="kh-heart" d="M100 120s-26-15-26-33a13 13 0 0 1 26-5 13 13 0 0 1 26 5c0 18-26 33-26 33Z"/>
+      <path class="kh-pulse" pathLength="1" d="M8 150h52l8-14 10 26 10-34 10 22h94"/>
+    </svg>
+    <img class="kh-logo" src="/img/karehome-logo.png" alt="" width="1407" height="395">
+    <div class="kh-msg">Healthier Lives. Brighter Tomorrows.</div>
+  </div>
+  <button class="kh-skip" type="button">Skip intro</button>
+</div>`;
+
 function page(p) {
   let h = head
-    .replace(/\/css\/karehome\.css\?v=[\w]+/, '/css/karehome.css?v=' + VER)
+    .replace(/<link rel="stylesheet" href="\/css\/karehome\.css\?v=[\w]+">/, `<link rel="stylesheet" href="/css/auth-popup.css?v=${VER}">\n<link rel="stylesheet" href="/css/karehome-loader.css?v=${VER}">\n<script src="/js/karehome-loader.js?v=${VER}"></script>\n<link rel="stylesheet" href="/css/karehome.css?v=${VER}">`)
     .replace(/\/js\/api\.js\?v=[\w]+/, '/js/api.js?v=' + VER);
   const t = TITLES[p.key];
   if (t) {
@@ -152,6 +172,7 @@ function page(p) {
       .replace(/<meta property="og:title" content="[^"]*">/, `<meta property="og:title" content="${t[0]} | Kare@Home">`);
   }
   return `${h}<body data-page="${p.key}">
+${LOADER}
 
 ${sprite}
 
@@ -173,6 +194,7 @@ ${modal}
 <script src="/js/sites.js?v=${VER}" defer></script>
 <script src="/js/content.js?v=${VER}" defer></script>
 <script src="/js/karehome.js?v=${VER}" defer></script>
+<script src="/js/auth-popup.js?v=${VER}" data-brand="karehome" defer></script>
 </body>
 </html>
 `;

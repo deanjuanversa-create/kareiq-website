@@ -703,7 +703,7 @@ body::after{display:none}
 .app-in{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:46px;padding:0 16px 0 13px;margin-left:10px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:14.5px;white-space:nowrap;flex:none;transition:border-color .25s,color .25s}
 .app-in:hover{border-color:var(--teal);color:var(--teal-deep)}
 .app-in svg{width:20px;height:20px;flex:none}
-.app-in{width:46px;padding:0}.app-in span{display:none}
+@media (max-width:1180px){.app-in{width:46px;padding:0}.app-in span{display:none}}
 .nav-cta{flex:none}
 @media (max-width:1080px){.app-in{margin-left:auto}.app-in~.burger{margin-left:8px}}
 .done-app{margin:14px auto 0;max-width:40ch;font-size:15px;color:var(--ink-soft)}

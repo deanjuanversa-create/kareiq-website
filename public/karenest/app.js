@@ -676,9 +676,10 @@
       pl.hidden = !plan; pl.textContent = plan ? 'Sign in to continue with ' + (name || 'your package') : '';
       setMode(m || 'signin');
       providers().then((on) => {
-        const box = $('#authProv'), keys = Object.keys(PROV).filter((k) => on[k]);
-        box.hidden = !keys.length;
-        box.innerHTML = keys.map((k) => '<a href="' + provHref(k, plan) + '">' + PROV_ICON[k] + 'Continue with ' + PROV[k] + '</a>').join('') + (keys.length ? '<p class="or">or use your mobile number or email</p>' : '');
+        // Google and Facebook are always offered; until their keys are set they explain that
+        const box = $('#authProv');
+        box.hidden = false;
+        box.innerHTML = Object.keys(PROV).map((k) => '<a href="' + (on[k] ? provHref(k, plan) : '#') + '" data-prov="' + k + '"' + (on[k] ? ' data-on="1"' : '') + '>' + PROV_ICON[k] + 'Continue with ' + PROV[k] + '</a>').join('') + '<p class="auth-note" role="status" aria-live="polite"></p><p class="or">or use your mobile number or email</p>';
       });
       if (!auth.open) { if (auth.showModal) auth.showModal(); else auth.setAttribute('open', ''); }
     }
@@ -686,6 +687,13 @@
     $('[data-auth-close]', auth).addEventListener('click', closeAuth);
     auth.addEventListener('click', (e) => { if (e.target === auth) closeAuth(); });
     $('#authSwitch').addEventListener('click', () => setMode(mode === 'signin' ? 'signup' : 'signin'));
+    $('#authProv').addEventListener('click', (e) => {
+      const a = e.target.closest('[data-prov]'); if (!a) return;
+      if (a.dataset.on) { a.lastChild.textContent = 'Opening ' + PROV[a.dataset.prov] + '…'; return; }
+      e.preventDefault();
+      $('.auth-note', auth).textContent = PROV[a.dataset.prov] + ' sign-in is being set up. For now, please sign in with your mobile number or email below.';
+      const f = $('input', mode === 'signin' ? fIn : fUp); if (f) f.focus();
+    });
     $$('[data-peek]', auth).forEach((b) => b.addEventListener('click', () => { const i = b.previousElementSibling; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.textContent = show ? 'Hide' : 'Show'; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); }));
     document.addEventListener('click', (e) => {
       const t = e.target.closest('[data-auth]');
@@ -734,16 +742,17 @@
     const msg = $('#provMsg');
     const params = new URLSearchParams(location.search);
     if (params.get('error')) { msg.textContent = params.get('error').slice(0, 200); msg.classList.add('err'); }
-    // Google / Facebook buttons appear only once their keys are set on the server
-    providers().then((on) => {
-      $$('[data-provider=google],[data-provider=facebook]', prov).forEach((b) => {
-        const p = b.dataset.provider;
-        if (!on[p]) return;
-        b.href = provHref(p, params.get('plan'));
-        b.removeAttribute('aria-disabled'); b.hidden = false; $('[data-st]', b).textContent = '';
-        b.addEventListener('click', () => { b.classList.add('loading'); $('[data-st]', b).textContent = 'Opening ' + PROV[p] + '…'; });
-      });
-    });
+    // Google / Facebook: always shown; they work once their keys are set on the server
+    const pbtns = $$('[data-provider=google],[data-provider=facebook]', prov);
+    pbtns.forEach((b) => { b.hidden = false; b.addEventListener('click', (e) => {
+      if (b.getAttribute('aria-disabled') === 'true') { e.preventDefault(); msg.classList.remove('err'); msg.textContent = PROV[b.dataset.provider] + ' sign-in is being set up. For now, please continue with email.'; return; }
+      b.classList.add('loading'); $('[data-st]', b).textContent = 'Opening ' + PROV[b.dataset.provider] + '…';
+    }); });
+    providers().then((on) => pbtns.forEach((b) => {
+      const p = b.dataset.provider;
+      if (on[p]) { b.href = provHref(p, params.get('plan')); b.removeAttribute('aria-disabled'); $('[data-st]', b).textContent = ''; }
+      else $('[data-st]', b).textContent = 'Coming soon';
+    }));
     addEventListener('pageshow', () => $$('.prov-btn.loading', prov).forEach((b) => { b.classList.remove('loading'); $('[data-st]', b).textContent = ''; }));
   }
 

@@ -1120,3 +1120,5 @@ dialog.auth h2{font-family:var(--f-display);font-weight:500;font-size:clamp(1.8r
 .auth-plan[hidden],.auth-prov[hidden]{display:none}
 
 html{scroll-padding-top:96px}
+.auth-note{font-size:.84rem;color:var(--muted);margin:2px 0 0}
+.auth-note:empty{display:none}
