@@ -55,11 +55,6 @@
       "permanent": true
     },
     {
-      "source": "/families",
-      "destination": "/#families",
-      "permanent": true
-    },
-    {
       "source": "/activities",
       "destination": "/#activities",
       "permanent": true

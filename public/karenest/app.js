@@ -150,7 +150,7 @@
   }
 
   /* old addresses of sections that now live on the home page (backup for the server redirect) */
-  if (PAGE === '404') { const m = location.pathname.match(/\/(about|life|activities|families|community|contact)\/?$/); if (m) location.replace(url('/') + location.search + '#' + m[1]); }
+  if (PAGE === '404') { const m = location.pathname.match(/\/(about|life|activities|community|contact)\/?$/); if (m) location.replace(url('/') + location.search + '#' + m[1]); }
 
   /* ================= home page: the menu follows the section on screen ================= */
   if (PAGE === 'home' && 'IntersectionObserver' in window) {
@@ -423,7 +423,7 @@
     });
     document.addEventListener('pointerdown', (e) => { if (gOpen && !e.target.closest('#guide')) setG(false); });
   }
-  const DEST = { packages: '/packages', activities: '/#activities', events: '/#events', families: '/#families', join: '/#join', contact: '/#contact', live: '/live-with-us', top: '/' };
+  const DEST = { packages: '/packages', activities: '/#activities', events: '/#events', families: '/families', join: '/#join', contact: '/#contact', live: '/live-with-us', top: '/' };
   function act(q) {
     if (q === 'visit') { openVisit(); return; }
     const d = DEST[q]; if (!d) return;
