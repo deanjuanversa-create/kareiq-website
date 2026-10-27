@@ -11,6 +11,21 @@
       "permanent": true
     },
     {
+      "source": "/kare-at-home/about",
+      "destination": "/kare-at-home#about-us",
+      "permanent": true
+    },
+    {
+      "source": "/kare-at-home/services",
+      "destination": "/kare-at-home#services",
+      "permanent": true
+    },
+    {
+      "source": "/kare-at-home/contact",
+      "destination": "/kare-at-home#contact",
+      "permanent": true
+    },
+    {
       "source": "/app",
       "destination": "https://kareiq-api.onrender.com/app/",
       "permanent": false

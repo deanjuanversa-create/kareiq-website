@@ -2,7 +2,7 @@
 /* links from the old one-page site (/kare-at-home#packages) open the matching page */
 (function () {
   if (document.body.dataset.page !== 'home') return;
-  var m = { services: '/services', packages: '/packages', karebalance: '/karebalance', 'kb-plans': '/karebalance#kb-plans', why: '/about', contact: '/contact' };
+  var m = { packages: '/packages', karebalance: '/karebalance', 'kb-plans': '/karebalance#kb-plans', why: '#about-us' };
   var h = location.hash.slice(1);
   if (m[h]) location.replace('/kare-at-home' + m[h]);
 })();
@@ -93,7 +93,17 @@
   measure();
   onScroll();
 
-  /* the current page is marked in the menu by the page itself (aria-current) */
+  /* home page: the menu follows the section on screen (About Us, Our Services, Contact) */
+  if (document.body.dataset.page === 'home' && 'IntersectionObserver' in window) {
+    const menuLinks = $$('#menu a, .drawer a').filter((a) => a.closest('li'));
+    const mark = (id) => menuLinks.forEach((a) => {
+      const on = id ? a.dataset.section === id : a.getAttribute('href') === '/kare-at-home';
+      a.classList.toggle('active', on);
+      if (on) a.setAttribute('aria-current', id ? 'location' : 'page'); else a.removeAttribute('aria-current');
+    });
+    const spy = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) mark(e.target.id === 'about' ? '' : e.target.id); }), { rootMargin: '-45% 0px -50% 0px' });
+    ['about', 'about-us', 'services', 'contact'].forEach((id) => { const el = document.getElementById(id); if (el) spy.observe(el); });
+  }
 
   /* ---------- mobile menu ---------- */
   function setMenu(open) { nav.classList.toggle('open', open); burger.setAttribute('aria-expanded', open); burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); }

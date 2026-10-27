@@ -2,12 +2,9 @@
 // Builds the Kare@Home pages from tools/karehome/source.html (the original one-page site, kept as
 // the single source of Kare@Home content). Each section becomes its own page with the shared
 // header, footer and booking form:
-//   /kare-at-home              home: introduction, where to go next, how it works
-//   /kare-at-home/about        why Kare@Home
-//   /kare-at-home/services     our services (each one opens the booking form)
+//   /kare-at-home              home: introduction, About Us, Our Services, how it works, Contact
 //   /kare-at-home/packages     care packages and prices (prices still come from the admin panel)
 //   /kare-at-home/karebalance  KareBalance programme
-//   /kare-at-home/contact      phone, WhatsApp, booking and family sign-in
 // Run: node tools/karehome/build.js
 const fs = require('fs');
 const path = require('path');
@@ -37,19 +34,26 @@ const floaters = between('<a class="wa-float"', '</button>', src.indexOf('</foot
 const modal = between('<!-- ============ BOOKING MODAL ============ -->', '\n</div>\n', src.indexOf('id="modal"') - 200);
 const S = { hero: section('about'), services: section('services'), how: section('how'), why: section('why'), packages: section('packages'), kb: section('karebalance') };
 
+// About Us, Our Services and Contact are sections of the home page; Care Packages and
+// KareBalance are pages of their own.
 const PAGES = [
   { key: 'home', path: '', label: 'Home' },
-  { key: 'about', path: '/about', label: 'About Us' },
-  { key: 'services', path: '/services', label: 'Our Services' },
   { key: 'packages', path: '/packages', label: 'Care Packages' },
-  { key: 'karebalance', path: '/karebalance', label: 'KareBalance' },
-  { key: 'contact', path: '/contact', label: 'Contact' }
+  { key: 'karebalance', path: '/karebalance', label: 'KareBalance' }
 ];
-const href = (p) => BASE + p.path;
+const MENU = [
+  { key: 'home', href: BASE, label: 'Home' },
+  { key: 'about', href: BASE + '#about-us', label: 'About Us', section: true },
+  { key: 'services', href: BASE + '#services', label: 'Our Services', section: true },
+  { key: 'packages', href: BASE + '/packages', label: 'Care Packages' },
+  { key: 'karebalance', href: BASE + '/karebalance', label: 'KareBalance' },
+  { key: 'contact', href: BASE + '#contact', label: 'Contact', section: true }
+];
 
 function header(key) {
   const cur = (k) => (k === key ? ' aria-current="page" class="active"' : '');
-  const items = PAGES.map((p) => `<li><a href="${href(p)}"${cur(p.key)}>${p.label}</a></li>`).join('\n      ');
+  const link = (m) => `<li><a href="${m.href}"${cur(m.key)}${m.section ? ` data-section="${m.href.split('#')[1]}"` : ''}>${m.label}</a></li>`;
+  const items = MENU.map(link).join('\n      ');
   return `<a class="skip" href="#main">Skip to main content</a>
 <div class="kh-top">
   <div class="wrap kh-top-in">
@@ -72,7 +76,7 @@ function header(key) {
   <nav class="drawer" id="drawer" aria-label="Menu">
     <div class="wrap">
       <ul>
-        ${PAGES.map((p) => `<li><a href="${href(p)}"${cur(p.key)}>${p.label}</a></li>`).join('\n        ')}
+        ${MENU.map(link).join('\n        ')}
         <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
         <li><a href="/" data-site="kareiq">← Back to KareIQ</a></li>
       </ul>
@@ -90,22 +94,20 @@ const arrow = '<svg aria-hidden="true" width="24" height="24"><use href="#i-arro
 const explore = `<section class="kh-explore" aria-labelledby="explore-title">
     <div class="wrap">
       <div class="sec-intro rv">
-        <h2 class="sec-title" id="explore-title">Explore Kare@Home</h2>
+        <h2 class="sec-title" id="explore-title">Packages &amp; Programmes</h2>
         <p class="sec-sub dark">Preventive care, at your doorstep.</p>
       </div>
-      <ul class="kh-cards">
-        <li class="rv" style="--d:.05s"><a class="kh-card" href="${BASE}/services"><span class="ic"><svg width="24" height="24"><use href="#i-nurse"/></svg></span><b>Our Services</b><small>Comprehensive, preventive and personalised care, at home.</small><span class="go">See all services ${arrow}</span></a></li>
+      <ul class="kh-cards two">
         <li class="rv" style="--d:.1s"><a class="kh-card" href="${BASE}/packages"><span class="ic"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><b>Care Packages</b><small>Preventive care packages to meet your loved one's day-to-day health needs.</small><span class="go">See packages and prices ${arrow}</span></a></li>
         <li class="rv" style="--d:.15s"><a class="kh-card" href="${BASE}/karebalance"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>KareBalance</b><small>Better Balance. Stronger Steps. Fewer Falls.</small><span class="go">About KareBalance ${arrow}</span></a></li>
-        <li class="rv" style="--d:.2s"><a class="kh-card" href="${BASE}/about"><span class="ic"><svg width="24" height="24"><use href="#i-shield"/></svg></span><b>Why Kare@Home</b><small>More than care. It's peace of mind.</small><span class="go">Why families choose us ${arrow}</span></a></li>
       </ul>
     </div>
   </section>`;
 
-const contact = `<section class="kh-contact" aria-labelledby="contact-title">
+const contact = `<section class="kh-contact" id="contact" aria-labelledby="contact-title">
     <div class="wrap">
       <div class="sec-intro rv">
-        <h1 class="sec-title" id="contact-title">Contact Kare@Home</h1>
+        <h2 class="sec-title" id="contact-title">Contact Us</h2>
         <p class="sec-sub dark">Book a Service | Enquire Now</p>
         <p class="sec-text">Call or WhatsApp us with your requirements, or send a booking request and a care coordinator will call you to confirm.</p>
       </div>
@@ -121,25 +123,20 @@ const contact = `<section class="kh-contact" aria-labelledby="contact-title">
 
 // links inside sections that pointed at other sections of the old single page
 const relink = (html) => html
-  .replace(/href="#services"/g, `href="${BASE}/services"`)
+  .replace(/href="#services"/g, `href="${BASE}#services"`)
   .replace(/href="#top"/g, `href="${BASE}"`)
-  .replace(/href="#contact"/g, `href="${BASE}/contact"`);
+  .replace(/href="#contact"/g, `href="${BASE}#contact"`);
 
 const BODY = {
-  home: relink(S.hero) + '\n\n  ' + explore + '\n\n  ' + S.how,
-  about: crumbs('About Us') + '\n  ' + asPage(S.why),
-  services: crumbs('Our Services') + '\n  ' + asPage(S.services),
+  // home: introduction, About Us (why Kare@Home), Our Services, how it works, packages, Contact
+  home: relink(S.hero) + '\n\n  ' + S.why.replace('<section class="why" id="why">', '<section class="why" id="about-us">') + '\n\n  ' + S.services + '\n\n  ' + S.how + '\n\n  ' + explore + '\n\n  ' + contact,
   packages: crumbs('Care Packages') + '\n  ' + asPage(S.packages),
-  karebalance: crumbs('KareBalance') + '\n  ' + asPage(S.kb),
-  contact: crumbs('Contact').replace(/<h1[^>]*>.*?<\/h1>\n  /, '') + '\n  ' + contact
+  karebalance: crumbs('KareBalance') + '\n  ' + asPage(S.kb)
 };
 const TITLES = {
   home: null,
-  about: ['Why Kare@Home', 'Trusted and trained caregivers, a preventive approach, the comfort of home, dignity and family assurance.'],
-  services: ['Our Services', 'Home care support, health monitoring, preventive screenings, nutrition, medication management, physiotherapy, companionship and personal care at home.'],
   packages: ['Care Packages', 'HomeStart, HomePlus and HomeElite preventive care packages, or a customised plan. Choose a monthly, quarterly, half-yearly or annual payment plan.'],
-  karebalance: ['KareBalance', 'KareBalance: a personalised fall prevention and mobility programme that helps older adults stay steady, active and independent.'],
-  contact: ['Contact', 'Call or WhatsApp Kare@Home on +91 81293 45178, or send a booking request and a care coordinator will call you.']
+  karebalance: ['KareBalance', 'KareBalance: a personalised fall prevention and mobility programme that helps older adults stay steady, active and independent.']
 };
 
 // old one-page links (/kare-at-home#packages) are sent to the new pages by js/karehome.js
@@ -166,7 +163,7 @@ ${header(p.key)}
   ${BODY[p.key]}
 </main>
 
-${relink(footer).replace('<footer class="foot" id="contact">', '<footer class="foot" id="contact">')}
+${relink(footer).replace('<footer class="foot" id="contact">', '<footer class="foot" id="site-footer">')}
 
 ${floaters}
 
@@ -186,4 +183,6 @@ for (const p of PAGES) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, page(p));
 }
+// pages from the earlier layout that are now sections of the home page
+for (const old of ['about', 'services', 'contact']) fs.rmSync(path.join(OUT, 'kare-at-home', old + '.html'), { force: true });
 console.log(`Kare@Home: ${PAGES.length} pages written (public/kare-at-home.html and public/kare-at-home/)`);

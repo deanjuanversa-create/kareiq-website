@@ -66,11 +66,11 @@
     <nav class="menu-wrap" aria-label="Main">
     <ul class="menu" id="menu">
       <li><a href="/kare-at-home" aria-current="page" class="active">Home</a></li>
-      <li><a href="/kare-at-home/about">About Us</a></li>
-      <li><a href="/kare-at-home/services">Our Services</a></li>
+      <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
+      <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
       <li><a href="/kare-at-home/packages">Care Packages</a></li>
       <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
-      <li><a href="/kare-at-home/contact">Contact</a></li>
+      <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
     </ul>
     </nav>
     <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
@@ -81,11 +81,11 @@
     <div class="wrap">
       <ul>
         <li><a href="/kare-at-home" aria-current="page" class="active">Home</a></li>
-        <li><a href="/kare-at-home/about">About Us</a></li>
-        <li><a href="/kare-at-home/services">Our Services</a></li>
+        <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
+        <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
         <li><a href="/kare-at-home/packages">Care Packages</a></li>
         <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
-        <li><a href="/kare-at-home/contact">Contact</a></li>
+        <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
         <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
         <li><a href="/" data-site="kareiq">← Back to KareIQ</a></li>
       </ul>
@@ -114,23 +114,53 @@
         <p class="lead load" style="--d:.55s" data-c="karehome.heroLead">Kare@Home brings trusted, preventive healthcare and everyday support to your doorstep, helping seniors live healthier, safer and more independently, from the comfort of home.</p>
         <div class="hero-ctas load" style="--d:.7s">
           <button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
-          <a href="/kare-at-home/services" class="btn btn-line">Learn More</a>
+          <a href="/kare-at-home#services" class="btn btn-line">Learn More</a>
         </div>
       </div>
     </div>
   </section>
 
-  <section class="kh-explore" aria-labelledby="explore-title">
-    <div class="wrap">
-      <div class="sec-intro rv">
-        <h2 class="sec-title" id="explore-title">Explore Kare@Home</h2>
-        <p class="sec-sub dark">Preventive care, at your doorstep.</p>
+  <section class="why" id="about-us">
+    <div class="why-in">
+      <div class="why-photo rv l">
+        <img id="whyImg" src="/img/karehome-why.jpg" alt="A smiling elderly man in a blue shirt talking with his caregiver at home" width="1056" height="651" loading="lazy">
+        <p class="note note-why" aria-hidden="true"><span>Prevent today.<br>Live better<br>tomorrow.</span>
+          <svg class="note-heart" viewBox="0 0 40 34" width="28" height="28"><path d="M20 31S3 21 3 11a8 8 0 0 1 17-3 8 8 0 0 1 17 3c0 10-17 20-17 20Z"/></svg>
+        </p>
       </div>
-      <ul class="kh-cards">
-        <li class="rv" style="--d:.05s"><a class="kh-card" href="/kare-at-home/services"><span class="ic"><svg width="24" height="24"><use href="#i-nurse"/></svg></span><b>Our Services</b><small>Comprehensive, preventive and personalised care, at home.</small><span class="go">See all services <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
-        <li class="rv" style="--d:.1s"><a class="kh-card" href="/kare-at-home/packages"><span class="ic"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><b>Care Packages</b><small>Preventive care packages to meet your loved one's day-to-day health needs.</small><span class="go">See packages and prices <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
-        <li class="rv" style="--d:.15s"><a class="kh-card" href="/kare-at-home/karebalance"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>KareBalance</b><small>Better Balance. Stronger Steps. Fewer Falls.</small><span class="go">About KareBalance <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
-        <li class="rv" style="--d:.2s"><a class="kh-card" href="/kare-at-home/about"><span class="ic"><svg width="24" height="24"><use href="#i-shield"/></svg></span><b>Why Kare@Home</b><small>More than care. It's peace of mind.</small><span class="go">Why families choose us <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
+      <div class="why-copy">
+        <div class="rv">
+          <h2 class="sec-title">Why Kare@Home</h2>
+          <p class="sec-sub dark">More than care. It's peace of mind.</p>
+        </div>
+        <ul class="reasons">
+          <li class="rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-shield"/></svg></span><b>Trusted &amp; Trained Caregivers</b><small>Background-verified and professionally trained.</small></li>
+          <li class="rv" style="--d:.12s"><span class="ic"><svg width="24" height="24"><use href="#i-heart"/></svg></span><b>Preventive Approach</b><small>Early detection. Better outcomes.</small></li>
+          <li class="rv" style="--d:.19s"><span class="ic"><svg width="24" height="24"><use href="#i-house-heart"/></svg></span><b>Comfort of Home</b><small>Familiar surroundings. Greater emotional well-being.</small></li>
+          <li class="rv" style="--d:.26s"><span class="ic"><svg width="24" height="24"><use href="#i-person"/></svg></span><b>Dignity &amp; Independence</b><small>Respecting choices. Supporting independence.</small></li>
+          <li class="rv" style="--d:.33s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Family Assurance</b><small>Stay connected. Always informed.</small></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="services" id="services">
+    <div class="wrap services-in">
+      <div class="sec-intro rv">
+        <h2 class="sec-title"><svg class="sprig" viewBox="0 0 48 48" aria-hidden="true" width="28" height="28"><path d="M22 40C21 27 13 17 3 14.5c-.5 12 7 22.5 19 25.5Z" fill="url(#kgl)"/><path d="M24 40c1-14 9-24 20-27 .5 12-7 23.5-20 27Z" fill="url(#kgl)" opacity=".85"/></svg>Our Services</h2>
+        <p class="sec-sub">Comprehensive, preventive and personalised care, at home.</p>
+        <p class="sec-text">From routine health monitoring to daily support, our services are designed to keep your loved ones safe, healthy and independent, right at home.</p>
+        <p class="sec-hint">Tap a service to book it.</p>
+      </div>
+      <ul class="svc-grid">
+        <li class="rv" style="--d:.05s"><button class="svc" data-book data-service="home-care"><span class="ic"><svg width="24" height="24"><use href="#i-nurse"/></svg></span><b>Home Care Support</b><small>Trained caregivers for daily routines, hygiene and safety at home.</small></button></li>
+        <li class="rv" style="--d:.1s"><button class="svc" data-book data-service="health-monitoring"><span class="ic"><svg width="24" height="24"><use href="#i-monitor"/></svg></span><b>Health Monitoring &amp; Management</b><small>Regular BP, sugar and vitals checks, shared with your family.</small></button></li>
+        <li class="rv" style="--d:.15s"><button class="svc" data-book data-service="health-screening"><span class="ic"><svg width="24" height="24"><use href="#i-screening"/></svg></span><b>Preventive Health Screenings</b><small>Early tests at home to catch problems before they grow.</small></button></li>
+        <li class="rv" style="--d:.2s"><button class="svc" data-book data-service="nutrition"><span class="ic"><svg width="24" height="24"><use href="#i-apple"/></svg></span><b>Nutrition &amp; Diet Support</b><small>Meal plans suited to diabetes, BP and age-related needs.</small></button></li>
+        <li class="rv" style="--d:.25s"><button class="svc" data-book data-service="medication"><span class="ic"><svg width="24" height="24"><use href="#i-meds"/></svg></span><b>Medication Management</b><small>Right medicine, right dose, right time, with refill reminders.</small></button></li>
+        <li class="rv" style="--d:.3s"><button class="svc" data-book data-service="physiotherapy"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>Physiotherapy &amp; Mobility Support</b><small>Exercises at home to improve strength, balance and confidence.</small></button></li>
+        <li class="rv" style="--d:.35s"><button class="svc" data-book data-service="companionship"><span class="ic"><svg width="24" height="24"><use href="#i-companion"/></svg></span><b>Companionship &amp; Emotional Well-being</b><small>Conversation, outings and activities that lift the spirit.</small></button></li>
+        <li class="rv" style="--d:.4s"><button class="svc" data-book data-service="personal-care"><span class="ic"><svg width="24" height="24"><use href="#i-person-heart"/></svg></span><b>Personal Care Assistance</b><small>Bathing, grooming and dressing support with dignity.</small></button></li>
       </ul>
     </div>
   </section>
@@ -149,10 +179,40 @@
       </ol>
     </div>
   </section>
+
+  <section class="kh-explore" aria-labelledby="explore-title">
+    <div class="wrap">
+      <div class="sec-intro rv">
+        <h2 class="sec-title" id="explore-title">Packages &amp; Programmes</h2>
+        <p class="sec-sub dark">Preventive care, at your doorstep.</p>
+      </div>
+      <ul class="kh-cards two">
+        <li class="rv" style="--d:.1s"><a class="kh-card" href="/kare-at-home/packages"><span class="ic"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><b>Care Packages</b><small>Preventive care packages to meet your loved one's day-to-day health needs.</small><span class="go">See packages and prices <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
+        <li class="rv" style="--d:.15s"><a class="kh-card" href="/kare-at-home/karebalance"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>KareBalance</b><small>Better Balance. Stronger Steps. Fewer Falls.</small><span class="go">About KareBalance <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="kh-contact" id="contact" aria-labelledby="contact-title">
+    <div class="wrap">
+      <div class="sec-intro rv">
+        <h2 class="sec-title" id="contact-title">Contact Us</h2>
+        <p class="sec-sub dark">Book a Service | Enquire Now</p>
+        <p class="sec-text">Call or WhatsApp us with your requirements, or send a booking request and a care coordinator will call you to confirm.</p>
+      </div>
+      <ul class="kh-ways">
+        <li class="rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-phone"/></svg></span><b>Call us</b><a class="big" href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a></li>
+        <li class="rv" style="--d:.1s"><span class="ic"><svg width="24" height="24"><use href="#i-hand-heart"/></svg></span><b>WhatsApp</b><a class="big" href="https://wa.me/918129345178?text=Hi%20Kare%40Home%2C%20I%27d%20like%20to%20know%20more%20about%20home%20care." target="_blank" rel="noopener">Message us on WhatsApp</a></li>
+        <li class="rv" style="--d:.15s"><span class="ic"><svg width="24" height="24"><use href="#i-assess"/></svg></span><b>Book a home visit</b><button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button></li>
+        <li class="rv" style="--d:.2s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Families and caregivers</b><a class="btn btn-line" href="/app/#/signin?brand=karehome" data-app="karehome">Sign in to My KareIQ</a></li>
+      </ul>
+      <p class="kh-follow"><a href="https://instagram.com/kareiq" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-camera"/></svg>Follow us @kareiQ</a></p>
+    </div>
+  </section>
 </main>
 
 <!-- ============ FOOTER ============ -->
-<footer class="foot" id="contact">
+<footer class="foot" id="site-footer">
   <div class="foot-band">
     <div class="wrap foot-in">
       <div class="f-brand">

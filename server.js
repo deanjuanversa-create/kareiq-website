@@ -453,6 +453,9 @@ async function route(req, res) {
     return send(res, 301, '', { Location: clean + url.search });
   }
 
+  // Kare@Home About Us, Our Services and Contact are now sections of its home page
+  const KH_MOVED = { '/kare-at-home/about': '#about-us', '/kare-at-home/services': '#services', '/kare-at-home/contact': '#contact' };
+  if (KH_MOVED[p]) return send(res, 301, '', { Location: '/kare-at-home' + KH_MOVED[p] });
   if (await serveFile(req, res, PUBLIC_DIR, p)) return;
   // trailing slash on a page that is a file (e.g. /karenest/live-with-us/) -> the clean address
   if (p.length > 1 && p.endsWith('/') && fs.existsSync(path.join(PUBLIC_DIR, path.normalize(p.slice(0, -1)) + '.html'))) {

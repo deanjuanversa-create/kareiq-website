@@ -759,3 +759,8 @@ main h1.sec-title{font-size:clamp(32px,3.4vw,46px)}
 .kh-follow svg{width:20px;height:20px}
 @media (max-width:1000px){.kh-ways{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:560px){.kh-ways{grid-template-columns:1fr}}
+
+html{scroll-padding-top:84px}
+.kh-cards.two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px}
+@media (max-width:560px){.kh-cards.two{grid-template-columns:1fr}}
+.kh-explore{background:linear-gradient(180deg,#fff,#f6fafc)}

@@ -112,7 +112,7 @@ How it links accounts: a Google/Facebook login is matched to an existing account
 ## The websites are built from small source files
 
 - **KareNest** (multi-page): `node tools/karenest/build.js` writes `public/karenest/*.html` from `tools/karenest/` (`layout.js` header/footer/widgets, `pages.js` page content, `data.js` packages and prices). Add `--standalone ../karenest-website` to also write the copy deployed to karenest.co.in. Styles and behaviour are in `public/karenest/site.css` and `app.js`.
-- **Kare@Home** (multi-page): `node tools/karehome/build.js` splits `tools/karehome/source.html` (the Kare@Home content) into `/kare-at-home`, `/about`, `/services`, `/packages`, `/karebalance` and `/contact`.
+- **Kare@Home** (multi-page): `node tools/karehome/build.js` builds `/kare-at-home` (home with About Us, Our Services and Contact), `/kare-at-home/packages` and `/kare-at-home/karebalance` from `tools/karehome/source.html` (the Kare@Home content).
 - Change content in those source files, rebuild, then deploy. Do not edit the generated `.html` files directly.
 
 ## Folder layout
