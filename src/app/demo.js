@@ -55,10 +55,10 @@ async function seed() {
     endDate: null, months, bookingRef: null, createdAt: iso()
   });
   await plan('P-DEMO01', 'karehome', 'homeplus', 'active', day(75), 12);
-  await plan('P-DEMO02', 'karenest', 'nest-living', 'active', day(120), 12);
+  await plan('P-DEMO02', 'karenest', 'kareplus', 'active', day(120), 12);
   await plan('P-DEMO03', 'karehome', 'homestart', 'pending', null, 3);
   await plan('P-DEMO04', 'karehome', 'homeelite', 'active', day(40), 6);
-  await plan('P-DEMO05', 'karenest', 'nest-living', 'active', day(60), 12);
+  await plan('P-DEMO05', 'karenest', 'kareplus', 'active', day(60), 12);
   for (const p of await docs.find('app_plans')) {
     if (p.startDate) {
       const d = new Date(p.startDate + 'T00:00:00Z'); d.setUTCMonth(d.getUTCMonth() + p.months); d.setUTCDate(d.getUTCDate() - 1);

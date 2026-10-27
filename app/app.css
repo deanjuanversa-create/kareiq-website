@@ -438,3 +438,6 @@ dialog[open]{animation:pop .3s var(--ease)}
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
 .picker-foot .btn{white-space:normal;text-align:center;height:auto;padding-top:10px;padding-bottom:10px}
+
+.oauth{display:grid;gap:10px;margin-bottom:6px}
+.oauth .or{margin:14px 0 4px}

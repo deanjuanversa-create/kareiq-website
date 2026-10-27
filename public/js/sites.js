@@ -31,4 +31,8 @@ window.KareAppStart = function (ref, brand) { return window.KARE_APP + '#/start?
     var b = a.dataset.app;
     a.href = window.KARE_APP + '#/signin' + (b && b !== 'kareiq' ? '?brand=' + b : '');
   });
+  // links to a particular app screen, e.g. data-app-path="#/join?brand=karenest"
+  document.querySelectorAll('a[data-app-path]').forEach(function (a) {
+    a.href = window.KARE_APP + a.dataset.appPath;
+  });
 })();

@@ -227,10 +227,27 @@
     return '<label class="field"><span>' + label + '</span><input class="in" name="' + name + '" ' + (attrs || '') + '>' + (hint ? '<small>' + hint + '</small>' : '') + '<em class="err" data-err="' + name + '"></em></label>';
   }
 
+  // "Continue with Google / Facebook": shown only for providers the server has keys for
+  function showOAuth(brand) {
+    fetch('/api/app/auth/providers', { credentials: 'same-origin' }).then(function (x) { return x.json(); }).then(function (d) {
+      var box = document.querySelector('[data-oauth]');
+      if (!box || !d || !d.providers) return;
+      var names = { google: 'Google', facebook: 'Facebook' };
+      var on = Object.keys(names).filter(function (k) { return d.providers[k]; });
+      if (!on.length) return;
+      box.innerHTML = on.map(function (k) {
+        return '<a class="btn ghost block oauth-btn" href="/api/app/auth/' + k + '/start' + (brand ? '?brand=' + encodeURIComponent(brand) : '') + '">Continue with ' + names[k] + '</a>';
+      }).join('') + '<div class="or"><span>or use your mobile number or email</span></div>';
+      box.hidden = false;
+    }).catch(function () { /* email sign-in still works */ });
+  }
+
   function gateView(kind, r) {
     if (kind === 'signin') {
       gateShell(
         '<h1>Sign in</h1><p class="lead">For families, caregivers and the KareIQ team.</p>' + flashHtml() +
+        (r.q.error ? '<div class="alert bad" role="alert">' + e(r.q.error.slice(0, 200)) + '</div>' : '') +
+        '<div class="oauth" data-oauth hidden></div>' +
         '<form data-form="signin" novalidate><div class="alert bad" data-msg hidden></div>' +
           field('id', 'Mobile number or email', 'autocomplete="username" inputmode="email" required autofocus') +
           pwField('password', 'Password') +
@@ -243,6 +260,7 @@
           '<span><a href="#/forgot">Forgot password?</a></span>' +
           '<span>Need help? <a href="' + waLink('Hello, I need help signing in to My KareIQ.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</span>' +
         '</div>', r.q.brand);
+      showOAuth(r.q.brand);
       return;
     }
     if (kind === 'forgot') {

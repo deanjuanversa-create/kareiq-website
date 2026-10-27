@@ -15,6 +15,7 @@ function matches(doc, filter) {
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       if ('$in' in v) return v.$in.includes(doc[k]);
       if ('$ne' in v) return doc[k] !== v.$ne;
+      if ('$lt' in v) return doc[k] < v.$lt;
     }
     return doc[k] === v;
   });

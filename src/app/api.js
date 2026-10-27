@@ -21,6 +21,7 @@ const { sendMail, mailReady } = require('../notify');
 const db = require('../db');
 const content = require('../content');
 const catalog = require('../catalog');
+const { createOAuth } = require('./oauth');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -247,8 +248,8 @@ async function attachRequest(user, kind, row, personName, relation) {
 function requestPlanId(product, row) {
   if (row.package && row.package !== 'undecided') return row.package;
   if (product !== 'karenest') return null;
-  if (row.interest === 'karenest-live') return 'nest-living';
-  return null; // day visit, community or KareBalance: the office picks the plan when activating
+  if (row.plan && PRODUCTS.karenest.plans.includes(row.plan)) return row.plan; // the package named on the website
+  return null; // day visit, community or "help me choose": the office picks the plan when activating
 }
 
 // Plans a family can choose in the app, with a price hint where the website shows one.
@@ -264,6 +265,7 @@ async function planChoices() {
         const perMonth = Object.values(web.prices).map((v) => v[0]).filter(Boolean);
         if (perMonth.length) price = 'from ' + fmt(Math.min(...perMonth)) + ' a month';
       } else if (catalog.packages[id] && catalog.packages[id].mrp) price = fmt(catalog.packages[id].mrp);
+      else if (catalog.karenestPlans[id]) { const k = catalog.karenestPlans[id]; price = fmt(k.price) + (/^(day|week|month)$/.test(k.unit) ? ' a ' + k.unit : ', ' + k.unit); }
       return { id, name: planName(id), price };
     })
   }));
@@ -990,10 +992,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     return rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
 
+  const oauth = createOAuth({ json, isHttps, signIn, audit, uid, now });
+
   // ---------------------------------------------------------------- entry point
   return async function handleAppApi(req, res, parts, url) {
     await ensureReady();
     const p = parts.join('/');
+    if (parts[0] === 'auth') return oauth(req, res, parts, url); // Google / Facebook sign-in
     const s = await auth.sessionOf(req);
     const signed = s && s.user ? s : null;
 

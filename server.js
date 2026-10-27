@@ -133,7 +133,7 @@ function readJson(req) {
 // ---------- rate limit for form posts: 8 per 10 minutes per device ----------
 const hits = new Map();
 const WINDOW_MS = 10 * 60 * 1000;
-const MAX_POSTS = 8;
+const MAX_POSTS = Number(process.env.RATE_LIMIT_POSTS) || 8; // form posts per device per 10 minutes
 function limited(req, key) {
   const k = `${clientIp(req)}:${key}`;
   const now = Date.now();
@@ -285,14 +285,14 @@ async function handleSubmit(req, res, kind) {
     ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
     : await store.add('enquiries', 'KQ', value);
   notify(kind, row);
-  console.log(`[${kind}] ${row.reference} ${row.name} ${row.phone} ${isBooking ? row.serviceName : row.interestName}`);
+  console.log(`[${kind}] ${row.reference} ${row.name} ${row.phone} ${isBooking ? row.serviceName : row.interestName + (row.planName ? ' / ' + row.planName : '')}`);
   json(res, 201, { ok: true, reference: row.reference });
 }
 
 function toCsv(name, rows) {
   const cols = name === 'bookings'
     ? ['reference', 'createdAt', 'status', 'name', 'phone', 'email', 'careForName', 'area', 'serviceName', 'packageName', 'billingName', 'date', 'timeName', 'notes', 'adminNote']
-    : ['reference', 'createdAt', 'status', 'name', 'phone', 'email', 'interestName', 'message', 'source', 'adminNote'];
+    : ['reference', 'createdAt', 'status', 'name', 'phone', 'email', 'interestName', 'planName', 'message', 'source', 'adminNote'];
   const esc = (v) => {
     let s = v == null ? '' : String(v);
     if (/^[=+\-@\t\r]/.test(s) && !/^\+\d{6,15}$/.test(s)) s = `'${s}`; // stop spreadsheet formula injection (phone numbers are safe)
@@ -353,7 +353,7 @@ const appApi = createAppApi({ json, readJson, limited, isHttps, clientIp });
 
 // ---------- CORS: the websites (Vercel) call this API on its own address ----------
 // Only the public form/content endpoints are shared; the admin API stays same-origin.
-const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health']);
+const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health', '/api/app/auth/providers']);
 function cors(req, res, p) {
   const origin = String(req.headers.origin || '').replace(/\/+$/, '');
   if (!origin || !PUBLIC_API.has(p)) return false;
@@ -441,7 +441,11 @@ async function route(req, res) {
   if (p === '/' && /^app\./i.test(String(req.headers['x-forwarded-host'] || req.headers.host || ''))) return send(res, 302, '', { Location: '/app/', 'Cache-Control': 'no-store' });
 
   // page visits go to the real website; files (logos, icons) are still served for the admin panel
-  if (SITE_URL && (!path.extname(p) || p.endsWith('.html'))) return send(res, 302, '', { Location: SITE_URL + p + url.search, 'Cache-Control': 'no-store' });
+  if (SITE_URL && (!path.extname(p) || p.endsWith('.html'))) {
+    // KareNest pages live at the root of karenest.co.in, without the /karenest folder
+    const to = /karenest/i.test(SITE_URL) && /^\/karenest(\/|$)/.test(p) ? p.replace(/^\/karenest/, '') || '/' : p;
+    return send(res, 302, '', { Location: SITE_URL + to + url.search, 'Cache-Control': 'no-store' });
+  }
 
   // tidy URLs: /kare-at-home.html -> /kare-at-home
   if (p.endsWith('.html') && p !== '/404.html') {
@@ -450,6 +454,10 @@ async function route(req, res) {
   }
 
   if (await serveFile(req, res, PUBLIC_DIR, p)) return;
+  // trailing slash on a page that is a file (e.g. /karenest/live-with-us/) -> the clean address
+  if (p.length > 1 && p.endsWith('/') && fs.existsSync(path.join(PUBLIC_DIR, path.normalize(p.slice(0, -1)) + '.html'))) {
+    return send(res, 301, '', { Location: p.slice(0, -1) + url.search });
+  }
   return notFound(req, res);
 }
 

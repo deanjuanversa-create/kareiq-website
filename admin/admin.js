@@ -343,7 +343,7 @@
       $('thead').innerHTML = '<tr><th>Reference</th><th>Person</th><th>Interested in</th><th>Message</th><th>Page</th><th>Status</th><th>Internal note</th></tr>';
       $('tbody').innerHTML = list.map((r) => `<tr>
         <td><span class="ref">${esc(r.reference)}</span><span class="s">${esc(when(r.createdAt))}</span></td>
-        <td>${person(r)}</td><td>${esc(r.interestName)}</td><td class="notes">${esc(r.message)}</td><td>${esc(r.source)}</td>
+        <td>${person(r)}</td><td>${esc(r.interestName)}${r.planName ? `<br><b>${esc(r.planName)}</b>` : ''}</td><td class="notes">${esc(r.message)}</td><td>${esc(r.source)}</td>
         <td>${statusSelect(r)}</td>
         <td><input class="note" data-id="${esc(r.id)}" value="${esc(r.adminNote || '')}" placeholder="Add note" aria-label="Internal note for ${esc(r.reference)}"></td></tr>`).join('');
     }

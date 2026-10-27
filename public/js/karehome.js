@@ -1,4 +1,11 @@
 /* Kare@Home page behaviour: header, scroll animations, counters, booking flow */
+/* links from the old one-page site (/kare-at-home#packages) open the matching page */
+(function () {
+  if (document.body.dataset.page !== 'home') return;
+  var m = { services: '/services', packages: '/packages', karebalance: '/karebalance', 'kb-plans': '/karebalance#kb-plans', why: '/about', contact: '/contact' };
+  var h = location.hash.slice(1);
+  if (m[h]) location.replace('/kare-at-home' + m[h]);
+})();
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -66,7 +73,7 @@
     const pr = Math.min(1, y / maxScroll);
     if (Math.abs(pr - lastBar) > 0.001) { lastBar = pr; bar.style.transform = 'scaleX(' + pr.toFixed(4) + ')'; }
     if (!reduce) {
-      if (y < 1000 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (y * 0.15).toFixed(1) + 'px,0) scale(1.03)';
+      if (heroImg && y < 1000 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (y * 0.15).toFixed(1) + 'px,0) scale(1.03)';
       if (whyImg && whyH) {
         const top = whyTop - y;
         if (top + whyH > 0 && top < vh) whyImg.style.transform = 'translate3d(0,' + (((top + whyH / 2 - vh / 2) / vh) * -40).toFixed(1) + 'px,0)';
@@ -79,22 +86,18 @@
   addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { measure(); onScroll(); }, 120); }, { passive: true });
   addEventListener('load', () => { measure(); onScroll(); });
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { measure(); onScroll(); });
-  heroImg.addEventListener('animationend', () => { heroImg.style.animation = 'none'; heroImg.dataset.ready = '1'; onScroll(); });
-  if (reduce) heroImg.dataset.ready = '1';
+  if (heroImg) {
+    heroImg.addEventListener('animationend', () => { heroImg.style.animation = 'none'; heroImg.dataset.ready = '1'; onScroll(); });
+    if (reduce) heroImg.dataset.ready = '1';
+  }
   measure();
   onScroll();
 
-  /* ---------- active menu link ---------- */
-  const links = $$('#menu a');
-  const so = new IntersectionObserver((es) => es.forEach((e) => {
-    if (!e.isIntersecting) return;
-    const id = e.target.id === 'about' ? 'top' : e.target.id;
-    links.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + id));
-  }), { rootMargin: '-45% 0px -50% 0px' });
-  ['about', 'services', 'how', 'why', 'packages', 'contact'].forEach((id) => { const el = document.getElementById(id); if (el) so.observe(el); });
+  /* the current page is marked in the menu by the page itself (aria-current) */
 
   /* ---------- mobile menu ---------- */
-  function setMenu(open) { nav.classList.toggle('open', open); burger.setAttribute('aria-expanded', open); }
+  function setMenu(open) { nav.classList.toggle('open', open); burger.setAttribute('aria-expanded', open); burger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu'); }
+  addEventListener('keydown', (e) => { if (e.key === 'Escape' && nav.classList.contains('open')) { setMenu(false); burger.focus(); } });
   burger.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
   $$('.drawer a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
   totop.addEventListener('click', () => scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }));

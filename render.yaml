@@ -26,6 +26,10 @@ services:
       - key: TRUST_PROXY
         value: "true"
       - key: SITE_URL          # visitors who open the Render address are sent here
-        value: https://kareiq-website-full.vercel.app
+        value: https://karenest.co.in
       - key: ALLOWED_ORIGINS   # websites allowed to send forms here (add the KareIQ domain when it exists)
         value: https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in
+      - key: OAUTH_REDIRECT_BASE # public address of this server, used for Google/Facebook sign-in callbacks
+        value: https://kareiq-api.onrender.com
+      # Google / Facebook sign-in: add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID and
+      # FACEBOOK_APP_SECRET in Render → Environment when you have them (never in this file or GitHub).

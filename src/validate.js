@@ -87,18 +87,21 @@ function validateEnquiry(body) {
   const interest = clean(body.interest, 40);
   const message = cleanMultiline(body.message, 1000);
   const source = clean(body.source, 40) || 'kareiq';
+  const planId = clean(body.plan, 40);
+  const plan = planId ? catalog.enquiryPlan(planId) : null;
 
   if (name.length < 2) errors.name = 'Please enter your name.';
   if (!phone) errors.phone = 'Enter a 10-digit Indian mobile number.';
   if (email && !validEmail(email)) errors.email = 'This email address looks incomplete.';
   if (!catalog.interests[interest]) errors.interest = 'Choose what you are interested in.';
+  if (planId && !plan) errors.plan = 'Choose one of the packages on the website.';
   if (body.consent !== true && body.consent !== 'on' && body.consent !== 'true') {
     errors.consent = 'Please agree to be contacted about your request.';
   }
 
   return {
     errors,
-    value: { name, phone, email, interest, interestName: catalog.interests[interest] || '', message, source }
+    value: { name, phone, email, interest, interestName: catalog.interests[interest] || '', plan: plan ? plan.id : '', planName: plan ? plan.name : '', message, source }
   };
 }
 

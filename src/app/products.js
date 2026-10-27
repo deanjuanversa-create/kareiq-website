@@ -15,13 +15,14 @@ const PRODUCTS = {
     id: 'karenest',
     name: 'KareNest',
     tagline: 'Community living',
-    plans: ['nest-living', 'nest-respite', 'customized', 'kb-base', 'kb-plus', 'kb-premium']
+    plans: ['kareplus', 'karepremium', 'bloom', 'flourish', 'thrive', 'kb-base', 'kb-plus', 'kb-premium', 'km-base', 'km-plus', 'km-premium', 'customized']
   }
 };
 
-// KareNest residence plans are not booked on the website yet, so they live here.
-// Change the names here if the KareNest team names them differently.
+// KareNest packages come from the website list in src/catalog.js. The two older ids are kept
+// so plans created before the packages were named still show a sensible name.
 const EXTRA_PLANS = {
+  ...catalog.karenestPlans,
   'nest-living': { name: 'KareNest community living' },
   'nest-respite': { name: 'KareNest short stay' }
 };

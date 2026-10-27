@@ -40,7 +40,7 @@ async function notify(kind, row) {
       })
     : lines({
         Reference: row.reference, Name: row.name, Phone: row.phone, Email: row.email,
-        Interest: row.interestName, Message: row.message, Page: row.source, Received: row.createdAt
+        Interest: row.interestName, Package: row.planName || '', Message: row.message, Page: row.source, Received: row.createdAt
       });
   try {
     await transporter.sendMail({

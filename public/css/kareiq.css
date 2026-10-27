@@ -682,8 +682,8 @@ html.kq-intro .wa-float{visibility:hidden}
 /* ---------- Our Values: K-A-R-E-I-Q ---------- */
 .kv{margin-top:clamp(44px,5.5vw,72px)}
 .kv-head{text-align:center;max-width:680px;margin:0 auto}
-.kv-head h3{font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.6vw,32px);line-height:1.25;margin-top:12px;color:var(--ink)}
-.kv-head h3 em{font-style:normal;letter-spacing:.06em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+.kv-head h2,.kv-head h3{font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.6vw,32px);line-height:1.25;margin-top:12px;color:var(--ink)}
+.kv-head h2 em,.kv-head h3 em{font-style:normal;letter-spacing:.06em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
 .kv-grid{list-style:none;margin:clamp(26px,3.2vw,40px) 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1.6vw,18px)}
 .kv-item{position:relative;isolation:isolate;display:flex;gap:18px;align-items:flex-start;padding:22px 22px 20px;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-soft);transform:translateZ(0);transition:transform .55s var(--out),border-color .45s var(--out)}
 .kv-item::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;box-shadow:var(--shadow-lift);opacity:0;transition:opacity .55s var(--out);pointer-events:none}
@@ -697,7 +697,7 @@ html.kq-intro .wa-float{visibility:hidden}
 .kv-item:nth-child(4) .kv-letter b{background-position:60% 0}
 .kv-item:nth-child(5) .kv-letter b{background-position:80% 0}
 .kv-item:nth-child(6) .kv-letter b{background-position:100% 0}
-.kv-item h4{margin:2px 0 6px;font:600 17px/1.25 var(--sans);color:var(--ink)}
+.kv-item h3,.kv-item h4{margin:2px 0 6px;font:600 17px/1.25 var(--sans);color:var(--ink)}
 .kv-item p{font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
 @media (hover:hover) and (pointer:fine){.kv-item{will-change:transform}.kv-item::after{will-change:opacity}}
 @media (hover:none){.kv-item:hover{transform:translateZ(0)}.kv-item:hover::after{opacity:0}}
@@ -710,3 +710,16 @@ html.kq-intro .wa-float{visibility:hidden}
 .app-in:hover{border-color:var(--teal);color:var(--teal-deep)}
 .app-in svg{width:20px;height:20px;flex:none}
 @media (max-width:1180px){.app-in{width:46px;padding:0}.app-in span{display:none}}
+
+/* Our Values sits first, directly under the header */
+.our-values{padding-block:clamp(40px,5vw,64px) clamp(36px,4.5vw,56px);background:linear-gradient(180deg,#f3f8fb 0%,#fbfaf8 100%)}
+.our-values .kv{margin-top:0}
+/* brand names in the brand cards are links to each website */
+a.brand-link{border-radius:16px;padding:6px 10px 6px 6px;margin:-6px 0 0 -6px;color:inherit;text-decoration:none;transition:background .25s,transform .25s}
+a.brand-link:hover{background:rgba(17,153,142,.08)}
+a.brand-link:active{transform:scale(.98);background:rgba(17,153,142,.14)}
+a.brand-link:focus-visible{outline:3px solid var(--teal);outline-offset:2px}
+a.brand-link h3{text-decoration:underline;text-decoration-color:transparent;text-underline-offset:5px;transition:text-decoration-color .25s}
+a.brand-link:hover h3,a.brand-link:focus-visible h3{text-decoration-color:currentColor}
+.brand-go{width:16px;height:16px;flex:none;opacity:.55;transition:transform .3s var(--smooth),opacity .3s}
+a.brand-link:hover .brand-go{transform:translateX(3px);opacity:1}

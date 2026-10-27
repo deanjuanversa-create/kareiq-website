@@ -16,7 +16,7 @@ const REDIS_TOKEN = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_R
 const PREFIX = process.env.KV_PREFIX || 'kareiq:';
 
 const mode = MONGO_URI ? 'mongo' : REDIS_URL && REDIS_TOKEN ? 'redis' : process.env.VERCEL ? 'temporary' : 'file';
-const DATA_DIR = mode === 'temporary' ? path.join('/tmp', 'kareiq-data') : path.join(__dirname, '..', 'data');
+const DATA_DIR = process.env.DATA_DIR || (mode === 'temporary' ? path.join('/tmp', 'kareiq-data') : path.join(__dirname, '..', 'data'));
 
 // ---------- MongoDB (one shared connection, opened on first use) ----------
 let mongoDbPromise = null;

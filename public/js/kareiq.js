@@ -19,7 +19,8 @@
   /* ---------- header state, progress bar, parallax, back to top ---------- */
   // measurements are cached so scrolling never forces a layout pass
   let ticking = false, maxScroll = 1, scrolled = false, topShown = false, lastBar = -1;
-  const measure = () => { maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight); };
+  let heroTop = 0;
+  const measure = () => { maxScroll = Math.max(1, document.documentElement.scrollHeight - innerHeight); const h = heroImg && heroImg.closest('section'); heroTop = h ? h.getBoundingClientRect().top + scrollY : 0; };
   function onScroll() {
     const y = scrollY;
     if (!scrolled && y > 40) { scrolled = true; nav.classList.add('scrolled'); }
@@ -28,7 +29,8 @@
     if (show !== topShown) { topShown = show; totop.classList.toggle('show', show); }
     const pr = Math.min(1, y / maxScroll);
     if (Math.abs(pr - lastBar) > 0.001) { lastBar = pr; bar.style.transform = 'scaleX(' + pr.toFixed(4) + ')'; }
-    if (!reduce && y < 900 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (y * 0.18).toFixed(1) + 'px,0) scale(1.04)';
+    const rel = Math.max(0, y - heroTop); // the hero is no longer the first section
+    if (!reduce && rel < 900 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (rel * 0.18).toFixed(1) + 'px,0) scale(1.04)';
     ticking = false;
   }
   addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(onScroll); ticking = true; } }, { passive: true });

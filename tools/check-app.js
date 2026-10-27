@@ -117,7 +117,7 @@ function client() {
   ok(ns2.data.products[0].people.some((x) => x.name === 'Radha Pillai'), 'assigned nurse now sees Radha');
 
   // walk-in KareNest family, no booking
-  const act2 = await admin.call('POST', '/api/app/admin/activate', { product: 'karenest', planId: 'nest-living', months: 12, familyName: 'Anil Kumar', familyPhone: '9822233344', personName: 'Kamala Kumar', relation: 'Mother' });
+  const act2 = await admin.call('POST', '/api/app/admin/activate', { product: 'karenest', planId: 'kareplus', months: 12, familyName: 'Anil Kumar', familyPhone: '9822233344', personName: 'Kamala Kumar', relation: 'Mother' });
   ok(act2.status === 200 && act2.data.link && act2.data.whatsapp.includes('wa.me/919822233344'), 'walk-in: welcome link + WhatsApp share');
   const token = act2.data.link.split('/link/')[1];
   const anil = client();
@@ -151,7 +151,7 @@ function client() {
   ok((await client().call('POST', '/api/app/signup', { name: 'X Y', phone: '9844455566', password: 'another-pass-1' })).data.errors.phone, 'same mobile number cannot sign up twice');
   const opts = await nu.call('GET', '/api/app/plans/options');
   ok(opts.data.products.length === 2 && opts.data.products[0].plans.some((x) => x.price), 'plan choices with prices');
-  const pr = await nu.call('POST', '/api/app/plans/request', { product: 'karenest', planId: 'nest-living', personName: 'Usha Raj', relation: 'Mother', note: 'From January' });
+  const pr = await nu.call('POST', '/api/app/plans/request', { product: 'karenest', planId: 'kareplus', personName: 'Usha Raj', relation: 'Mother', note: 'From January' });
   ok(pr.status === 201, 'family chooses a KareNest plan in the app');
   const nus2 = await nu.refresh();
   ok(nus2.data.products.length === 2 && nus2.data.products.every((p) => p.status === 'pending'), 'KareNest (and included Kare@Home) show "being set up"');
@@ -160,7 +160,7 @@ function client() {
   ok((await nu.call('POST', '/api/app/plans/request', { product: 'karenest', personId: pr.data.personId })).status === 409, 'same person cannot ask twice for the same brand');
   const rq2 = (await admin.call('GET', '/api/app/admin/requests')).data.rows.find((x) => x.reference === pr.data.reference);
   ok(rq2 && rq2.kind === 'plan-request' && rq2.product === 'karenest', 'plan request is in the office inbox');
-  const a3 = await admin.call('POST', '/api/app/admin/activate', { requestKind: 'enquiry', requestId: rq2.id, product: 'karenest', planId: 'nest-living', months: 12, familyName: 'Divya Raj', familyPhone: '9844455566', personName: 'Usha Raj', relation: 'Mother' });
+  const a3 = await admin.call('POST', '/api/app/admin/activate', { requestKind: 'enquiry', requestId: rq2.id, product: 'karenest', planId: 'kareplus', months: 12, familyName: 'Divya Raj', familyPhone: '9844455566', personName: 'Usha Raj', relation: 'Mother' });
   ok(a3.status === 200 && a3.data.plan.status === 'active', 'office activates the app request (no confirmation needed: it is their own)');
   ok((await nu.refresh()).data.products[0].status === 'active', 'family now sees KareNest active');
   // someone signs up with a number that later books on the website: office must confirm before linking
