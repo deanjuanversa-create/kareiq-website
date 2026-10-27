@@ -5,21 +5,84 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "X-Content-Type-Options", "value": "nosniff" },
-        { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
-        { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
-        { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" }
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=(), geolocation=()"
+        }
       ]
     },
     {
       "source": "/images/(.*)",
-      "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=604800"
+        }
+      ]
     }
   ],
   "redirects": [
-    { "source": "/index", "destination": "/", "permanent": true },
-    { "source": "/karebalance/index", "destination": "/karebalance", "permanent": true },
-    { "source": "/app", "destination": "https://kareiq-api.onrender.com/app/?brand=karenest", "permanent": false },
-    { "source": "/app/:path*", "destination": "https://kareiq-api.onrender.com/app/:path*", "permanent": false }
+    {
+      "source": "/index",
+      "destination": "/",
+      "permanent": true
+    },
+    {
+      "source": "/karebalance/index",
+      "destination": "/karebalance",
+      "permanent": true
+    },
+    {
+      "source": "/contact",
+      "destination": "/#contact",
+      "permanent": true
+    },
+    {
+      "source": "/community",
+      "destination": "/#community",
+      "permanent": true
+    },
+    {
+      "source": "/families",
+      "destination": "/#families",
+      "permanent": true
+    },
+    {
+      "source": "/activities",
+      "destination": "/#activities",
+      "permanent": true
+    },
+    {
+      "source": "/life",
+      "destination": "/#life",
+      "permanent": true
+    },
+    {
+      "source": "/about",
+      "destination": "/#about",
+      "permanent": true
+    },
+    {
+      "source": "/app",
+      "destination": "https://kareiq-api.onrender.com/app/?brand=karenest",
+      "permanent": false
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "https://kareiq-api.onrender.com/app/:path*",
+      "permanent": false
+    }
   ]
 }

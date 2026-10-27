@@ -149,6 +149,19 @@
     matchMedia('(min-width:1220px)').addEventListener('change', (m) => { if (m.matches) setMenu(false); });
   }
 
+  /* old addresses of sections that now live on the home page (backup for the server redirect) */
+  if (PAGE === '404') { const m = location.pathname.match(/\/(about|life|activities|families|community|contact)\/?$/); if (m) location.replace(url('/') + location.search + '#' + m[1]); }
+
+  /* ================= home page: the menu follows the section on screen ================= */
+  if (PAGE === 'home' && 'IntersectionObserver' in window) {
+    const secLinks = $$('.links a[href*="#"], .drawer a[href*="#"], .links a[href$="/"], .drawer a[href$="/"]').filter((a) => !a.closest('.dd'));
+    const idOf = (a) => (a.getAttribute('href').split('#')[1] || 'hero');
+    const mark = (id) => secLinks.forEach((a) => { const on = idOf(a) === id; if (on) a.setAttribute('aria-current', id === 'hero' ? 'page' : 'location'); else a.removeAttribute('aria-current'); });
+    const ids = [...new Set(secLinks.map(idOf))].filter((id) => document.getElementById(id));
+    const spy = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) mark(e.target.id); }), { rootMargin: '-45% 0px -50% 0px' });
+    ids.forEach((id) => spy.observe(document.getElementById(id)));
+  }
+
   /* ================= reveal on scroll ================= */
   if ('IntersectionObserver' in window) {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); } }), { threshold: 0.08, rootMargin: '0px 0px -5% 0px' });
@@ -189,7 +202,7 @@
   /* ================= Plan a Visit dialog ================= */
   const dlg = $('#dlg');
   function openVisit() {
-    if (!dlg) { location.href = url('/contact') + '?type=karenest-visit#enquiry'; return; }
+    if (!dlg) { location.href = url('/') + '?type=karenest-visit#contact'; return; }
     const form = $('#visitForm');
     showForm(form);
     if (dlg.showModal) { if (!dlg.open) dlg.showModal(); } else dlg.setAttribute('open', '');
@@ -205,7 +218,7 @@
     const t = e.target.closest('[data-open]');
     if (!t) return;
     if (t.dataset.open === 'visit') { e.preventDefault(); openVisit(); }
-    else if (t.dataset.open === 'join' && PAGE === 'community') { const f = $('#join form'); if (f) { e.preventDefault(); showForm(f); $('#join').scrollIntoView({ behavior: smooth() }); setTimeout(() => f.elements.name.focus({ preventScroll: true }), reduce() ? 0 : 600); } }
+    else if (t.dataset.open === 'join' && PAGE === 'home') { const f = $('#join form'); if (f) { e.preventDefault(); showForm(f); $('#join').scrollIntoView({ behavior: smooth() }); setTimeout(() => f.elements.name.focus({ preventScroll: true }), reduce() ? 0 : 600); } }
   });
 
   /* ================= enquiry buttons on package cards ================= */
@@ -410,7 +423,7 @@
     });
     document.addEventListener('pointerdown', (e) => { if (gOpen && !e.target.closest('#guide')) setG(false); });
   }
-  const DEST = { packages: '/packages', activities: '/activities', events: '/life#events', families: '/families', join: '/community#join', contact: '/contact#enquiry', live: '/live-with-us', top: '/' };
+  const DEST = { packages: '/packages', activities: '/#activities', events: '/#events', families: '/#families', join: '/#join', contact: '/#contact', live: '/live-with-us', top: '/' };
   function act(q) {
     if (q === 'visit') { openVisit(); return; }
     const d = DEST[q]; if (!d) return;
@@ -557,7 +570,7 @@
     const recs = [
       { h: 'Live With Us', p: 'A home with support, care and a vibrant community around you, every single day.', l: ['KarePlus shared living or a KarePremium private room', 'Five daily food and beverage services', 'A Kare@Home preventive check-up plan included'], href: '/live-with-us', cta: 'See resident packages' },
       { h: 'Visit & Participate', p: 'Spend your days with us: activities, wellness programmes and good company, then head home in the evening.', l: ['Yoga, walks, arts and learning sessions', 'Lunch with friends', 'A day, a week or a month: Bloom, Flourish or Thrive'], href: '/visit-and-participate', cta: 'See visitor passes' },
-      { h: 'Join Our Community', p: 'Stay connected with KareNest through events, celebrations and regular updates.', l: ['Invites to festivals and talks', "Updates on what's happening", 'A friendly network of seniors and families'], href: '/community#join', cta: 'Join Our Community' }
+      { h: 'Join Our Community', p: 'Stay connected with KareNest through events, celebrations and regular updates.', l: ['Invites to festivals and talks', "Updates on what's happening", 'A friendly network of seniors and families'], href: '/#join', cta: 'Join Our Community' }
     ];
     let step = 0, score = [0, 0, 0], hist = [];
     const prog2 = () => '<div class="fit-prog" aria-hidden="true">' + qs.map((_, i) => '<i class="' + (i < step || step >= qs.length ? 'on' : '') + '"></i>').join('') + '</div>';

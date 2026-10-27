@@ -1118,3 +1118,5 @@ dialog.auth h2{font-family:var(--f-display);font-weight:500;font-size:clamp(1.8r
 .auth-switch button{border:0;background:none;font:inherit;font-weight:700;cursor:pointer;padding:6px 4px;text-decoration:underline;text-underline-offset:3px}
 @media (max-width:480px){dialog.auth{padding:36px 20px 24px;border-radius:24px}}
 .auth-plan[hidden],.auth-prov[hidden]{display:none}
+
+html{scroll-padding-top:96px}

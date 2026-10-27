@@ -453,6 +453,10 @@ async function route(req, res) {
     return send(res, 301, '', { Location: clean + url.search });
   }
 
+  // KareNest About, Life, Activities, For Families, Join Our Community and Contact are sections of its home page
+  const KN_MOVED = { about: 'about', life: 'life', activities: 'activities', families: 'families', community: 'community', contact: 'contact' };
+  const kn = p.match(/^\/karenest\/(about|life|activities|families|community|contact)$/);
+  if (kn) return send(res, 301, '', { Location: '/karenest/' + url.search + '#' + KN_MOVED[kn[1]] });
   // Kare@Home About Us, Our Services and Contact are now sections of its home page
   const KH_MOVED = { '/kare-at-home/about': '#about-us', '/kare-at-home/services': '#services', '/kare-at-home/contact': '#contact' };
   if (KH_MOVED[p]) return send(res, 301, '', { Location: '/kare-at-home' + KH_MOVED[p] });
