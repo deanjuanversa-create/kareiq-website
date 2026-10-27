@@ -54,4 +54,24 @@ async function notify(kind, row) {
   }
 }
 
-module.exports = { notify, emailEnabled: enabled };
+// Email to one person (sign-in links from the KareIQ app). Needs SMTP_HOST + nodemailer.
+const mailReady = Boolean(process.env.SMTP_HOST) && Boolean(nodemailer);
+let personalTransport = null;
+async function sendMail(to, subject, text) {
+  if (!mailReady || !to) return false;
+  personalTransport = personalTransport || transporter || nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT || 587),
+    secure: String(process.env.SMTP_SECURE || 'false') === 'true',
+    auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined
+  });
+  try {
+    await personalTransport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text });
+    return true;
+  } catch (err) {
+    console.error(`[mail] to ${to} failed: ${err.message}`);
+    return false;
+  }
+}
+
+module.exports = { notify, sendMail, emailEnabled: enabled, mailReady };

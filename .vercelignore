@@ -1,4 +1,16 @@
+# Vercel only serves the static websites in /public.
+# The API (server.js, src, admin) runs on Render; Vercel forwards /api/* and /admin* to it.
 .env
 data/
 node_modules/
 *.zip
+server.js
+src/
+admin/
+api/
+render.yaml
+package.json
+package-lock.json
+README.md
+app/
+tools/

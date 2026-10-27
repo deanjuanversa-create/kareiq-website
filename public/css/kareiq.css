@@ -669,3 +669,44 @@ body::after{display:none}
 
 /* ecosystem centre node: real wordmark image (keeps the logo's curved i) */
 .n-iq img.wm{width:64%;height:auto;margin-top:9%;flex:none}
+
+/* ---------- WhatsApp: floating chat button (bottom-left, opposite back-to-top) + footer link ---------- */
+.wa-float{position:fixed;left:calc(20px + env(safe-area-inset-left,0px));bottom:calc(20px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;padding:11px 18px 11px 13px;border-radius:999px;background:#fff;color:var(--ink);font:600 14px/1 var(--sans);box-shadow:0 14px 30px -14px rgba(19,48,74,.5),inset 0 0 0 1.5px #cfeedd;transform:translateZ(0);transition:transform .4s var(--out),box-shadow .4s var(--out)}
+.wa-float .wa-ico{width:24px;height:24px;color:#25d366;flex:none}
+.wa-float:hover{transform:translate3d(0,-3px,0);box-shadow:0 20px 36px -16px rgba(37,211,102,.55),inset 0 0 0 1.5px #25d366}
+@media (max-width:560px){.wa-float span{display:none}.wa-float{padding:12px}}
+html.kq-intro .wa-float{visibility:hidden}
+.foot-wa{display:inline-flex;align-items:center;gap:6px}
+.foot-wa::before{content:"";width:8px;height:8px;border-radius:50%;background:#25d366}
+
+/* ---------- Our Values: K-A-R-E-I-Q ---------- */
+.kv{margin-top:clamp(44px,5.5vw,72px)}
+.kv-head{text-align:center;max-width:680px;margin:0 auto}
+.kv-head h3{font-family:var(--serif);font-weight:400;font-size:clamp(24px,2.6vw,32px);line-height:1.25;margin-top:12px;color:var(--ink)}
+.kv-head h3 em{font-style:normal;letter-spacing:.06em;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;white-space:nowrap}
+.kv-grid{list-style:none;margin:clamp(26px,3.2vw,40px) 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:clamp(12px,1.6vw,18px)}
+.kv-item{position:relative;isolation:isolate;display:flex;gap:18px;align-items:flex-start;padding:22px 22px 20px;background:rgba(255,255,255,.85);border:1px solid var(--line);border-radius:20px;box-shadow:var(--shadow-soft);transform:translateZ(0);transition:transform .55s var(--out),border-color .45s var(--out)}
+.kv-item::after{content:"";position:absolute;inset:0;z-index:-1;border-radius:inherit;box-shadow:var(--shadow-lift);opacity:0;transition:opacity .55s var(--out);pointer-events:none}
+.kv-item:hover{transform:translate3d(0,-5px,0);border-color:transparent}
+.kv-item:hover::after{opacity:1}
+.kv-letter{flex:none;display:grid;place-items:center;width:54px;height:54px;border-radius:16px;background:linear-gradient(150deg,#f2faf8,#f6f1fc);box-shadow:inset 0 0 0 1px rgba(19,48,74,.06)}
+.kv-letter b{font:400 32px/1 var(--serif);background:var(--grad);background-size:600% 100%;-webkit-background-clip:text;background-clip:text;color:transparent}
+.kv-item:nth-child(1) .kv-letter b{background-position:0% 0}
+.kv-item:nth-child(2) .kv-letter b{background-position:20% 0}
+.kv-item:nth-child(3) .kv-letter b{background-position:40% 0}
+.kv-item:nth-child(4) .kv-letter b{background-position:60% 0}
+.kv-item:nth-child(5) .kv-letter b{background-position:80% 0}
+.kv-item:nth-child(6) .kv-letter b{background-position:100% 0}
+.kv-item h4{margin:2px 0 6px;font:600 17px/1.25 var(--sans);color:var(--ink)}
+.kv-item p{font-size:14.5px;line-height:1.6;color:var(--ink-soft)}
+@media (hover:hover) and (pointer:fine){.kv-item{will-change:transform}.kv-item::after{will-change:opacity}}
+@media (hover:none){.kv-item:hover{transform:translateZ(0)}.kv-item:hover::after{opacity:0}}
+@media (max-width:960px){.kv-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){.kv-grid{grid-template-columns:1fr;gap:10px}.kv-item{padding:16px 16px 15px;gap:14px}.kv-letter{width:46px;height:46px;border-radius:14px}.kv-letter b{font-size:27px}}
+
+/* Sign in to the KareIQ app (families, caregivers, office) */
+.nav-end{display:flex;align-items:center;gap:10px;flex:none}
+.app-in{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:46px;padding:0 16px 0 13px;border-radius:999px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:14px;white-space:nowrap;flex:none;transition:border-color .25s,color .25s}
+.app-in:hover{border-color:var(--teal);color:var(--teal-deep)}
+.app-in svg{width:20px;height:20px;flex:none}
+@media (max-width:1180px){.app-in{width:46px;padding:0}.app-in span{display:none}}

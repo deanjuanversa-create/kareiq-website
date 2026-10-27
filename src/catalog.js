@@ -10,6 +10,7 @@ const services = {
   'physiotherapy': 'Physiotherapy & Mobility Support',
   'companionship': 'Companionship & Emotional Well-being',
   'personal-care': 'Personal Care Assistance',
+  'karebalance': 'KareBalance: fall prevention & mobility',
   'not-sure': 'Not sure yet, please guide me'
 };
 
@@ -18,6 +19,9 @@ const packages = {
   'homeplus': { name: 'HomePlus', mrp: 6999 },
   'homeelite': { name: 'HomeElite', mrp: 12999 },
   'customized': { name: 'Customised plan' },
+  'kb-base': { name: 'KareBalance Base', mrp: 7999 },
+  'kb-plus': { name: 'KareBalance Plus', mrp: 39999 },
+  'kb-premium': { name: 'KareBalance Premium', mrp: 90000 },
   'undecided': { name: 'Not decided yet' }
 };
 
@@ -46,6 +50,10 @@ const careFor = {
 const interests = {
   'karehome': 'Kare@Home: care at home',
   'karenest': 'KareNest: community living',
+  'karenest-visit': 'KareNest: day visit',
+  'karenest-join': 'KareNest: join the community',
+  'karenest-live': 'KareNest: live with us',
+  'karenest-karebalance': 'KareNest: KareBalance',
   'partnership': 'Partnership or careers',
   'general': 'Not sure yet, guide me'
 };

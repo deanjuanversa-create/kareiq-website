@@ -1,0 +1,43 @@
+/* KareNest intro: a sprig grows inside a drawn ring, its leaves unfurl, the KareNest mark
+   blooms in its place with the wordmark, then the whole screen lifts away on a soft wave. */
+.kn-loader{position:fixed;inset:0;z-index:200;display:none;place-items:center;
+  background:linear-gradient(170deg,#F3FAF7 0%,#FFFFFF 45%,#F3EEFA 100%);color:#113F3D;will-change:transform}
+html.kn-intro .kn-loader{display:grid}
+html.kn-intro,html.kn-intro body{overflow:hidden}
+/* the hero waits for the intro */
+html.kn-intro .hero,html.kn-intro .hero *{animation-play-state:paused!important}
+
+.kn-loader::before{content:"";position:absolute;width:70vmax;height:70vmax;left:50%;top:46%;translate:-50% -50%;border-radius:50%;
+  background:radial-gradient(circle,rgba(61,187,152,.16) 0%,rgba(122,76,191,.08) 40%,transparent 66%);pointer-events:none}
+/* wave that hangs under the screen while it lifts */
+.kn-wave{position:absolute;left:0;right:0;top:100%;height:90px;display:block;pointer-events:none}
+.kn-wave path{fill:#F3EEFA}
+
+.kn-stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;padding:0 24px}
+.kn-emblem{position:relative;width:clamp(150px,34vw,200px);aspect-ratio:1}
+.kn-emblem svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.kn-ring{fill:none;stroke:url(#knGrad);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1}
+.kn-ring2{fill:none;stroke:rgba(17,63,61,.07);stroke-width:2.4}
+.kn-stem{fill:none;stroke:#2DAF8E;stroke-width:3;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1}
+.kn-leaf{transform-box:fill-box;transform:scale(0)}
+.kn-leaf.l1{fill:#3DBB98;transform-origin:100% 100%}
+.kn-leaf.l2{fill:#2E8FB5;transform-origin:0% 100%}
+.kn-leaf.l3{fill:#7A4CBF;transform-origin:100% 100%}
+.kn-leaf.l4{fill:#D6568C;transform-origin:0% 100%}
+.kn-mark{position:absolute;left:50%;top:50%;width:58%;height:auto;translate:-50% -50%;opacity:0;transform:scale(.5)}
+
+.kn-word{position:relative;font-family:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:500;font-size:clamp(2.3rem,7vw,3.4rem);line-height:1;letter-spacing:-.01em;display:flex}
+.kn-word span{display:inline-block;opacity:0;transform:translateY(60%);
+  background:linear-gradient(100deg,#12917A 0%,#2E8FB5 35%,#7A4CBF 68%,#D6568C 100%);background-size:var(--w,8em) 100%;background-position:var(--x,0) 0;
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.kn-tag{font-family:"Figtree","Segoe UI",system-ui,sans-serif;font-size:.78rem;letter-spacing:.22em;text-transform:uppercase;color:#5F7572;opacity:0}
+
+.kn-skip{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);border:0;background:none;
+  color:#5F7572;font:600 12px "Figtree",system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:10px 14px;opacity:0;transition:opacity .6s}
+.kn-skip.show{opacity:1}
+.kn-skip:hover,.kn-skip:focus-visible{color:#113F3D}
+
+/* safety net: if the script never runs, the intro still clears itself */
+html.kn-intro .kn-loader{animation:knFailsafe .6s 8s forwards}
+@keyframes knFailsafe{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.kn-loader{display:none!important}}

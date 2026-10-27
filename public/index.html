@@ -3,17 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KareIQ Healthtech | Connected Eldercare</title>
+<title>KareIQ | Connected Eldercare</title>
 <meta name="description" content="KareIQ is building a connected eldercare ecosystem that supports older adults at home and in community.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap">
 <meta name="theme-color" content="#11998e">
 <link rel="icon" type="image/png" href="/img/favicon-kareiq.png">
-<link rel="stylesheet" href="/css/kareiq.css?v=20261019w">
-<link rel="stylesheet" href="/css/loader.css?v=20261019w">
-<script src="/js/loader.js?v=20261019w"></script>
-<script src="/api/content.js"></script>
+<link rel="stylesheet" href="/css/kareiq.css?v=20261024b">
+<link rel="stylesheet" href="/css/loader.css?v=20261024a">
+<script src="/js/loader.js?v=20261024a"></script>
+<script src="/js/api.js?v=20261024a"></script>
 </head>
 <body>
 <!-- ============ INTRO ============ -->
@@ -104,15 +104,16 @@
         <li><a href="#top" class="active">Home</a></li>
         <li><a href="#about">About KareIQ</a></li>
         <li><a href="#ecosystem">Our Care Ecosystem</a></li>
-        <li><a href="/kare-at-home">Kare@home</a></li>
-        <li><a href="#karenest">KareNest</a></li>
         <li><a href="#team">Our Team</a></li>
         <li><a href="#contact">Contact</a></li>
       </ul>
+      <div class="nav-end">
+      <a class="app-in" href="/app/#/signin?brand=kareiq" data-app="kareiq" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
       <button class="btn btn-grad" data-open>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="24" height="24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17 14.5c2.5 0 4.2 1.5 4.6 4"/></svg>
         Talk to Our Team
       </button>
+      </div>
       <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false"><span></span></button>
     </div>
     <nav class="drawer" aria-label="Mobile">
@@ -120,10 +121,9 @@
         <li><a href="#top">Home</a></li>
         <li><a href="#about">About KareIQ</a></li>
         <li><a href="#ecosystem">Our Care Ecosystem</a></li>
-        <li><a href="/kare-at-home">Kare@home</a></li>
-        <li><a href="#karenest">KareNest</a></li>
         <li><a href="#team">Our Team</a></li>
         <li><a href="#contact">Contact</a></li>
+        <li><a href="/app/#/signin" data-app="kareiq">Sign in (families and caregivers)</a></li>
       </ul>
       <button class="btn btn-grad" data-open>Talk to Our Team <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
     </nav>
@@ -135,14 +135,13 @@
   <section class="hero">
     <div class="hero-photo"><img id="heroImg" src="/img/hero.jpg" alt="An adult daughter embracing her smiling elderly mother in a sari on a sofa at home" fetchpriority="high"></div>
     <svg class="leaf leaf-hero" viewBox="0 0 160 200" aria-hidden="true" width="140" height="175"><use href="#leaf"/></svg>
-    <a class="float-card load" href="/kare-at-home#how" style="animation-delay:1.1s" aria-label="Example care update from Kare@home. See how home care works.">
+    <a class="float-card load" href="/kare-at-home#how" data-site="karehome" data-path="#how" style="animation-delay:1.1s" aria-label="Example care update from Kare@home. See how home care works.">
       <span class="dot"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M12 20s-7-4.4-7-9.4A4 4 0 0 1 12 8a4 4 0 0 1 7 2.6C19 15.6 12 20 12 20Z"/></svg></span>
       <span class="fc-text" id="fcText"><b>Care visit complete</b><small><i class="live"></i>Amma's wellness check · 10:30 am</small></span>
       <span class="fc-go" aria-hidden="true"><svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></span>
     </a>
     <div class="wrap hero-in">
       <div class="hero-copy">
-        <div class="eyebrow load" style="animation-delay:.15s">KareIQ Healthtech Private Limited</div>
         <h1 class="load" style="animation-delay:.3s"><span data-c="kareiq.heroTitle">A better way to care for the people who</span> <em data-c="kareiq.heroHighlight">cared for us.</em></h1>
         <p class="lead load" style="animation-delay:.45s" data-c="kareiq.heroLead">KareIQ is building a connected eldercare ecosystem that supports older adults at home and in community, with dignity, wellbeing and connection.</p>
         <div class="hero-ctas load" style="animation-delay:.6s">
@@ -171,7 +170,7 @@
         <div class="rule rv z" style="--d:.15s"></div>
       </div>
       <div class="about-body">
-        <p class="rv" style="--d:.1s">At KareIQ Healthtech Private Limited, we believe that growing older should never mean compromising on health, independence, dignity or happiness.</p>
+        <p class="rv" style="--d:.1s">At KareIQ, we believe that growing older should never mean compromising on health, independence, dignity or happiness.</p>
         <p class="rv" style="--d:.15s">As families evolve and the needs of our ageing population become more complex, eldercare needs a new approach: one that brings together compassionate human care, meaningful social connections and the power of technology.</p>
         <p class="rv" style="--d:.2s">KareIQ is building a technology-driven, integrated eldercare ecosystem designed to make quality care more accessible, personalised and connected. Our vision is to create an environment where older adults can live with confidence, remain meaningfully engaged and enjoy a better quality of life, while their families experience greater peace of mind.</p>
       </div>
@@ -181,15 +180,28 @@
       <article class="vm-card vision rv l">
         <span class="vm-ico" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M4 24s7.5-13 20-13 20 13 20 13-7.5 13-20 13S4 24 4 24Z"/><circle cx="24" cy="24" r="6.5"/><path d="M24 21.5v5M21.5 24h5"/></svg></span>
         <div class="eyebrow">Our Vision</div>
-        <h3>To redefine ageing by making every stage of later life healthier, happier and more dignified.</h3>
-        <p>We envision a future where older adults have access to the right care, meaningful companionship and the support they need to live life on their own terms.</p>
+        <h3>To revolutionize healthcare by creating a seamless, personalized, and proactive care ecosystem that empowers individuals to live healthier, longer, and more independent lives.</h3>
       </article>
       <article class="vm-card mission-c rv r" style="--d:.12s">
         <span class="vm-ico" aria-hidden="true"><svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><circle cx="24" cy="24" r="18"/><circle cx="24" cy="24" r="11"/><circle cx="24" cy="24" r="4"/><path d="M24 24 40 8M34 8h6v6"/></svg></span>
         <div class="eyebrow">Our Mission</div>
-        <h3>To make eldercare more accessible, connected and dependable through the thoughtful integration of technology and human care.</h3>
-        <p>We aim to simplify the eldercare journey for families by creating connected experiences that address the diverse needs of older adults, with compassion, reliability and respect at the heart of everything we do.</p>
+        <h3>To deliver intelligent, tech-enabled care that empowers individuals with personalized health support through every stage of life.</h3>
       </article>
+    </div>
+
+    <div class="wrap kv" id="values-kareiq">
+      <div class="kv-head rv">
+        <div class="eyebrow">Our Values</div>
+        <h3>The values behind our name: <em aria-label="KareIQ">K·A·R·E·I·Q</em></h3>
+      </div>
+      <ul class="kv-grid">
+        <li class="kv-item rv" style="--d:0.00s"><span class="kv-letter" aria-hidden="true"><b>K</b></span><div><h4>Kindness</h4><p>Leading with empathy &amp; compassion in every interaction.</p></div></li>
+        <li class="kv-item rv" style="--d:0.07s"><span class="kv-letter" aria-hidden="true"><b>A</b></span><div><h4>Accountability</h4><p>Commitment to transparency and ethical practices.</p></div></li>
+        <li class="kv-item rv" style="--d:0.14s"><span class="kv-letter" aria-hidden="true"><b>R</b></span><div><h4>Reliability</h4><p>Consistently dependable &amp; trustworthy.</p></div></li>
+        <li class="kv-item rv" style="--d:0.21s"><span class="kv-letter" aria-hidden="true"><b>E</b></span><div><h4>Empowerment</h4><p>Fostering inclusiveness &amp; elevating diverse voices.</p></div></li>
+        <li class="kv-item rv" style="--d:0.28s"><span class="kv-letter" aria-hidden="true"><b>I</b></span><div><h4>Innovation</h4><p>Impactful solutions through forward thinking.</p></div></li>
+        <li class="kv-item rv" style="--d:0.35s"><span class="kv-letter" aria-hidden="true"><b>Q</b></span><div><h4>Quality</h4><p>Holding ourselves to the highest ethical &amp; professional standards.</p></div></li>
+      </ul>
     </div>
   </section>
 
@@ -244,7 +256,7 @@
           <p class="card-tag">Personalised Care, Where It Matters Most</p>
           <p>Kare@Home focuses on bringing care and support closer to older adults, helping them and their families navigate their needs in the comfort and familiarity of home.</p>
           <ul class="chips"><li>Skilled Home Care</li><li>Nursing Support</li><li>Health &amp; Wellness</li><li>Emotional Support</li></ul>
-          <a href="/kare-at-home" class="btn btn-grad" aria-label="Know more about Kare@home">Know more <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></a>
+          <a href="/kare-at-home" data-site="karehome" class="btn btn-grad" aria-label="Know more about Kare@home">Know more <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></a>
         </div>
         <div class="card-photo">
           <img src="/img/home.jpg" alt="A caregiver in a blue uniform kneeling beside a smiling elderly woman at home" loading="lazy">
@@ -253,11 +265,11 @@
       </article>
       <article class="card nest rv r" id="karenest" style="--d:.12s">
         <div class="card-body">
-          <div class="brand"><svg viewBox="0 0 52 52" aria-hidden="true" width="28" height="28"><use href="#lotus"/></svg><h3>KareNest</h3></div>
+          <div class="brand"><img class="emblem" src="/img/karenest-mark.webp" alt="" width="360" height="368"><h3>KareNest</h3></div>
           <p class="card-tag">A Community for Health, Dignity and Happiness</p>
           <p>KareNest is an eldercare community that brings together residents and day visitors through meaningful activities, social engagement and opportunities to build connections. It is designed around a simple belief: ageing well is not just about living longer, but about living with purpose, belonging and joy.</p>
           <ul class="chips"><li>Live With Us</li><li>Visit &amp; Participate</li><li>Activities &amp; Wellness</li></ul>
-          <button class="btn btn-grad" data-open data-interest="karenest" aria-label="Know more about KareNest">Know more <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+          <a href="/karenest" data-site="karenest" class="btn btn-grad" aria-label="Know more about KareNest">Know more <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></a>
         </div>
         <div class="card-photo">
           <img src="/img/nest.jpg" alt="A group of smiling older adults walking together in a garden community" loading="lazy">
@@ -309,8 +321,8 @@
           <path class="comet c3 rev" pathLength="100" d="M135 324 C 210 380, 350 380, 425 324" stroke="#3b82c4"/>
         </svg>
         <div class="node n-iq"><img src="/img/kareiq-icon.svg" alt="" width="266" height="266"><img class="wm" src="/img/kareiq-wordmark.png" alt="kareiQ" width="686" height="205"></div>
-        <a class="node n-home" href="/kare-at-home"><img class="emblem" src="/img/karehome-emblem.png" alt="" width="435" height="395"><b>Kare@home</b><small>Care at home</small></a>
-        <button class="node n-nest" data-open data-interest="karenest"><svg viewBox="0 0 52 52" aria-hidden="true" width="28" height="28"><use href="#lotus"/></svg><b>KareNest</b><small>Community living</small></button>
+        <a class="node n-home" href="/kare-at-home" data-site="karehome"><img class="emblem" src="/img/karehome-emblem.png" alt="" width="435" height="395"><b>Kare@home</b><small>Care at home</small></a>
+        <a class="node n-nest" href="/karenest" data-site="karenest"><img class="emblem" src="/img/karenest-mark.webp" alt="" width="360" height="368"><b>KareNest</b><small>Community living</small></a>
         <div class="eco-cap">TWO SERVICES. ONE CONNECTED ECOSYSTEM.</div>
       </div>
     </div>
@@ -403,13 +415,14 @@
   <div class="wrap">
     <div class="foot">
       <a href="/" class="logo" aria-label="KareIQ home"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
-      <div class="foot-about"><b>KareIQ Healthtech Private Limited</b><p>Care that connects. Technology that empowers. A better way to age.</p><p class="foot-contact"><a href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a><a href="mailto:support@kareiq.co.in">support@kareiq.co.in</a></p></div>
-      <nav class="foot-links" aria-label="Footer"><a href="#about">About KareIQ</a><a href="/kare-at-home">Kare@home</a><a href="#karenest">KareNest</a><a href="#team">Our Team</a><a href="#contact">Contact</a></nav>
+      <div class="foot-about"><p>Care that connects. Technology that empowers. A better way to age.</p><p class="foot-contact"><a href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a><a href="mailto:support@kareiq.co.in">support@kareiq.co.in</a><a class="foot-wa" href="https://wa.me/918129345178?text=Hi%20KareIQ%2C%20I%27d%20like%20to%20know%20more." target="_blank" rel="noopener">WhatsApp us</a></p></div>
+      <nav class="foot-links" aria-label="Footer"><a href="#about">About KareIQ</a><a href="#team">Our Team</a><a href="#contact">Contact</a></nav>
     </div>
-    <div class="foot-bottom"><span>© <span id="year">2026</span> KareIQ Healthtech Private Limited. All rights reserved.</span><span class="legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></span><span class="bars"><i></i><i></i></span></div>
+    <div class="foot-bottom"><span>© <span id="year">2026</span> KareIQ. All rights reserved.</span><span class="legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></span><span class="bars"><i></i><i></i></span></div>
   </div>
 </footer>
 
+<a class="wa-float" href="https://wa.me/918129345178?text=Hi%20KareIQ%2C%20I%27d%20like%20to%20know%20more." target="_blank" rel="noopener" aria-label="Chat with KareIQ on WhatsApp"><svg class="wa-ico" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2Zm0 18.15h-.01a8.23 8.23 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.24 8.24 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.23 8.23Zm4.52-6.16c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.04-.38-1.99-1.22-.73-.66-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.42h-.48c-.16 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28Z"/></svg><span>Chat with us</span></a>
 <button class="totop" id="totop" aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
 
 <div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" hidden>
@@ -448,8 +461,9 @@
   </div>
 </div>
 
-<script src="/js/forms.js?v=20261019w" defer></script>
-<script src="/js/content.js?v=20261019w" defer></script>
-<script src="/js/kareiq.js?v=20261019w" defer></script>
+<script src="/js/forms.js?v=20261024a" defer></script>
+<script src="/js/sites.js?v=20261024b" defer></script>
+<script src="/js/content.js?v=20261024a" defer></script>
+<script src="/js/kareiq.js?v=20261024a" defer></script>
 </body>
 </html>

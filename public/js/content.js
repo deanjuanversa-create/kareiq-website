@@ -1,7 +1,8 @@
 /* Applies admin-edited content (window.KARE_CONTENT, served by /api/content.js)
    to the page. When the page is opened without the server, the text already
    in the HTML is used. */
-(function () {
+(function apply() {
+  if (!window.KARE_CONTENT && window.KareWhenContent && !apply.waited) { apply.waited = true; return window.KareWhenContent(apply); }
   const C = window.KARE_CONTENT;
   if (!C) return;
   const get = (path) => path.split('.').reduce((o, k) => (o == null ? o : o[k]), C);

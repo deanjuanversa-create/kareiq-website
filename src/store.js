@@ -2,6 +2,7 @@
 // Files mode: one JSON array per collection in /data, writes queued so two
 // submissions at the same moment never corrupt a file.
 // Redis mode (Vercel): one hash per collection, one field per record.
+// MongoDB mode (Render + Atlas): one document per record.
 
 const crypto = require('crypto');
 const db = require('./db');
@@ -10,6 +11,7 @@ const queues = {};
 const byNewest = (a, b) => (a.createdAt < b.createdAt ? 1 : a.createdAt > b.createdAt ? -1 : 0);
 
 async function readAll(collection) {
+  if (db.mode === 'mongo') return db.recordAll(collection);
   if (db.mode === 'redis') return (await db.hashAll(collection)).sort(byNewest);
   const rows = await db.getJSON(collection, []);
   return Array.isArray(rows) ? rows : [];
@@ -45,11 +47,13 @@ async function add(collection, prefix, record) {
     createdAt: new Date().toISOString(),
     ...record
   };
+  if (db.mode === 'mongo') { await db.recordInsert(collection, row); return row; }
   if (db.mode === 'redis') { await db.hashSet(collection, row.id, row); return row; }
   return mutate(collection, (rows) => { rows.unshift(row); return row; });
 }
 
 async function update(collection, id, changes) {
+  if (db.mode === 'mongo') return db.recordUpdate(collection, id, { ...changes, updatedAt: new Date().toISOString() });
   if (db.mode === 'redis') {
     const row = await db.hashGet(collection, id);
     if (!row) return null;
@@ -65,4 +69,4 @@ async function update(collection, id, changes) {
   });
 }
 
-module.exports = { readAll, add, update };
+module.exports = { readAll, add, update, mutate, makeReference };

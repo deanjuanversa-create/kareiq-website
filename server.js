@@ -2,9 +2,15 @@
 //
 //   node server.js
 //
-// - Serves the websites in /public  (KareIQ at /, Kare@Home at /kare-at-home)
+// - Serves the websites in /public  (KareIQ at /, Kare@Home at /kare-at-home, KareNest at /karenest)
 // - Saves bookings and enquiries      (POST /api/bookings, POST /api/enquiries)
 // - Password-protected admin page     (/admin, set ADMIN_PASSWORD in .env)
+// - The KareIQ app                     (/app: families, caregivers and the office team sign in here;
+//                                       people see Kare@Home and/or KareNest depending on their plan)
+//
+// Live setup: the websites are static on Vercel, which forwards /api/* and /admin* to this
+// server on Render; data is stored in MongoDB Atlas (MONGODB_URI). Set SITE_URL on Render so
+// visitors who open the Render address directly are sent to the real website.
 
 const http = require('http');
 const fs = require('fs');
@@ -20,6 +26,8 @@ const { validateBooking, validateEnquiry } = require('./src/validate');
 const { notify, emailEnabled } = require('./src/notify');
 const db = require('./src/db');
 const content = require('./src/content');
+const { createAppApi } = require('./src/app/api');
+const appAuth = require('./src/app/auth');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -30,7 +38,12 @@ const ON_VERCEL = Boolean(process.env.VERCEL);
 const TRUST_PROXY = ON_VERCEL || String(process.env.TRUST_PROXY || 'false') === 'true';
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const ADMIN_DIR = path.join(__dirname, 'admin');
+const APP_DIR = path.join(__dirname, 'app');
 const MAX_BODY = 64 * 1024; // content edits from admin can be larger than form posts
+// When set (on Render), plain page visits go to the real website instead of a second copy of it
+const SITE_URL = (process.env.SITE_URL || '').replace(/\/+$/, '');
+// Websites allowed to call the API from the browser (comma-separated, exact origins)
+const ALLOWED_ORIGINS = new Set((process.env.ALLOWED_ORIGINS || '').split(',').map((o) => o.trim().replace(/\/+$/, '')).filter(Boolean));
 
 // ---------- .env loader (KEY=value lines; real environment variables win) ----------
 function loadEnv(file) {
@@ -176,9 +189,15 @@ function sessionOf(req) {
   return { user: ADMIN_USER, expires };
 }
 
+// Signed in to the KareIQ app as an office admin? Then the website editor opens too (one sign-in).
+async function appAdmin(req) {
+  try { const s = await appAuth.sessionOf(req); return Boolean(s && s.user && s.user.role === 'admin'); } catch { return false; }
+}
+
 // For pages: redirect to the sign-in page. For the API: a JSON 401 the admin page understands.
-function isAdmin(req, res, { page = false } = {}) {
+async function isAdmin(req, res, { page = false } = {}) {
   if (ADMIN_PASSWORD && sessionOf(req)) return true;
+  if (await appAdmin(req)) return true;
   if (page) { send(res, 302, '', { Location: '/admin/login', 'Cache-Control': 'no-store' }); return false; }
   json(res, 401, { ok: false, signedOut: true, message: 'Please sign in again.' });
   return false;
@@ -283,7 +302,7 @@ function toCsv(name, rows) {
 }
 
 async function handleAdminApi(req, res, parts) {
-  if (!isAdmin(req, res)) return;
+  if (!(await isAdmin(req, res))) return;
   if (parts[0] === 'content') {
     if (req.method === 'GET' && parts.length === 1) return json(res, 200, { ok: true, content: await content.get(), defaults: content.DEFAULTS });
     if (req.method === 'PUT' && parts.length === 1) {
@@ -330,6 +349,29 @@ async function handleAdminApi(req, res, parts) {
   json(res, 405, { ok: false, message: 'Not allowed.' });
 }
 
+const appApi = createAppApi({ json, readJson, limited, isHttps, clientIp });
+
+// ---------- CORS: the websites (Vercel) call this API on its own address ----------
+// Only the public form/content endpoints are shared; the admin API stays same-origin.
+const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health']);
+function cors(req, res, p) {
+  const origin = String(req.headers.origin || '').replace(/\/+$/, '');
+  if (!origin || !PUBLIC_API.has(p)) return false;
+  res.setHeader('Vary', 'Origin');
+  if (!ALLOWED_ORIGINS.has(origin)) return false;
+  res.setHeader('Access-Control-Allow-Origin', origin);
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Max-Age': '86400'
+    });
+    res.end();
+    return true;
+  }
+  return false;
+}
+
 // ---------- router ----------
 async function route(req, res) {
   const url = new URL(req.url, 'http://localhost');
@@ -342,22 +384,30 @@ async function route(req, res) {
   const p = url.pathname;
 
   if (p.startsWith('/api/')) {
-    if (p === '/api/health' && req.method === 'GET') return json(res, 200, { ok: true, time: new Date().toISOString() });
+    if (cors(req, res, p)) return; // answered a browser permission check
+    if (p === '/api/health' && req.method === 'GET') {
+      // ?db=1 also checks the database connection (for setup checks; uptime pings should use the plain URL)
+      if (url.searchParams.get('db') === '1') {
+        try { await db.ping(); } catch (e) { console.error('[db] ping failed:', e.message); return json(res, 503, { ok: false, storage: db.mode, message: 'Database not reachable' }); }
+      }
+      return json(res, 200, { ok: true, storage: db.mode, time: new Date().toISOString() });
+    }
     if (p === '/api/catalog' && req.method === 'GET') return json(res, 200, catalog);
     if (p === '/api/content' && req.method === 'GET') return json(res, 200, await content.get());
     if (p === '/api/content.js' && req.method === 'GET') {
       // loaded by the pages before their own scripts, so edited prices and text apply without a flash
       return send(res, 200, `window.KARE_CONTENT=${JSON.stringify(await content.get()).replace(/</g, '\\u003c')};`, {
         'Content-Type': 'text/javascript; charset=utf-8',
-        // on Vercel the CDN keeps a copy for 30 s so pages stay fast; admin edits show within about 30 s
-        'Cache-Control': ON_VERCEL ? 'public, max-age=0, s-maxage=30, stale-while-revalidate=300' : 'no-cache'
+        // pages load this in the background (js/api.js), so always fetch the latest: admin edits show at once
+        'Cache-Control': 'no-cache'
       });
     }
     if (p === '/api/bookings' && req.method === 'POST') return handleSubmit(req, res, 'booking');
     if (p === '/api/enquiries' && req.method === 'POST') return handleSubmit(req, res, 'enquiry');
     if (p === '/api/admin/login' && req.method === 'POST') return handleLogin(req, res);
     if (p === '/api/admin/logout' && req.method === 'POST') return handleLogout(req, res);
-    if (p === '/api/admin/session' && req.method === 'GET') return json(res, 200, { ok: true, configured: Boolean(ADMIN_PASSWORD), signedIn: Boolean(ADMIN_PASSWORD && sessionOf(req)), storage: db.mode });
+    if (p === '/api/admin/session' && req.method === 'GET') return json(res, 200, { ok: true, configured: Boolean(ADMIN_PASSWORD), signedIn: Boolean(ADMIN_PASSWORD && sessionOf(req)) || await appAdmin(req), storage: db.mode });
+    if (p.startsWith('/api/app/')) return appApi(req, res, p.slice('/api/app/'.length).split('/').filter(Boolean), url);
     if (p.startsWith('/api/admin/')) return handleAdminApi(req, res, p.slice('/api/admin/'.length).split('/').filter(Boolean));
     return json(res, 404, { ok: false, message: 'Not found.' });
   }
@@ -367,17 +417,31 @@ async function route(req, res) {
   if (p === '/admin' || p.startsWith('/admin/')) {
     // the sign-in page and its files are public
     if (p === '/admin/login' || p === '/admin/login/') {
-      if (ADMIN_PASSWORD && sessionOf(req)) return send(res, 302, '', { Location: '/admin/', 'Cache-Control': 'no-store' });
+      if ((ADMIN_PASSWORD && sessionOf(req)) || await appAdmin(req)) return send(res, 302, '', { Location: '/admin/', 'Cache-Control': 'no-store' });
       if (await serveFile(req, res, ADMIN_DIR, '/login.html', { cache: false })) return;
     }
     if (p === '/admin/login.js' || p === '/admin/login.css') {
       if (await serveFile(req, res, ADMIN_DIR, p.slice('/admin'.length), { cache: false })) return;
     }
-    if (!isAdmin(req, res, { page: true })) return;
+    if (!(await isAdmin(req, res, { page: true }))) return;
     if (p === '/admin') return send(res, 301, '', { Location: '/admin/' });
     if (await serveFile(req, res, ADMIN_DIR, p.slice('/admin'.length), { cache: false })) return;
     return notFound(req, res);
   }
+
+  // the KareIQ app (one page; the screens are drawn by app/app.js)
+  if (p === '/app') return send(res, 301, '', { Location: '/app/' + url.search });
+  if (p.startsWith('/app/')) {
+    const rel = p.slice('/app'.length);
+    if (rel === '/' || !path.extname(rel)) { if (await serveFile(req, res, APP_DIR, '/index.html', { cache: false })) return; }
+    if (await serveFile(req, res, APP_DIR, rel)) return;
+    return notFound(req, res);
+  }
+  // app.<your domain> opens the app directly
+  if (p === '/' && /^app\./i.test(String(req.headers['x-forwarded-host'] || req.headers.host || ''))) return send(res, 302, '', { Location: '/app/', 'Cache-Control': 'no-store' });
+
+  // page visits go to the real website; files (logos, icons) are still served for the admin panel
+  if (SITE_URL && (!path.extname(p) || p.endsWith('.html'))) return send(res, 302, '', { Location: SITE_URL + p + url.search, 'Cache-Control': 'no-store' });
 
   // tidy URLs: /kare-at-home.html -> /kare-at-home
   if (p.endsWith('.html') && p !== '/404.html') {
@@ -407,8 +471,11 @@ if (require.main === module) {
     console.log('\n  KareIQ website is running');
     console.log(`  KareIQ:      ${base}/`);
     console.log(`  Kare@Home:   ${base}/kare-at-home`);
+    console.log(`  KareNest:    ${base}/karenest`);
+    console.log(`  KareIQ app:  ${base}/app   (families, caregivers and the office team sign in here)`);
+    if (db.mode === 'file' && String(process.env.APP_DEMO || 'true') === 'true') console.log('               demo logins (password demo-pass-123): family@demo.kareiq (both)  arjun@demo.kareiq (Kare@Home only)  meena@demo.kareiq (KareNest + included Kare@Home)  nurse@demo.kareiq  admin@demo.kareiq');
     console.log(`  Admin:       ${base}/admin  ${ADMIN_PASSWORD ? '(sign in with ADMIN_PASSWORD from .env)' : '(off: add ADMIN_PASSWORD to .env, then restart)'}`);
-    console.log(`  Storage:     ${db.mode === 'redis' ? 'Upstash Redis' : 'files in the data folder'}`);
+    console.log(`  Storage:     ${{ mongo: 'MongoDB Atlas', redis: 'Upstash Redis', temporary: 'temporary (data will be lost)', file: 'files in the data folder' }[db.mode]}`);
     console.log(`  Email alerts: ${emailEnabled ? 'on' : 'off (optional, see README)'}\n`);
   });
   const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };

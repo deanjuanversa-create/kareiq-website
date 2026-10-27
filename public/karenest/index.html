@@ -1,0 +1,1206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>KareNest</title>
+<link rel="icon" type="image/webp" href="/karenest/images/mark.webp">
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30&family=Figtree:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/karenest/loader.css?v=20261024a">
+<script src="/karenest/loader.js?v=20261024a"></script>
+<style>
+/* Layout: follows the KareNest reference — airy white ground, garden photography, the logo's teal → violet → rose sweep as the connecting thread, mascot as the guide. Deliberately single (light) theme to match the brand art. */
+:root{
+  color-scheme:light;
+  --bg:#FFFFFF; --soft:#F4F9F7; --mist:#EEF6F3;
+  --ink:#113F3D; --ink-2:#34524F; --muted:#5F7572; --line:rgba(17,63,61,.10);
+  --teal:#12917A; --teal-d:#0B6B59; --blue:#245F86; --violet:#7A4CBF; --rose:#D6568C; --gold:#E2A43A;
+  --g-soft:#E8F5EF; --v-soft:#F1EBFA; --r-soft:#FCEDF3; --b-soft:#E7F1F8;
+  --grad:linear-gradient(100deg,#12917A 0%,#2E8FB5 35%,#7A4CBF 68%,#D6568C 100%);
+  --shadow:0 30px 70px -35px rgba(17,63,61,.45);
+  --shadow-sm:0 14px 34px -22px rgba(17,63,61,.45);
+  --f-display:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --f-body:"Figtree","Segoe UI",system-ui,-apple-system,sans-serif;
+  --ease:cubic-bezier(.2,.8,.2,1); --spring:cubic-bezier(.2,.9,.25,1.2);
+  --max:1320px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:1.03rem;line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:80;background:var(--bg)}
+a{color:inherit;text-decoration:none}
+img{max-width:100%;display:block}
+h1,h2,h3,h4{font-family:var(--f-display);font-weight:500;letter-spacing:-.015em;line-height:1.08;margin:0;text-wrap:balance}
+p{margin:0}
+button{font:inherit}
+.wrap{max-width:var(--max);margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+.eyebrow{font-size:.76rem;font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--teal)}
+.grad-text{background:var(--grad);background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:sheen 9s ease-in-out infinite}
+@keyframes sheen{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+:focus-visible{outline:3px solid var(--violet);outline-offset:3px;border-radius:12px}
+.ico{width:18px;height:18px;flex-shrink:0;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ---------- progress + nav ---------- */
+.progress{position:fixed;top:env(safe-area-inset-top,0px);left:0;height:3px;width:100%;background:var(--grad);transform-origin:0 50%;transform:scaleX(0);z-index:90}
+.nav{position:sticky;top:env(safe-area-inset-top,0px);z-index:60;background:rgba(255,255,255,.72);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);transition:box-shadow .4s}
+.nav.scrolled{box-shadow:0 1px 0 var(--line),0 12px 30px -24px rgba(17,63,61,.35)}
+.nav-in{display:flex;align-items:center;gap:14px;padding-block:12px;transition:padding .4s var(--ease);max-width:1440px}
+.nav.scrolled .nav-in{padding-block:6px}
+.brand{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.brand img{width:56px;height:auto;transition:transform .7s var(--spring)}
+.nav.scrolled .brand img{width:46px}
+.brand:hover img{transform:rotate(-8deg) scale(1.06)}
+.wm{display:flex;flex-direction:column;line-height:1}
+.wm b{font-family:var(--f-display);font-weight:500;font-size:1.9rem;letter-spacing:-.02em;background:linear-gradient(90deg,#12917A 0 42%,#7A4CBF 62%,#D6568C);-webkit-background-clip:text;background-clip:text;color:transparent}
+.wm small{display:flex;align-items:center;gap:5px;font-size:.42rem;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin-top:5px;white-space:nowrap}
+.wm small::before,.wm small::after{content:"";width:12px;height:1.5px;background:var(--teal)}
+.wm small::after{background:var(--rose)}
+.links{display:flex;gap:2px;margin:0 0 0 auto;list-style:none;padding:0}
+.links a{display:block;white-space:nowrap;font-size:.85rem;font-weight:500;color:var(--ink-2);padding:9px 8px;border-radius:99px;position:relative;transition:color .3s}
+.links a::after{content:"";position:absolute;left:8px;right:8px;bottom:3px;height:2px;border-radius:2px;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .45s var(--ease)}
+.links a:hover,.links a.active{color:var(--teal)}
+.links a:hover::after,.links a.active::after{transform:scaleX(1)}
+.nav-cta{display:flex;gap:8px;flex-shrink:0}
+.burger{display:none;margin-left:auto;width:48px;height:48px;border-radius:16px;border:1px solid var(--line);background:#fff;cursor:pointer;position:relative;flex-shrink:0}
+.burger span{position:absolute;left:14px;right:14px;height:2px;background:var(--ink);border-radius:2px;transition:transform .35s,opacity .3s}
+.burger span:nth-child(1){top:17px}.burger span:nth-child(2){top:23px}.burger span:nth-child(3){top:29px}
+.menu-open .burger span:nth-child(1){transform:translateY(6px) rotate(45deg)}
+.menu-open .burger span:nth-child(2){opacity:0}
+.menu-open .burger span:nth-child(3){transform:translateY(-6px) rotate(-45deg)}
+.drawer{position:fixed;inset:0;z-index:55;background:linear-gradient(160deg,#fff 30%,var(--g-soft) 70%,var(--v-soft));padding:calc(100px + env(safe-area-inset-top,0px)) max(24px,env(safe-area-inset-right,0px)) calc(32px + env(safe-area-inset-bottom,0px)) max(24px,env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px;clip-path:circle(0% at calc(100% - 46px) 46px);transition:clip-path .75s cubic-bezier(.7,0,.2,1);visibility:hidden;overflow-y:auto}
+.menu-open .drawer{clip-path:circle(150% at calc(100% - 46px) 46px);visibility:visible}
+.drawer a{font-family:var(--f-display);font-size:1.85rem;padding:8px 0;border-bottom:1px solid var(--line);opacity:0;transform:translateY(18px);transition:opacity .5s,transform .5s}
+.menu-open .drawer a{opacity:1;transform:none}
+.drawer .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:22px}
+
+/* ---------- buttons ---------- */
+.btn{--bx:0px;--by:0px;display:inline-flex;align-items:center;justify-content:center;gap:9px;font-weight:600;font-size:.95rem;line-height:1;padding:16px 26px;border-radius:99px;border:1.5px solid transparent;cursor:pointer;transition:transform .4s var(--ease),box-shadow .4s,background .3s,color .3s,border-color .3s;transform:translate(var(--bx),var(--by));position:relative;overflow:hidden;white-space:nowrap;isolation:isolate}
+.btn .arr{transition:transform .35s var(--ease)}
+.btn:hover .arr{transform:translateX(4px)}
+.btn-primary{background:linear-gradient(135deg,#16A386,var(--teal-d));color:#fff;box-shadow:0 16px 30px -16px rgba(18,145,122,.9)}
+.btn-primary::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.4) 50%,transparent 70%);transform:translateX(-110%);transition:transform .9s var(--ease)}
+.btn-primary:hover::before{transform:translateX(110%)}
+.btn-primary:hover{box-shadow:0 22px 40px -16px rgba(18,145,122,.95)}
+.btn-ghost{background:rgba(255,255,255,.85);border-color:rgba(18,145,122,.45);color:var(--teal-d)}
+.btn-ghost:hover{background:var(--g-soft);border-color:var(--teal)}
+.btn-sm{padding:11px 15px;font-size:.8rem;gap:7px}
+.nav-cta .ico{width:16px;height:16px}
+
+/* ---------- hero ---------- */
+.hero{position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(100deg,#F3FAF7 0%,#fff 38%)}
+.hero-photo{position:absolute;top:0;right:0;bottom:0;width:64%;z-index:-1;-webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 24%);mask-image:linear-gradient(90deg,transparent 0%,#000 24%);animation:wipe 1.6s .1s var(--ease) both;overflow:hidden}
+.hero-photo img{width:100%;height:100%;object-fit:cover;object-position:35% 40%;animation:kenburns 26s ease-in-out infinite alternate}
+@keyframes wipe{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
+@keyframes kenburns{from{transform:scale(1.02) translate(0,0)}to{transform:scale(1.07) translate(-1%,-.5%)}}
+.hero-photo::after{content:"";position:absolute;inset:auto 0 0;height:30%;background:linear-gradient(transparent,rgba(255,255,255,.55))}
+.hero-in{position:relative;min-height:600px;display:flex;align-items:center;padding-block:70px 110px}
+.hero-copy{max-width:560px;position:relative;z-index:2}
+.hero h1{font-size:clamp(2.8rem,5.6vw,5rem);margin-top:16px;font-weight:500}
+.hero h1 .ln{display:block;overflow:hidden;padding-bottom:.06em}
+.hero h1 .ln>span{display:inline-block;animation:rise 1.1s var(--ease) both}
+.hero h1 .ln:nth-child(2)>span{animation-delay:.12s;color:var(--blue)}
+.hero h1 .ln:nth-child(3)>span{animation-delay:.24s}
+.hero h1 .ln:nth-child(1)>span{color:var(--teal)}
+.hero h1 .violet{background:linear-gradient(90deg,#7A4CBF,#B04FA8 70%,#D6568C);-webkit-background-clip:text;background-clip:text;color:transparent}
+@keyframes rise{from{transform:translateY(105%)}to{transform:none}}
+.hero .lede{font-size:1.18rem;color:var(--ink-2);max-width:32ch;margin-top:22px;animation:fadeUp 1s .45s both}
+.hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:34px;animation:fadeUp 1s .6s both}
+@keyframes fadeUp{from{transform:translateY(18px)}to{transform:none}}
+.sprig{position:absolute;left:44%;top:30%;width:110px;height:170px;z-index:1;pointer-events:none}
+.sprig path{fill:none;stroke:#2DAF8E;stroke-width:2.2;stroke-linecap:round;stroke-dasharray:300;stroke-dashoffset:300;animation:draw 2.2s .8s var(--ease) forwards}
+.sprig .lf{fill:#3DBB98;stroke:none;transform-box:fill-box;transform-origin:0% 100%;animation:leafIn .9s var(--spring) both,sway 6s ease-in-out infinite}
+@keyframes draw{to{stroke-dashoffset:0}}
+@keyframes leafIn{from{transform:scale(0)}to{transform:scale(1)}}
+@keyframes sway{0%,100%{rotate:0deg}50%{rotate:6deg}}
+.glass{position:absolute;z-index:3;display:flex;align-items:center;gap:12px;padding:12px 18px 12px 12px;border-radius:20px;background:rgba(255,255,255,.78);backdrop-filter:blur(14px) saturate(1.4);-webkit-backdrop-filter:blur(14px) saturate(1.4);border:1px solid rgba(255,255,255,.9);box-shadow:var(--shadow-sm);font-size:.85rem;line-height:1.3;animation:chipIn 1s var(--spring) both,bob 6s ease-in-out infinite}
+.glass .ic{width:42px;height:42px;border-radius:14px;display:grid;place-items:center;flex-shrink:0}
+.glass .ic .ico{width:22px;height:22px}
+.glass b{display:block;font-weight:600}
+.glass span{color:var(--muted);font-size:.78rem}
+.glass.g1{right:6%;top:16%;animation-delay:1.2s,0s}
+.glass.g2{right:30%;bottom:16%;animation-delay:1.4s,-3s}
+.live{display:inline-flex;align-items:center;gap:6px;color:var(--teal)!important;font-weight:600}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--teal);animation:pulse 1.6s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(18,145,122,.6)}100%{box-shadow:0 0 0 10px rgba(18,145,122,0)}}
+@keyframes chipIn{from{transform:translateY(24px) scale(.9);opacity:0}to{transform:none;opacity:1}}
+@keyframes bob{0%,100%{translate:0 0}50%{translate:0 -10px}}
+.scroll-cue{position:absolute;left:50%;bottom:22px;translate:-50% 0;width:28px;height:44px;border-radius:20px;border:2px solid rgba(17,63,61,.25);display:grid;justify-items:center;padding-top:7px}
+.scroll-cue::after{content:"";width:4px;height:9px;border-radius:4px;background:var(--teal);animation:cue 1.8s ease-in-out infinite}
+@keyframes cue{0%{transform:translateY(0);opacity:1}70%{transform:translateY(14px);opacity:0}100%{opacity:0}}
+
+/* ---------- section scaffolding ---------- */
+.sec{padding-block:96px}
+.h2{font-size:clamp(2rem,3.8vw,3rem)}
+.sub{color:var(--muted);margin-top:14px;max-width:46ch}
+.link-arrow{display:inline-flex;align-items:center;gap:8px;font-weight:600;font-size:.9rem;color:var(--teal)}
+.link-arrow .ico{width:16px;height:16px;transition:transform .35s var(--ease)}
+.link-arrow:hover .ico{transform:translateX(5px)}
+.head-row{display:flex;justify-content:space-between;align-items:end;gap:20px;flex-wrap:wrap;margin-bottom:40px}
+
+/* ---------- experience ---------- */
+.exp{display:grid;grid-template-columns:.9fr 2.1fr;gap:48px;align-items:center}
+.exp h2 .kn{background:linear-gradient(90deg,#7A4CBF,#D6568C);-webkit-background-clip:text;background-clip:text;color:transparent}
+.xcards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.xcard{background:#fff;border:1px solid var(--line);border-radius:24px;overflow:hidden;box-shadow:var(--shadow-sm);display:flex;flex-direction:column;min-width:0;transform-style:preserve-3d;transition:transform .55s var(--ease),box-shadow .55s}
+.xcard:hover{box-shadow:var(--shadow)}
+.xmedia{position:relative;height:150px;overflow:hidden}
+.xmedia img{position:absolute;right:0;top:0;height:100%;width:78%;object-fit:cover;-webkit-mask-image:linear-gradient(90deg,transparent,#000 35%);mask-image:linear-gradient(90deg,transparent,#000 35%);transition:transform 1.2s var(--ease)}
+.xcard:hover .xmedia img{transform:scale(1.08)}
+.xicon{position:absolute;left:20px;top:22px;width:78px;height:78px;border-radius:50%;background:#fff;box-shadow:0 10px 26px -12px rgba(17,63,61,.45);display:grid;place-items:center;color:var(--ink);transition:transform .7s var(--spring)}
+.xicon .ico{width:36px;height:36px;stroke-width:1.6}
+.xcard:hover .xicon{transform:rotate(-10deg) scale(1.06)}
+.xbody{padding:6px 24px 24px;display:flex;flex-direction:column;flex:1}
+.xbody h3{font-size:1.4rem}
+.xbody p{color:var(--muted);font-size:.94rem;margin-top:10px;flex:1}
+.xbody .link-arrow{margin-top:18px;color:var(--blue)}
+
+/* ---------- focus ---------- */
+.focus{background:linear-gradient(90deg,#F5FAF8 0%,#F7F4FC 60%,#FCF3F7 100%);position:relative;overflow:hidden}
+.focus-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1.75fr);gap:40px;align-items:center;max-width:1440px;margin:0 auto;padding-right:max(20px,env(safe-area-inset-right,0px))}
+.focus-photo{height:100%;min-height:380px;position:relative;overflow:hidden;border-radius:0 32px 32px 0}
+.focus-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 30%;transition:transform 1.4s var(--ease)}
+.focus:hover .focus-photo img{transform:scale(1.05)}
+.focus-copy{padding-block:60px;min-width:0}
+.focus h2{font-size:clamp(2rem,3.4vw,2.9rem)}
+.focus h2 .w1{color:var(--ink)}.focus h2 .w2{color:var(--ink)}.focus h2 .w3{color:var(--violet)}
+.pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;padding-block:50px}
+.pillar{border-radius:22px;padding:26px 20px;background:var(--pbg);border:1px solid rgba(255,255,255,.8);box-shadow:inset 0 1px 0 rgba(255,255,255,.9);transition:transform .55s var(--ease),box-shadow .55s;min-width:0;position:relative;overflow:hidden}
+.pillar::before{content:"";position:absolute;width:160px;height:160px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.9),transparent 70%);right:-60px;top:-60px;transition:transform .8s var(--ease)}
+.pillar:hover{transform:translateY(-8px);box-shadow:var(--shadow)}
+.pillar:hover::before{transform:translate(-30px,30px) scale(1.3)}
+.pillar .pic{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:#fff;color:var(--c);margin-bottom:18px;position:relative}
+.pillar .pic .ico{width:32px;height:32px;stroke-width:1.7}
+.pillar:hover .pic .ico{animation:beat 1s ease-in-out}
+@keyframes beat{0%,100%{transform:scale(1)}30%{transform:scale(1.2)}60%{transform:scale(.95)}}
+.pillar h3{font-family:var(--f-body);font-weight:700;letter-spacing:.12em;font-size:.95rem;color:var(--c);margin-bottom:14px;position:relative}
+.pillar ul{list-style:none;padding:0;margin:0;display:grid;gap:9px;position:relative}
+.pillar li{display:flex;gap:8px;align-items:flex-start;font-size:.88rem;color:var(--ink-2);line-height:1.4}
+.pillar li .ico{width:16px;height:16px;margin-top:2px;color:var(--c);stroke-width:2.6}
+
+/* ---------- discover ---------- */
+.acts{display:grid;grid-template-columns:repeat(6,1fr);gap:18px}
+.act{border-radius:20px;background:#fff;border:1px solid var(--line);overflow:hidden;box-shadow:var(--shadow-sm);transition:transform .55s var(--ease),box-shadow .55s;min-width:0}
+.act:hover{transform:translateY(-8px);box-shadow:var(--shadow)}
+.act-img{position:relative;aspect-ratio:4/3;overflow:hidden;max-width:100%}
+.act-img img{width:100%;height:100%;object-fit:cover;transition:transform 1.1s var(--ease)}
+.act:hover .act-img img{transform:scale(1.1)}
+.act-img .when{position:absolute;left:10px;bottom:10px;font-size:.74rem;font-weight:600;padding:6px 10px;border-radius:99px;background:rgba(255,255,255,.9);color:var(--ink);backdrop-filter:blur(6px);transform:translateY(46px);transition:transform .5s var(--spring);display:flex;align-items:center;gap:5px}
+.act-img .when .ico{width:13px;height:13px}
+.act:hover .act-img .when,.act:focus-within .act-img .when{transform:none}
+.act-body{padding:16px 16px 18px}
+.act h3{font-family:var(--f-body);font-weight:600;font-size:.98rem;letter-spacing:0}
+.act p{color:var(--muted);font-size:.84rem;margin-top:4px;line-height:1.45}
+
+/* ---------- families + highlights ---------- */
+.duo{display:grid;grid-template-columns:1.05fr 1fr;gap:24px}
+.fam{display:grid;grid-template-columns:1fr 1fr;border-radius:26px;overflow:hidden;background:linear-gradient(150deg,#F3FAF7,#F6F2FC);border:1px solid var(--line);min-width:0}
+.fam-photo{position:relative;min-height:340px;overflow:hidden}
+.fam-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:40% 50%;transition:transform 1.4s var(--ease)}
+.fam:hover .fam-photo img{transform:scale(1.06)}
+.fam-photo .heart{position:absolute;right:16px;top:16px;width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:var(--rose);animation:beat 2.4s ease-in-out infinite}
+.fam-copy{padding:34px 30px;display:flex;flex-direction:column;justify-content:center;gap:14px;min-width:0}
+.fam-copy .kick{font-family:var(--f-display);font-size:1.1rem;color:var(--teal)}
+.fam-copy h2{font-size:clamp(1.9rem,2.8vw,2.4rem);color:var(--blue)}
+.fam-copy p{color:var(--ink-2);font-size:.95rem}
+.fam-copy .btn{align-self:flex-start;margin-top:6px;white-space:normal;text-align:left;line-height:1.25}
+.hl{border-radius:26px;background:linear-gradient(160deg,#F2F8FB,#F6FAF9);border:1px solid var(--line);padding:28px;min-width:0}
+.hl-head{display:flex;justify-content:space-between;align-items:start;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.hl-head h3{font-size:1.6rem;color:var(--blue)}
+.hl-head p{color:var(--muted);font-size:.88rem;margin-top:4px}
+.next{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:16px;background:var(--ink);color:#fff;margin-bottom:16px;font-size:.84rem}
+.next .lbl{margin-right:auto;opacity:.85}
+.next .lbl b{opacity:1;font-weight:600}
+.cd{display:flex;gap:6px;font-variant-numeric:tabular-nums}
+.cd span{min-width:42px;text-align:center;padding:4px 6px;border-radius:10px;background:rgba(255,255,255,.12);line-height:1.1}
+.cd b{display:block;font-family:var(--f-display);font-size:1.15rem}
+.cd small{font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;opacity:.75}
+.evs{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.ev{background:#fff;border-radius:18px;overflow:hidden;border:1px solid var(--line);transition:transform .5s var(--ease),box-shadow .5s;min-width:0;display:flex;flex-direction:column}
+.ev:hover{transform:translateY(-6px);box-shadow:var(--shadow)}
+.ev-img{position:relative;aspect-ratio:16/10;max-width:100%}
+.ev-img .ph{position:absolute;inset:0;overflow:hidden}
+.ev-img img{width:100%;height:100%;object-fit:cover;transition:transform 1.1s var(--ease)}
+.ev:hover .ev-img img{transform:scale(1.1)}
+.date{position:absolute;left:10px;bottom:-18px;width:48px;height:52px;border-radius:12px;background:#fff;box-shadow:0 8px 20px -10px rgba(17,63,61,.5);display:grid;place-content:center;text-align:center;line-height:1;z-index:1}
+.date b{font-family:var(--f-display);font-size:1.25rem;color:var(--ink)}
+.date small{font-size:.6rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--teal);margin-top:3px}
+.ev-body{padding:26px 14px 14px;display:grid;gap:5px}
+.ev h4{font-family:var(--f-body);font-weight:600;font-size:.92rem;letter-spacing:0;line-height:1.3}
+.ev .m{display:flex;gap:6px;align-items:center;color:var(--muted);font-size:.78rem}
+.ev .m .ico{width:13px;height:13px}
+
+/* ---------- community ---------- */
+.comm{position:relative;overflow:hidden}
+.comm-x{content:"";position:absolute;left:-10%;bottom:-120px;width:70%;height:300px;background:radial-gradient(ellipse at 30% 60%,rgba(122,76,191,.16),transparent 60%),radial-gradient(ellipse at 70% 70%,rgba(18,145,122,.12),transparent 60%);z-index:-1;filter:blur(10px)}
+.comm-in{display:grid;grid-template-columns:.85fr 2.15fr;gap:44px;align-items:center}
+.comm h2{color:var(--blue)}
+.comm .btn{margin-top:26px}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.tile{position:relative;border-radius:22px;overflow:hidden;aspect-ratio:4/3.3;max-width:100%;box-shadow:var(--shadow-sm);isolation:isolate}
+.tile img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;transition:transform 1.2s var(--ease)}
+.tile::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(transparent 45%,rgba(6,30,28,.78))}
+.tile:hover img{transform:scale(1.1)}
+.tile .cap{position:absolute;left:14px;right:14px;bottom:12px;color:#fff;display:flex;justify-content:space-between;align-items:end;gap:8px}
+.tile b{font-weight:600;font-size:.95rem;line-height:1.25}
+.tile .go{width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,.2);display:grid;place-items:center;flex-shrink:0;transform:rotate(-45deg) scale(.8);opacity:0;transition:all .5s var(--spring)}
+.tile:hover .go{opacity:1;transform:none}
+.tile .go .ico{width:15px;height:15px}
+
+/* ---------- CTA with mascot ---------- */
+.cta{position:relative;margin-top:110px;isolation:isolate;clip-path:inset(-480px 0 0 0)}
+.cta-band{position:relative;isolation:isolate;min-height:340px;display:flex;align-items:center}
+.cta-bg{position:absolute;inset:0;overflow:hidden;z-index:-1;background:#0D5A4B;isolation:isolate}
+.cta-bg::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,#0B5446 0%,rgba(11,84,70,.92) 38%,rgba(11,84,70,.25) 75%,rgba(11,84,70,.1)),linear-gradient(0deg,rgba(11,84,70,.5),transparent 50%);z-index:-1}
+.cta-bg>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:-2;filter:saturate(1.1);animation:kenburns 30s ease-in-out infinite alternate}
+.cta-top{position:absolute;left:0;right:0;top:-26px;height:60px;background:linear-gradient(90deg,#A5D8F0,#CFE7F7 40%,#E7DDF6 80%,#F3D6E6);z-index:-3;clip-path:polygon(0 30%,100% 0,100% 100%,0 100%)}
+.cta-copy{position:relative;padding-block:70px 90px;max-width:620px;color:#fff}
+.cta h2{font-size:clamp(2.2rem,4.6vw,3.6rem);color:#fff}
+.cta p{color:rgba(255,255,255,.9);margin-top:12px;font-size:1.08rem;max-width:44ch}
+.cta .hero-actions{animation:none}
+.cta .btn-ghost{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.75);color:#fff}
+.cta .btn-ghost:hover{background:rgba(255,255,255,.16);border-color:#fff}
+.cta-wave{position:absolute;left:0;right:0;bottom:-1px;height:70px;pointer-events:none;overflow:hidden;z-index:6}
+.cta-wave svg{position:absolute;bottom:0;width:200%;height:100%;animation:wave 16s linear infinite}
+.cta-wave svg.w2{animation-duration:24s;animation-direction:reverse}
+@keyframes wave{to{transform:translateX(-50%)}}
+
+.buddy{position:absolute;right:max(5%,env(safe-area-inset-right,0px));bottom:14px;width:clamp(220px,23vw,310px);z-index:4;cursor:pointer;border:0;background:none;padding:0;-webkit-tap-highlight-color:transparent}
+.buddy .body{transform-origin:50% 100%;transition:transform .6s var(--ease);will-change:transform}
+.buddy .body img{width:100%;height:auto;display:block;filter:drop-shadow(-8px 10px 16px rgba(0,0,0,.3));animation:breathe 4s ease-in-out infinite;transform-origin:50% 100%}
+.kb .kb-wave{transform-box:view-box;transform-origin:82px 480px;transition:transform .4s var(--ease)}
+.buddy.wave .body{animation:waveBody 1.3s ease-in-out}
+@keyframes waveBody{0%,100%{rotate:0deg}18%{rotate:-5deg}36%{rotate:4deg}54%{rotate:-4deg}72%{rotate:2.5deg}}
+.buddy.happy .body img{filter:drop-shadow(-8px 10px 16px rgba(0,0,0,.3)) brightness(1.06) saturate(1.1)}
+@keyframes armWave{0%,100%{transform:rotate(0)}15%{transform:rotate(-16deg)}32%{transform:rotate(10deg)}50%{transform:rotate(-14deg)}68%{transform:rotate(8deg)}84%{transform:rotate(-6deg)}}
+.kb .kb-eye{transition:transform .09s ease-in}
+.kb.blink .kb-eye{transform:scaleY(.08)}
+.kb .kb-pupil{transition:transform .25s var(--ease)}
+.kb .kb-mouth{transform-box:fill-box;transform-origin:50% 20%}
+.kb.talk .kb-mouth{animation:talk .26s ease-in-out infinite alternate}
+@keyframes talk{from{transform:scaleY(1)}to{transform:scaleY(.62)}}
+.kb.happy .kb-eye{transform:scaleY(.45) translateY(6px)}
+.kb .kb-scrunch,.kb .kb-pony{transform-box:view-box;transform-origin:300px 120px}
+.buddy:hover .kb-pony{animation:bounceHair .9s var(--spring)}
+@keyframes bounceHair{30%{transform:rotate(3deg)}60%{transform:rotate(-2deg)}}
+.kb .kb-book{transform-box:view-box;transform-origin:250px 560px;transition:transform .5s var(--spring)}
+.buddy:hover .kb-book{transform:rotate(-4deg) translateY(-6px)}
+@keyframes breathe{0%,100%{transform:scale(1,1)}50%{transform:scale(1.012,1.022)}}
+.buddy.hop .body img{animation:hop .7s var(--spring)}
+@keyframes hop{0%{transform:translateY(0) scale(1,1)}25%{transform:translateY(0) scale(1.06,.94)}55%{transform:translateY(-28px) scale(.97,1.04)}80%{transform:translateY(0) scale(1.04,.96)}100%{transform:none}}
+@keyframes waveBody{0%,100%{rotate:0deg}20%{rotate:-5deg}40%{rotate:4deg}60%{rotate:-4deg}80%{rotate:2deg}}
+.buddy .shadow{position:absolute;left:15%;right:15%;bottom:-6px;height:16px;border-radius:50%;background:radial-gradient(rgba(0,0,0,.35),transparent 70%)}
+.bubble{position:absolute;right:calc(max(5%,env(safe-area-inset-right,0px)) + clamp(190px,20vw,270px));bottom:clamp(200px,20vw,280px);z-index:5;width:min(290px,70vw);background:#fff;color:var(--ink);border-radius:22px 22px 6px 22px;padding:16px 18px;box-shadow:0 26px 50px -24px rgba(0,0,0,.55);font-size:.92rem;line-height:1.45;transform-origin:100% 100%;transition:transform .5s var(--spring),opacity .3s}
+.bubble.hide{transform:scale(.6) translateY(10px);opacity:0;pointer-events:none}
+.bubble b{display:block;font-family:var(--f-display);font-size:1.08rem;margin-bottom:4px;color:var(--teal-d)}
+.bubble .acts-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+.bubble .pill{font-size:.8rem;font-weight:600;padding:8px 12px;border-radius:99px;border:0;background:var(--g-soft);color:var(--teal-d);cursor:pointer;transition:background .3s,transform .3s}
+.bubble .pill:hover{background:#D4EEE4;transform:translateY(-2px)}
+.bubble .hint{font-size:.72rem;color:var(--muted);margin-top:10px}
+.typing{display:inline-flex;gap:4px;padding:4px 0}
+.typing i{width:7px;height:7px;border-radius:50%;background:var(--teal);animation:dots 1s infinite}
+.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+@keyframes dots{0%,100%{transform:translateY(0);opacity:.4}50%{transform:translateY(-5px);opacity:1}}
+.particle{position:fixed;pointer-events:none;z-index:95;width:16px;height:16px;left:0;top:0}
+
+/* ---------- floating guide ---------- */
+.guide{position:fixed;right:max(18px,env(safe-area-inset-right,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;flex-direction:column;align-items:flex-end;gap:12px;transform:translateY(140%);transition:transform .7s var(--spring);pointer-events:none}
+.guide.show{transform:none}
+.guide>*{pointer-events:auto}
+.g-btn{width:70px;height:70px;border-radius:50%;border:0;padding:3px;background:var(--grad);cursor:pointer;position:relative;box-shadow:0 18px 34px -14px rgba(17,63,61,.7);transition:transform .4s var(--spring)}
+.g-btn:hover{transform:scale(1.08) rotate(-6deg)}
+.g-btn img{width:100%;height:100%;border-radius:50%;object-fit:cover;background:linear-gradient(160deg,#E8F5EF,#F1EBFA)}
+.g-btn .dot{position:absolute;right:2px;top:2px;width:16px;height:16px;border-radius:50%;background:var(--rose);border:3px solid #fff;animation:pulseR 1.8s infinite}
+@keyframes pulseR{0%{box-shadow:0 0 0 0 rgba(214,86,140,.6)}100%{box-shadow:0 0 0 10px rgba(214,86,140,0)}}
+.g-tease{max-width:230px;background:#fff;border-radius:18px 18px 4px 18px;padding:12px 14px;font-size:.86rem;box-shadow:var(--shadow);border:1px solid var(--line);transform-origin:100% 100%;transition:transform .5s var(--spring),opacity .3s;cursor:pointer}
+.g-tease.hide{transform:scale(.5);opacity:0;pointer-events:none}
+.g-panel{width:min(340px,calc(100vw - 36px));background:#fff;border-radius:26px;box-shadow:0 40px 80px -30px rgba(17,63,61,.6);border:1px solid var(--line);overflow:hidden;transform-origin:100% 100%;transition:transform .55s var(--spring),opacity .3s}
+.g-panel.hide{transform:scale(.4) translateY(40px);opacity:0;pointer-events:none;position:absolute}
+.g-top{display:flex;gap:12px;align-items:center;padding:16px 18px;background:linear-gradient(120deg,#0E6B5A,#1B8F78 50%,#6E52B8);color:#fff}
+.g-top img{width:48px;height:48px;border-radius:50%;background:#fff;object-fit:cover}
+.g-top b{display:block;font-size:1rem}
+.g-top span{font-size:.76rem;opacity:.9}
+.g-top .x{margin-left:auto;width:34px;height:34px;border-radius:50%;border:0;background:rgba(255,255,255,.18);color:#fff;cursor:pointer;font-size:1.2rem;line-height:1}
+.g-msgs{padding:16px 18px 6px;display:grid;gap:10px;max-height:260px;overflow-y:auto}
+.msg{background:var(--soft);border-radius:4px 16px 16px 16px;padding:10px 13px;font-size:.88rem;line-height:1.45;justify-self:start;max-width:92%;animation:chipIn .5s var(--spring) both}
+.msg.me{background:var(--teal);color:#fff;border-radius:16px 4px 16px 16px;justify-self:end}
+.g-quick{display:flex;flex-wrap:wrap;gap:8px;padding:10px 18px 18px}
+.g-quick button{font-size:.8rem;font-weight:600;padding:9px 12px;border-radius:99px;border:1px solid var(--line);background:#fff;color:var(--ink-2);cursor:pointer;transition:all .3s}
+.g-quick button:hover{border-color:var(--teal);color:var(--teal);background:var(--g-soft)}
+@media (max-width:700px){
+  .guide{right:max(12px,env(safe-area-inset-right,0px));bottom:calc(12px + env(safe-area-inset-bottom,0px));gap:10px}
+  .g-panel{width:min(360px,calc(100vw - 24px));max-height:min(52vh,420px);display:flex;flex-direction:column}
+  .g-panel.hide{display:flex}
+  .g-top{padding:12px 14px;flex:none}
+  .g-top img{width:40px;height:40px}
+  .g-msgs{max-height:none;flex:1 1 auto;min-height:0;padding:12px 14px 4px}
+  .g-quick{flex:none;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;padding:8px 14px 12px;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
+  .g-quick::-webkit-scrollbar{display:none}
+  .g-quick button{flex:none}
+  .g-btn{width:60px;height:60px}
+}
+
+/* ---------- footer ---------- */
+footer{padding-block:60px 36px;background:linear-gradient(180deg,#fff,var(--soft))}
+.foot{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.2fr;gap:36px}
+.foot h5{font-size:.74rem;letter-spacing:.18em;text-transform:uppercase;margin:0 0 16px;color:var(--muted);font-weight:700}
+.foot ul{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.foot li a{color:var(--ink-2);font-size:.93rem;transition:color .3s}
+.foot li a:hover{color:var(--teal)}
+.foot .tag{color:var(--muted);font-size:.92rem;margin-top:16px;max-width:30ch}
+.foot .contact{display:grid;gap:8px;font-size:.93rem;color:var(--ink-2)}
+.foot-bot{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin-top:48px;padding-top:22px;border-top:1px solid var(--line);color:var(--muted);font-size:.84rem}
+.byline{display:flex;align-items:center;gap:12px;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase}
+.byline img{height:30px;width:auto}
+.byline{color:inherit;text-decoration:none}
+
+/* ---------- dialog ---------- */
+dialog{border:0;padding:0;border-radius:28px;max-width:min(520px,calc(100vw - 32px));width:100%;background:#fff;color:var(--ink);box-shadow:0 40px 100px -30px rgba(0,0,0,.5);overflow:visible}
+dialog::backdrop{background:rgba(8,30,28,.55);backdrop-filter:blur(6px)}
+dialog[open]{animation:dlg .55s var(--spring)}
+@keyframes dlg{from{transform:translateY(30px) scale(.95);opacity:0}}
+.dlg-mascot{position:absolute;right:18px;top:-74px;width:90px;pointer-events:none;animation:peek .8s .15s var(--spring) both}
+@keyframes peek{from{transform:translateY(40px);opacity:0}}
+.dlg-head{padding:28px 28px 0;display:flex;justify-content:space-between;align-items:start;gap:12px}
+.dlg-head h3{font-size:1.8rem}
+.dlg-head p{color:var(--muted);font-size:.92rem;margin-top:6px}
+.x{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--soft);color:var(--ink);cursor:pointer;font-size:1.3rem;line-height:1;flex-shrink:0}
+form.visit{padding:22px 28px 28px;display:grid;gap:14px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.seg input{position:absolute;opacity:0;pointer-events:none}
+.seg label{display:block;text-align:center;padding:12px 6px;border-radius:14px;border:1.5px solid var(--line);font-size:.84rem;font-weight:600;cursor:pointer;transition:all .25s;color:var(--ink-2)}
+.seg input:checked+label{border-color:var(--teal);background:var(--g-soft);color:var(--teal-d)}
+.seg input:focus-visible+label{outline:3px solid var(--violet);outline-offset:2px}
+.field{display:grid;gap:6px}
+.field label{font-size:.82rem;font-weight:600;color:var(--ink-2)}
+.field input,.field select{font:inherit;font-size:.96rem;padding:13px 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--soft);color:var(--ink);width:100%;transition:border-color .25s,box-shadow .25s}
+.field input:focus,.field select:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 4px rgba(18,145,122,.16)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err{color:#C0306A;font-size:.82rem;min-height:1em}
+.done{padding:40px 28px 34px;text-align:center}
+.done .tick{width:84px;height:84px;margin:0 auto 18px;border-radius:50%;background:var(--g-soft);display:grid;place-items:center}
+.done .tick svg{width:44px;height:44px;stroke:var(--teal);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:60;stroke-dashoffset:60;animation:draw .7s .2s forwards}
+.done h3{font-size:1.7rem}
+.done p{color:var(--muted);margin:10px auto 22px;max-width:36ch}
+
+/* ---------- reveal (content is visible at rest; it settles into place) ---------- */
+.js .rv{transform:translateY(36px);transition:transform 1.1s var(--ease);transition-delay:var(--d,0s)}
+.js .rv.in{transform:none}
+.js .rv.tilt.in{transition:transform .55s var(--ease),box-shadow .55s}
+.js .rv-img img{transform:scale(1.14)}
+.js .rv-img.in img{transform:none;transition:transform 1.6s var(--ease)}
+
+/* ---------- responsive ---------- */
+@media (max-width:1419px){.links,.nav-cta{display:none}.burger{display:block}}
+@media (min-width:1420px){.links a{padding-left:6px;padding-right:6px}}
+/* Sign in to the KareIQ app (families, caregivers, office) */
+.app-in{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:42px;width:42px;margin-left:8px;border-radius:99px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-weight:600;font-size:.85rem;white-space:nowrap;flex:none;transition:border-color .3s,color .3s}
+.app-in:hover{border-color:var(--teal);color:var(--teal-d)}
+.app-in svg{width:20px;height:20px;flex:none}
+.app-in span{display:none}
+@media (min-width:1900px){.app-in{width:auto;padding:0 15px 0 12px}.app-in span{display:inline}}
+
+.done-app{font-size:.95rem;color:var(--muted);margin:10px auto 14px;max-width:38ch}
+@media (max-width:1419px){.app-in{margin-left:auto}.app-in~.burger{margin-left:8px}}
+@media (max-width:1240px){
+  .acts{grid-template-columns:repeat(3,1fr)}
+  .duo{grid-template-columns:1fr}
+  .focus-in{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);padding-left:0}
+  .pillars{grid-column:1/-1;padding:0 0 50px max(20px,env(safe-area-inset-left,0px));padding-top:0}
+}
+@media (max-width:1020px){
+  .exp,.comm-in{grid-template-columns:1fr;gap:32px}
+  .hero-photo{width:72%}
+  .hero-copy{max-width:470px}
+  .sprig{display:none}
+  .glass.g2{display:none}
+}
+@media (max-width:760px){
+  body{font-size:16px}
+  .sec{padding-block:72px}
+  .hero{background:#fff}
+  .hero-photo{position:relative;width:100%;height:330px;-webkit-mask-image:linear-gradient(180deg,#000 70%,transparent);mask-image:linear-gradient(180deg,#000 70%,transparent)}
+  .hero-in{min-height:0;padding-block:0 70px;margin-top:-50px}
+  .glass.g1{right:16px;top:auto;bottom:calc(100% + 72px)}
+  .scroll-cue{display:none}
+  .xcards{grid-template-columns:1fr}
+  .focus-in{grid-template-columns:1fr;padding-left:max(20px,env(safe-area-inset-left,0px))}
+  .focus-photo{min-height:260px;border-radius:24px;margin-top:40px}
+  .focus-copy{padding-block:10px}
+  .pillars{grid-template-columns:1fr;padding:0 0 60px}
+  .acts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  #activities{padding-bottom:36px}
+  .act-img .when{font-size:.7rem;white-space:nowrap;padding:6px 9px;gap:5px}
+  .act-img .when{transform:none}
+  .fam{grid-template-columns:1fr}
+  .fam-photo{min-height:240px}
+  .evs{display:grid;grid-template-columns:1fr;gap:14px}
+  .hl{padding:22px}
+  .tiles{grid-template-columns:1fr 1fr}
+  .cta{margin-top:60px}
+  .cta-band{min-height:0;flex-direction:column;align-items:stretch}
+  .cta-copy{padding-block:48px 350px}
+  .buddy{right:max(10px,env(safe-area-inset-right,0px));width:190px}
+  .bubble{right:auto;left:max(16px,env(safe-area-inset-left,0px));bottom:90px;width:min(250px,58vw);border-radius:22px 22px 6px 22px;transform-origin:100% 100%}
+  .foot{grid-template-columns:1fr 1fr}
+  .row2{grid-template-columns:1fr}
+  .tile .go{opacity:1;transform:none}
+}
+@media (max-width:480px){
+  .hero-actions .btn{flex:1 1 100%}
+  .wm b{font-size:1.55rem}.brand img{width:46px}
+  .wm small{display:none}
+  .foot{grid-template-columns:1fr}
+  .tiles{gap:10px}
+  .tile b{font-size:.84rem}
+  .bubble{left:12px;bottom:70px;width:56vw;padding:12px 14px;font-size:.84rem}
+  .bubble .hint{display:none}
+  .bubble .pill{padding:7px 10px;font-size:.76rem}
+  .buddy{width:165px}
+  .cta-copy{padding-bottom:350px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+  .js .rv,.js .rv-img img{transform:none}
+}
+
+/* ---------- a day at KareNest ---------- */
+.day{background:linear-gradient(180deg,#fff,var(--soft));position:relative;overflow:hidden}
+.day-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:48px;align-items:center}
+.day-stage{position:relative;aspect-ratio:5/4;border-radius:30px;overflow:hidden;box-shadow:var(--shadow);max-width:100%;background:var(--mist)}
+.day-stage img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scale(1.08);transition:opacity .9s var(--ease),transform 6s var(--ease)}
+.day-stage img.on{opacity:1;transform:scale(1)}
+.day-stage::after{content:"";position:absolute;inset:0;background:linear-gradient(transparent 50%,rgba(6,30,28,.7))}
+.day-cap{position:absolute;left:24px;right:24px;bottom:22px;z-index:2;color:#fff}
+.day-cap .badge{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:6px 11px;border-radius:99px;background:rgba(255,255,255,.18);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+.day-cap .badge.now::before{content:"";width:8px;height:8px;border-radius:50%;background:#5BE3B8;animation:pulse 1.6s infinite}
+.day-cap h3{font-size:clamp(1.6rem,3vw,2.3rem);color:#fff;margin-top:10px}
+.day-cap p{opacity:.92;margin-top:6px;max-width:44ch;font-size:.97rem}
+.clock{position:absolute;right:20px;top:20px;z-index:2;width:86px;height:86px;border-radius:50%;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);box-shadow:var(--shadow-sm)}
+.clock i{position:absolute;left:50%;bottom:50%;transform-origin:50% 100%;border-radius:3px;background:var(--ink);transition:transform 1s var(--spring)}
+.clock .hh{width:4px;height:22px;margin-left:-2px}
+.clock .mm{width:3px;height:31px;margin-left:-1.5px;background:var(--teal)}
+.clock::after{content:"";position:absolute;left:50%;top:50%;width:9px;height:9px;margin:-4.5px;border-radius:50%;background:var(--rose)}
+.times{list-style:none;margin:28px 0 0;padding:0 0 0 28px;display:grid;gap:4px;position:relative}
+.times::before{content:"";position:absolute;left:9px;top:12px;bottom:12px;width:2px;background:var(--line)}
+.times .fill{position:absolute;left:9px;top:12px;width:2px;background:var(--grad);height:var(--p,0%);transition:height 1s var(--ease)}
+.times button{all:unset;box-sizing:border-box;display:grid;grid-template-columns:86px 1fr;gap:10px;align-items:center;width:100%;padding:10px 14px;border-radius:14px;cursor:pointer;position:relative;transition:background .3s,transform .4s var(--ease)}
+.times button::before{content:"";position:absolute;left:-24px;top:50%;width:12px;height:12px;margin-top:-6px;border-radius:50%;background:#fff;border:2px solid #C7D7D3;transition:all .4s var(--spring)}
+.times button:hover{background:#fff;transform:translateX(4px)}
+.times button[aria-current="true"]{background:#fff;box-shadow:var(--shadow-sm)}
+.times button[aria-current="true"]::before{border-color:var(--teal);background:var(--teal);transform:scale(1.35);box-shadow:0 0 0 5px rgba(18,145,122,.18)}
+.times button.past::before{border-color:var(--teal)}
+.times button:focus-visible{outline:3px solid var(--violet)}
+.times .t{font-variant-numeric:tabular-nums;font-weight:700;color:var(--teal);font-size:.88rem}
+.times .n{font-weight:500;color:var(--ink)}
+.day-ctrl{display:flex;gap:10px;align-items:center;margin-top:18px;color:var(--muted);font-size:.85rem}
+.day-ctrl button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:#fff;cursor:pointer;display:grid;place-items:center;color:var(--ink);transition:all .3s}
+.day-ctrl button:hover{border-color:var(--teal);color:var(--teal)}
+
+/* ---------- fit finder ---------- */
+.fit{position:relative}
+.fit-card{display:grid;grid-template-columns:.9fr 1.4fr;border-radius:32px;overflow:hidden;background:#fff;box-shadow:var(--shadow);border:1px solid var(--line)}
+.fit-side{background:linear-gradient(160deg,#0E6B5A,#1A8F78 55%,#6B4FB5);color:#fff;padding:44px 36px;position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;gap:26px;min-width:0}
+.fit-side::before{content:"";position:absolute;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,.18),transparent 65%);right:-120px;top:-100px;animation:drift 14s ease-in-out infinite}
+@keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(-40px,40px)}}
+.fit-side h2{color:#fff;font-size:clamp(1.9rem,3.2vw,2.6rem)}
+.fit-side p{opacity:.9;margin-top:10px}
+.fit-side .eyebrow{color:#B8F2DF}
+.fit-head{display:flex;align-items:center;gap:12px}
+.fit-head img{width:64px;height:64px;border-radius:50%;background:#fff;border:3px solid rgba(255,255,255,.7);animation:bob 4s ease-in-out infinite}
+.fit-head span{font-size:.9rem;opacity:.95;background:rgba(255,255,255,.14);padding:10px 14px;border-radius:16px 16px 16px 4px}
+.fit-main{padding:40px;min-width:0}
+.fit-prog{display:flex;gap:6px;margin-bottom:22px}
+.fit-prog i{flex:1;height:5px;border-radius:5px;background:var(--mist);overflow:hidden;position:relative}
+.fit-prog i::after{content:"";position:absolute;inset:0;background:var(--grad);transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease)}
+.fit-prog i.on::after{transform:none}
+.fit-step{animation:stepIn .55s var(--ease) both}
+@keyframes stepIn{from{opacity:0;transform:translateX(24px)}}
+.fit-q{font-family:var(--f-display);font-size:1.6rem;line-height:1.2}
+.fit-small{color:var(--muted);font-size:.86rem;margin-top:4px}
+.opts{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:22px}
+.opt{all:unset;box-sizing:border-box;cursor:pointer;border:1.5px solid var(--line);border-radius:20px;padding:18px 16px;display:grid;gap:10px;transition:all .35s var(--ease);background:#fff}
+.opt:hover{border-color:var(--teal);transform:translateY(-4px);box-shadow:var(--shadow-sm)}
+.opt:focus-visible{outline:3px solid var(--violet);outline-offset:2px}
+.opt .oi{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--g-soft);color:var(--teal)}
+.opt .oi .ico{width:24px;height:24px}
+.opt b{font-weight:600;font-size:.98rem}
+.opt span{font-size:.82rem;color:var(--muted);line-height:1.4}
+.fit-back{all:unset;cursor:pointer;color:var(--muted);font-size:.85rem;margin-top:18px;display:inline-flex;gap:6px;align-items:center}
+.fit-back:hover{color:var(--teal)}
+.result{display:grid;gap:14px}
+.result .rtag{display:inline-flex;align-self:start;justify-self:start;font-size:.74rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;padding:6px 12px;border-radius:99px;background:var(--g-soft);color:var(--teal-d)}
+.result h3{font-size:2rem}
+.result p{color:var(--ink-2)}
+.result ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.result li{display:flex;gap:8px;align-items:flex-start;font-size:.94rem}
+.result li .ico{color:var(--teal);margin-top:3px}
+.result .row{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+
+/* ---------- lightbox ---------- */
+.lb{position:fixed;inset:0;z-index:100;background:rgba(6,24,22,.86);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:grid;place-items:center;padding:calc(20px + env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));opacity:0;pointer-events:none;transition:opacity .4s}
+.lb.open{opacity:1;pointer-events:auto}
+.lb-box{width:min(1000px,100%);max-height:100%;display:grid;grid-template-columns:1.5fr 1fr;background:#fff;border-radius:28px;overflow:hidden;transform:scale(.92) translateY(20px);transition:transform .55s var(--spring);box-shadow:0 50px 120px -40px rgba(0,0,0,.7)}
+.lb.open .lb-box{transform:none}
+.lb-img{position:relative;min-height:340px;background:var(--mist);overflow:hidden}
+.lb-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;animation:lbIn .7s var(--ease)}
+@keyframes lbIn{from{opacity:0;transform:scale(1.06)}}
+.lb-info{padding:34px 30px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.lb-info .eyebrow{font-size:.7rem}
+.lb-info h3{font-size:2rem}
+.lb-info p{color:var(--ink-2)}
+.lb-meta{display:flex;gap:8px;align-items:center;color:var(--teal-d);font-weight:600;font-size:.9rem}
+.lb-info .btn{align-self:flex-start;margin-top:auto}
+.lb-count{color:var(--muted);font-size:.8rem;font-variant-numeric:tabular-nums}
+.lb-nav{position:absolute;top:50%;translate:0 -50%;width:52px;height:52px;border-radius:50%;border:0;background:rgba(255,255,255,.92);cursor:pointer;display:grid;place-items:center;color:var(--ink);box-shadow:var(--shadow-sm);transition:transform .3s var(--spring);z-index:2}
+.lb-nav:hover{transform:scale(1.1)}
+.lb-prev{left:max(16px,env(safe-area-inset-left,0px))}.lb-next{right:max(16px,env(safe-area-inset-right,0px))}
+.lb-prev .ico{transform:rotate(180deg)}
+.lb-x{position:absolute;right:max(16px,env(safe-area-inset-right,0px));top:calc(16px + env(safe-area-inset-top,0px));width:46px;height:46px;border-radius:50%;border:0;background:rgba(255,255,255,.15);color:#fff;font-size:1.6rem;cursor:pointer;z-index:2}
+.zoomable{cursor:zoom-in}
+.zoom-hint{position:absolute;right:10px;top:10px;width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.88);display:grid;place-items:center;color:var(--ink);opacity:0;transform:scale(.7);transition:all .4s var(--spring);z-index:2}
+.zoom-hint .ico{width:16px;height:16px}
+.act:hover .zoom-hint,.tile:hover .zoom-hint{opacity:1;transform:none}
+
+/* ---------- comfort (accessibility) panel ---------- */
+.comfort{position:fixed;left:max(18px,env(safe-area-inset-left,0px));bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:70;display:flex;flex-direction:column;align-items:flex-start;gap:10px}
+.c-btn{display:flex;align-items:center;gap:8px;height:52px;padding:0 18px 0 14px;border-radius:99px;border:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(10px);color:var(--ink);font-weight:600;font-size:.86rem;cursor:pointer;box-shadow:var(--shadow-sm);transition:transform .35s var(--spring)}
+.c-btn:hover{transform:translateY(-3px)}
+.c-btn .aa{font-family:var(--f-display);font-size:1.3rem;line-height:1}
+.c-panel{width:min(300px,calc(100vw - 36px));background:#fff;border-radius:22px;border:1px solid var(--line);box-shadow:var(--shadow);padding:18px;display:grid;gap:14px;transform-origin:0 100%;transition:transform .45s var(--spring),opacity .3s}
+.c-panel.hide{transform:scale(.6);opacity:0;pointer-events:none;position:absolute;bottom:0}
+.c-panel h4{font-family:var(--f-body);font-size:.95rem;font-weight:700}
+.c-row{display:grid;gap:8px}
+.c-row label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.seg2{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+.seg2 button{padding:10px 0;border-radius:12px;border:1.5px solid var(--line);background:#fff;cursor:pointer;font-weight:700;color:var(--ink-2)}
+.seg2 button[aria-pressed="true"]{border-color:var(--teal);background:var(--g-soft);color:var(--teal-d)}
+.tog{display:flex;justify-content:space-between;align-items:center;font-size:.9rem;font-weight:500}
+.tog button{width:50px;height:28px;border-radius:99px;border:0;background:#D3DEDB;position:relative;cursor:pointer;transition:background .3s}
+.tog button::after{content:"";position:absolute;left:3px;top:3px;width:22px;height:22px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.2);transition:transform .35s var(--spring)}
+.tog button[aria-pressed="true"]{background:var(--teal)}
+.tog button[aria-pressed="true"]::after{transform:translateX(22px)}
+html[data-contrast="high"]{--muted:#2E4644;--ink-2:#132F2D;--line:rgba(17,63,61,.32)}
+html[data-contrast="high"] .sub,html[data-contrast="high"] p{color:var(--ink-2)}
+html[data-contrast="high"] .cta-copy p,html[data-contrast="high"] .fit-side p,html[data-contrast="high"] .day-cap p{color:#fff}
+html[data-contrast="high"] a:not(.btn):not(.tile):not(.brand){text-decoration:underline;text-underline-offset:3px}
+html.calm *,html.calm *::before,html.calm *::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+
+/* speak button in bubble */
+.speak{all:unset;cursor:pointer;display:inline-flex;align-items:center;gap:5px;font-size:.74rem;font-weight:600;color:var(--violet);margin-top:8px}
+.speak .ico{width:15px;height:15px}
+.buddy.enter .body{animation:enter 1.1s var(--spring) both}
+@keyframes enter{0%{transform:translateY(18%) scale(.94)}60%{transform:translateY(-4%) scale(1.02)}100%{transform:none}}
+
+@media (max-width:1020px){
+  .day-grid{grid-template-columns:1fr}
+  .fit-card{grid-template-columns:1fr}
+  .opts{grid-template-columns:1fr}
+  .opt{grid-template-columns:auto 1fr;align-items:center}
+  .opt span{grid-column:2}
+  .opt .oi{grid-row:span 2}
+}
+@media (max-width:760px){
+  .lb-box{grid-template-columns:1fr;max-height:calc(100dvh - 40px)}
+  .lb-img{min-height:0;aspect-ratio:4/3}
+  .lb-info{padding:22px}
+  .lb-info h3{font-size:1.6rem}
+  .lb-nav{top:auto;bottom:calc(24px + env(safe-area-inset-bottom,0px));translate:0 0;width:46px;height:46px}
+  .fit-main,.fit-side{padding:28px 22px}
+  .c-btn span.l{display:none}
+  .c-btn{padding:0 14px}
+}
+
+
+/* ---------- footer socials ---------- */
+.socials{margin-top:20px}
+.socials-h{display:block;font-size:.74rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.socials-row{display:flex;gap:10px;margin-top:10px}
+.soc{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;color:var(--teal-d);background:#fff;box-shadow:inset 0 0 0 1px var(--line),0 8px 18px -14px rgba(17,63,61,.5);transition:transform .35s var(--ease),background .3s,color .3s,box-shadow .3s}
+.soc:hover,.soc:focus-visible{color:#fff;transform:translateY(-3px);box-shadow:0 12px 22px -12px rgba(17,63,61,.55)}
+.soc.ig:hover,.soc.ig:focus-visible{background:linear-gradient(45deg,#f9a03f,#e1306c 50%,#833ab4)}
+.soc.fb:hover,.soc.fb:focus-visible{background:#1877f2}
+.soc.li:hover,.soc.li:focus-visible{background:#0a66c2}
+@media (hover:none){.soc:hover{transform:none}}
+
+/* form: consent note + hidden anti-spam field */
+.visit .consent{margin:0 0 12px;font-size:.78rem;line-height:1.5;color:var(--muted)}
+.hp-field{position:absolute!important;left:-9999px!important;width:1px;height:1px;opacity:0}
+.visit button[disabled]{opacity:.7;cursor:progress}
+
+/* visit form: day visits only */
+.seg.one{grid-template-columns:1fr}
+.dlg-note{margin:-4px 0 0;font-size:.86rem;color:var(--muted)}
+.dlg-note a{color:var(--teal-d);font-weight:600;text-decoration:underline;text-underline-offset:3px}
+
+/* contact us */
+.contact-sec{padding-top:40px;background:linear-gradient(180deg,#fff,var(--soft))}
+.contact-in{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:56px;align-items:center}
+.contact-list{list-style:none;padding:0;margin:28px 0 0;display:grid;gap:16px}
+.contact-list li{display:flex;gap:14px;align-items:center}
+.contact-list .ci{width:46px;height:46px;border-radius:14px;display:grid;place-items:center;background:var(--g-soft);color:var(--teal);flex:none}
+.contact-list .ci .ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.contact-list b{display:block;font-weight:600;color:var(--ink)}
+.contact-list span span,.contact-list li>span:last-child{color:var(--ink-2)}
+.contact-list a{color:var(--teal-d);font-weight:500}
+.contact-nestu{display:flex;gap:14px;align-items:center;margin-top:30px;padding:14px 18px 14px 14px;border-radius:22px;background:#fff;box-shadow:var(--shadow-sm);max-width:440px}
+.contact-nestu img{width:58px;height:58px;border-radius:50%;background:var(--v-soft);flex:none}
+.contact-nestu b{display:block;color:var(--violet);font-size:.9rem}
+.contact-nestu span{font-size:.92rem;color:var(--ink-2)}
+.contact-card{background:#fff;border-radius:28px;box-shadow:var(--shadow);border:1px solid var(--line);position:relative}
+.contact-card::before{content:"";position:absolute;inset:0 0 auto;height:6px;border-radius:28px 28px 0 0;background:var(--grad)}
+.cform{padding:34px 32px 30px}
+.cform[hidden],.cdone[hidden]{display:none}
+.cform h3{font-size:1.6rem;margin-bottom:4px}
+.cform select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23113F3D' stroke-width='2.4' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:40px;cursor:pointer}
+.cform select:invalid{color:var(--muted)}
+.cform select option{color:var(--ink)}
+.cform .field input[aria-invalid="true"],.cform .field select[aria-invalid="true"]{border-color:#C0306A;background:#FDF1F6}
+.cform .field .err{min-height:0}
+.cform button[type=submit]{width:100%}
+.cdone{padding:44px 32px;text-align:center}
+.cdone .tick{width:84px;height:84px;margin:0 auto 18px;border-radius:50%;background:var(--g-soft);display:grid;place-items:center}
+.cdone .tick svg{width:40px;height:40px;fill:none;stroke:var(--teal);stroke-width:3.5;stroke-linecap:round;stroke-linejoin:round}
+.cdone h3{font-size:1.8rem}
+.cdone p{color:var(--ink-2);margin:10px auto 22px;max-width:40ch}
+.cdone .row{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+@media (max-width:900px){.contact-in{grid-template-columns:1fr;gap:34px}.contact-sec{padding-top:24px}}
+@media (max-width:520px){.cform{padding:28px 20px 24px}.contact-card{border-radius:22px}.cdone{padding:36px 20px}}
+</style>
+<link rel="stylesheet" href="/karenest/karebalance.css?v=20261024b">
+</head>
+<body>
+<!-- intro: plays on a fresh visit (see loader.js) -->
+<div class="kn-loader" id="knLoader" role="status" aria-label="Loading KareNest">
+  <div class="kn-stage">
+    <div class="kn-emblem" aria-hidden="true">
+      <svg viewBox="0 0 200 200">
+        <defs><linearGradient id="knGrad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#12917A"/><stop offset=".4" stop-color="#2E8FB5"/><stop offset=".72" stop-color="#7A4CBF"/><stop offset="1" stop-color="#D6568C"/></linearGradient></defs>
+        <circle class="kn-ring2" cx="100" cy="100" r="86"/>
+        <circle class="kn-ring" cx="100" cy="100" r="86" pathLength="1" transform="rotate(-90 100 100)"/>
+        <g class="kn-sprig" style="transform-origin:100px 150px">
+          <path class="kn-stem" pathLength="1" d="M100 156C98 132 96 112 104 64"/>
+          <path class="kn-leaf l1" d="M99 134c-17-1-29-10-31-24 14 0 28 9 31 24z"/>
+          <path class="kn-leaf l2" d="M99 117c3-16 16-25 31-25-1 14-13 24-31 25z"/>
+          <path class="kn-leaf l3" d="M101 97c-15-4-23-16-22-29 13 3 23 14 22 29z"/>
+          <path class="kn-leaf l4" d="M103 77c3-13 14-20 26-20-2 12-12 19-26 20z"/>
+        </g>
+      </svg>
+      <img class="kn-mark" src="/karenest/images/mark.webp" alt="">
+    </div>
+    <div class="kn-word" aria-hidden="true"><span>K</span><span>a</span><span>r</span><span>e</span><span>N</span><span>e</span><span>s</span><span>t</span></div>
+    <div class="kn-tag">Welcome home</div>
+  </div>
+  <button class="kn-skip" type="button">Skip intro</button>
+  <svg class="kn-wave" viewBox="0 0 1440 90" preserveAspectRatio="none" aria-hidden="true"><path d="M0 0H1440V30C1200 80 960 90 720 60S240 10 0 50Z"/></svg>
+</div>
+
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <symbol id="arr" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+  <symbol id="ppl" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.4-.3 4.2 1.2 4.6 4"/></symbol>
+  <symbol id="chk" viewBox="0 0 24 24"><path d="M5 12.5l4.2 4.2L19 7"/></symbol>
+  <symbol id="clk" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M12 21s-6.5-5.6-6.5-11a6.5 6.5 0 0 1 13 0c0 5.4-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></symbol>
+  <symbol id="heart" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/></symbol>
+</defs></svg>
+
+<div class="progress" id="progress"></div>
+
+<header class="nav" id="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top" aria-label="KareNest home">
+      <img src="/karenest/images/mark.webp" alt="">
+      <span class="wm"><b>KareNest</b><small>Live healthy. Live happy. Live with dignity.</small></span>
+    </a>
+    <ul class="links">
+      <li><a href="#top" class="active">Home</a></li>
+      <li><a href="#about">About KareNest</a></li>
+      <li><a href="#life">Life at KareNest</a></li>
+      <li><a href="#activities">Activities &amp; Wellness</a></li>
+      <li><a href="#karebalance">KareBalance</a></li>
+      <li><a href="#families">For Families</a></li>
+      <li><a href="#contact">Contact Us</a></li>
+    </ul>
+    <div class="nav-cta">
+      <button class="btn btn-primary btn-sm mag" data-open="join"><svg class="ico"><use href="#ppl"/></svg>Join Our Community</button>
+      <button class="btn btn-ghost btn-sm mag" data-open="visit"><svg class="ico"><use href="#cal"/></svg>Plan a Visit</button>
+    </div>
+    <a class="app-in" href="/app/#/signin?brand=karenest" data-app="karenest" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
+    <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
+  </div>
+</header>
+
+<nav class="drawer" id="drawer" aria-label="Mobile">
+  <a href="#top" style="transition-delay:.12s">Home</a>
+  <a href="#about" style="transition-delay:.16s">About KareNest</a>
+  <a href="#life" style="transition-delay:.2s">Life at KareNest</a>
+  <a href="#activities" style="transition-delay:.24s">Activities &amp; Wellness</a>
+  <a href="#karebalance" style="transition-delay:.26s">KareBalance</a>
+  <a href="#families" style="transition-delay:.28s">For Families</a>
+  <a href="#contact" style="transition-delay:.36s">Contact Us</a>
+  <a href="/app/#/signin?brand=karenest" data-app="karenest" style="transition-delay:.4s">Family sign in</a>
+  <div class="row"><button class="btn btn-primary" data-open="join"><svg class="ico"><use href="#ppl"/></svg>Join Our Community</button><button class="btn btn-ghost" data-open="visit"><svg class="ico"><use href="#cal"/></svg>Plan a Visit</button></div>
+</nav>
+
+<main id="top">
+<!-- HERO -->
+<section class="hero" id="hero">
+  <div class="hero-photo" id="heroPhoto"><img src="/karenest/images/hero.webp" alt="Four KareNest members laughing together on a garden bench"></div>
+  <svg class="sprig" viewBox="0 0 110 170" aria-hidden="true">
+    <path d="M30 168C40 120 52 80 92 18"/>
+    <path class="lf" style="animation-delay:1.4s,0s" d="M46 112c-22-4-34-18-36-34 18 2 32 14 36 34z"/>
+    <path class="lf" style="animation-delay:1.6s,-1s" d="M56 90c4-22 20-34 38-34-2 18-16 32-38 34z"/>
+    <path class="lf" style="animation-delay:1.8s,-2s" d="M68 62c-18-8-26-24-24-40 16 6 26 20 24 40z"/>
+    <path class="lf" style="animation-delay:2s,-3s" d="M80 40c6-18 20-26 30-26-4 16-16 26-30 26z"/>
+  </svg>
+  <div class="glass g1" aria-hidden="true"><div class="ic" style="background:var(--g-soft);color:var(--teal)"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="4.5" r="2"/><path d="M5 9l7 2 7-2M12 11v5l-4 5M12 16l4 5"/></svg></div><div><b>Yoga on the lawn</b><span class="live">Mon to Sat · 10:00 AM</span></div></div>
+  <div class="glass g2" aria-hidden="true"><div class="ic" style="background:var(--r-soft);color:var(--rose)"><svg class="ico"><use href="#heart"/></svg></div><div><b>Update sent to family</b><span>“Amma loved the music hour”</span></div></div>
+  <div class="wrap hero-in">
+    <div class="hero-copy">
+      <div class="eyebrow">KareNest</div>
+      <h1>
+        <span class="ln"><span>Live Well.</span></span>
+        <span class="ln"><span>Stay Connected.</span></span>
+        <span class="ln"><span class="violet">Keep Growing.</span></span>
+      </h1>
+      <p class="lede">A community where ageing is embraced with Health, Dignity &amp; Happiness.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary mag" href="#about">Explore Our Community<svg class="ico arr"><use href="#arr"/></svg></a>
+        <button class="btn btn-ghost mag" data-open="visit"><svg class="ico"><use href="#cal"/></svg>Plan a Visit</button>
+        <button class="btn btn-ghost mag" data-open="join"><svg class="ico"><use href="#ppl"/></svg>Join Our Community</button>
+      </div>
+    </div>
+  </div>
+  <a class="scroll-cue" href="#about" aria-label="Scroll to the next section"></a>
+</section>
+
+
+
+<!-- EXPERIENCE -->
+<section class="sec" id="about">
+  <div class="wrap exp">
+    <div class="rv">
+      <h2 class="h2">How would you like to experience <span class="kn">KareNest?</span></h2>
+      <p class="sub">Whether you want to live with us, visit for the day, or simply stay connected, there's a place for you in our community.</p>
+    </div>
+    <div class="xcards">
+      <article class="xcard tilt rv">
+        <div class="xmedia"><img loading="lazy" decoding="async" src="/karenest/images/exp1.webp" alt="A resident couple chatting in the garden"><div class="xicon"><svg class="ico" viewBox="0 0 40 40"><path d="M6 19 20 7l14 12"/><path d="M10 16v17h20V16"/><path d="M17 33v-8h6v8"/></svg></div></div>
+        <div class="xbody"><h3>Live With Us</h3><p>For active living, support, care and a vibrant community.</p><a class="link-arrow" href="#life">Learn More<svg class="ico"><use href="#arr"/></svg></a></div>
+      </article>
+      <article class="xcard tilt rv" style="--d:.1s">
+        <div class="xmedia"><img loading="lazy" decoding="async" src="/karenest/images/exp2.webp" alt="Day visitors joining a group session"><div class="xicon" style="color:var(--teal)"><svg class="ico" viewBox="0 0 40 40"><path d="M10 31C10 17 18 9 32 8c0 14-8 23-22 23Z"/><path d="M10 31 24 17M16 25h5M20 21v-5"/></svg></div></div>
+        <div class="xbody"><h3>Visit &amp; Participate</h3><p>Join activities, wellness programmes and community experiences during the day.</p><a class="link-arrow" href="#activities">Learn More<svg class="ico"><use href="#arr"/></svg></a></div>
+      </article>
+      <article class="xcard tilt rv" style="--d:.2s">
+        <div class="xmedia"><img loading="lazy" decoding="async" src="/karenest/images/exp3.webp" alt="A member staying in touch on his phone"><div class="xicon" style="color:var(--blue)"><svg class="ico" viewBox="0 0 40 40"><circle cx="20" cy="12" r="4.5"/><circle cx="10" cy="17" r="3.5"/><circle cx="30" cy="17" r="3.5"/><path d="M12 32c0-5 3.6-8.5 8-8.5s8 3.5 8 8.5"/><path d="M4 30c0-4 2.6-6.5 6-6.5M36 30c0-4-2.6-6.5-6-6.5"/></svg></div></div>
+        <div class="xbody"><h3>Join Our Community</h3><p>For seniors, families and caregivers who want to stay connected with KareNest.</p><a class="link-arrow" href="#community">Learn More<svg class="ico"><use href="#arr"/></svg></a></div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- FOCUS -->
+<section class="focus" id="life">
+  <div class="focus-in">
+    <div class="focus-photo rv-img"><img loading="lazy" decoding="async" src="/karenest/images/yoga.webp" alt="A smiling member stretching during outdoor yoga"></div>
+    <div class="focus-copy rv">
+      <div class="eyebrow">Our focus</div>
+      <h2 style="margin-top:12px"><span class="w1">Health.</span> <span class="w2">Dignity.</span> <span class="w3">Happiness.</span></h2>
+      <p class="sub">Everything we do at KareNest is built around three core pillars, helping older adults live healthier lives, with dignity and joy.</p>
+    </div>
+    <div class="pillars">
+      <div class="pillar rv" style="--c:#12917A;--pbg:linear-gradient(160deg,#E6F5EE,#F3FAF7)">
+        <div class="pic"><svg class="ico" viewBox="0 0 24 24"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/><path d="M6.5 12h3l1.4-2.5 2 4.5 1.4-2h3.2"/></svg></div>
+        <h3>HEALTH</h3>
+        <ul><li><svg class="ico"><use href="#chk"/></svg>Wellness &amp; Fitness</li><li><svg class="ico"><use href="#chk"/></svg>Preventive Care</li><li><svg class="ico"><use href="#chk"/></svg>Nutrition &amp; Mental Wellbeing</li></ul>
+      </div>
+      <div class="pillar rv" style="--c:#7A4CBF;--pbg:linear-gradient(160deg,#EFE8FA,#F8F5FD);--d:.1s">
+        <div class="pic"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.2"/><path d="M12 8v6M8 10.5l4 1.5 4-1.5M9.5 21l2.5-7 2.5 7"/><path d="M5 16c1.5 1.5 4 2.5 7 2.5s5.5-1 7-2.5"/></svg></div>
+        <h3>DIGNITY</h3>
+        <ul><li><svg class="ico"><use href="#chk"/></svg>Independence</li><li><svg class="ico"><use href="#chk"/></svg>Respect &amp; Choice</li><li><svg class="ico"><use href="#chk"/></svg>Meaningful Engagement</li></ul>
+      </div>
+      <div class="pillar rv" style="--c:#D6568C;--pbg:linear-gradient(160deg,#FCE9F1,#FDF5F8);--d:.2s">
+        <div class="pic"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.3 5.3l1.8 1.8M16.9 16.9l1.8 1.8M5.3 18.7l1.8-1.8M16.9 7.1l1.8-1.8"/></svg></div>
+        <h3>HAPPINESS</h3>
+        <ul><li><svg class="ico"><use href="#chk"/></svg>Friendships</li><li><svg class="ico"><use href="#chk"/></svg>Hobbies &amp; Learning</li><li><svg class="ico"><use href="#chk"/></svg>Celebrations &amp; Fun</li></ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- DISCOVER -->
+<section class="sec" id="activities">
+  <div class="wrap">
+    <div class="head-row rv">
+      <div><h2 class="h2" style="color:var(--blue)">Discover What Awaits You</h2><p class="sub" style="margin-top:8px">Activities, wellness, learning, and more, designed for happier, healthier days.</p></div>
+      <a class="link-arrow" href="#families">View All Activities<svg class="ico"><use href="#arr"/></svg></a>
+    </div>
+    <div class="acts">
+      <article class="act rv" tabindex="0"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a1.webp" alt="Group yoga on the lawn"><span class="when"><svg class="ico"><use href="#clk"/></svg>Mon–Sat · 10:00 AM</span></div><div class="act-body"><h3>Yoga &amp; Fitness</h3><p>Stay active, flexible and energised.</p></div></article>
+      <article class="act rv" tabindex="0" style="--d:.06s"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a2.webp" alt="Members at an arts and crafts table"><span class="when"><svg class="ico"><use href="#clk"/></svg>Tue &amp; Fri · 11:15 AM</span></div><div class="act-body"><h3>Arts &amp; Crafts</h3><p>Express your creativity.</p></div></article>
+      <article class="act rv" tabindex="0" style="--d:.12s"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a3.webp" alt="A music and cultural gathering"><span class="when"><svg class="ico"><use href="#clk"/></svg>Wed · 3:30 PM</span></div><div class="act-body"><h3>Music &amp; Cultural Events</h3><p>Celebrate life, together.</p></div></article>
+      <article class="act rv" tabindex="0" style="--d:.18s"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a4.webp" alt="A walking club on a tree-lined path"><span class="when"><svg class="ico"><use href="#clk"/></svg>Mon–Sat · 5:30 PM</span></div><div class="act-body"><h3>Walking Clubs</h3><p>Fresh air, good company.</p></div></article>
+      <article class="act rv" tabindex="0" style="--d:.24s"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a5.webp" alt="A learning session in a classroom"><span class="when"><svg class="ico"><use href="#clk"/></svg>Mon &amp; Thu · 2:00 PM</span></div><div class="act-body"><h3>Learning Sessions</h3><p>New skills, new hobbies.</p></div></article>
+      <article class="act rv" tabindex="0" style="--d:.3s"><div class="act-img"><img loading="lazy" decoding="async" src="/karenest/images/a6.webp" alt="Friends playing table games"><span class="when"><svg class="ico"><use href="#clk"/></svg>Mon–Sat · 4:30 PM</span></div><div class="act-body"><h3>Games &amp; Social Moments</h3><p>Because life is better together.</p></div></article>
+    </div>
+  </div>
+</section>
+
+  <!-- ================= KareBalance: fall prevention & mobility programme ================= -->
+  <section class="kb" id="karebalance" aria-labelledby="kb-title">
+    <div class="wrap">
+      <div class="kb-intro">
+        <div class="kb-copy rv">
+          <span class="kb-eyebrow">KareBalance</span>
+          <h2 class="kb-title" id="kb-title"><span>Better Balance.</span><span>Stronger Steps.</span><span>Fewer Falls.</span></h2>
+          <p class="kb-lead">A personalised fall prevention and mobility programme that helps older adults stay steady, active, and independent.</p>
+          <div class="kb-ctas">
+            <button class="btn btn-primary mag" data-open="visit"><svg class="ico"><use href="#cal"/></svg>Book a Consultation</button>
+            <a class="kb-link" href="#kb-plans">See programmes &amp; pricing <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+        <figure class="kb-photo rv-img">
+          <img src="/karenest/images/yoga.webp" alt="KareNest members doing a balance and stretching session on the lawn" loading="lazy" decoding="async">
+          <figcaption class="kb-note">Stay active.<br>Stay independent.</figcaption>
+        </figure>
+      </div>
+
+      <div class="rv">
+        <h3 class="kb-h">How KareBalance Helps</h3>
+        <ul class="kb-helps">
+          <li class="kb-help" style="--c:var(--kb-c1)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><h4>Improve Balance &amp; Stability</h4><p>Build better control while standing, turning and walking.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c2)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><h4>Build Strength</h4><p>Strengthen leg and core muscles for everyday activities.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c1d)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4" r="2"/><path d="M11 21l2.2-6.2-2.6-3 1.1-4.8 3 2.9 3 1.1M10.6 11.8 7.4 14M13.2 14.8 15.6 21"/></svg></span><h4>Move with Confidence</h4><p>Practise walking, stair climbing and sit-to-stand transitions.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c3)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.9-3.4 8.1-8 9-4.6-.9-8-4.1-8-9V6l8-3Z"/><path d="M8.6 12.6 12 9.6l3.4 3V16H8.6v-3.4Z"/></svg></span><h4>Identify Fall Risks</h4><p>Assess personal risk factors, medication-related concerns and home safety hazards.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c5)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><path d="M2.8 20c.5-3.6 2.9-5.6 5.7-5.6s5.2 2 5.7 5.6"/><circle cx="17" cy="9.2" r="2.4"/><path d="M15.6 14.7c2.7.1 4.6 1.9 5.4 5"/></svg></span><h4>Stay Independent</h4><p>Develop safer movement habits and confidence in daily life.</p></li>
+        </ul>
+      </div>
+
+      <div class="kb-for  rv">
+        <div class="kb-for-media"><img src="/karenest/images/a4.webp" alt="KareNest members out for a group walk in the garden" loading="lazy" decoding="async"></div>
+        <div class="kb-for-body">
+          <h3 class="kb-h">Who Is KareBalance For?</h3>
+          <p class="kb-for-lead">KareBalance is designed for older adults who:</p>
+          <ul class="kb-checks">
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have experienced a fall or near-fall.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Fear falling and have started avoiding everyday activities.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Feel unsteady while walking, turning or climbing stairs.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Are recovering mobility after an illness, hospitalisation or a period of inactivity.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have reduced leg strength, balance or mobility.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Want to maintain their balance, strength and independence as they age.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="kb-plans" class="rv">
+        <h3 class="kb-h">Our Programmes &amp; Pricing</h3>
+        <p class="kb-sub">Choose the right level of support for your needs and goals.</p>
+      </div>
+      <div class="kb-plans rv">
+        <article class="kb-plan ">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><div><h4>KareBalance Base</h4><p class="kb-plan-sub">Assessment &amp; Report</p></div></div>
+          <p class="kb-price">₹7,999</p><p class="kb-unit">One-time fee</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive fall risk assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Balance, strength and mobility testing</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Review of fall history and relevant risk factors</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety recommendations</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Personalised assessment report with next steps</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Understanding individual fall risks and prevention needs.</p></div>
+          <button class="btn btn-ghost kb-choose" data-open="visit" aria-label="Book KareBalance Base">Book Base</button>
+        </article>
+        <article class="kb-plan c2">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><div><h4>KareBalance Plus</h4><p class="kb-plan-sub">Structured Training &amp; Prevention</p></div></div>
+          <p class="kb-price">₹39,999</p><p class="kb-unit">24 supervised training sessions</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Initial fall risk assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>24 supervised training sessions</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progressive balance and strength exercises</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Walking, turning and sit-to-stand practice</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety review</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progress monitoring and family report</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults with balance difficulties, reduced strength or a history of falls.</p></div>
+          <button class="btn btn-ghost kb-choose" data-open="visit" aria-label="Book KareBalance Plus">Book Plus</button>
+        </article>
+        <article class="kb-plan c3">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></span><div><h4>KareBalance Premium</h4><p class="kb-plan-sub">Comprehensive Six-Month Support</p></div></div>
+          <p class="kb-price">₹90,000</p><p class="kb-unit">Six-month programme</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive initial assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Weekly supervised balance and strength training</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Quarterly reassessments</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home visits and safety recommendations</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Family coaching and caregiver guidance</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Ongoing progress tracking and personalised programme adjustments</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults needing continued support to maintain mobility, confidence and independence.</p></div>
+          <button class="btn btn-ghost kb-choose" data-open="visit" aria-label="Book KareBalance Premium">Book Premium</button>
+        </article>
+      </div>
+
+      <div class="kb-band rv">
+        <span class="kb-band-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><path d="M2.5 20v-2.5A4.5 4.5 0 0 1 7 13a4.5 4.5 0 0 1 4.5 4.5M12.5 17.5A4.5 4.5 0 0 1 17 13a4.5 4.5 0 0 1 4.5 4.5V20"/><path d="M12 6.6c-.6-1.3-2.6-1.2-2.6.4 0 1.4 2.6 3 2.6 3s2.6-1.6 2.6-3c0-1.6-2-1.7-2.6-.4Z"/></svg></span>
+        <div>
+          <h3>Not sure which programme is right for your loved one?</h3>
+          <p>Our team can help identify the most appropriate level of support based on mobility, fall history and individual goals.</p>
+        </div>
+        <button class="btn btn-primary mag" data-open="visit">Talk to Our Team<svg class="ico arr"><use href="#arr"/></svg></button>
+      </div>
+      <p class="kb-fine">Note: Final pricing may vary based on assessment complexity, session frequency, home-visit requirements and service location. Clinical suitability should be established before beginning supervised training. KareBalance is a fall risk reduction and mobility support programme and does not guarantee the prevention of falls.</p>
+    </div>
+  </section>
+
+
+
+<!-- A DAY AT KARENEST -->
+<section class="sec day" id="day">
+  <div class="wrap day-grid">
+    <div class="day-stage rv" id="dayStage">
+      <div class="clock" aria-hidden="true"><i class="hh" id="hh"></i><i class="mm" id="mm"></i></div>
+      <div class="day-cap"><span class="badge" id="dayBadge">Up next</span><h3 id="dayTitle">Yoga on the lawn</h3><p id="dayText"></p></div>
+    </div>
+    <div class="rv" style="--d:.1s">
+      <div class="eyebrow">A day at KareNest</div>
+      <h2 class="h2" style="margin-top:12px">Every hour has <span class="grad-text">something to look forward to</span></h2>
+      <p class="sub">We're open <b>Monday to Saturday, 9:30 AM to 6:00 PM</b>. Tap a time to see what a day with us looks like.</p>
+      <ul class="times" id="times"><span class="fill" id="dayFill"></span></ul>
+      <div class="day-ctrl"><button id="dayPrev" aria-label="Previous time"><svg class="ico" style="transform:rotate(180deg)"><use href="#arr"/></svg></button><button id="dayNext" aria-label="Next time"><svg class="ico"><use href="#arr"/></svg></button><span id="dayNow"></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- FAMILIES + HIGHLIGHTS -->
+<section class="sec" id="families" style="padding-top:0">
+  <div class="wrap duo">
+    <div class="fam rv">
+      <div class="fam-photo rv-img"><img loading="lazy" decoding="async" src="/karenest/images/fam.webp" alt="A grandmother and granddaughter arranging flowers together"><span class="heart"><svg class="ico" style="width:20px;height:20px;fill:currentColor;stroke:none"><use href="#heart"/></svg></span></div>
+      <div class="fam-copy">
+        <span class="kick">For Families</span>
+        <h2>Peace of Mind, Always.</h2>
+        <p>Stay connected, get regular updates, and know your loved ones are safe, healthy and happy, wherever they live with us or visit for the day.</p>
+        <a class="btn btn-primary mag" href="#community">Learn How We Keep You Connected<svg class="ico arr"><use href="#arr"/></svg></a>
+      </div>
+    </div>
+    <div class="hl rv" style="--d:.1s" id="events">
+      <div class="hl-head">
+        <div><h3>Community Highlights</h3><p>Events, workshops, wellness programmes and more.</p></div>
+        <a class="link-arrow" href="#activities">View All<svg class="ico"><use href="#arr"/></svg></a>
+      </div>
+      <div class="next" id="next"><span class="lbl">Next up · <b id="nextName">—</b></span><div class="cd"><span><b id="cdD">00</b><small>days</small></span><span><b id="cdH">00</b><small>hrs</small></span><span><b id="cdM">00</b><small>min</small></span><span><b id="cdS">00</b><small>sec</small></span></div></div>
+      <div class="evs" id="evs"></div>
+    </div>
+  </div>
+</section>
+
+<!-- COMMUNITY -->
+<section class="sec comm" id="community" style="padding-top:20px">
+  <div class="wrap comm-in">
+    <div class="rv">
+      <h2 class="h2">More Than Activities. A Community.</h2>
+      <p class="sub">KareNest is not just a place. It's a family of caregivers, staff and members, all connected in a shared journey of care, purpose and joy.</p>
+      <button class="btn btn-primary mag" data-open="join">Join the Community<svg class="ico arr"><use href="#arr"/></svg></button>
+    </div>
+    <div class="tiles">
+      <a class="tile rv" href="#visit"><img loading="lazy" decoding="async" src="/karenest/images/c1.webp" alt="Friends chatting around a garden table"><span class="cap"><b>Make New Friends</b><span class="go"><svg class="ico"><use href="#arr"/></svg></span></span></a>
+      <a class="tile rv" href="#visit" style="--d:.08s"><img loading="lazy" decoding="async" src="/karenest/images/c2.webp" alt="A member playing guitar"><span class="cap"><b>Share Your Talents</b><span class="go"><svg class="ico"><use href="#arr"/></svg></span></span></a>
+      <a class="tile rv" href="#visit" style="--d:.16s"><img loading="lazy" decoding="async" src="/karenest/images/c3.webp" alt="Members walking together"><span class="cap"><b>Stay Active</b><span class="go"><svg class="ico"><use href="#arr"/></svg></span></span></a>
+      <a class="tile rv" href="#visit" style="--d:.24s"><img loading="lazy" decoding="async" src="/karenest/images/c4.webp" alt="A smiling member in the garden"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go"><svg class="ico"><use href="#arr"/></svg></span></span></a>
+    </div>
+  </div>
+</section>
+
+
+<!-- FIT FINDER -->
+<section class="sec fit" id="fit" style="padding-top:30px">
+  <div class="wrap">
+    <div class="fit-card rv">
+      <div class="fit-side">
+        <div>
+          <div class="eyebrow">Find your fit</div>
+          <h2 style="margin-top:12px">Which KareNest experience suits you?</h2>
+          <p>Three quick questions, under a minute. No sign-up needed.</p>
+        </div>
+        <div class="fit-head"><img loading="lazy" decoding="async" src="/karenest/images/head.webp" alt=""><span id="fitSays">I'll help you choose!</span></div>
+      </div>
+      <div class="fit-main" id="fitMain" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA + MASCOT -->
+<section class="cta" id="visit">
+  <div class="cta-top" aria-hidden="true"></div>
+  <div class="cta-band" id="ctaBand">
+    <div class="cta-bg"><img loading="lazy" decoding="async" src="/karenest/images/garden.webp" alt=""></div>
+    <div class="wrap" style="width:100%">
+      <div class="cta-copy rv">
+        <h2>A Brighter Chapter Awaits.</h2>
+        <p>Join KareNest for a healthier, happier and more connected tomorrow.</p>
+        <div class="hero-actions">
+          <button class="btn btn-ghost mag" data-open="visit"><svg class="ico"><use href="#cal"/></svg>Plan a Visit</button>
+          <button class="btn btn-ghost mag" data-open="join"><svg class="ico"><use href="#ppl"/></svg>Join Our Community</button>
+        </div>
+      </div>
+    </div>
+    <div class="bubble hide" id="bubble" role="status" aria-live="polite"></div>
+    <button class="buddy" id="buddy" aria-label="Talk to Nestu, the KareNest guide">
+      <span class="shadow"></span>
+      <span class="body" id="buddyBody"><img loading="lazy" decoding="async" src="/karenest/images/mascot.webp" alt="Nestu, the KareNest guide: a cheerful girl in round glasses waving hello"></span>
+    </button>
+    <div class="cta-wave" aria-hidden="true">
+      <svg class="w2" viewBox="0 0 2880 70" preserveAspectRatio="none"><path d="M0 40C240 10 480 66 720 40s480-56 720-26 480 56 720 26 480-56 720-26V70H0Z" fill="#E9DDF5"/></svg>
+      <svg viewBox="0 0 2880 70" preserveAspectRatio="none"><path d="M0 52C240 30 480 70 720 52s480-40 720-20 480 40 720 20 480-40 720-20V70H0Z" fill="#fff"/></svg>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACT US -->
+<section class="sec contact-sec" id="contact" aria-labelledby="contact-title">
+  <div class="wrap contact-in">
+    <div class="contact-copy rv">
+      <div class="eyebrow">Contact us</div>
+      <h2 class="h2" id="contact-title" style="margin-top:12px">Let's talk about <span class="grad-text">what you need</span></h2>
+      <p class="sub">Leave your name and number and tell us what you're interested in. Our team will call you back, usually the same day.</p>
+      <ul class="contact-list">
+        <li><span class="ci"><svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg></span><span><b>Monday to Saturday</b>9:30 AM to 6:00 PM</span></li>
+        <li><span class="ci"><svg class="ico" viewBox="0 0 24 24"><path d="M4 6.5h16v11H4z"/><path d="m4 7 8 6 8-6"/></svg></span><span><b>Email</b><a href="mailto:hello@karenest.in">hello@karenest.in</a></span></li>
+        <li><span class="ci"><svg class="ico" viewBox="0 0 24 24"><path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11Z"/><circle cx="12" cy="10" r="2.4"/></svg></span><span><b>Visit us</b>Kochi, Kerala</span></li>
+      </ul>
+      <div class="contact-nestu"><img loading="lazy" decoding="async" src="/karenest/images/head.webp" alt=""><span><b>Nestu says</b>Not sure which to pick? Choose the closest one and we'll guide you on the call.</span></div>
+    </div>
+    <div class="contact-card rv" style="--d:.1s">
+      <form class="visit cform" id="contactForm" novalidate>
+        <h3>Send an enquiry</h3>
+        <div class="field"><label for="cName">Name</label><input id="cName" name="name" autocomplete="name" placeholder="e.g. Meera Nair" required aria-describedby="cNameErr"><span class="err" id="cNameErr"></span></div>
+        <div class="field"><label for="cPhone">Phone number</label><input id="cPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="+91 98xxx xxxxx" required aria-describedby="cPhoneErr"><span class="err" id="cPhoneErr"></span></div>
+        <div class="field"><label for="cType">Enquiry type</label>
+          <select id="cType" name="type" required aria-describedby="cTypeErr">
+            <option value="" disabled selected>Choose one</option>
+            <option value="karenest-visit">Day Visit</option>
+            <option value="karenest-live">Live With Us</option>
+            <option value="karenest-join">Community</option>
+            <option value="karenest-karebalance">KareBalance</option>
+          </select><span class="err" id="cTypeErr"></span></div>
+        <input type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field" id="cWebsite">
+        <div class="err" id="cErr" role="alert"></div>
+        <p class="consent">By sending this, you agree that the KareNest team may call you about your enquiry.</p>
+        <button class="btn btn-primary" type="submit">Send enquiry<svg class="ico arr"><use href="#arr"/></svg></button>
+      </form>
+      <div class="cdone" id="contactDone" hidden tabindex="-1">
+        <div class="tick"><svg viewBox="0 0 48 48"><path d="M12 25l8 8 16-17"/></svg></div>
+        <h3>Thank you!</h3>
+        <p id="cDoneMsg">We'll call you soon.</p>
+        <div class="row"><a class="btn btn-primary" id="cDoneApp" href="/app/#/start" hidden>Create your account</a><button class="btn btn-ghost" type="button" id="cAgain">Send another</button></div>
+      </div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <div>
+        <a class="brand" href="#top"><img src="/karenest/images/mark.webp" alt=""><span class="wm"><b>KareNest</b><small>Live healthy. Live happy. Live with dignity.</small></span></a>
+        <p class="tag">A community where ageing is embraced with health, dignity and happiness.</p> <div class="socials"><span class="socials-h">Follow us</span><div class="socials-row"><a class="soc ig" href="https://www.instagram.com/karenestbykareiq/" target="_blank" rel="noopener" aria-label="KareNest on Instagram"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/></svg></a><a class="soc fb" href="https://www.facebook.com/profile.php?id=61590756755250" target="_blank" rel="noopener" aria-label="KareNest on Facebook"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M13.6 21v-7.6h2.6l.4-3h-3V8.5c0-.9.3-1.5 1.5-1.5h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3.1Z"/></svg></a><a class="soc li" href="https://www.linkedin.com/company/109885415/" target="_blank" rel="noopener" aria-label="KareNest on LinkedIn"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-1.6-4.9-4.2-4.9-1.5 0-2.5.8-2.9 1.6V8.9h-3V20h3.1v-5.8c0-1.5.6-2.6 2-2.6 1.3 0 1.9.9 1.9 2.6V20h3.1v-6.4Z"/></svg></a></div></div>
+      </div>
+      <div><h5>Explore</h5><ul><li><a href="#about">About KareNest</a></li><li><a href="#life">Life at KareNest</a></li><li><a href="#activities">Activities &amp; Wellness</a></li><li><a href="#families">For Families</a></li><li><a href="#day">A Day at KareNest</a></li><li><a href="#fit">Find Your Fit</a></li></ul></div>
+      <div><h5>Get involved</h5><ul><li><a href="#community">Join the Community</a></li><li><a href="#visit">Visit Us</a></li><li><a href="#contact">Contact Us</a></li><li><a href="#events">Community Highlights</a></li></ul></div>
+      <div><h5>Visit us</h5><div class="contact"><span>Kochi, Kerala</span><span>hello@karenest.in</span><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
+    </div>
+    <div class="foot-bot">
+      <span>© 2026 KareNest. All rights reserved.</span>
+      <a class="byline" href="/" data-site="kareiq" aria-label="A brand by KareIQ">A brand by <img loading="lazy" decoding="async" src="/karenest/images/kareiq.webp" alt="kareIQ"></a>
+    </div>
+  </div>
+</footer>
+
+
+<!-- lightbox -->
+<div class="lb" id="lb" role="dialog" aria-modal="true" aria-label="Photo viewer" hidden>
+  <button class="lb-x" id="lbX" aria-label="Close photo viewer">×</button>
+  <button class="lb-nav lb-prev" id="lbPrev" aria-label="Previous photo"><svg class="ico"><use href="#arr"/></svg></button>
+  <div class="lb-box">
+    <div class="lb-img" id="lbImg"></div>
+    <div class="lb-info">
+      <span class="eyebrow" id="lbKick"></span>
+      <h3 id="lbTitle"></h3>
+      <span class="lb-meta" id="lbMeta"></span>
+      <p id="lbText"></p>
+      <span class="lb-count" id="lbCount"></span>
+      <button class="btn btn-primary" id="lbCta"><svg class="ico"><use href="#cal"/></svg>Plan a Visit</button>
+    </div>
+  </div>
+  <button class="lb-nav lb-next" id="lbNext" aria-label="Next photo"><svg class="ico"><use href="#arr"/></svg></button>
+</div>
+
+<!-- comfort settings -->
+<div class="comfort" id="comfort">
+  <div class="c-panel hide" id="cPanel" role="dialog" aria-label="Reading comfort">
+    <h4>Reading comfort</h4>
+    <div class="c-row"><label>Text size</label><div class="seg2" id="fsSeg"><button data-fs="1" aria-pressed="true" style="font-size:.9rem">A</button><button data-fs="1.12" aria-pressed="false" style="font-size:1.05rem">A+</button><button data-fs="1.25" aria-pressed="false" style="font-size:1.2rem">A++</button></div></div>
+    <div class="tog">Higher contrast<button id="tgContrast" aria-pressed="false" aria-label="Higher contrast"></button></div>
+    <div class="tog">Calm motion<button id="tgCalm" aria-pressed="false" aria-label="Calm motion"></button></div>
+  </div>
+  <button class="c-btn" id="cBtn" aria-expanded="false" aria-controls="cPanel"><span class="aa">Aa</span><span class="l">Reading comfort</span></button>
+</div>
+
+<!-- floating guide -->
+<div class="guide" id="guide">
+  <div class="g-panel hide" id="gPanel" role="dialog" aria-label="Nestu, your KareNest guide">
+    <div class="g-top"><img loading="lazy" decoding="async" src="/karenest/images/head.webp" alt=""><div><b>Nestu</b><span id="gStatus">Here to help you find your way</span></div><button class="x" id="gClose" aria-label="Close">×</button></div>
+    <div class="g-msgs" id="gMsgs"></div>
+    <div class="g-quick" id="gQuick">
+      <button data-q="visit">Plan a visit</button><button data-q="activities">Today's activities</button><button data-q="events">Upcoming events</button><button data-q="families">For families</button><button data-q="join">Join the community</button><button data-q="top">Back to top</button>
+    </div>
+  </div>
+  <div class="g-tease hide" id="gTease">Hi, I'm Nestu! Need a hand finding your way around KareNest?</div>
+  <button class="g-btn" id="gBtn" aria-label="Chat with Nestu" aria-expanded="false"><img loading="lazy" decoding="async" src="/karenest/images/head.webp" alt=""><span class="dot" id="gDot"></span></button>
+</div>
+
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <img loading="lazy" decoding="async" class="dlg-mascot" src="/karenest/images/head.webp" alt="" style="border-radius:50%;background:#fff;border:4px solid #fff;box-shadow:var(--shadow-sm)">
+  <div id="dlgForm">
+    <div class="dlg-head"><div><h3 id="dlgTitle">Plan a day visit</h3><p id="dlgSub">Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and our team will call to confirm.</p></div><button class="x" id="dlgX" aria-label="Close">×</button></div>
+    <form class="visit" id="visitForm" novalidate>
+      <div class="seg one" role="radiogroup" aria-label="I'm interested in">
+        <input type="radio" name="kind" id="k2" value="Day visits" checked><label for="k2">Day visits</label>
+      </div>
+      <p class="dlg-note">Interested in living with us, the community or KareBalance? <a href="#contact" id="toContact">Send us an enquiry</a>.</p>
+      <div class="field"><label for="fName">Your name</label><input id="fName" autocomplete="name" placeholder="e.g. Meera Nair"></div>
+      <div class="row2">
+        <div class="field"><label for="fPhone">Phone</label><input id="fPhone" type="tel" autocomplete="tel" placeholder="+91 98xxx xxxxx"></div>
+        <div class="field"><label for="fDate">Preferred date</label><input id="fDate" type="date"></div>
+      </div>
+      <div class="field"><label for="fFor">Visiting for</label><select id="fFor"><option>Myself</option><option>A parent</option><option>A relative or friend</option></select></div>
+      <input type="text" id="fWebsite" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp-field"><div class="err" id="fErr" role="alert"></div><p class="consent">By sending this, you agree that the KareNest team may call you about your request.</p>
+      <button class="btn btn-primary" type="submit">Send my request<svg class="ico arr"><use href="#arr"/></svg></button>
+    </form>
+  </div>
+  <div class="done" id="dlgDone" hidden>
+    <div class="tick"><svg viewBox="0 0 48 48"><path d="M12 25l8 8 16-17"/></svg></div>
+    <h3>See you soon!</h3>
+    <p id="doneMsg">We'll call you to confirm.</p>
+    <p class="done-app" id="doneAppP" hidden>Families can follow their request and, once your loved one joins, see daily updates in <b>My KareIQ</b>.</p>
+    <div class="row" style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:6px"><a class="btn btn-primary" id="doneApp" href="/app/#/start" hidden>Create your account</a><button class="btn btn-ghost" id="doneClose">Close</button></div>
+  </div>
+</dialog>
+
+<script src="/karenest/app.js?v=20261024g"></script>
+<script src="/js/sites.js?v=20261024b" defer></script>
+
+</body>
+</html>

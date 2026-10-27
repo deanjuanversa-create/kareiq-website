@@ -55,7 +55,7 @@
   async function send(url, data) {
     let res;
     try {
-      res = await fetch(url, {
+      res = await fetch((window.KARE_API || '') + url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify(data)

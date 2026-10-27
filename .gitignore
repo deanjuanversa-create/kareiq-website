@@ -1,5 +1,25 @@
-node_modules/
+# Secrets: never commit these (put real values in Render / Vercel settings instead)
 .env
-data/*.json
-data/*.tmp
-data/content-history/
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials*.json
+service-account*.json
+
+# Saved bookings, enquiries, app accounts and health data (local copies only)
+data/*
+!data/.gitkeep
+
+# Tools and build output
+node_modules/
+.vercel/
+*.log
+*.zip
+
+# OS clutter
+.DS_Store
+Thumbs.db
+desktop.ini

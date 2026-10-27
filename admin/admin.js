@@ -71,7 +71,7 @@
     const pB = prevFrom ? inRange(state.rows.bookings, prevFrom, from) : null;
     const pE = prevFrom ? inRange(state.rows.enquiries, prevFrom, from) : null;
     const rangeLabel = state.days ? `the last ${state.days} days` : 'all time';
-    $('ovSub').textContent = `Bookings and enquiries from both websites, ${rangeLabel}.`;
+    $('ovSub').textContent = `Bookings and enquiries from all three websites, ${rangeLabel}.`;
 
     // ---- KPIs
     const waiting = state.rows.bookings.filter((r) => r.status === 'new').length + state.rows.enquiries.filter((r) => r.status === 'new').length;

@@ -1,0 +1,31 @@
+# Render Blueprint for the KareIQ API (bookings, enquiries, admin panel) and the KareIQ app (/app).
+# The three websites stay on Vercel and forward /api/* and /admin* here.
+services:
+  - type: web
+    name: kareiq-api
+    runtime: node
+    plan: free
+    region: singapore          # closest Render region to India
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: MONGODB_URI       # paste the Atlas connection string when Render asks
+        sync: false
+      - key: MONGODB_DB
+        value: kareiq
+      - key: ADMIN_PASSWORD    # choose the admin panel password when Render asks
+        sync: false
+      - key: ADMIN_EMAIL       # the first office login for the KareIQ app (/app); its password is ADMIN_PASSWORD
+        value: admin@karenest.co.in
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "true"
+      - key: SITE_URL          # visitors who open the Render address are sent here
+        value: https://kareiq-website-full.vercel.app
+      - key: ALLOWED_ORIGINS   # websites allowed to send forms here (add the KareIQ domain when it exists)
+        value: https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in

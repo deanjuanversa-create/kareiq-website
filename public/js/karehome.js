@@ -122,6 +122,17 @@
     if (first && modal.classList.contains('open')) setTimeout(() => first.focus({ preventScroll: true }), 60);
   }
 
+  // KareBalance programmes have fixed pricing, so the payment plan does not apply
+  function kbBilling() {
+    if (!F.billing) return;
+    const kb = /^kb-/.test(F.package.value) || F.service.value === 'karebalance';
+    const field = F.billing.closest('.field');
+    if (field) field.hidden = kb;
+    F.billing.disabled = kb;
+  }
+  F.package.addEventListener('change', kbBilling);
+  F.service.addEventListener('change', kbBilling);
+
   function openModal(trigger) {
     lastFocus = trigger || document.activeElement;
     setMenu(false);
@@ -130,6 +141,7 @@
     doneView.hidden = true;
     if (trigger && trigger.dataset.service) F.service.value = trigger.dataset.service;
     if (trigger && trigger.dataset.package) F.package.value = trigger.dataset.package;
+    kbBilling();
     modal.hidden = false;
     document.documentElement.style.overflow = 'hidden';
     requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('open')));
@@ -204,6 +216,7 @@
       $('#doneName').textContent = data.name.split(' ')[0];
       $('#donePhone').textContent = data.phone;
       $('#doneRef').textContent = res.reference;
+      if (window.KareAppStart) $('#doneApp').href = window.KareAppStart(res.reference, 'karehome');
       $('#doneWa').href = Kare.CONTACT.whatsapp + '?text=' + encodeURIComponent('Hi Kare@Home, my booking reference is ' + res.reference + '.');
       bookView.hidden = true;
       doneView.hidden = false;
@@ -230,7 +243,7 @@
 /* ---------- Care packages: payment-plan switch ----------
    Prices, names and "Includes" come from the admin (window.KARE_CONTENT).
    The numbers below are only the fallback when the page is opened without the server. */
-(function () {
+(window.KareWhenContent || ((fn) => fn()))(function () {
   const C = window.KARE_CONTENT && window.KARE_CONTENT.pricing;
   const PRICES = {
     homestart: { 1: [2599, 2599], 3: [2386, 7159], 6: [2333, 13999], 12: [2291, 27499] },
@@ -352,7 +365,7 @@
   apply(1, false);
   requestAnimationFrame(() => movePill(btns[0]));
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => movePill(btns.find((b) => b.classList.contains('on'))));
-})();
+});
 
 /* Pause looping decorations in sections that are off screen */
 (function () {

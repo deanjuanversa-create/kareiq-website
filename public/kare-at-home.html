@@ -13,8 +13,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
-<link rel="stylesheet" href="/css/karehome.css?v=20261019w">
-<script src="/api/content.js"></script>
+<link rel="stylesheet" href="/css/karehome.css?v=20261024b">
+<script src="/js/api.js?v=20261024a"></script>
 </head>
 <body>
 
@@ -53,38 +53,21 @@
 
 <div class="progress" id="progress" aria-hidden="true"></div>
 
-<!-- Parent brand bar: always leads back to KareIQ -->
-<div class="parent-bar">
-  <div class="wrap pb-in">
-    <a href="/" class="pb-back"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M13 8H3M7 4 3 8l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to <img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
-    <span class="pb-tag">Kare@Home is a <b>KareIQ</b> brand · <a href="/#karenest">Explore KareNest</a></span>
-  </div>
-</div>
-
 <!-- ============ HEADER ============ -->
 <header class="nav" id="nav">
   <div class="wrap nav-in">
-    <a href="/" class="logo" aria-label="KareIQ home"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
+    <a href="#top" class="logo" aria-label="Kare@Home home"><img src="/img/karehome-logo.png" alt="Kare@Home" width="1407" height="395"></a>
     <ul class="menu" id="menu">
       <li><a href="#top" class="active">Home</a></li>
       <li><a href="#about">About Us</a></li>
       <li><a href="#services">Our Services</a></li>
       <li><a href="#packages">Care Packages</a></li>
+      <li><a href="#karebalance">KareBalance</a></li>
       <li><a href="#why">Why Kare@Home</a></li>
       <li><a href="#contact">Contact</a></li>
-      <li class="has-dd">
-        <a href="/" class="dd-trigger" aria-haspopup="true">KareIQ <svg viewBox="0 0 12 8" width="10" height="8" aria-hidden="true"><path d="M1 1.5 6 6.5l5-5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></a>
-        <div class="dd" role="menu">
-          <a href="/" class="dd-hero" role="menuitem"><img src="/img/kareiq-icon.svg" alt="" width="266" height="266"><span><b>KareIQ home</b><small>Our parent company</small></span></a>
-          <a href="/#about" role="menuitem">About KareIQ</a>
-          <a href="/#approach" role="menuitem">Our Approach</a>
-          <a href="/#what-we-do" role="menuitem">Our Care Ecosystem</a>
-          <a href="/#karenest" role="menuitem">KareNest</a>
-          <a href="/#team" role="menuitem">Our Team</a>
-        </div>
-      </li>
     </ul>
     <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
+    <a class="app-in" href="/app/#/signin?brand=karehome" data-app="karehome" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
     <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
   </div>
   <nav class="drawer" id="drawer" aria-label="Mobile">
@@ -94,13 +77,10 @@
         <li><a href="#about">About Us</a></li>
         <li><a href="#services">Our Services</a></li>
         <li><a href="#packages">Care Packages</a></li>
+        <li><a href="#karebalance">KareBalance</a></li>
         <li><a href="#why">Why Kare@Home</a></li>
         <li><a href="#contact">Contact</a></li>
-        <li class="dr-group">KareIQ</li>
-        <li><a href="/">KareIQ home</a></li>
-        <li><a href="/#about">About KareIQ</a></li>
-        <li><a href="/#karenest">KareNest</a></li>
-        <li><a href="/#team">Our Team</a></li>
+        <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
       </ul>
       <button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
     </div>
@@ -121,7 +101,7 @@
         <img class="hero-logo load" style="--d:.05s" src="/img/karehome-logo.png" alt="Kare@Home: Preventive Care. At Your Doorstep." width="1407" height="395">
         <div class="brand-by load" style="--d:.25s">
           <i class="line"></i><span>A brand by</span><b class="sep"></b>
-          <a href="/" aria-label="KareIQ"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
+          <a href="/" data-site="kareiq" aria-label="KareIQ"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
           <i class="line"></i>
         </div>
         <h1 class="load" style="--d:.4s"><span data-c="karehome.heroLine1">Compassionate care.</span><span data-c="karehome.heroLine2">Right where you are.</span></h1>
@@ -257,6 +237,119 @@
       <p class="gst" data-c="pricing.gstNote">All prices are exclusive of GST.</p>
     </div>
   </section>
+
+  <!-- ================= KareBalance: fall prevention & mobility programme ================= -->
+  <section class="kb" id="karebalance" aria-labelledby="kb-title">
+    <div class="wrap">
+      <div class="kb-intro">
+        <div class="kb-copy rv">
+          <span class="kb-eyebrow">KareBalance</span>
+          <h2 class="kb-title" id="kb-title"><span>Better Balance.</span><span>Stronger Steps.</span><span>Fewer Falls.</span></h2>
+          <p class="kb-lead">A personalised fall prevention and mobility programme that helps older adults stay steady, active, and independent.</p>
+          <div class="kb-ctas">
+            <button class="btn btn-grad" data-book data-service="karebalance" data-package="undecided">Book a Consultation <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <a class="kb-link" href="#kb-plans">See programmes &amp; pricing <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
+          </div>
+        </div>
+        <figure class="kb-photo rv r">
+          <img src="/img/home.jpg" alt="A Kare@Home caregiver supporting an older woman at home" loading="lazy" decoding="async">
+          <figcaption class="kb-note">Stay active.<br>Stay independent.</figcaption>
+        </figure>
+      </div>
+
+      <div class="rv">
+        <h3 class="kb-h">How KareBalance Helps</h3>
+        <ul class="kb-helps">
+          <li class="kb-help" style="--c:var(--kb-c1)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><h4>Improve Balance &amp; Stability</h4><p>Build better control while standing, turning and walking.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c2)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><h4>Build Strength</h4><p>Strengthen leg and core muscles for everyday activities.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c1d)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4" r="2"/><path d="M11 21l2.2-6.2-2.6-3 1.1-4.8 3 2.9 3 1.1M10.6 11.8 7.4 14M13.2 14.8 15.6 21"/></svg></span><h4>Move with Confidence</h4><p>Practise walking, stair climbing and sit-to-stand transitions.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c3)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.9-3.4 8.1-8 9-4.6-.9-8-4.1-8-9V6l8-3Z"/><path d="M8.6 12.6 12 9.6l3.4 3V16H8.6v-3.4Z"/></svg></span><h4>Identify Fall Risks</h4><p>Assess personal risk factors, medication-related concerns and home safety hazards.</p></li>
+          <li class="kb-help" style="--c:var(--kb-c5)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><path d="M2.8 20c.5-3.6 2.9-5.6 5.7-5.6s5.2 2 5.7 5.6"/><circle cx="17" cy="9.2" r="2.4"/><path d="M15.6 14.7c2.7.1 4.6 1.9 5.4 5"/></svg></span><h4>Stay Independent</h4><p>Develop safer movement habits and confidence in daily life.</p></li>
+        </ul>
+      </div>
+
+      <div class="kb-for no-media rv">
+        
+        <div class="kb-for-body">
+          <h3 class="kb-h">Who Is KareBalance For?</h3>
+          <p class="kb-for-lead">KareBalance is designed for older adults who:</p>
+          <ul class="kb-checks">
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have experienced a fall or near-fall.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Fear falling and have started avoiding everyday activities.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Feel unsteady while walking, turning or climbing stairs.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Are recovering mobility after an illness, hospitalisation or a period of inactivity.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have reduced leg strength, balance or mobility.</span></li>
+            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Want to maintain their balance, strength and independence as they age.</span></li>
+          </ul>
+        </div>
+      </div>
+
+      <div id="kb-plans" class="rv">
+        <h3 class="kb-h">Our Programmes &amp; Pricing</h3>
+        <p class="kb-sub">Choose the right level of support for your needs and goals.</p>
+      </div>
+      <div class="kb-plans rv">
+        <article class="kb-plan ">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><div><h4>KareBalance Base</h4><p class="kb-plan-sub">Assessment &amp; Report</p></div></div>
+          <p class="kb-price">₹7,999</p><p class="kb-unit">One-time fee</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive fall risk assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Balance, strength and mobility testing</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Review of fall history and relevant risk factors</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety recommendations</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Personalised assessment report with next steps</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Understanding individual fall risks and prevention needs.</p></div>
+          <button class="btn btn-outline kb-choose" data-book data-service="karebalance" data-package="kb-base" aria-label="Book KareBalance Base">Book Base <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </article>
+        <article class="kb-plan c2">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><div><h4>KareBalance Plus</h4><p class="kb-plan-sub">Structured Training &amp; Prevention</p></div></div>
+          <p class="kb-price">₹39,999</p><p class="kb-unit">24 supervised training sessions</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Initial fall risk assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>24 supervised training sessions</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progressive balance and strength exercises</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Walking, turning and sit-to-stand practice</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety review</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progress monitoring and family report</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults with balance difficulties, reduced strength or a history of falls.</p></div>
+          <button class="btn btn-outline kb-choose" data-book data-service="karebalance" data-package="kb-plus" aria-label="Book KareBalance Plus">Book Plus <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </article>
+        <article class="kb-plan c3">
+          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></span><div><h4>KareBalance Premium</h4><p class="kb-plan-sub">Comprehensive Six-Month Support</p></div></div>
+          <p class="kb-price">₹90,000</p><p class="kb-unit">Six-month programme</p>
+          <hr>
+          <p class="kb-inc-h">What's included</p>
+          <ul class="kb-inc">
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive initial assessment</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Weekly supervised balance and strength training</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Quarterly reassessments</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home visits and safety recommendations</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Family coaching and caregiver guidance</span></li>
+              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Ongoing progress tracking and personalised programme adjustments</span></li>
+          </ul>
+          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults needing continued support to maintain mobility, confidence and independence.</p></div>
+          <button class="btn btn-outline kb-choose" data-book data-service="karebalance" data-package="kb-premium" aria-label="Book KareBalance Premium">Book Premium <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        </article>
+      </div>
+
+      <div class="kb-band rv">
+        <span class="kb-band-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><path d="M2.5 20v-2.5A4.5 4.5 0 0 1 7 13a4.5 4.5 0 0 1 4.5 4.5M12.5 17.5A4.5 4.5 0 0 1 17 13a4.5 4.5 0 0 1 4.5 4.5V20"/><path d="M12 6.6c-.6-1.3-2.6-1.2-2.6.4 0 1.4 2.6 3 2.6 3s2.6-1.6 2.6-3c0-1.6-2-1.7-2.6-.4Z"/></svg></span>
+        <div>
+          <h3>Not sure which programme is right for your loved one?</h3>
+          <p>Our team can help identify the most appropriate level of support based on mobility, fall history and individual goals.</p>
+        </div>
+        <a class="btn btn-grad" href="https://wa.me/918129345178?text=Hi%20Kare%40Home%2C%20I%27d%20like%20help%20choosing%20a%20KareBalance%20programme." target="_blank" rel="noopener">Talk to Our Team <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
+      </div>
+      <p class="kb-fine">Note: Final pricing may vary based on assessment complexity, session frequency, home-visit requirements and service location. Clinical suitability should be established before beginning supervised training. KareBalance is a fall risk reduction and mobility support programme and does not guarantee the prevention of falls.</p>
+    </div>
+  </section>
+
 </main>
 
 <!-- ============ FOOTER ============ -->
@@ -264,7 +357,7 @@
   <div class="foot-band">
     <div class="wrap foot-in">
       <div class="f-brand">
-        <a href="/" aria-label="KareIQ home"><img src="/img/kareiq-logo-white.png" alt="KareIQ" width="980" height="270"></a>
+        <a href="#top" aria-label="Kare@Home home"><img src="/img/karehome-logo-white.png" alt="Kare@Home" width="1407" height="395"></a>
         <p>Healthier Lives. Brighter Tomorrows.</p>
       </div>
       <div class="f-call">
@@ -281,13 +374,13 @@
       </div>
       <div class="f-by">
         <small>a brand by</small>
-        <a href="/" aria-label="KareIQ"><img src="/img/kareiq-logo-white.png" alt="KareIQ" width="980" height="270"></a>
+        <a href="/" data-site="kareiq" aria-label="KareIQ"><img src="/img/kareiq-logo-white.png" alt="KareIQ" width="980" height="270"></a>
       </div>
     </div>
   </div>
   <div class="foot-base">
     <div class="wrap base-in">
-      <span>© <span id="year">2026</span> KareIQ Healthtech Pvt. Ltd. All rights reserved.</span>
+      <span>© <span id="year">2026</span> KareIQ. All rights reserved.</span>
       <nav aria-label="Legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
     </div>
   </div>
@@ -323,6 +416,7 @@
               <option value="physiotherapy">Physiotherapy &amp; Mobility Support</option>
               <option value="companionship">Companionship &amp; Emotional Well-being</option>
               <option value="personal-care">Personal Care Assistance</option>
+              <option value="karebalance">KareBalance: fall prevention &amp; mobility</option>
               <option value="not-sure">Not sure yet, please guide me</option>
             </select>
             <span class="err"></span>
@@ -335,6 +429,11 @@
               <option value="homeplus">HomePlus · from ₹4,408 / month</option>
               <option value="homeelite">HomeElite · from ₹8,816 / month</option>
               <option value="customized">Customised plan · get an estimate</option>
+              <optgroup label="KareBalance">
+                <option value="kb-base">KareBalance Base · ₹7,999 one-time</option>
+                <option value="kb-plus">KareBalance Plus · ₹39,999 (24 sessions)</option>
+                <option value="kb-premium">KareBalance Premium · ₹90,000 (6 months)</option>
+              </optgroup>
             </select>
             <span class="err"></span>
           </div>
@@ -425,16 +524,19 @@
       <h3>Booking request received</h3>
       <p>Thank you, <span id="doneName"></span>. A care coordinator will call you on <b id="donePhone"></b> within one working day to confirm your care assessment.</p>
       <div class="ref">Your reference <b id="doneRef"></b></div>
+      <p class="done-app">Follow your booking and, once care starts, see visit notes and health readings in <b>My KareIQ</b>.</p>
       <div class="done-actions">
+        <a class="btn btn-grad" id="doneApp" href="/app/#/start">Create your account</a>
         <a class="btn btn-line" id="doneWa" href="https://wa.me/918129345178" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-chat"/></svg>Message us on WhatsApp</a>
-        <button class="btn btn-grad" id="doneClose">Done</button>
+        <button class="btn btn-line" id="doneClose">Done</button>
       </div>
     </div>
   </div>
 </div>
 
-<script src="/js/forms.js?v=20261019w" defer></script>
-<script src="/js/content.js?v=20261019w" defer></script>
-<script src="/js/karehome.js?v=20261019w" defer></script>
+<script src="/js/forms.js?v=20261024a" defer></script>
+<script src="/js/sites.js?v=20261024b" defer></script>
+<script src="/js/content.js?v=20261024a" defer></script>
+<script src="/js/karehome.js?v=20261024b" defer></script>
 </body>
 </html>

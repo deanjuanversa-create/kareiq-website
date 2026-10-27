@@ -68,6 +68,37 @@ npm install                 # installs nodemailer (only needed for email)
 
 Then fill the `SMTP_*` and `NOTIFY_EMAIL` lines in `.env` and restart. For Gmail, create an App Password and use `smtp.gmail.com`, port `587`.
 
+## The KareIQ app (My KareIQ, at `/app`)
+
+One sign-in for **families**, **caregivers** and the **office team**, across both brands.
+
+| Who signs in | What they see |
+|---|---|
+| A family with a Kare@Home plan only | Goes straight into Kare@Home; KareNest is not shown |
+| A family with a KareNest plan | KareNest **and** Kare@Home: Kare@Home is included with KareNest (set in `INCLUDES` in `src/app/products.js`) |
+| A family with both (e.g. mother at home, father at KareNest) | A "Where would you like to go?" screen with one tile per brand, like choosing a profile on Netflix. A **Switch** button at the top moves between them |
+| A caregiver | The people assigned to them, with a big **Record visit** button |
+| Office admin | Both brands plus the **Office**: requests, people and plans, logins, activity |
+
+**New families can sign up in the app:** **Create an account** on the sign-in page (name, mobile number, password), then they pick Kare@Home or KareNest and a plan. It lands in the office inbox as "New plan (app)" with an **Activate plan** button. Mobile numbers are not checked by SMS yet, so if a self-made account uses the same number as someone else's website booking, the office is asked to confirm on the phone before linking them.
+
+**How a plan gets to the family (no extra work for the family):**
+1. A family books on the Kare@Home site or sends a Join / Visit request on KareNest. The thank-you screen now has **Create your account**: they confirm the booking with their mobile number, choose a password, and see "Your plan is being set up".
+2. The booking appears in **Office → Requests** with an **Activate plan** button. Choose the plan, start date and (optionally) a caregiver. If the family hasn't made an account yet, one is made for them and you get a **welcome link** with a **Send on WhatsApp** button (and email, if SMTP is set up).
+3. From then on the family sees health readings, charts, visit notes, their care team and plan, and can ask for an extra visit, a plan change or a question. Their requests land in the same inbox.
+
+Walk-ins and phone bookings: **Office → Add a family**. New caregivers and office staff: **Office → Logins → Add**.
+
+**Sign in:** with mobile number or email. "Forgot password?" emails a link when SMTP is set up; otherwise the request appears in the inbox with a **Send sign-in link** button.
+
+**The first office login** is `ADMIN_EMAIL` (default `admin@karenest.co.in`) with the `ADMIN_PASSWORD` password. Signing in to the app as an office admin also opens the website editor at `/admin`.
+
+**Safety rules carried over from the dashboard spec:** families only ever see their own people (anything else answers "not found"); health readings are never deleted, a wrong one is removed with a reason and kept in the record; no "normal/high" labels until the doctors approve the reference ranges; signed out after 15 minutes without activity (4 hours at most); every action is in **Office → Activity**.
+
+**Try it on your computer:** `node server.js`, open http://localhost:3000/app. Without a database, demo logins are created (password `demo-pass-123`): `family@demo.kareiq` (mother on Kare@Home, father at KareNest), `arjun@demo.kareiq` (Kare@Home only), `meena@demo.kareiq` (KareNest, so also Kare@Home), `rahul@demo.kareiq` (plan being set up), `nurse@demo.kareiq`, `nest@demo.kareiq`, `admin@demo.kareiq`. Delete the `data` folder to start again. With the server running, `npm run check:app` runs the end-to-end checks.
+
+**Where things are:** `app/` (the screens), `src/app/` (sign-in, permissions, plans, readings), `src/docs.js` (storage for MongoDB, Redis or files). Plan names per brand are in `src/app/products.js`; the KareNest residence plans there ("KareNest community living", "KareNest short stay") are placeholders until the KareNest team names them.
+
 ## Folder layout
 
 ```
@@ -81,7 +112,9 @@ kareiq-website/
 │   ├── db.js            ← storage: data folder locally, Upstash Redis on Vercel
 │   ├── store.js         ← bookings and enquiries
 │   └── notify.js        ← optional email alerts
-├── admin/               ← admin page (password protected)
+├── admin/               ← website editor (password protected)
+├── app/                 ← the KareIQ app: families, caregivers, office (/app)
+├── src/app/             ← app sign-in, permissions, plans, readings
 ├── public/              ← everything visitors see
 │   ├── index.html       ← KareIQ
 │   ├── kare-at-home.html← Kare@Home
@@ -102,7 +135,42 @@ kareiq-website/
 4. **Prices, contact details and headlines**: change them from the admin page (Website content). No code edits needed.
 5. **Photos**: the images in `public/img` were taken from the design mockups. Swap in your original high-resolution photos with the same file names for the sharpest result.
 
-## Deploy on Vercel
+## Live setup: Vercel + Render + MongoDB Atlas
+
+```
+ visitors -> Vercel (static pages)                  -> Render (server.js)           -> MongoDB Atlas
+             karenest.co.in (KareNest)                 api.<domain>                    bookings, enquiries,
+             kareiq-website-full.vercel.app            forms, admin-edited content,    website content
+               (KareIQ, Kare@Home)                     admin panel at /admin
+```
+
+- **Vercel** serves the pages as static files only (`vercel.json`: `outputDirectory: public`; `.vercelignore` keeps the server out).
+- **The pages call the API directly** at its own address, set in ONE line:
+  `public/js/api.js` here, and `js/sites.js` in the KareNest project (`window.KARE_API = ...`).
+  On your own computer (`localhost`) the local server is used automatically.
+- Admin-edited text and prices load in the background (`js/api.js`), so pages never wait for the server.
+  If it is asleep or down, pages show the built-in text and forms show a "call or WhatsApp us" message.
+- **Render** runs `node server.js` (see `render.yaml`). Environment variables:
+  `MONGODB_URI`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `TRUST_PROXY=true`,
+  `SITE_URL` (where people who open the API address in a browser are sent) and
+  `ALLOWED_ORIGINS` (websites allowed to send forms, e.g. `https://karenest.co.in,https://www.karenest.co.in,https://kareiq-website-full.vercel.app`).
+  Every website address that has forms must be in `ALLOWED_ORIGINS`, or the browser blocks its forms.
+- **Content Security Policy:** `vercel.json` allows scripts and requests to `https://kareiq-api.onrender.com` and
+  `https://api.karenest.co.in`. If the API moves to another address, add it there too.
+- **MongoDB Atlas** collections: `bookings`, `enquiries`, `settings` (website content), `history` (content backups).
+- Health check: `https://<api address>/api/health?db=1` should answer `{"ok":true,"storage":"mongo",...}`.
+- Render's free plan sleeps after 15 minutes without visits (the first request then takes about a minute).
+  Keep it awake with a free uptime monitor opening `/api/health` every 5 minutes, or use a paid Render plan.
+
+### Domains (GoDaddy DNS for karenest.co.in)
+
+| Type  | Name | Points to                                        | For                            |
+|-------|------|--------------------------------------------------|--------------------------------|
+| A     | @    | the IP Vercel shows (usually 76.76.21.21)        | karenest.co.in -> KareNest     |
+| CNAME | www  | the value Vercel shows (cname.vercel-dns.com)    | www.karenest.co.in             |
+| CNAME | api  | the value Render shows (kareiq-api.onrender.com) | api.karenest.co.in -> the API  |
+
+## Older setup: everything on Vercel
 
 The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and JS from Vercel's CDN, and sends `/api/*` and `/admin` to one serverless function (`api/index.js`, which runs the same code as `server.js`).
 

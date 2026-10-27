@@ -2,14 +2,18 @@
   "name": "kareiq-website",
   "version": "1.0.0",
   "private": true,
-  "description": "KareIQ and Kare@Home websites with booking and enquiry backend",
+  "description": "KareIQ, Kare@Home and KareNest websites with the booking and enquiry API (runs on Render with MongoDB Atlas)",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "check:app": "node tools/check-app.js http://localhost:3000"
   },
   "engines": {
     "node": ">=18"
+  },
+  "dependencies": {
+    "mongodb": "^6.10.0"
   },
   "optionalDependencies": {
     "nodemailer": "6.9.16"

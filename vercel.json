@@ -4,24 +4,36 @@
   "outputDirectory": "public",
   "cleanUrls": true,
   "trailingSlash": false,
-  "functions": {
-    "api/index.js": {
-      "includeFiles": "{server.js,src/**,admin/**,data/**,public/404.html}",
-      "maxDuration": 10
-    }
-  },
-  "rewrites": [
+  "redirects": [
     {
-      "source": "/api/:path*",
-      "destination": "/api/index?__path=/api/:path*"
+      "source": "/app",
+      "destination": "https://kareiq-api.onrender.com/app/",
+      "permanent": false
+    },
+    {
+      "source": "/app/:path*",
+      "destination": "https://kareiq-api.onrender.com/app/:path*",
+      "permanent": false
     },
     {
       "source": "/admin",
-      "destination": "/api/index?__path=/admin"
+      "destination": "https://kareiq-api.onrender.com/admin/",
+      "permanent": false
     },
     {
       "source": "/admin/:path*",
-      "destination": "/api/index?__path=/admin/:path*"
+      "destination": "https://kareiq-api.onrender.com/admin/:path*",
+      "permanent": false
+    },
+    {
+      "source": "/karenest",
+      "destination": "https://karenest.co.in/",
+      "permanent": false
+    },
+    {
+      "source": "/karenest/:path*",
+      "destination": "https://karenest.co.in/",
+      "permanent": false
     }
   ],
   "headers": [
@@ -46,7 +58,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'self'; base-uri 'self'; frame-ancestors 'self'"
+          "value": "default-src 'self'; script-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; form-action 'self'; base-uri 'self'; frame-ancestors 'self'"
         }
       ]
     },
