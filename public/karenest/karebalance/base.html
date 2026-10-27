@@ -13,9 +13,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/karenest/loader.css?v=20261027a">
-<script src="/karenest/loader.js?v=20261027a"></script>
-<link rel="stylesheet" href="/karenest/site.css?v=20261027a">
+<link rel="stylesheet" href="/karenest/loader.css?v=20261027b">
+<script src="/karenest/loader.js?v=20261027b"></script>
+<link rel="stylesheet" href="/karenest/site.css?v=20261027b">
 </head>
 <body data-page="kb-base" data-base="/karenest">
 <div class="kn-loader" id="knLoader" role="status" aria-label="Loading KareNest">
@@ -61,7 +61,6 @@
       <li><a href="/karenest/">Home</a></li>
       <li><a href="/karenest/about" aria-label="About KareNest">About<span class="x-l"> KareNest</span></a></li>
       <li><a href="/karenest/life" aria-label="Life at KareNest">Life<span class="x-l"> at KareNest</span></a></li>
-      <li><a href="/karenest/activities" aria-label="Activities &amp; Wellness">Activities<span class="x-l"> &amp; Wellness</span></a></li>
       <li class="has-dd"><button class="dd-btn active" type="button" aria-expanded="false" aria-controls="dd-packages" aria-label="Our Packages"><span class="x-l">Our </span>Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
       <div class="dd" id="dd-packages">
         <ul>
@@ -88,7 +87,7 @@
       <a class="btn btn-primary btn-sm mag" href="/karenest/community#join" data-open="join"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.4-.3 4.2 1.2 4.6 4"/></svg>Join Our Community</a>
       <a class="btn btn-ghost btn-sm mag" href="/karenest/contact?type=karenest-visit#enquiry" data-open="visit"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>Plan a Visit</a>
     </div>
-    <a class="app-in" href="/karenest/sign-in"><svg class="" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign In</span></a>
+    <a class="app-in" href="/karenest/sign-in" data-auth><svg class="" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign In</span></a>
     <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
   </div>
 </header>
@@ -97,7 +96,6 @@
   <a href="/karenest/">Home</a>
   <a href="/karenest/about">About KareNest</a>
   <a href="/karenest/life">Life at KareNest</a>
-  <a href="/karenest/activities">Activities &amp; Wellness</a>
   <button class="acc-btn" type="button" aria-expanded="true" aria-controls="m-packages">Our Packages<svg class="" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
   <div class="acc-panel" id="m-packages">
     <a href="/karenest/packages">All packages</a>
@@ -112,7 +110,7 @@
   </div>
   <a href="/karenest/families">For Families</a>
   <a href="/karenest/contact">Contact Us</a>
-  <a href="/karenest/sign-in">Sign In</a>
+  <a data-auth href="/karenest/sign-in">Sign In</a>
   <div class="row"><a class="btn btn-primary" href="/karenest/community#join" data-open="join"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.4-.3 4.2 1.2 4.6 4"/></svg>Join Our Community</a><a class="btn btn-ghost" href="/karenest/contact?type=karenest-visit#enquiry" data-open="visit"><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>Plan a Visit</a></div>
   <a class="d-back" href="/" data-site="kareiq">← Back to KareIQ</a>
   <div class="d-meta"><span>Mon to Sat · 9:30 AM – 6:00 PM</span><span>Kochi, Kerala · hello@karenest.in</span></div>
@@ -127,7 +125,7 @@
       <h1>KareBalance Base</h1>
       <p class="lede">Assessment &amp; Report</p>
       <div class="price-chip"><b>₹7,999</b><span>One-time fee</span></div>
-      <div class="hero-actions"><a class="btn btn-primary mag" href="#enquire" data-enquire="kb-base">Book Base<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn btn-ghost mag" href="/karenest/karebalance">Compare KareBalance<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+      <div class="hero-actions"><a class="btn btn-primary mag" href="/karenest/sign-in?plan=kb-base" data-auth data-plan="kb-base">Book Base<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn btn-ghost mag" href="/karenest/karebalance">Compare KareBalance<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
     
   </div>
@@ -143,7 +141,7 @@
         <h2 class="h3x" style="margin-top:12px">KareBalance Base</h2>
         <div class="pkg-price"><b>₹7,999</b><span>One-time fee</span></div>
         
-        <a class="btn btn-primary" href="#enquire" data-enquire="kb-base">Book Base<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+        <a class="btn btn-primary" href="/karenest/sign-in?plan=kb-base" data-auth data-plan="kb-base">Book Base<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a class="link-arrow" href="/karenest/karebalance">All KareBalance programmes<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
       <div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in KareBalance</span><a href="/karenest/karebalance/plus">KareBalance Plus<span>₹39,999 24 supervised training sessions</span></a><a href="/karenest/karebalance/premium">KareBalance Premium<span>₹90,000 Six-month programme</span></a></div>
@@ -195,7 +193,7 @@
       </div>
       <div><h2 class="h5">Explore</h2><ul><li><a href="/karenest/about">About KareNest</a></li><li><a href="/karenest/life">Life at KareNest</a></li><li><a href="/karenest/activities">Activities &amp; Wellness</a></li><li><a href="/karenest/families">For Families</a></li></ul></div>
       <div><h2 class="h5">Packages</h2><ul><li><a href="/karenest/packages">Our Packages</a></li><li><a href="/karenest/live-with-us">Live With Us</a></li><li><a href="/karenest/visit-and-participate">Visit &amp; Participate</a></li><li><a href="/karenest/wellness">Wellness</a></li><li><a href="/karenest/karebalance" aria-current="page">KareBalance</a></li><li><a href="/karenest/karemind">KareMind</a></li></ul></div>
-      <div><h2 class="h5">Get involved</h2><ul><li><a href="/karenest/community">Join Our Community</a></li><li><a href="/karenest/contact?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li><li><a href="/karenest/contact">Contact Us</a></li><li><a href="/karenest/sign-in">Sign In</a></li></ul></div>
+      <div><h2 class="h5">Get involved</h2><ul><li><a href="/karenest/community">Join Our Community</a></li><li><a href="/karenest/contact?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li><li><a href="/karenest/contact">Contact Us</a></li><li><a data-auth href="/karenest/sign-in">Sign In</a></li></ul></div>
       <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
     </div>
     <div class="foot-bot">
@@ -228,6 +226,35 @@
   <button class="g-btn" id="gBtn" type="button" aria-label="Chat with Nestu" aria-expanded="false" aria-controls="gPanel"><img loading="lazy" decoding="async" src="/karenest/images/head.webp" alt="" width="70" height="70"><span class="dot" id="gDot"></span></button>
 </div>
 
+<dialog id="authDlg" class="auth" aria-labelledby="authTitle">
+  <button class="auth-x" type="button" data-auth-close aria-label="Close">×</button>
+  <p class="auth-eyebrow">Welcome</p>
+  <h2 id="authTitle">Sign in to KareNest</h2>
+  <p class="auth-sub" id="authSub">One sign-in for KareNest and Kare@Home.</p>
+  <p class="auth-plan" id="authPlan" hidden></p>
+  <div class="auth-prov" id="authProv" hidden></div>
+  <form class="auth-form" id="authSignin" novalidate>
+    <label class="sr-only" for="aId">Mobile number or email</label>
+    <input id="aId" name="id" autocomplete="username" placeholder="Mobile number or email" required>
+    <div class="auth-pw"><label class="sr-only" for="aPw">Password</label><input id="aPw" name="password" type="password" autocomplete="current-password" placeholder="Password" required><button type="button" class="auth-peek" data-peek aria-label="Show password">Show</button></div>
+    <p class="auth-err" role="alert" data-auth-err></p>
+    <button class="auth-go" type="submit">Sign in</button>
+    <p class="auth-alt"><a href="/app/#/forgot" data-app-path="#/forgot">Forgot password?</a></p>
+  </form>
+  <form class="auth-form" id="authSignup" novalidate hidden>
+    <label class="sr-only" for="sName">Your name</label>
+    <input id="sName" name="name" autocomplete="name" placeholder="Your name" required>
+    <label class="sr-only" for="sPhone">Mobile number</label>
+    <input id="sPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Mobile number" required>
+    <label class="sr-only" for="sEmail">Email address (optional)</label>
+    <input id="sEmail" name="email" type="email" autocomplete="email" placeholder="Email address (optional)">
+    <div class="auth-pw"><label class="sr-only" for="sPw">Choose a password</label><input id="sPw" name="password" type="password" autocomplete="new-password" placeholder="Choose a password (8+ characters)" required><button type="button" class="auth-peek" data-peek aria-label="Show password">Show</button></div>
+    <p class="auth-err" role="alert" data-auth-err></p>
+    <button class="auth-go" type="submit">Create account</button>
+  </form>
+  <p class="auth-switch"><span id="authSwitchText">New to KareNest?</span> <button type="button" id="authSwitch">Create an account</button></p>
+</dialog>
+
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <img loading="lazy" decoding="async" class="dlg-mascot" src="/karenest/images/head.webp" alt="" width="90" height="90" style="border-radius:50%;background:#fff;border:4px solid #fff;box-shadow:var(--shadow-sm)">
   <div id="dlgForm">
@@ -254,7 +281,7 @@
   </div>
 </dialog>
 
-<script src="/js/sites.js?v=20261027a"></script>
-<script src="/karenest/app.js?v=20261027a"></script>
+<script src="/js/sites.js?v=20261027b"></script>
+<script src="/karenest/app.js?v=20261027b"></script>
 </body>
 </html>

@@ -50,7 +50,7 @@ module.exports = function pages(L) {
   ${p.includes && includes && !compact ? `<hr><p class="pkg-inc-h">${esc(p.listTitle)}</p>${list(p.includes)}` : ''}
   ${p.best && !compact ? `<p class="pkg-best"><b>Best for:</b> ${esc(p.best)}</p>` : ''}
   <div class="pkg-actions">
-    ${compact ? '' : `<a class="btn btn-primary" href="${detailHref(p)}#enquire" data-enquire="${p.id}">${esc(p.cta)}</a>`}
+    ${compact ? '' : `<a class="btn btn-primary" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}</a>`}
     <a class="link-arrow" href="${detailHref(p)}">View details<span class="sr-only"> of ${esc(p.name)}</span>${ico('arr')}</a>
   </div>
 </article>`;
@@ -188,7 +188,7 @@ module.exports = function pages(L) {
           <p class="kb-inc-h">What's included</p>
           <ul class="kb-inc">${p.includes.map((t) => `<li>${kbCheck}<span>${esc(t)}</span></li>`).join('')}</ul>
           <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> ${esc(p.best)}</p></div>
-          <a class="btn btn-primary kb-choose" href="${detailHref(p)}#enquire" data-enquire="${p.id}">${esc(p.cta)}</a>
+          <a class="btn btn-primary kb-choose" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}</a>
           <a class="kb-link kb-more" href="${detailHref(p)}">View details<span class="sr-only"> of ${esc(p.name)}</span> <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
         </article>`;
 
@@ -758,7 +758,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
         <h2 class="h3x" style="margin-top:12px">${esc(p.name)}</h2>
         ${priceHtml(p)}
         ${p.note ? `<p class="pkg-note">${esc(p.note)}</p>` : ''}
-        <a class="btn btn-primary" href="#enquire" data-enquire="${p.id}">${esc(p.cta)}${arrow}</a>
+        <a class="btn btn-primary" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a>
         <a class="link-arrow" href="${u(g.path)}">All ${esc(g.name)} ${p.group === 'visit' ? 'passes' : p.group === 'live' ? 'packages' : 'programmes'}${ico('arr')}</a>
       </div>
       ${siblings.length ? `<div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in ${esc(g.name)}</span>${siblings.map((s) => `<a href="${detailHref(s)}">${esc(s.name)}<span>${D.rupees(s.price)} ${esc(D.unitLabel(s))}</span></a>`).join('')}</div>` : ''}
@@ -771,7 +771,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
         crumbs: crumbsFor, eyebrow: `${esc(g.name)} · ${esc(badgeOf(p))}`, solo: true,
         h1: `${esc(p.name)}`, lede: esc(p.tagline + (p.desc && p.group !== 'karemind' && p.group !== 'visit' ? '' : '')),
         extra: `<div class="price-chip"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
-        actions: `<a class="btn btn-primary mag" href="#enquire" data-enquire="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}">Compare ${esc(g.name)}${arrow}</a>`
+        actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}">Compare ${esc(g.name)}${arrow}</a>`
       })}
 <section class="sec" style="padding-top:34px" aria-label="${esc(p.name)} details">
   <div class="wrap pd">
@@ -793,7 +793,7 @@ ${enquiry({ title: `${esc(p.cta)}`, lede: 'Leave your name and number and our te
       crumbs: [HOME, ['For Families']], eyebrow: 'For Families',
       h1: 'Peace of Mind, <span class="accent">Always.</span>',
       lede: 'Stay connected, get regular updates, and know your loved ones are safe, healthy and happy, wherever they live with us or visit for the day.',
-      actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}">${ico('user')}Family Sign In</a><a class="btn btn-ghost mag" href="${u('/contact')}#enquiry">Talk to our team${arrow}</a>`,
+      actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}" data-auth>${ico('user')}Family Sign In</a><a class="btn btn-ghost mag" href="${u('/contact')}#enquiry">Talk to our team${arrow}</a>`,
       image: 'fam.webp', alt: 'A grandmother and granddaughter arranging flowers together', caption: `${ico('heart')}“Amma loved the music hour”`
     })}
 
@@ -805,7 +805,7 @@ ${enquiry({ title: `${esc(p.cta)}`, lede: 'Leave your name and number and our te
       <li><span class="fi">${ico('chart')}</span><b>Health readings</b><span>Follow readings such as blood pressure and weight over time.</span></li>
       <li><span class="fi">${ico('shield')}</span><b>Your plan</b><span>See which plan your loved one is on and send requests to our team.</span></li>
     </ul>
-    <div class="hero-actions" style="animation:none"><a class="btn btn-primary" href="${u('/sign-in')}">Sign in to My KareIQ${arrow}</a><a class="btn btn-ghost" href="${u('/sign-in')}#create">Create an account</a></div>
+    <div class="hero-actions" style="animation:none"><a class="btn btn-primary" href="${u('/sign-in')}" data-auth>Sign in to My KareIQ${arrow}</a><a class="btn btn-ghost" href="${u('/sign-in')}#create" data-auth="signup">Create an account</a></div>
   </div>
 </section>
 
@@ -932,13 +932,13 @@ ${enquiry({ id: 'join', eyebrow: 'Join the community', title: 'Be part of it', l
       <h2>Welcome back</h2>
       <p>Choose how you'd like to sign in.</p>
       <div class="prov" id="providers">
-        <a class="prov-btn" href="#" data-provider="google" aria-disabled="true" role="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A10 10 0 0 0 2 12c0 1.6.4 3.2 1.1 4.6L6.4 14z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 6 12 6z"/></svg>Continue with Google<span class="st" data-st>Checking…</span></a>
-        <a class="prov-btn" href="#" data-provider="facebook" aria-disabled="true" role="button"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/></svg>Continue with Facebook<span class="st" data-st>Checking…</span></a>
-        <a class="prov-btn email" href="/app/#/signin?brand=karenest" data-app="karenest" data-provider="email">${ico('mail', '', ' style="stroke:currentColor;fill:none;stroke-width:2"')}Continue with email</a>
+        <a class="prov-btn" href="#" data-provider="google" aria-disabled="true" role="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A10 10 0 0 0 2 12c0 1.6.4 3.2 1.1 4.6L6.4 14z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 6 12 6z"/></svg>Continue with Google<span class="st" data-st>Checking…</span></a>
+        <a class="prov-btn" href="#" data-provider="facebook" aria-disabled="true" role="button" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/></svg>Continue with Facebook<span class="st" data-st>Checking…</span></a>
+        <a class="prov-btn email" href="/app/#/signin?brand=karenest" data-app="karenest" data-auth data-provider="email">${ico('mail', '', ' style="stroke:currentColor;fill:none;stroke-width:2"')}Continue with email</a>
       </div>
       <p class="prov-msg" id="provMsg" role="status" aria-live="polite"></p>
       <div class="signin-foot" id="create">
-        <span>New here? <a href="/app/#/join?brand=karenest" data-app-path="#/join?brand=karenest">Create an account</a></span>
+        <span>New here? <a href="/app/#/join?brand=karenest" data-app-path="#/join?brand=karenest" data-auth="signup">Create an account</a></span>
         <span>Forgot your password? <a href="/app/#/forgot" data-app-path="#/forgot">Reset it</a></span>
       </div>
     </div>

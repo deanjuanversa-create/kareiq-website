@@ -1078,3 +1078,43 @@ footer{padding-block:clamp(44px,6vw,64px) calc(36px + env(safe-area-inset-bottom
 @media (hover:hover){.c-btn:hover,.c-btn:focus-visible{width:auto;padding:0 18px 0 14px;gap:8px}.c-btn:hover .l,.c-btn:focus-visible .l{max-width:160px;opacity:1}}
 @media (max-width:760px){.c-btn{width:46px;height:46px}}
 .day-cap .day-title{font-family:var(--f-display);font-weight:500;line-height:1.08;letter-spacing:-.015em}
+
+/* ---------- header: if the menu does not fit (wider fonts, bigger text size), app.js first
+   shortens the labels, then switches to the menu button. Nothing ever overlaps. ---------- */
+.nav.compact .links .x-l{display:none!important}
+.nav.tight .nav-main,.nav.tight .nav-cta{display:none}
+.nav.tight .burger{display:block}
+.nav.tight .app-in{margin-left:auto}
+
+/* ---------- sign in / create account popup ---------- */
+dialog.auth{max-width:min(440px,calc(100vw - 24px));padding:40px 34px 30px;border-radius:28px;background:#FBF8F2;text-align:center;overflow:visible;box-shadow:0 40px 100px -30px rgba(6,30,28,.55)}
+dialog.auth::backdrop{background:rgba(8,30,28,.6);backdrop-filter:blur(4px)}
+.auth-x{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:50%;border:0;background:#fff;color:var(--teal-d);font-size:1.4rem;line-height:1;cursor:pointer;box-shadow:var(--shadow-sm)}
+.auth-x:hover{background:var(--g-soft)}
+.auth-eyebrow{font-size:.74rem;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#B08A3E}
+dialog.auth h2{font-family:var(--f-display);font-weight:500;font-size:clamp(1.8rem,5vw,2.2rem);margin-top:12px;color:var(--ink)}
+.auth-sub{margin-top:10px;color:var(--muted);font-size:.95rem}
+.auth-plan{margin:14px auto 0;display:inline-block;padding:8px 14px;border-radius:99px;background:var(--g-soft);color:var(--teal-d);font-weight:600;font-size:.88rem}
+.auth-prov{display:grid;gap:10px;margin-top:22px}
+.auth-prov a{display:flex;align-items:center;justify-content:center;gap:10px;min-height:50px;border-radius:99px;border:1px solid #E6DDC8;background:#fff;color:var(--ink);font-weight:600;font-size:.95rem}
+.auth-prov a:hover{border-color:var(--teal)}
+.auth-prov svg{width:20px;height:20px}
+.auth-prov .or{font-size:.82rem;color:var(--muted);margin-top:4px}
+.auth-form{display:grid;gap:12px;margin-top:24px;text-align:left}
+.auth-form[hidden]{display:none}
+.auth-form input{width:100%;font:inherit;font-size:1rem;padding:15px 20px;border-radius:99px;border:1px solid #E6DDC8;background:#fff;color:var(--ink);transition:border-color .2s,box-shadow .2s}
+.auth-form input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 4px rgba(18,145,122,.15)}
+.auth-form input[aria-invalid="true"]{border-color:#C0306A;background:#FDF1F6}
+.auth-pw{position:relative}
+.auth-pw input{padding-right:78px}
+.auth-peek{position:absolute;right:8px;top:50%;translate:0 -50%;border:0;background:none;color:var(--teal-d);font-weight:600;font-size:.85rem;padding:8px 12px;border-radius:99px;cursor:pointer}
+.auth-err{color:#C0306A;font-size:.86rem;min-height:1.2em;text-align:center}
+.auth-go{min-height:54px;border:0;border-radius:99px;background:#0D3F37;color:#fff;font:700 .85rem var(--f-body);letter-spacing:.2em;text-transform:uppercase;cursor:pointer;transition:background .2s}
+.auth-go:hover{background:#0B6B59}
+.auth-go[disabled]{opacity:.7;cursor:progress}
+.auth-alt{text-align:center;font-size:.88rem}
+.auth-alt a,.auth-switch button{color:var(--teal-d);font-weight:600}
+.auth-switch{margin-top:18px;font-size:.92rem;color:var(--ink-2)}
+.auth-switch button{border:0;background:none;font:inherit;font-weight:700;cursor:pointer;padding:6px 4px;text-decoration:underline;text-underline-offset:3px}
+@media (max-width:480px){dialog.auth{padding:36px 20px 24px;border-radius:24px}}
+.auth-plan[hidden],.auth-prov[hidden]{display:none}

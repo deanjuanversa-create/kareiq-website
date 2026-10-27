@@ -626,39 +626,134 @@
     lb.addEventListener('touchend', (e) => { if (tx == null) return; const dx = e.changedTouches[0].clientX - tx; if (Math.abs(dx) > 50) showLb(gi + (dx < 0 ? 1 : -1)); tx = null; });
   }
 
-  /* ================= Sign In: Google, Facebook, email ================= */
+  /* ================= which sign-in providers are switched on (shared) ================= */
+  let providersP = null;
+  const providers = () => providersP || (providersP = fetch(api() + '/api/app/auth/providers', { credentials: 'omit' }).then((r) => r.json()).then((d) => (d && d.providers) || {}).catch(() => ({})));
+  const PROV = { google: 'Google', facebook: 'Facebook' };
+  const PROV_ICON = {
+    google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A10 10 0 0 0 2 12c0 1.6.4 3.2 1.1 4.6L6.4 14z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 6 12 6z"/></svg>',
+    facebook: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#1877F2" d="M24 12a12 12 0 1 0-13.9 11.9v-8.4H7.1V12h3V9.4c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 .9-2 1.9V12h3.4l-.5 3.5h-2.9v8.4A12 12 0 0 0 24 12z"/></svg>'
+  };
+  // where My KareIQ opens after signing in: the "What would you like to set up?" page, with the
+  // chosen package's form already open when they came from a package
+  const nextFor = (plan) => (plan ? '#/plans?brand=karenest&plan=' + encodeURIComponent(plan) : '#/plans');
+  const provHref = (p, plan) => api() + '/api/app/auth/' + p + '/start?brand=karenest&next=' + encodeURIComponent(nextFor(plan)) + '&back=' + encodeURIComponent(location.origin + url('/sign-in'));
+
+  /* ================= sign in / create account popup =================
+     The popup talks to the KareIQ server, which answers with a one-time link. Opening that
+     link signs the person in to My KareIQ and continues to the package they picked. */
+  const auth = $('#authDlg');
+  if (auth) {
+    const fIn = $('#authSignin'), fUp = $('#authSignup');
+    let mode = 'signin', plan = '';
+    const planName = (id) => { const b = $('[data-plan="' + id + '"]'); const card = b && b.closest('.pkg,.kb-plan,.pd-card,.phero'); const h = card && card.querySelector('h1,h2,h3,h4'); return h ? h.textContent.trim() : ''; };
+    function setMode(m) {
+      mode = m;
+      fIn.hidden = m !== 'signin'; fUp.hidden = m !== 'signup';
+      $('#authTitle').textContent = m === 'signin' ? 'Sign in to KareNest' : 'Create your account';
+      $('#authSub').textContent = m === 'signin' ? 'One sign-in for KareNest and Kare@Home.' : 'It takes a minute. Our team will call you to confirm the details.';
+      $('#authSwitchText').textContent = m === 'signin' ? 'New to KareNest?' : 'Already have an account?';
+      $('#authSwitch').textContent = m === 'signin' ? 'Create an account' : 'Sign in';
+      $$('[data-auth-err]', auth).forEach((x) => { x.textContent = ''; });
+      setTimeout(() => { const f = $('input', m === 'signin' ? fIn : fUp); if (f) f.focus(); }, 30);
+    }
+    function openAuth(m, p) {
+      plan = p || '';
+      const pl = $('#authPlan'), name = plan && planName(plan);
+      pl.hidden = !plan; pl.textContent = plan ? 'Sign in to continue with ' + (name || 'your package') : '';
+      setMode(m || 'signin');
+      providers().then((on) => {
+        const box = $('#authProv'), keys = Object.keys(PROV).filter((k) => on[k]);
+        box.hidden = !keys.length;
+        box.innerHTML = keys.map((k) => '<a href="' + provHref(k, plan) + '">' + PROV_ICON[k] + 'Continue with ' + PROV[k] + '</a>').join('') + (keys.length ? '<p class="or">or use your mobile number or email</p>' : '');
+      });
+      if (!auth.open) { if (auth.showModal) auth.showModal(); else auth.setAttribute('open', ''); }
+    }
+    const closeAuth = () => { if (auth.close) auth.close(); else auth.removeAttribute('open'); };
+    $('[data-auth-close]', auth).addEventListener('click', closeAuth);
+    auth.addEventListener('click', (e) => { if (e.target === auth) closeAuth(); });
+    $('#authSwitch').addEventListener('click', () => setMode(mode === 'signin' ? 'signup' : 'signin'));
+    $$('[data-peek]', auth).forEach((b) => b.addEventListener('click', () => { const i = b.previousElementSibling; const show = i.type === 'password'; i.type = show ? 'text' : 'password'; b.textContent = show ? 'Hide' : 'Show'; b.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); }));
+    document.addEventListener('click', (e) => {
+      const t = e.target.closest('[data-auth]');
+      if (!t) return;
+      e.preventDefault();
+      if (document.body.classList.contains('menu-open')) setMenu(false);
+      openAuth(t.dataset.auth === 'signup' ? 'signup' : 'signin', t.dataset.plan);
+    });
+    async function send(form, path, body) {
+      const err = $('[data-auth-err]', form), btn = $('.auth-go', form), label = btn.textContent;
+      err.textContent = ''; btn.disabled = true; btn.textContent = 'Please wait…';
+      try {
+        const r = await fetch(api() + '/api/app/' + path, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'kareiq' }, body: JSON.stringify({ ...body, handoff: true, next: nextFor(plan) }) });
+        const d = await r.json().catch(() => ({}));
+        if (r.ok && d.ok && d.go) { btn.textContent = 'Opening My KareIQ…'; location.href = d.go; return; }
+        const er = d.errors || {};
+        $$('input', form).forEach((i) => { if (er[i.name]) i.setAttribute('aria-invalid', 'true'); else i.removeAttribute('aria-invalid'); });
+        err.textContent = er.name || er.phone || er.email || er.password || d.message || 'Sorry, that did not work. Please try again.';
+      } catch (e2) { err.textContent = 'We could not reach the sign-in service. Please check your internet and try again.'; }
+      btn.disabled = false; btn.textContent = label;
+    }
+    fIn.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const id = fIn.elements.id.value.trim(), pw = fIn.elements.password.value;
+      if (!id || !pw) { $('[data-auth-err]', fIn).textContent = 'Please enter your mobile number or email, and your password.'; (id ? fIn.elements.password : fIn.elements.id).focus(); return; }
+      send(fIn, 'login', { id, password: pw });
+    });
+    fUp.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const v = (n) => fUp.elements[n].value.trim();
+      const digits = v('phone').replace(/\D/g, '');
+      const err = $('[data-auth-err]', fUp);
+      if (v('name').length < 2) { err.textContent = 'Please enter your name.'; fUp.elements.name.focus(); return; }
+      if (!(digits.length === 10 || (digits.length === 12 && digits.startsWith('91')))) { err.textContent = 'Please enter a 10-digit mobile number.'; fUp.elements.phone.focus(); return; }
+      if (fUp.elements.password.value.length < 8) { err.textContent = 'Please choose a password with at least 8 characters.'; fUp.elements.password.focus(); return; }
+      send(fUp, 'signup', { name: v('name'), phone: v('phone'), email: v('email'), password: fUp.elements.password.value });
+    });
+    // /sign-in?plan=kareplus (from a package button without JavaScript, or a shared link)
+    const q = new URLSearchParams(location.search);
+    if (PAGE === 'signin' && q.get('plan')) openAuth('signin', q.get('plan'));
+  }
+
+  /* ================= Sign In page ================= */
   const prov = $('#providers');
   if (prov) {
     const msg = $('#provMsg');
-    const NAMES = { google: 'Google', facebook: 'Facebook' };
-    const btns = $$('[data-provider=google],[data-provider=facebook]', prov);
-    const setSt = (b, t) => { $('[data-st]', b).textContent = t; };
     const params = new URLSearchParams(location.search);
     if (params.get('error')) { msg.textContent = params.get('error').slice(0, 200); msg.classList.add('err'); }
-    btns.forEach((b) => b.addEventListener('click', (e) => {
-      if (b.getAttribute('aria-disabled') === 'true') {
-        e.preventDefault();
-        msg.classList.remove('err');
-        msg.textContent = NAMES[b.dataset.provider] + " sign-in isn't available yet. Please continue with email.";
-        return;
-      }
-      b.classList.add('loading'); setSt(b, 'Opening ' + NAMES[b.dataset.provider] + '…');
-    }));
-    // which providers the server has keys for (no keys or secrets ever reach this page)
-    fetch(api() + '/api/app/auth/providers', { credentials: 'omit' })
-      .then((r) => r.json())
-      .then((d) => {
-        btns.forEach((b) => {
-          const p = b.dataset.provider;
-          if (d && d.providers && d.providers[p]) {
-            const back = location.origin + location.pathname;
-            b.href = api() + '/api/app/auth/' + p + '/start?brand=karenest&back=' + encodeURIComponent(back);
-            b.removeAttribute('aria-disabled'); setSt(b, '');
-          } else setSt(b, 'Not available yet');
-        });
-      })
-      .catch(() => { btns.forEach((b) => setSt(b, 'Unavailable right now')); msg.textContent = "We couldn't check the other sign-in options just now. You can still continue with email."; });
-    addEventListener('pageshow', () => btns.forEach((b) => { if (b.classList.contains('loading')) { b.classList.remove('loading'); setSt(b, ''); } }));
+    // Google / Facebook buttons appear only once their keys are set on the server
+    providers().then((on) => {
+      $$('[data-provider=google],[data-provider=facebook]', prov).forEach((b) => {
+        const p = b.dataset.provider;
+        if (!on[p]) return;
+        b.href = provHref(p, params.get('plan'));
+        b.removeAttribute('aria-disabled'); b.hidden = false; $('[data-st]', b).textContent = '';
+        b.addEventListener('click', () => { b.classList.add('loading'); $('[data-st]', b).textContent = 'Opening ' + PROV[p] + '…'; });
+      });
+    });
+    addEventListener('pageshow', () => $$('.prov-btn.loading', prov).forEach((b) => { b.classList.remove('loading'); $('[data-st]', b).textContent = ''; }));
+  }
+
+  /* ================= header: never let the menu overlap the buttons ================= */
+  if (nav) {
+    const main = $('.nav-main', nav), inner = $('.nav-in', nav);
+    // compare the last menu item with the space the menu has (the hidden dropdown panels are ignored)
+    const over = () => {
+      const lis = $$('.links > li', main); if (!lis.length) return false;
+      const last = lis[lis.length - 1].getBoundingClientRect(), m = main.getBoundingClientRect(), cta = ($('.nav-cta', nav) || main).getBoundingClientRect();
+      return last.right > m.right + 1 || last.right > cta.left - 4;
+    };
+    const fit = () => {
+      nav.classList.remove('compact', 'tight');
+      if (!main || getComputedStyle(main).display === 'none') return;
+      if (over()) nav.classList.add('compact');
+      if (over()) nav.classList.add('tight');
+    };
+    fit();
+    addEventListener('resize', () => requestAnimationFrame(fit), { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
+    addEventListener('load', fit);
+    $$('#fsSeg button').forEach((b) => b.addEventListener('click', () => requestAnimationFrame(fit)));
   }
 
   measure();

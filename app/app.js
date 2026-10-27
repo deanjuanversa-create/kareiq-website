@@ -685,9 +685,11 @@
       }).join('') + '</div>' +
       '<div class="picker-foot"><button class="btn ghost" data-act="claim">Already booked on our website? Add your booking</button></div>' +
       '<div class="picker-foot"><span class="muted">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing between Kare@Home and KareNest.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</span></div></main>';
+    // coming from a package on the website: open that package's request form once
+    if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; planDialog(r.q.brand, r.q.plan); }
   }
   function first_(n) { return first(n); }
-  function planDialog(brand) {
+  function planDialog(brand, chosen) {
     var b = BRANDS[brand];
     var load = S.cache.planOpts ? Promise.resolve(S.cache.planOpts) : api('GET', 'plans/options').then(function (d) { S.cache.planOpts = d; return d; });
     load.then(function (d) {
@@ -701,12 +703,13 @@
       openDialog(b.name + ' plans',
         '<form data-form="plan-request" data-brand="' + brand + '" novalidate><div class="alert bad" data-msg hidden></div>' +
         '<div class="field"><span>Plan</span><div class="pick">' + prod.plans.map(function (pl, i) {
-          return '<label><input type="radio" name="planId" value="' + e(pl.id) + '"' + (i === 0 ? ' checked' : '') + '><span><b>' + e(pl.name) + '</b>' + (pl.price ? '<em>' + e(pl.price) + '</em>' : '<em>Price on call</em>') + '</span></label>';
+          return '<label><input type="radio" name="planId" value="' + e(pl.id) + '"' + ((chosen ? pl.id === chosen : i === 0) ? ' checked' : '') + '><span><b>' + e(pl.name) + '</b>' + (pl.price ? '<em>' + e(pl.price) + '</em>' : '<em>Price on call</em>') + '</span></label>';
         }).join('') + '<label><input type="radio" name="planId" value="undecided"><span><b>Not sure yet</b><em>We will help you choose</em></span></label></div><em class="err" data-err="planId"></em></div>' +
         who +
+        (S.me.user.phone ? '' : field('phone', 'Your mobile number', 'type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required', 'Our team will call you on this number.')) +
         '<div class="row2">' + field('startDate', 'Would like to start (optional)', 'type="date" min="' + todayIST() + '"') + '<span></span></div>' +
         '<label class="field"><span>Anything we should know? (optional)</span><textarea class="in" name="note" maxlength="1000" placeholder="Health needs, mobility, preferred times..."></textarea></label>' +
-        '<p class="muted small">Nothing is charged now. The ' + e(b.name) + ' team will call you on ' + e(phoneNice(S.me.user.phone)) + ' to confirm the plan, price and start date.</p></form>',
+        '<p class="muted small">Nothing is charged now. The ' + e(b.name) + ' team will call you' + (S.me.user.phone ? ' on ' + e(phoneNice(S.me.user.phone)) : '') + ' to confirm the plan, price and start date.</p></form>',
         '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send to the ' + e(b.name) + ' team</button>');
     });
   }

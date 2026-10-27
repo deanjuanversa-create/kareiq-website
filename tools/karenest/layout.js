@@ -36,7 +36,7 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261027a';
+const VER = '20261027b';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq-website-full.vercel.app/' };
 
@@ -46,7 +46,6 @@ const NAV = [
   { key: 'home', href: '/', label: 'Home' },
   { key: 'about', href: '/about', label: 'About KareNest', parts: [['About'], [' KareNest', 'x']] },
   { key: 'life', href: '/life', label: 'Life at KareNest', parts: [['Life'], [' at KareNest', 'x']] },
-  { key: 'activities', href: '/activities', label: 'Activities & Wellness', parts: [['Activities'], [' & Wellness', 'x']] },
   { key: 'packages', label: 'Our Packages', parts: [['Our ', 'x'], ['Packages']], dropdown: true },
   { key: 'families', href: '/families', label: 'For Families', parts: [['For ', 'x'], ['Families']] },
   { key: 'contact', href: '/contact', label: 'Contact Us', parts: [['Contact'], [' Us', 'x']] }
@@ -167,7 +166,7 @@ ${SPRITE}
       <a class="btn btn-primary btn-sm mag" href="${u('/community')}#join" data-open="join"${current(pg, 'community')}>${ico('ppl')}Join Our Community</a>
       <a class="btn btn-ghost btn-sm mag" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a>
     </div>
-    <a class="app-in" href="${u('/sign-in')}"${current(pg, 'signin')}>${ico('user', '')}<span>Sign In</span></a>
+    <a class="app-in" href="${u('/sign-in')}" data-auth${current(pg, 'signin')}>${ico('user', '')}<span>Sign In</span></a>
     <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button>
   </div>
 </header>
@@ -176,7 +175,6 @@ ${SPRITE}
   ${d('home', home, 'Home')}
   ${d('about', u('/about'), 'About KareNest')}
   ${d('life', u('/life'), 'Life at KareNest')}
-  ${d('activities', u('/activities'), 'Activities &amp; Wellness')}
   <button class="acc-btn" type="button" aria-expanded="${pkgOpen}" aria-controls="m-packages">Our Packages${ico('chev', '')}</button>
   <div class="acc-panel" id="m-packages"${pkgOpen ? '' : ' hidden'}>
     ${ds('packages', u('/packages'), 'All packages')}
@@ -191,7 +189,7 @@ ${SPRITE}
   </div>
   ${d('families', u('/families'), 'For Families')}
   ${d('contact', u('/contact'), 'Contact Us')}
-  ${d('signin', u('/sign-in'), 'Sign In')}
+  ${d('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}
   <div class="row"><a class="btn btn-primary" href="${u('/community')}#join" data-open="join">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a></div>
   <a class="d-back" href="${kareiq}" data-site="kareiq">← Back to KareIQ</a>
   <div class="d-meta"><span>Mon to Sat · 9:30 AM – 6:00 PM</span><span>Kochi, Kerala · hello@karenest.in</span></div>
@@ -210,7 +208,7 @@ ${SPRITE}
       </div>
       <div><h2 class="h5">Explore</h2><ul>${f('about', u('/about'), 'About KareNest')}${f('life', u('/life'), 'Life at KareNest')}${f('activities', u('/activities'), 'Activities &amp; Wellness')}${f('families', u('/families'), 'For Families')}</ul></div>
       <div><h2 class="h5">Packages</h2><ul>${f('packages', u('/packages'), 'Our Packages', 1)}${f('live', u('/live-with-us'), 'Live With Us', 1)}${f('visit', u('/visit-and-participate'), 'Visit &amp; Participate', 1)}${f('wellness', u('/wellness'), 'Wellness', 1)}${f('karebalance', u('/karebalance'), 'KareBalance', 1)}${f('karemind', u('/karemind'), 'KareMind', 1)}</ul></div>
-      <div><h2 class="h5">Get involved</h2><ul>${f('community', u('/community'), 'Join Our Community')}<li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In')}</ul></div>
+      <div><h2 class="h5">Get involved</h2><ul>${f('community', u('/community'), 'Join Our Community')}<li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}</ul></div>
       <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
     </div>
     <div class="foot-bot">
@@ -243,6 +241,35 @@ ${SPRITE}
   <div class="g-tease hide" id="gTease">Hi, I'm Nestu! Need a hand finding your way around KareNest?</div>
   <button class="g-btn" id="gBtn" type="button" aria-label="Chat with Nestu" aria-expanded="false" aria-controls="gPanel"><img loading="lazy" decoding="async" src="${img('head.webp')}" alt="" width="70" height="70"><span class="dot" id="gDot"></span></button>
 </div>
+
+<dialog id="authDlg" class="auth" aria-labelledby="authTitle">
+  <button class="auth-x" type="button" data-auth-close aria-label="Close">×</button>
+  <p class="auth-eyebrow">Welcome</p>
+  <h2 id="authTitle">Sign in to KareNest</h2>
+  <p class="auth-sub" id="authSub">One sign-in for KareNest and Kare@Home.</p>
+  <p class="auth-plan" id="authPlan" hidden></p>
+  <div class="auth-prov" id="authProv" hidden></div>
+  <form class="auth-form" id="authSignin" novalidate>
+    <label class="sr-only" for="aId">Mobile number or email</label>
+    <input id="aId" name="id" autocomplete="username" placeholder="Mobile number or email" required>
+    <div class="auth-pw"><label class="sr-only" for="aPw">Password</label><input id="aPw" name="password" type="password" autocomplete="current-password" placeholder="Password" required><button type="button" class="auth-peek" data-peek aria-label="Show password">Show</button></div>
+    <p class="auth-err" role="alert" data-auth-err></p>
+    <button class="auth-go" type="submit">Sign in</button>
+    <p class="auth-alt"><a href="/app/#/forgot" data-app-path="#/forgot">Forgot password?</a></p>
+  </form>
+  <form class="auth-form" id="authSignup" novalidate hidden>
+    <label class="sr-only" for="sName">Your name</label>
+    <input id="sName" name="name" autocomplete="name" placeholder="Your name" required>
+    <label class="sr-only" for="sPhone">Mobile number</label>
+    <input id="sPhone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="Mobile number" required>
+    <label class="sr-only" for="sEmail">Email address (optional)</label>
+    <input id="sEmail" name="email" type="email" autocomplete="email" placeholder="Email address (optional)">
+    <div class="auth-pw"><label class="sr-only" for="sPw">Choose a password</label><input id="sPw" name="password" type="password" autocomplete="new-password" placeholder="Choose a password (8+ characters)" required><button type="button" class="auth-peek" data-peek aria-label="Show password">Show</button></div>
+    <p class="auth-err" role="alert" data-auth-err></p>
+    <button class="auth-go" type="submit">Create account</button>
+  </form>
+  <p class="auth-switch"><span id="authSwitchText">New to KareNest?</span> <button type="button" id="authSwitch">Create an account</button></p>
+</dialog>
 
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <img loading="lazy" decoding="async" class="dlg-mascot" src="${img('head.webp')}" alt="" width="90" height="90" style="border-radius:50%;background:#fff;border:4px solid #fff;box-shadow:var(--shadow-sm)">

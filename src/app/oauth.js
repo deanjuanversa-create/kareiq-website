@@ -62,6 +62,9 @@ const PROVIDERS = {
   }
 };
 
+// where to go in the app after signing in, e.g. "#/plans?brand=karenest&plan=kareplus"
+function safeNext(v) { const s = String(v || ''); return /^#\/[A-Za-z0-9\-\/?=&._]{0,150}$/.test(s) ? s : ''; }
+
 const configured = (k) => Boolean(PROVIDERS[k] && PROVIDERS[k].clientId() && PROVIDERS[k].secret());
 function providers() { const out = {}; for (const k of Object.keys(PROVIDERS)) out[k] = configured(k); return out; }
 
@@ -109,7 +112,8 @@ function createOAuth({ json, isHttps, signIn, audit, uid, now }) {
     const verifier = P.pkce ? b64url(crypto.randomBytes(48)) : null;
     const brand = /^(karehome|karenest)$/.test(url.searchParams.get('brand') || '') ? url.searchParams.get('brand') : '';
     await docs.removeWhere('app_oauth', { createdAt: { $lt: Date.now() - STATE_TTL_MS } }).catch(() => {});
-    await docs.insert('app_oauth', { id: sha(state), provider: k, verifier, back, brand, createdAt: Date.now() });
+    const next = safeNext(url.searchParams.get('next'));
+    await docs.insert('app_oauth', { id: sha(state), provider: k, verifier, back, brand, next, createdAt: Date.now() });
     const q = new URLSearchParams({
       client_id: P.clientId(), redirect_uri: `${base(req)}/api/app/auth/${k}/callback`, response_type: 'code', scope: P.scope, state, ...P.extra
     });
@@ -160,7 +164,7 @@ function createOAuth({ json, isHttps, signIn, audit, uid, now }) {
     if (!user.active) return fail(req, res, back, 'This account is switched off. Please contact us and we will help.');
     await signIn(req, res, user);
     await audit(user.id, created ? 'account.signup.' + k : 'signin.' + k);
-    const where = row.brand ? '#/' + row.brand : '#/';
+    const where = row.next || (row.brand ? '#/' + row.brand : '#/');
     // signIn set the session cookie; add the cleared state cookie too
     const prev = res.getHeader('Set-Cookie');
     res.setHeader('Set-Cookie', [].concat(prev || [], stateCookie(req, '', 0)));
@@ -179,4 +183,4 @@ function createOAuth({ json, isHttps, signIn, audit, uid, now }) {
   };
 }
 
-module.exports = { createOAuth, providers, PROVIDERS };
+module.exports = { createOAuth, providers, PROVIDERS, safeNext };

@@ -353,7 +353,7 @@ const appApi = createAppApi({ json, readJson, limited, isHttps, clientIp });
 
 // ---------- CORS: the websites (Vercel) call this API on its own address ----------
 // Only the public form/content endpoints are shared; the admin API stays same-origin.
-const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health', '/api/app/auth/providers']);
+const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health', '/api/app/auth/providers', '/api/app/login', '/api/app/signup']);
 function cors(req, res, p) {
   const origin = String(req.headers.origin || '').replace(/\/+$/, '');
   if (!origin || !PUBLIC_API.has(p)) return false;
@@ -363,7 +363,7 @@ function cors(req, res, p) {
   if (req.method === 'OPTIONS') {
     res.writeHead(204, {
       'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Headers': 'Content-Type, X-Requested-With',
       'Access-Control-Max-Age': '86400'
     });
     res.end();

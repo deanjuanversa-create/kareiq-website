@@ -21,7 +21,7 @@ const { sendMail, mailReady } = require('../notify');
 const db = require('../db');
 const content = require('../content');
 const catalog = require('../catalog');
-const { createOAuth } = require('./oauth');
+const { createOAuth, safeNext } = require('./oauth');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -305,6 +305,21 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     setCookie(res, token, req, maxAgeSec);
   }
 
+  // Sign-in from another website (the KareNest popup): instead of a cookie the browser could
+  // not keep across sites, answer with a one-time link (2 minutes). Opening it on this server
+  // signs the person in here and continues to `next` inside the app.
+  function apiBase(req) {
+    if (process.env.OAUTH_REDIRECT_BASE) return process.env.OAUTH_REDIRECT_BASE.replace(/\/+$/, '');
+    const host = String(req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000').split(',')[0].trim();
+    return `${isHttps(req) ? 'https' : 'http'}://${host}`;
+  }
+  async function handoff(req, user, next) {
+    const t = crypto.randomBytes(32).toString('base64url');
+    await docs.removeWhere('app_handoff', { createdAt: { $lt: Date.now() - 120000 } }).catch(() => {});
+    await docs.insert('app_handoff', { id: auth.sha(t), userId: user.id, next: safeNext(next), createdAt: Date.now() });
+    return `${apiBase(req)}/api/app/handoff?t=${t}`;
+  }
+
   async function me(user, session) {
     const products = await productsFor(user);
     return {
@@ -348,6 +363,10 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         if (user && user.active && !user.passwordHash) return json(res, 401, { ok: false, needsSetup: true, message: 'Your account is ready but has no password yet. Open the welcome link we sent you, or tap "Forgot password" to get a new one.' });
         await new Promise((r) => setTimeout(r, 350));
         return json(res, 401, { ok: false, message: 'That email/mobile number and password do not match. Check for typos, or tap "Forgot password".' });
+      }
+      if (body.handoff) {
+        await audit(user.id, 'signin');
+        return json(res, 200, { ok: true, go: await handoff(req, user, body.next) });
       }
       await signIn(req, res, user);
       await audit(user.id, 'signin');
@@ -420,6 +439,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const user = { id: uid(), name, email: email || null, phone, role: 'family', passwordHash: auth.hashPassword(body.password), active: true, selfSignup: true, verified: false, createdAt: now(), passwordSetAt: now() };
       await docs.insert('app_users', user);
       await audit(user.id, 'account.signup');
+      if (body.handoff) return json(res, 201, { ok: true, go: await handoff(req, user, body.next) });
       await signIn(req, res, user);
       return json(res, 201, { ok: true });
     }
@@ -599,7 +619,15 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const startDate = clean(body.startDate, 10);
       if (startDate && (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || startDate < todayIST())) errors.startDate = 'Choose today or a later date.';
       const note = typeof body.note === 'string' ? body.note.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, ' ').trim().slice(0, 1000) : '';
+      // accounts made with Google or Facebook have no mobile number yet: the team needs one to call
+      let newPhone = null;
+      if (!user.phone) {
+        newPhone = normalisePhone(body.phone);
+        if (!newPhone) errors.phone = 'Enter a 10-digit mobile number so our team can call you.';
+        else if (await docs.findOne('app_users', { phone: newPhone })) errors.phone = 'This number already has an account. Sign in with it, or use another number.';
+      }
       if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
+      if (newPhone) { await docs.update('app_users', user.id, { phone: newPhone }); user.phone = newPhone; }
       const already = person && bestPlan(await docs.find('app_plans', { personId: person.id }), prod);
       if (already && (already.status === 'pending' || already.status === 'active')) {
         return json(res, 409, { ok: false, message: already.included
@@ -999,6 +1027,16 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     await ensureReady();
     const p = parts.join('/');
     if (parts[0] === 'auth') return oauth(req, res, parts, url); // Google / Facebook sign-in
+    if (p === 'handoff' && req.method === 'GET') {
+      const t = url.searchParams.get('t') || '';
+      const row = t ? await docs.findOne('app_handoff', { id: auth.sha(t) }) : null;
+      if (row) await docs.remove('app_handoff', row.id);
+      const user = row && Date.now() - row.createdAt < 120000 ? await docs.findOne('app_users', { id: row.userId }) : null;
+      if (!user || !user.active) { res.writeHead(302, { Location: '/app/#/signin?error=' + encodeURIComponent('That sign-in link has expired. Please sign in again.'), 'Cache-Control': 'no-store' }); return res.end(); }
+      await signIn(req, res, user);
+      res.writeHead(302, { Location: '/app/' + (row.next || '#/'), 'Cache-Control': 'no-store' });
+      return res.end();
+    }
     const s = await auth.sessionOf(req);
     const signed = s && s.user ? s : null;
 
