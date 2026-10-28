@@ -35,7 +35,13 @@ module.exports = function pages(L) {
   const visitBtn = (cls = 'btn btn-ghost mag', label = 'Plan a Visit') => `<a class="${cls}" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}${label}</a>`;
   const detailHref = (p) => u(D.pathOf(p));
   const badgeOf = (p) => (p.type === p.tagline ? G[p.group].name : p.type);
-  const priceHtml = (p) => `<div class="pkg-price"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}</span></div>`;
+  // monthly packages can be paid monthly, quarterly, half-yearly or yearly (savings set in the admin page)
+  const DUR = [['1', 'Monthly'], ['3', 'Quarterly (3 months)'], ['6', 'Half-yearly (6 months)'], ['12', 'Yearly (12 months)']];
+  const priceHtml = (p) => p.unit === 'month'
+    ? `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>/ month</span></div>
+  <label class="pkg-dur"><span>Payment plan</span><select data-dur="${p.id}" aria-label="Payment plan for ${esc(p.name)}">${DUR.map((d) => `<option value="${d[0]}" data-label="${d[1]}">${d[1]}</option>`).join('')}</select></label>
+  <p class="pkg-bill" data-bill>Billed monthly</p>`
+    : `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}</span></div>`;
   const list = (items) => `<ul class="pkg-list">${items.map((t) => `<li>${ico('chk')}<span>${esc(t)}</span></li>`).join('')}</ul>`;
 
   function pkgCard(p, { compact = false, level = 3, includes = true } = {}) {
@@ -183,7 +189,7 @@ module.exports = function pages(L) {
   const kbCheck = '<svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
   const kbPlan = (p, i) => `<article class="kb-plan ${['', 'c2', 'c3'][i]}" aria-labelledby="pk-${p.id}">
           <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true">${kbIcons[p.id]}</svg></span><div><h3 class="h4x" id="pk-${p.id}"><a href="${detailHref(p)}">${esc(p.name)}</a></h3><p class="kb-plan-sub">${esc(p.tagline)}</p></div></div>
-          <p class="kb-price">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p>
+          <p class="kb-price" data-pp="${p.id}" data-base="${p.price}">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p>
           <hr>
           <p class="kb-inc-h">What's included</p>
           <ul class="kb-inc">${p.includes.map((t) => `<li>${kbCheck}<span>${esc(t)}</span></li>`).join('')}</ul>
@@ -589,7 +595,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
           <span class="eyebrow">Fall prevention &amp; mobility</span>
           <h3 class="h2x"><a href="${u('/karebalance')}">KareBalance</a></h3>
           <p>${esc(G.karebalance.short)}</p>
-          <div class="tiers">${D.byGroup('karebalance').map((p) => `<span>${esc(p.name.replace('KareBalance ', ''))} · ${D.rupees(p.price)}</span>`).join('')}</div>
+          <div class="tiers">${D.byGroup('karebalance').map((p) => `<span>${esc(p.name.replace('KareBalance ', ''))} · <span data-ppt="${p.id}">${D.rupees(p.price)}</span></span>`).join('')}</div>
           <div class="row"><a class="btn btn-primary" href="${u('/karebalance')}">Explore KareBalance${arrow}</a><a class="btn btn-ghost" href="${u('/karebalance')}#enquire">Book a Consultation</a></div>
         </div>
       </article>
@@ -599,7 +605,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
           <span class="eyebrow">Mental wellbeing</span>
           <h3 class="h2x"><a href="${u('/karemind')}">KareMind</a></h3>
           <p>Nurture Your Mind. Enhance Your Wellbeing. ${esc(G.karemind.short)}</p>
-          <div class="tiers">${D.byGroup('karemind').map((p) => `<span>${esc(p.name.replace('KareMind ', ''))} · ${D.rupees(p.price)}</span>`).join('')}</div>
+          <div class="tiers">${D.byGroup('karemind').map((p) => `<span>${esc(p.name.replace('KareMind ', ''))} · <span data-ppt="${p.id}">${D.rupees(p.price)}</span></span>`).join('')}</div>
           <div class="row"><a class="btn btn-primary" href="${u('/karemind')}">Explore KareMind${arrow}</a><a class="btn btn-ghost" href="${u('/karemind')}#enquire">Enquire</a></div>
         </div>
       </article>
@@ -761,7 +767,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
         <a class="btn btn-primary" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a>
         <a class="link-arrow" href="${u(g.path)}">All ${esc(g.name)} ${p.group === 'visit' ? 'passes' : p.group === 'live' ? 'packages' : 'programmes'}${ico('arr')}</a>
       </div>
-      ${siblings.length ? `<div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in ${esc(g.name)}</span>${siblings.map((s) => `<a href="${detailHref(s)}">${esc(s.name)}<span>${D.rupees(s.price)} ${esc(D.unitLabel(s))}</span></a>`).join('')}</div>` : ''}
+      ${siblings.length ? `<div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in ${esc(g.name)}</span>${siblings.map((s) => `<a href="${detailHref(s)}">${esc(s.name)}<span><span data-ppt="${s.id}">${D.rupees(s.price)}</span> ${esc(D.unitLabel(s))}</span></a>`).join('')}</div>` : ''}
     </aside>`;
     add({
       key: p.id, path: D.pathOf(p), nav: 'packages', sub,
@@ -770,7 +776,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
       body: () => `${hero({
         crumbs: crumbsFor, eyebrow: `${esc(g.name)} · ${esc(badgeOf(p))}`, solo: true,
         h1: `${esc(p.name)}`, lede: esc(p.tagline + (p.desc && p.group !== 'karemind' && p.group !== 'visit' ? '' : '')),
-        extra: `<div class="price-chip"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
+        extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
         actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}">Compare ${esc(g.name)}${arrow}</a>`
       })}
 <section class="sec" style="padding-top:34px" aria-label="${esc(p.name)} details">

@@ -649,8 +649,41 @@
   };
   // where My KareIQ opens after signing in: the "What would you like to set up?" page, with the
   // chosen package's form already open when they came from a package
-  const nextFor = (plan) => (plan ? '#/plans?brand=karenest&plan=' + encodeURIComponent(plan) : '#/plans');
-  const provHref = (p, plan) => api() + '/api/app/auth/' + p + '/start?brand=karenest&next=' + encodeURIComponent(nextFor(plan)) + '&back=' + encodeURIComponent(location.origin + url('/sign-in'));
+  const nextFor = (plan, months) => (plan ? '#/plans?brand=karenest&plan=' + encodeURIComponent(plan) + (months ? '&months=' + encodeURIComponent(months) : '') : '#/plans');
+  const provHref = (p, plan, months) => api() + '/api/app/auth/' + p + '/start?brand=karenest&next=' + encodeURIComponent(nextFor(plan, months)) + '&back=' + encodeURIComponent(location.origin + url('/sign-in'));
+
+  /* ================= prices: edited in the admin page, with payment plans =================
+     Every price carries data-pp (or data-ppt) with the package id; monthly packages also have a
+     "Payment plan" dropdown (monthly, quarterly, half-yearly, yearly) with the KareNest savings. */
+  (function prices() {
+    const SAVE = { 1: 0, 3: 5, 6: 7, 12: 10 };
+    let nest = null;
+    const fmt = (n) => '\u20b9' + Number(n).toLocaleString('en-IN');
+    const savings = () => (nest && nest.savings) || SAVE;
+    const base = (id, el) => (nest && nest.prices && nest.prices[id]) || Number((el && el.dataset.base) || 0);
+    function update(sel) {
+      const id = sel.dataset.dur, wrap = sel.closest('.pkg,.pd-card,.kb-plan,[data-pkwrap]') || document;
+      const priceEl = $('[data-pp="' + id + '"]', wrap);
+      const m = sel.value, s = savings()[m] || 0, pm = Math.round(base(id, priceEl) * (1 - s / 100));
+      if (priceEl) ($('b', priceEl) || priceEl).textContent = fmt(pm);
+      const bill = $('[data-bill]', wrap);
+      if (bill) bill.innerHTML = m === '1' ? 'Billed monthly' : fmt(pm * Number(m)) + ' billed for ' + m + ' months' + (s ? ' · <b>save ' + s + '%</b>' : '');
+      $$('[data-plan="' + id + '"]', wrap).forEach((a) => { a.dataset.months = m; });
+    }
+    function apply() {
+      if (nest && nest.prices) {
+        $$('[data-pp]').forEach((el) => { const v = nest.prices[el.dataset.pp]; if (v && !$('select[data-dur="' + el.dataset.pp + '"]', el.closest('.pkg,.pd-card,.kb-plan,[data-pkwrap]') || el)) ($('b', el) || el).textContent = fmt(v); });
+        $$('[data-ppt]').forEach((el) => { const v = nest.prices[el.dataset.ppt]; if (v) el.textContent = fmt(v); });
+      }
+      $$('select[data-dur]').forEach((sel) => {
+        [...sel.options].forEach((o) => { const sv = savings()[o.value] || 0; o.textContent = o.dataset.label + (sv ? ' (save ' + sv + '%)' : ''); });
+        update(sel);
+      });
+    }
+    document.addEventListener('change', (e) => { const sel = e.target.closest && e.target.closest('select[data-dur]'); if (sel) update(sel); });
+    apply();
+    fetch(api() + '/api/content', { credentials: 'omit' }).then((r) => (r.ok ? r.json() : null)).then((c) => { if (c && c.nest) { nest = c.nest; apply(); } }).catch(() => {});
+  })();
 
   /* ================= sign in / create account popup =================
      The popup talks to the KareIQ server, which answers with a one-time link. Opening that
@@ -658,7 +691,7 @@
   const auth = $('#authDlg');
   if (auth) {
     const fIn = $('#authSignin'), fUp = $('#authSignup');
-    let mode = 'signin', plan = '';
+    let mode = 'signin', plan = '', months = '';
     const planName = (id) => { const b = $('[data-plan="' + id + '"]'); const card = b && b.closest('.pkg,.kb-plan,.pd-card,.phero'); const h = card && card.querySelector('h1,h2,h3,h4'); return h ? h.textContent.trim() : ''; };
     function setMode(m) {
       mode = m;
@@ -670,8 +703,8 @@
       $$('[data-auth-err]', auth).forEach((x) => { x.textContent = ''; });
       setTimeout(() => { const f = $('input', m === 'signin' ? fIn : fUp); if (f) f.focus(); }, 30);
     }
-    function openAuth(m, p) {
-      plan = p || '';
+    function openAuth(m, p, mo) {
+      plan = p || ''; months = mo || '';
       const pl = $('#authPlan'), name = plan && planName(plan);
       pl.hidden = !plan; pl.textContent = plan ? 'Sign in to continue with ' + (name || 'your package') : '';
       setMode(m || 'signin');
@@ -679,7 +712,7 @@
         // Google and Facebook are always offered; until their keys are set they explain that
         const box = $('#authProv');
         box.hidden = false;
-        box.innerHTML = Object.keys(PROV).map((k) => '<a href="' + (on[k] ? provHref(k, plan) : '#') + '" data-prov="' + k + '"' + (on[k] ? ' data-on="1"' : '') + '>' + PROV_ICON[k] + 'Continue with ' + PROV[k] + '</a>').join('') + '<p class="auth-note" role="status" aria-live="polite"></p><p class="or">or use your mobile number or email</p>';
+        box.innerHTML = Object.keys(PROV).map((k) => '<a href="' + (on[k] ? provHref(k, plan, months) : '#') + '" data-prov="' + k + '"' + (on[k] ? ' data-on="1"' : '') + '>' + PROV_ICON[k] + 'Continue with ' + PROV[k] + '</a>').join('') + '<p class="auth-note" role="status" aria-live="polite"></p><p class="or">or use your mobile number or email</p>';
       });
       if (!auth.open) { if (auth.showModal) auth.showModal(); else auth.setAttribute('open', ''); }
     }
@@ -700,13 +733,13 @@
       if (!t) return;
       e.preventDefault();
       if (document.body.classList.contains('menu-open')) setMenu(false);
-      openAuth(t.dataset.auth === 'signup' ? 'signup' : 'signin', t.dataset.plan);
+      openAuth(t.dataset.auth === 'signup' ? 'signup' : 'signin', t.dataset.plan, t.dataset.months);
     });
     async function send(form, path, body) {
       const err = $('[data-auth-err]', form), btn = $('.auth-go', form), label = btn.textContent;
       err.textContent = ''; btn.disabled = true; btn.textContent = 'Please wait…';
       try {
-        const r = await fetch(api() + '/api/app/' + path, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'kareiq' }, body: JSON.stringify({ ...body, handoff: true, next: nextFor(plan) }) });
+        const r = await fetch(api() + '/api/app/' + path, { method: 'POST', credentials: 'omit', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'kareiq' }, body: JSON.stringify({ ...body, handoff: true, next: nextFor(plan, months) }) });
         const d = await r.json().catch(() => ({}));
         if (r.ok && d.ok && d.go) { btn.textContent = 'Opening My KareIQ…'; location.href = d.go; return; }
         const er = d.errors || {};

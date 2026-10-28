@@ -13,9 +13,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/karenest/loader.css?v=20261027b">
-<script src="/karenest/loader.js?v=20261027b"></script>
-<link rel="stylesheet" href="/karenest/site.css?v=20261027b">
+<link rel="stylesheet" href="/karenest/loader.css?v=20261028a">
+<script src="/karenest/loader.js?v=20261028a"></script>
+<link rel="stylesheet" href="/karenest/site.css?v=20261028a">
 </head>
 <body data-page="karepremium" data-base="/karenest">
 <div class="kn-loader" id="knLoader" role="status" aria-label="Loading KareNest">
@@ -124,7 +124,7 @@
       <div class="eyebrow">Live With Us · Private Room</div>
       <h1>KarePremium</h1>
       <p class="lede">Private Living. Enhanced Wellness. Personal Space.</p>
-      <div class="price-chip"><b>₹99,000</b><span>/ month · Inclusive of 18% GST and applicable service charges</span></div>
+      <div class="price-chip"><b data-ppt="karepremium">₹99,000</b><span>/ month · Inclusive of 18% GST and applicable service charges</span></div>
       <div class="hero-actions"><a class="btn btn-primary mag" href="/karenest/sign-in?plan=karepremium" data-auth data-plan="karepremium">Enquire About KarePremium<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a><a class="btn btn-ghost mag" href="/karenest/live-with-us">Compare Live With Us<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
     </div>
     
@@ -155,12 +155,14 @@
       <div class="pd-card c-violet">
         <span class="pkg-type">Private Room</span>
         <h2 class="h3x" style="margin-top:12px">KarePremium</h2>
-        <div class="pkg-price"><b>₹99,000</b><span>/ month</span></div>
+        <div class="pkg-price" data-pp="karepremium" data-base="99000"><b>₹99,000</b><span>/ month</span></div>
+  <label class="pkg-dur"><span>Payment plan</span><select data-dur="karepremium" aria-label="Payment plan for KarePremium"><option value="1" data-label="Monthly">Monthly</option><option value="3" data-label="Quarterly (3 months)">Quarterly (3 months)</option><option value="6" data-label="Half-yearly (6 months)">Half-yearly (6 months)</option><option value="12" data-label="Yearly (12 months)">Yearly (12 months)</option></select></label>
+  <p class="pkg-bill" data-bill>Billed monthly</p>
         <p class="pkg-note">Inclusive of 18% GST and applicable service charges.</p>
         <a class="btn btn-primary" href="/karenest/sign-in?plan=karepremium" data-auth data-plan="karepremium">Enquire About KarePremium<svg class="ico arr" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
         <a class="link-arrow" href="/karenest/live-with-us">All Live With Us packages<svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
       </div>
-      <div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in Live With Us</span><a href="/karenest/live-with-us/kareplus">KarePlus<span>₹55,000 / month</span></a></div>
+      <div class="pd-other"><span class="eyebrow" style="margin:6px 4px 2px">Also in Live With Us</span><a href="/karenest/live-with-us/kareplus">KarePlus<span><span data-ppt="kareplus">₹55,000</span> / month</span></a></div>
     </aside>
   </div>
 </section>
@@ -297,7 +299,7 @@
   </div>
 </dialog>
 
-<script src="/js/sites.js?v=20261027b"></script>
-<script src="/karenest/app.js?v=20261027b"></script>
+<script src="/js/sites.js?v=20261028a"></script>
+<script src="/karenest/app.js?v=20261028a"></script>
 </body>
 </html>

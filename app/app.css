@@ -673,3 +673,29 @@ details.vgroup>summary{cursor:pointer;font-weight:650}
   .vcard .vd{font-size:.74rem}
   .vcard .vr{font-size:.74rem;margin-top:4px}
 }
+
+/* package prices, payment plans and details */
+.pr{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap}
+.pr b{font-family:var(--slab,Georgia,serif);font-size:1.55rem;font-weight:600;color:var(--ink)}
+.pr b.quote{font-size:1.1rem}
+.pr span{color:var(--ink-2);font-size:.92rem}
+.pr-sub{font-size:.86rem;color:var(--ink-2);margin-top:2px}
+.pr-sub .save{color:var(--good)}
+.dur{display:grid;gap:4px;width:100%;margin:10px 0 4px}
+.dur span{font-size:.82rem;font-weight:600;color:var(--ink-2)}
+.dur .in{min-height:42px;padding:6px 36px 6px 12px}
+.mn h3.sec2{font-size:1.15rem;margin:22px 0 12px;color:var(--ink-2)}
+.pkc{min-height:0}
+.pkc h3{font-size:1.3rem}
+.pk-acts{margin-top:auto;padding-top:12px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;width:100%}
+.pk-acts .arrowlink{margin-top:0;padding:0}
+.pk-box{border:1.5px solid var(--line-2);border-radius:var(--r);padding:16px;margin:-4px 0 16px;background:var(--wash)}
+.pk-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.pk-name{display:block;font-size:1.15rem;margin-bottom:4px}
+.pk-head .tagb{margin-right:6px}
+.pk-more{margin-top:10px}
+.pk-more>summary{cursor:pointer;font-weight:650;color:var(--accent-d);margin-bottom:8px}
+.pk-tag{font-weight:600;margin-bottom:6px}
+.pk-h{font-size:1rem;margin:14px 0 8px}
+.pk-best{margin-top:10px;font-size:.92rem;background:var(--accent-soft);padding:10px 12px;border-radius:var(--r-sm)}
+table.ptab td,table.ptab th{white-space:nowrap}

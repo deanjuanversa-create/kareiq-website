@@ -3,6 +3,8 @@
 // the first save, and to fill any field missing from an older saved file.
 
 const db = require('./db');
+// KareNest, KareBalance and KareMind packages (names, wording and starting prices)
+const NEST = require('../tools/karenest/data');
 
 const KEY = 'content';
 const KEEP_HISTORY = 20;
@@ -79,8 +81,15 @@ const DEFAULTS = {
       lead: 'Need a tailored plan?',
       text: "Call us and we'll help create the perfect care package for you."
     }
+  },
+  // KareNest website and app: one price per package (GST included). Monthly packages
+  // (KarePlus, KarePremium, Thrive) can be paid for 1, 3, 6 or 12 months with these savings.
+  nest: {
+    prices: Object.fromEntries(NEST.packages.map((p) => [p.id, p.price])),
+    savings: { 1: 0, 3: 5, 6: 7, 12: 10 }
   }
 };
+const NEST_IDS = NEST.packages.map((p) => p.id);
 
 const PLANS = ['1', '3', '6', '12'];
 const PACKAGE_KEYS = DEFAULTS.pricing.packages.map((p) => p.key);
@@ -184,6 +193,18 @@ function validate(input) {
     return pkg;
   });
   if (out.pricing.packages.filter((p) => p.popular).length > 1) errors.push('Only one package can be marked "Most popular".');
+  // KareNest, KareBalance and KareMind prices + savings for monthly KareNest packages
+  for (const id of NEST_IDS) {
+    const v = int(c.nest && c.nest.prices ? c.nest.prices[id] : NaN);
+    const name = (NEST.packages.find((x) => x.id === id) || {}).name || id;
+    if (Number.isNaN(v) || v === 0) errors.push(`${name}: price must be a number above 0.`);
+    out.nest.prices[id] = Number.isNaN(v) || v === 0 ? DEFAULTS.nest.prices[id] : v;
+  }
+  for (const m of PLANS) {
+    const sv = int(c.nest && c.nest.savings ? c.nest.savings[m] : NaN);
+    if (Number.isNaN(sv) || sv > 90) errors.push(`KareNest saving for the ${m}-month plan must be between 0 and 90%.`);
+    out.nest.savings[m] = Number.isNaN(sv) ? 0 : sv;
+  }
   out.pricing.customized.lead = str(c.pricing.customized.lead, 80) || DEFAULTS.pricing.customized.lead;
   out.pricing.customized.text = str(c.pricing.customized.text, 200) || DEFAULTS.pricing.customized.text;
 

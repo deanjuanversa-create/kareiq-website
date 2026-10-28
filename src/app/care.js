@@ -8,7 +8,6 @@
 // Free sessions and add-on discounts: the Kare@Home website packages.
 
 const catalog = require('../catalog');
-const content = require('../content');
 
 // [category, item, HomeStart, HomePlus, HomeElite, note]
 const MONITORING = [
@@ -80,26 +79,11 @@ function groupOf(planId) {
 
 const fmt = (n) => 'Rs ' + Number(Math.round(n)).toLocaleString('en-IN');
 
-// What a plan costs, from the website prices. Returns { amount, text, gst } or { amount: null }.
+// What a plan costs, from the package list (prices the admin can edit).
 async function chargeOf(plan) {
-  const id = plan.planId;
-  if (!id) return { amount: null, text: 'Plan to be confirmed' };
-  const c = await content.get();
-  const web = c.pricing && c.pricing.packages ? c.pricing.packages.find((x) => x.key === id) : null;
-  if (web && web.prices) {
-    const m = String(plan.months || 12);
-    const row = web.prices[m] || web.prices['12'];
-    if (row) return { amount: row[1], text: `${web.name}, ${m === '1' ? '1 month' : m + ' months'}`, gst: c.pricing.gstNote || 'Prices exclude GST.' };
-  }
-  const k = catalog.karenestPlans[id];
-  if (k) {
-    const months = Number(plan.months) || 1;
-    const amount = k.unit === 'month' ? k.price * months : k.price;
-    return { amount, text: k.unit === 'month' ? `${k.name}, ${months} month${months === 1 ? '' : 's'}` : `${k.name} (${k.unit})`, gst: 'KareNest prices include GST.' };
-  }
-  const p = catalog.packages[id];
-  if (p && p.mrp) return { amount: p.mrp, text: p.name, gst: 'Prices exclude GST.' };
-  return { amount: null, text: 'Price confirmed by our team' };
+  if (!plan.planId) return { amount: null, text: 'Plan to be confirmed' };
+  const packinfo = require('./packinfo');
+  return packinfo.priceOf(await packinfo.byId(plan.planId), plan.months);
 }
 
 module.exports = { MONITORING, monitoringFor, FREE, DISCOUNT, SERVICES, groupOf, chargeOf, fmt, TIERS };

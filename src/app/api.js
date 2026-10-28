@@ -25,6 +25,7 @@ const { createOAuth, safeNext } = require('./oauth');
 const risk = require('./risk');
 const care = require('./care');
 const report = require('./report');
+const packinfo = require('./packinfo');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -262,21 +263,18 @@ function requestPlanId(product, row) {
   return null; // day visit, community or "help me choose": the office picks the plan when activating
 }
 
-// Plans a family can choose in the app, with a price hint where the website shows one.
+// Plans a family can choose in the app: every package of each brand with what is included and its prices
 async function planChoices() {
-  const c = await content.get();
+  const list = await packinfo.all();
   const fmt = (n) => '₹' + Number(n).toLocaleString('en-IN');
   return Object.values(PRODUCTS).map((pr) => ({
     ...brand(pr.id),
     plans: pr.plans.map((id) => {
-      const web = c.pricing && c.pricing.packages ? c.pricing.packages.find((x) => x.key === id) : null;
-      let price = null;
-      if (web && web.prices) {
-        const perMonth = Object.values(web.prices).map((v) => v[0]).filter(Boolean);
-        if (perMonth.length) price = 'from ' + fmt(Math.min(...perMonth)) + ' a month';
-      } else if (catalog.packages[id] && catalog.packages[id].mrp) price = fmt(catalog.packages[id].mrp);
-      else if (catalog.karenestPlans[id]) { const k = catalog.karenestPlans[id]; price = fmt(k.price) + (/^(day|week|month)$/.test(k.unit) ? ' a ' + k.unit : ', ' + k.unit); }
-      return { id, name: planName(id), price };
+      const pk = list.find((x) => x.id === id);
+      if (!pk) return { id, name: planName(id), price: null };
+      const price = pk.model === 'tiers' || pk.model === 'monthly' ? 'from ' + fmt(Math.min(...Object.values(pk.prices).map((x) => x.perMonth))) + ' a month'
+        : pk.model === 'fixed' ? fmt(pk.price) + ' ' + pk.length : null;
+      return { ...pk, price };
     })
   }));
 }
@@ -485,22 +483,22 @@ function planYear(plan) {
 
 async function packageData(person) {
   const plans = (await docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } })).filter((pl) => pl.status !== 'ended');
-  const c = await content.get();
+  const catalogList = await packinfo.all();
   const out = [];
   for (const pl of plans) {
-    const web = c.pricing && c.pricing.packages ? c.pricing.packages.find((x) => x.key === pl.planId) : null;
-    const charge = await care.chargeOf(pl);
+    const pk = catalogList.find((x) => x.id === pl.planId) || null;
+    const charge = packinfo.priceOf(pk, pl.months);
     out.push({
-      ...planView(pl), group: care.groupOf(pl.planId), charge,
-      includes: web ? web.includes : [], monitoring: care.monitoringFor(pl.planId),
-      freeSessions: care.FREE[pl.planId] || 0, discount: care.DISCOUNT[pl.planId] || 0
+      ...planView(pl), group: pk ? pk.group : care.groupOf(pl.planId), charge,
+      tagline: pk ? pk.tagline : '', listTitle: pk ? pk.listTitle : '', includes: pk ? pk.includes : [], notes: pk ? pk.notes : [], best: pk ? pk.best : null,
+      monitoring: care.monitoringFor(pl.planId), freeSessions: care.FREE[pl.planId] || 0, discount: care.DISCOUNT[pl.planId] || 0
     });
   }
   // KareNest residents also get Kare@Home
   const included = withIncluded(plans).filter((pl) => pl.included).map(planView);
   const main = out.find((pl) => pl.status === 'active') || out[0] || null;
   const paid = out.filter((pl) => pl.status === 'active' || pl.status === 'paused').reduce((s, pl) => s + (pl.charge.amount || 0), 0);
-  return { person: { id: person.id, name: person.name }, plans: out, included, summary: main ? { startDate: main.startDate, endDate: main.endDate, paid, paidText: paid ? care.fmt(paid) : null, activatedAt: main.startDate } : null };
+  return { person: { id: person.id, name: person.name }, plans: out, included, catalog: catalogList, groupOrder: packinfo.GROUP_ORDER, periods: packinfo.PERIOD, summary: main ? { startDate: main.startDate, endDate: main.endDate, paid, paidText: paid ? care.fmt(paid) : null, activatedAt: main.startDate } : null };
 }
 
 async function servicesData(user, person) {
@@ -1053,12 +1051,17 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         await docs.insert('app_people', person);
         await docs.insert('app_links', { id: uid(), userId: user.id, personId: person.id, kind: 'family', relation: relation || null, createdAt: now() });
       }
-      const planRow = { id: uid(), personId: person.id, product: prod, planId, status: 'pending', bookingRef: null, months: null, createdAt: now() };
+      // payment plan: monthly, quarterly, half-yearly or yearly for packages priced by the month
+      const pk = planId ? await packinfo.byId(planId) : null;
+      const months = pk && packinfo.durationOf(pk) ? (packinfo.MONTHS.includes(String(body.months)) ? Number(body.months) : (pk.model === 'tiers' ? 12 : 1)) : null;
+      const charge = pk ? packinfo.priceOf(pk, months) : null;
+      const planRow = { id: uid(), personId: person.id, product: prod, planId, status: 'pending', bookingRef: null, months, createdAt: now() };
       await docs.insert('app_plans', planRow);
       const row = await store.add('enquiries', 'KQ', {
         name: user.name, phone: user.phone || '', email: user.email || '', interest: 'app-plan-request', interestName: 'New plan from the app',
-        message: [planId ? 'Plan: ' + planName(planId) : 'Plan: not decided, please guide', startDate ? 'Would like to start: ' + startDate : '', note].filter(Boolean).join('\n'),
-        source: 'app', product: prod, package: planId || 'undecided', date: startDate || null, userId: user.id, accountUserId: user.id,
+        message: [planId ? 'Plan: ' + planName(planId) : 'Plan: not decided, please guide', months ? `Payment plan: ${packinfo.PERIOD[months]} (${months === 1 ? '1 month' : months + ' months'})` : '',
+          charge && charge.amount ? 'Price shown: Rs ' + Number(charge.amount).toLocaleString('en-IN') + (charge.gst ? ' (' + charge.gst.replace(/\.$/, '') + ')' : '') : '', startDate ? 'Would like to start: ' + startDate : '', note].filter(Boolean).join('\n'),
+        source: 'app', product: prod, package: planId || 'undecided', billing: months ? String(months) : null, date: startDate || null, userId: user.id, accountUserId: user.id,
         personId: person.id, personName: person.name, relation: relation || null, appPlanId: planRow.id, kind: 'plan-request'
       });
       await docs.update('app_plans', planRow.id, { bookingRef: row.reference });

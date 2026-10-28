@@ -30,6 +30,9 @@ fs.mkdirSync(OUT, { recursive: true });
     else fs.copyFileSync(path.join(ROOT, r), path.join(OUT, r));
   });
 })('');
+// the server reads the KareNest package list (names, wording, prices) from here
+fs.mkdirSync(path.join(OUT, 'tools/karenest'), { recursive: true });
+fs.copyFileSync(path.join(ROOT, 'tools/karenest/data.js'), path.join(OUT, 'tools/karenest/data.js'));
 const edit = (rel, fn) => {
   const f = path.join(OUT, rel), before = fs.readFileSync(f, 'utf8'), after = fn(before);
   if (after === before) throw new Error('Nothing changed in ' + rel + ' (the file was probably edited; update tools/demo/build.js)');
@@ -93,7 +96,7 @@ const vercel = {
   outputDirectory: 'public',
   cleanUrls: true,
   trailingSlash: false,
-  functions: { 'api/index.js': { includeFiles: '{app,admin,public,src}/**', maxDuration: 15 } },
+  functions: { 'api/index.js': { includeFiles: '{app,admin,public,src,tools}/**', maxDuration: 15 } },
   redirects: [
     { source: '/kare-at-home/', destination: '/kare-at-home', permanent: false },
     { source: '/kare-at-home/about', destination: '/kare-at-home#about-us', permanent: false },

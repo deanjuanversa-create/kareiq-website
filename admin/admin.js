@@ -382,6 +382,9 @@
   }));
 
   function buildEditors(c) {
+    const NEST_NAMES = { kareplus: ['KarePlus (shared living)', 'month'], karepremium: ['KarePremium (private room)', 'month'], bloom: ['KareNest Bloom (day pass)', 'day'], flourish: ['KareNest Flourish (weekly pass)', 'week'], thrive: ['KareNest Thrive (monthly pass)', 'month'], 'kb-base': ['KareBalance Base', 'one-time'], 'kb-plus': ['KareBalance Plus', '24 sessions'], 'kb-premium': ['KareBalance Premium', '6 months'], 'km-base': ['KareMind Base', 'one-time'], 'km-plus': ['KareMind Plus', '3 months'], 'km-premium': ['KareMind Premium', '6 months'] };
+    $('nestPrices').innerHTML = Object.keys(c.nest.prices).map((id) => `<tr data-nest="${id}"><td>${esc((NEST_NAMES[id] || [id])[0])}</td><td><span class="rupee" style="display:block"><input type="number" min="1" step="1" data-k="nest" aria-label="${esc((NEST_NAMES[id] || [id])[0])} price"></span></td><td class="hint">${esc((NEST_NAMES[id] || ['', ''])[1])}</td></tr>`).join('');
+    $('nestSavings').innerHTML = PLANS.map((m) => `<label class="f pct"><span>${m === '1' ? '1 month' : m + ' months'}</span><input type="number" min="0" max="90" step="1" data-nsave="${m}"></label>`).join('');
     $('savings').innerHTML = PLANS.map((m) => `<label class="f pct"><span>${m === '1' ? '1 month' : m + ' months'}</span><input type="number" min="0" max="90" step="1" data-save="${m}" ${m === '1' ? 'title="Usually 0 for monthly"' : ''}></label>`).join('');
     $('pkgEditors').innerHTML = c.pricing.packages.map((p, i) => `
       <article class="card pkg" style="--c:${PKG_C[i]}" data-pkg="${p.key}">
@@ -407,6 +410,8 @@
   function fill(c) {
     $$('[name]', form).forEach((el) => { if (el.name !== 'popular') el.value = getPath(c, el.name) ?? ''; });
     PLANS.forEach((m) => { $(`savings`).querySelector(`[data-save="${m}"]`).value = c.pricing.savings[m]; });
+    Object.keys(c.nest.prices).forEach((id) => { const el = form.querySelector(`[data-nest="${id}"] input`); if (el) el.value = c.nest.prices[id]; });
+    PLANS.forEach((m) => { $('nestSavings').querySelector(`[data-nsave="${m}"]`).value = c.nest.savings[m]; });
     c.pricing.packages.forEach((p) => {
       const card = form.querySelector(`[data-pkg="${p.key}"]`);
       card.querySelector('[data-p="name"]').value = p.name;
@@ -430,6 +435,8 @@
     delete c.updatedAt;
     $$('[name]', form).forEach((el) => { if (el.name !== 'popular') setPath(c, el.name, el.value.trim()); });
     PLANS.forEach((m) => { c.pricing.savings[m] = Number($('savings').querySelector(`[data-save="${m}"]`).value); });
+    $$('[data-nest]', form).forEach((tr) => { c.nest.prices[tr.dataset.nest] = Number(tr.querySelector('input').value); });
+    PLANS.forEach((m) => { c.nest.savings[m] = Number($('nestSavings').querySelector(`[data-nsave="${m}"]`).value); });
     c.pricing.packages = c.pricing.packages.map((p) => {
       const card = form.querySelector(`[data-pkg="${p.key}"]`);
       const prices = {};

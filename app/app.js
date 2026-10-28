@@ -662,7 +662,7 @@
         S.cache.pkg = d;
         var canAsk = S.me.user.role !== 'caregiver';
         var right = canAsk ? '<button class="btn pink" data-act="ask" data-kind="plan">Modify package</button>' : '';
-        if (!d.plans.length) { fill(personBar(p, people, right) + '<div class="empty"><b>No package yet</b>Choose a Kare@Home or KareNest plan and our team will call you to confirm.<p style="margin-top:12px"><a class="btn sm" href="#/plans">See plans</a></p></div>'); return; }
+        if (!d.plans.length) { fill(personBar(p, people, right) + '<div class="empty"><b>No package yet</b>Choose a Kare@Home or KareNest package below. Our team will call you to confirm.</div>' + catalogHtml(d, p)); return; }
         var s = d.summary;
         var sumBox = s ? '<div class="pkgsum"><div><span>Package activation date</span><b>' + (s.startDate ? e(date(s.startDate)) : 'After confirmation') + '</b></div>' +
           '<div><span>Package expiry date</span><b>' + (s.endDate ? e(date(s.endDate)) : '–') + '</b></div>' +
@@ -688,7 +688,7 @@
         var mon = d.plans.filter(function (pl) { return pl.monitoring && pl.monitoring.length; })[0];
         var monHtml = mon ? '<h2 class="sec">What we monitor with ' + e(mon.name) + '</h2><section class="panel tw" style="padding:6px 14px"><table class="mon"><thead><tr><th>What</th><th>How often</th></tr></thead><tbody>' +
           mon.monitoring.map(function (m, i) { var prev = mon.monitoring[i - 1]; return (!prev || prev.category !== m.category ? '<tr class="cat"><td colspan="2">' + e(m.category) + '</td></tr>' : '') + '<tr><td>' + e(m.item) + '</td><td>' + e(m.freq) + '</td></tr>'; }).join('') + '</tbody></table></section>' : '';
-        fill(personBar(p, people, right) + sumBox + cards + incl + addOns + monHtml);
+        fill(personBar(p, people, right) + sumBox + cards + incl + addOns + monHtml + catalogHtml(d, p));
       });
     });
   }
@@ -696,11 +696,47 @@
     var d = S.cache.pkg, pl = d && d.plans.filter(function (x) { return x.id === id; })[0];
     if (!pl) return;
     openDialog(pl.name, '<dl class="kv"><dt>Brand</dt><dd>' + e(pl.productName) + '</dd><dt>Status</dt><dd>' + statusPill(pl) + '</dd>' +
-      (pl.startDate ? '<dt>Runs</dt><dd>' + e(date(pl.startDate)) + ' to ' + e(date(pl.endDate)) + (pl.months ? ' (' + pl.months + ' months)' : '') + '</dd>' : '') +
-      '<dt>Charge</dt><dd>' + (pl.charge.amount ? e(pl.charge.text) + ': <b>Rs ' + Number(pl.charge.amount).toLocaleString('en-IN') + '</b>' + (pl.charge.gst ? '<br><span class="muted small">' + e(pl.charge.gst) + '</span>' : '') : e(pl.charge.text)) + '</dd></dl>' +
-      (pl.includes.length ? '<h3 style="margin:16px 0 8px">What is included</h3><ul class="inc">' + pl.includes.map(function (x) { return '<li>' + icon('check') + e(x) + '</li>'; }).join('') + '</ul>' : '') +
-      (pl.monitoring.length ? '<h3 style="margin:16px 0 8px">What we monitor</h3><ul class="inc">' + pl.monitoring.map(function (m) { return '<li>' + icon('check') + e(m.item) + ' <span class="muted small">(' + e(m.freq.toLowerCase()) + ')</span></li>'; }).join('') + '</ul>' : ''),
+      (pl.startDate ? '<dt>Runs</dt><dd>' + e(date(pl.startDate)) + ' to ' + e(date(pl.endDate)) + '</dd>' : '') +
+      (pl.months ? '<dt>Payment plan</dt><dd>' + e(PERIOD_NAMES[pl.months] || pl.months + ' months') + (pl.months > 1 ? ' (' + pl.months + ' months)' : '') + '</dd>' : '') +
+      '<dt>Charge</dt><dd>' + (pl.charge.amount ? '<b>' + rs(pl.charge.amount) + '</b>' + (pl.charge.perMonth && pl.charge.months > 1 ? ' <span class="muted small">(' + rs(pl.charge.perMonth) + ' a month)</span>' : '') + (pl.charge.gst ? '<br><span class="muted small">' + e(pl.charge.gst) + '</span>' : '') : e(pl.charge.text)) + '</dd></dl>' +
+      '<div style="margin-top:14px">' + includesHtml(pl) + '</div>' +
+      (pl.monitoring.length ? '<h3 class="pk-h">What we monitor</h3><ul class="inc">' + pl.monitoring.map(function (m) { return '<li>' + icon('check') + '<span>' + e(m.item) + ' <span class="muted small">(' + e(m.freq.toLowerCase()) + ')</span></span></li>'; }).join('') + '</ul>' : ''),
       '<button class="btn" data-act="close">Done</button>');
+  }
+  // every package, grouped, with prices, payment plans and a way to choose it
+  function catalogHtml(d, p) {
+    var role = S.me.user.role, mine = d.plans.map(function (x) { return x.planId; });
+    var by = {};
+    d.catalog.forEach(function (pk) { (by[pk.group] = by[pk.group] || []).push(pk); });
+    return '<h2 class="sec" id="all-packages">All packages</h2><p class="muted" style="margin:-6px 0 16px">Every Kare@Home and KareNest package, with what is included. ' + (role === 'family' ? 'Choose one and our team will call you to confirm.' : role === 'admin' ? 'Add a package for ' + e(first(p.name)) + ' straight from here.' : '') + '</p>' +
+      d.groupOrder.filter(function (g) { return by[g]; }).map(function (g) {
+        return '<h3 class="sec2">' + e(g) + '</h3><div class="cards3">' + by[g].map(function (pk) {
+          var has = mine.indexOf(pk.id) > -1;
+          var act = role === 'family' ? '<button class="btn sm" data-act="choose-pkg" data-id="' + e(pk.id) + '">' + (has ? 'Change or renew' : 'Choose ' + e(pk.name.replace(/^KareNest |^KareBalance |^KareMind /, ''))) + '</button>'
+            : role === 'admin' ? '<button class="btn sm" data-act="add-pkg" data-id="' + e(pk.id) + '">' + icon('plus') + 'Add for ' + e(first(p.name)) + '</button>' : '';
+          return '<article class="bcard pkc" data-pkcard><div class="bc-top"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span>' + (has ? '<span class="pill active"><i></i>Has this</span>' : '') + '</div>' +
+            '<h3>' + e(pk.name) + '</h3><p class="muted small">' + e(pk.tagline || '') + '</p><div class="pk-price" data-pkprice>' + priceHtml(pk) + '</div>' + durationSelect(pk) +
+            '<div class="pk-acts">' + act + '<button class="arrowlink" data-act="cat-details" data-id="' + e(pk.id) + '">View details' + icon('arrow') + '</button></div></article>';
+        }).join('') + '</div>';
+      }).join('');
+  }
+  function catalogDetails(id) {
+    var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
+    if (!pk) return;
+    var role = S.me.user.role;
+    openDialog(pk.name, '<div class="pk-head" style="margin-bottom:10px"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span><div class="pk-price">' + priceHtml(pk) + '</div></div>' + includesHtml(pk) + priceTable(pk),
+      '<button class="btn ghost" data-act="close">Close</button>' + (role === 'family' ? '<button class="btn" data-act="choose-pkg" data-id="' + e(pk.id) + '">Choose ' + e(pk.name) + '</button>' : role === 'admin' ? '<button class="btn" data-act="add-pkg" data-id="' + e(pk.id) + '">Add for ' + e(first(d.person.name)) + '</button>' : ''));
+  }
+  function addPkgDialog(id) {
+    var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
+    if (!pk) return;
+    openDialog('Add ' + pk.name + ' for ' + d.person.name, '<form data-form="add-pkg" data-id="' + e(pk.id) + '" data-product="' + e(pk.product) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      '<div class="pk-price" data-pkprice style="margin-bottom:12px">' + priceHtml(pk) + '</div>' +
+      (hasDuration(pk) ? durationSelect(pk) : '<label class="field"><span>Runs for</span><select class="in" name="months"><option value="1">1 month</option><option value="3">3 months</option><option value="6">6 months</option><option value="12" selected>12 months</option></select></label>') +
+      field('startDate', 'Starts on', 'type="date" value="' + todayIST() + '"') +
+      '<p class="muted small">The plan becomes active straight away. The family sees it the next time they open the app.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Add package</button>');
+    S.cache.dlgPlans = [pk];
   }
 
   // ================================================================ Book services
@@ -912,32 +948,82 @@
       '<div class="picker-foot"><button class="btn ghost" data-act="claim">Already booked on our website? Add your booking</button></div>' +
       '<div class="picker-foot"><span class="muted">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing between Kare@Home and KareNest.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</span></div></main>';
     // coming from a package on the website: open that package's request form once
-    if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; planDialog(r.q.brand, r.q.plan); }
+    if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; planDialog(r.q.brand, r.q.plan, r.q.months); }
   }
   function first_(n) { return first(n); }
-  function planDialog(brand, chosen) {
+  // ---------------------------------------------------------------- package prices and details
+  var PERIOD_NAMES = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
+  function rs(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+  function hasDuration(pk) { return pk && (pk.model === 'tiers' || pk.model === 'monthly'); }
+  function defaultMonths(pk, want) { return ['1', '3', '6', '12'].indexOf(String(want)) > -1 ? String(want) : (pk.model === 'tiers' ? '12' : '1'); }
+  // price for one package and payment plan, as shown on cards and in the buying dialog
+  function priceHtml(pk, months) {
+    if (!pk) return '';
+    if (hasDuration(pk)) {
+      var m = defaultMonths(pk, months), pr = pk.prices[m];
+      return '<div class="pr"><b>' + rs(pr.perMonth) + '</b><span>/ month</span></div>' +
+        '<div class="pr-sub">' + (m === '1' ? 'Billed monthly' : rs(pr.total) + ' billed for ' + m + ' months') + (pr.saving ? ' · <b class="save">save ' + pr.saving + '%</b>' : '') + '</div>';
+    }
+    if (pk.model === 'fixed') return '<div class="pr"><b>' + rs(pk.price) + '</b><span>' + e(pk.length) + '</span></div>';
+    return '<div class="pr"><b class="quote">Price on call</b></div>';
+  }
+  function durationSelect(pk, months, id) {
+    if (!hasDuration(pk)) return '';
+    var m = defaultMonths(pk, months);
+    return '<label class="dur"><span>Payment plan</span><select class="in" name="months" data-act="dur" data-id="' + e(id || pk.id) + '">' + ['1', '3', '6', '12'].map(function (x) {
+      return '<option value="' + x + '"' + (x === m ? ' selected' : '') + '>' + PERIOD_NAMES[x] + (x === '1' ? '' : ' (' + x + ' months)') + (pk.prices[x].saving ? ', save ' + pk.prices[x].saving + '%' : '') + '</option>';
+    }).join('') + '</select></label>';
+  }
+  function includesHtml(pk) {
+    if (!pk) return '';
+    return (pk.tagline ? '<p class="pk-tag">' + e(pk.tagline) + '</p>' : '') + (pk.desc ? '<p class="muted small" style="margin-bottom:10px">' + e(pk.desc) + '</p>' : '') +
+      (pk.includes && pk.includes.length ? '<h3 class="pk-h">' + e(pk.listTitle || "What's included") + '</h3><ul class="inc">' + pk.includes.map(function (x) { return '<li>' + icon('check') + '<span>' + e(x) + '</span></li>'; }).join('') + '</ul>' : '') +
+      (pk.best ? '<p class="pk-best"><b>Best for:</b> ' + e(pk.best) + '</p>' : '') +
+      (pk.notes && pk.notes.length ? pk.notes.map(function (n) { return '<p class="muted small" style="margin-top:8px">' + e(n) + '</p>'; }).join('') : '');
+  }
+  function priceTable(pk) {
+    if (!hasDuration(pk)) return '';
+    return '<h3 class="pk-h">Payment plans</h3><div class="tw"><table class="ptab"><thead><tr><th>Plan</th><th>Per month</th><th>Billed</th><th>Saving</th></tr></thead><tbody>' + ['1', '3', '6', '12'].map(function (m) {
+      var pr = pk.prices[m]; return '<tr><td>' + PERIOD_NAMES[m] + '</td><td>' + rs(pr.perMonth) + '</td><td>' + rs(pr.total) + (m === '1' ? '' : ' for ' + m + ' months') + '</td><td>' + (pr.saving ? pr.saving + '%' : '–') + '</td></tr>';
+    }).join('') + '</tbody></table></div>';
+  }
+
+  function planDialog(brand, chosen, months) {
     var b = BRANDS[brand];
     var load = S.cache.planOpts ? Promise.resolve(S.cache.planOpts) : api('GET', 'plans/options').then(function (d) { S.cache.planOpts = d; return d; });
     load.then(function (d) {
       if (!d.ok) return toast(d.message);
       var prod = d.products.filter(function (x) { return x.id === brand; })[0];
       var people = d.people || [];
+      var pre = S.pid && people.some(function (x) { return x.id === S.pid; }) ? S.pid : null;
       var who = people.length
-        ? '<label class="field"><span>Who is it for?</span><select class="in" name="personId" data-act="who">' + people.map(function (x) { return '<option value="' + e(x.id) + '">' + e(x.name) + (x.relation ? ' (' + e(x.relation) + ')' : '') + '</option>'; }).join('') + '<option value="">Someone else</option></select></label><div data-new hidden>'
+        ? '<label class="field"><span>Who is it for?</span><select class="in" name="personId" data-act="who">' + people.map(function (x) { return '<option value="' + e(x.id) + '"' + (x.id === pre ? ' selected' : '') + '>' + e(x.name) + (x.relation ? ' (' + e(x.relation) + ')' : '') + '</option>'; }).join('') + '<option value="">Someone else</option></select></label><div data-new hidden>'
         : '<div data-new>';
       who += '<div class="row2">' + field('personName', people.length ? 'Their name' : 'Who is it for?', 'placeholder="e.g. Lakshmi Nair"') + field('relation', 'They are your', 'placeholder="e.g. Mother" list="rels2"') + '</div><datalist id="rels2"><option>Mother<option>Father<option>Grandmother<option>Grandfather<option>Spouse<option>Myself</datalist></div>';
-      openDialog(b.name + ' plans',
+      var first = chosen && prod.plans.some(function (pl) { return pl.id === chosen; }) ? chosen : prod.plans[0].id;
+      S.cache.dlgPlans = prod.plans; S.cache.dlgMonths = months;
+      openDialog(b.name + ' packages',
         '<form data-form="plan-request" data-brand="' + brand + '" novalidate><div class="alert bad" data-msg hidden></div>' +
-        '<div class="field"><span>Plan</span><div class="pick">' + prod.plans.map(function (pl, i) {
-          return '<label><input type="radio" name="planId" value="' + e(pl.id) + '"' + ((chosen ? pl.id === chosen : i === 0) ? ' checked' : '') + '><span><b>' + e(pl.name) + '</b>' + (pl.price ? '<em>' + e(pl.price) + '</em>' : '<em>Price on call</em>') + '</span></label>';
-        }).join('') + '<label><input type="radio" name="planId" value="undecided"><span><b>Not sure yet</b><em>We will help you choose</em></span></label></div><em class="err" data-err="planId"></em></div>' +
+        '<label class="field"><span>Package</span><select class="in" name="planId" data-act="plan-pick">' + prod.plans.map(function (pl) {
+          return '<option value="' + e(pl.id) + '"' + (pl.id === first ? ' selected' : '') + '>' + e(pl.name) + (pl.price ? ' · ' + e(pl.price) : '') + '</option>';
+        }).join('') + '<option value="undecided">Not sure yet: help me choose</option></select><em class="err" data-err="planId"></em></label>' +
+        '<div class="pk-box" data-pkbox></div>' +
         who +
         (S.me.user.phone ? '' : field('phone', 'Your mobile number', 'type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required', 'Our team will call you on this number.')) +
         '<div class="row2">' + field('startDate', 'Would like to start (optional)', 'type="date" min="' + todayIST() + '"') + '<span></span></div>' +
         '<label class="field"><span>Anything we should know? (optional)</span><textarea class="in" name="note" maxlength="1000" placeholder="Health needs, mobility, preferred times..."></textarea></label>' +
-        '<p class="muted small">Nothing is charged now. The ' + e(b.name) + ' team will call you' + (S.me.user.phone ? ' on ' + e(phoneNice(S.me.user.phone)) : '') + ' to confirm the plan, price and start date.</p></form>',
+        '<p class="muted small">Nothing is charged now. The ' + e(b.name) + ' team will call you' + (S.me.user.phone ? ' on ' + e(phoneNice(S.me.user.phone)) : '') + ' to confirm the package, payment plan and start date.</p></form>',
         '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send to the ' + e(b.name) + ' team</button>');
+      fillPkgBox(first, months);
+      var sel = $('dialog[open] [name=personId]'); if (sel) $('[data-new]', sel.closest('form')).hidden = Boolean(sel.value);
     });
+  }
+  function fillPkgBox(id, months) {
+    var box = $('dialog[open] [data-pkbox]'); if (!box) return;
+    var pk = (S.cache.dlgPlans || []).filter(function (x) { return x.id === id; })[0];
+    if (!pk) { box.innerHTML = '<p class="muted">Our team will help you choose the right package when they call.</p>'; return; }
+    box.innerHTML = '<div class="pk-head"><div><b class="pk-name">' + e(pk.name) + '</b>' + (pk.type ? '<span class="tagb">' + e(pk.type) + '</span>' : '') + '</div><div class="pk-price" data-pkprice>' + priceHtml(pk, months) + '</div></div>' +
+      durationSelect(pk, months) + '<details class="pk-more" open><summary>Everything included</summary>' + includesHtml(pk) + priceTable(pk) + '</details>';
   }
   function claimDialog() {
     openDialog('Add your website booking',
@@ -1246,6 +1332,7 @@
     'plan-request': function (f, v) {
       v.product = f.getAttribute('data-brand');
       if (v.personId) { delete v.personName; delete v.relation; }
+      if (!$('[name=months]', f)) delete v.months;
       return api('POST', 'plans/request', v).then(function (d) {
         if (!d.ok) return d;
         S.cache.planOpts = null;
@@ -1317,6 +1404,11 @@
           '<p class="muted small" style="margin-top:12px">Saved. The family sees it on their dashboard.</p><a class="btn sm ghost" style="margin-top:12px" href="#/assess?p=' + e(id) + '">Do another check</a>';
         toast('Saved.');
         if (box && window.innerWidth < 980) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    },
+    'add-pkg': function (f, v) {
+      return api('POST', 'admin/plans', { personId: S.pid, product: f.getAttribute('data-product'), planId: f.getAttribute('data-id'), startDate: v.startDate, months: v.months }).then(function (d) {
+        if (!d.ok) return d; closeDialog(); toast('Package added.'); S.people = null; render();
       });
     },
     profile2: function (f, v) {
@@ -1416,6 +1508,14 @@
         break;
       case 'upload': uploadDialog(); break;
       case 'pkgdetails': pkgDetails(id); break;
+      case 'cat-details': catalogDetails(id); break;
+      case 'add-pkg': closeDialog(); addPkgDialog(id); break;
+      case 'choose-pkg': {
+        var cpk = S.cache.pkg && S.cache.pkg.catalog.filter(function (x) { return x.id === id; })[0];
+        var card = t.closest('[data-pkcard]'), msel = card && $('[data-act=dur]', card);
+        closeDialog(); if (cpk) planDialog(cpk.product, cpk.id, msel ? msel.value : undefined);
+        break;
+      }
       case 'book': bookDialog(t.getAttribute('data-k')); break;
       case 'print': window.print(); break;
       case 'ask': askDialog(t.getAttribute('data-kind')); break;
@@ -1471,6 +1571,15 @@
       api('PATCH', 'admin/requests/' + t.getAttribute('data-type') + '/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Status saved.' : d.message); });
     } else if (act === 'plan-status') {
       api('PATCH', 'admin/plans/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Plan updated.' : d.message); S.cache.dirty = true; });
+    } else if (act === 'plan-pick') {
+      fillPkgBox(t.value, S.cache.dlgMonths);
+    } else if (act === 'dur') {
+      var did = t.getAttribute('data-id'), pool = (S.cache.dlgPlans || []).concat((S.cache.pkg && S.cache.pkg.catalog) || []);
+      var pk = pool.filter(function (x) { return x.id === did; })[0];
+      var holder = t.closest('[data-pkcard]') || t.closest('dialog');
+      var out = holder && $('[data-pkprice]', holder);
+      if (pk && out) out.innerHTML = priceHtml(pk, t.value);
+      if (t.closest('dialog')) S.cache.dlgMonths = t.value;
     } else if (act === 'person') {
       var r = route(); go('#/' + r.parts[0] + '?p=' + encodeURIComponent(t.value));
     } else if (act === 'sumgroup') {
