@@ -723,11 +723,12 @@ a.brand-link h3{text-decoration:underline;text-decoration-color:transparent;text
 a.brand-link:hover h3,a.brand-link:focus-visible h3{text-decoration-color:currentColor}
 .brand-go{width:16px;height:16px;flex:none;opacity:.55;transition:transform .3s var(--smooth),opacity .3s}
 a.brand-link:hover .brand-go{transform:translateX(3px);opacity:1}
-/* team photos */
-.p-photo{margin:-6px -6px 20px;border-radius:18px;overflow:hidden;aspect-ratio:16/12;background:#eef2f6}
-.p-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;display:block;transition:transform .8s var(--smooth,ease)}
-.person:hover .p-photo img{transform:scale(1.03)}
-@media (max-width:560px){.p-photo{margin:-4px -4px 16px;aspect-ratio:1/1;border-radius:16px}}
+/* team photos: the whole photo, same height for both, on a soft brand-tinted panel */
+.p-photo{margin:-6px -6px 20px;height:clamp(320px,34vw,460px);display:flex;justify-content:center;align-items:flex-end;padding:14px 14px 0;border-radius:18px;overflow:hidden;background:linear-gradient(160deg,#e4f3f1 0%,#ece8f8 55%,#f8e7ef 100%)}
+.p-photo picture{display:contents}
+.p-photo img{height:100%;width:auto;max-width:100%;object-fit:contain;display:block;border-radius:12px 12px 0 0;box-shadow:0 18px 34px -24px rgba(19,48,74,.55);transition:transform .8s var(--smooth,ease);transform-origin:50% 100%}
+.person:hover .p-photo img{transform:scale(1.02)}
+@media (max-width:560px){.p-photo{margin:-4px -4px 16px;padding:12px 12px 0;border-radius:16px}}
 @media (prefers-reduced-motion:reduce){.p-photo img{transition:none}.person:hover .p-photo img{transform:none}}
 
 /* footer social links */
@@ -739,3 +740,8 @@ a.brand-link:hover .brand-go{transform:translateX(3px);opacity:1}
 .foot-social .fb:hover,.foot-social .fb:focus-visible{background:#1877f2}
 .foot-social .wa{color:#1fa855}
 .foot-social .wa:hover,.foot-social .wa:focus-visible{background:#1fa855;color:#fff}
+/* cards stack on tablets and phones: show each photo at its natural size, centred */
+@media (max-width:960px){
+  .p-photo{height:auto}
+  .p-photo img{height:auto;width:100%;max-width:420px;max-height:none}
+}
