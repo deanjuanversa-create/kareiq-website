@@ -99,6 +99,22 @@ Walk-ins and phone bookings: **Office → Add a family**. New caregivers and off
 
 **Where things are:** `app/` (the screens), `src/app/` (sign-in, permissions, plans, readings), `src/docs.js` (storage for MongoDB, Redis or files). Plan names per brand are in `src/app/products.js`. KareNest plans are the website packages (KarePlus, KarePremium, Bloom, Flourish, Thrive, KareBalance and KareMind) listed in `src/catalog.js`.
 
+### Dashboard pages (one layout for everyone)
+
+Top bar plus a side menu. Families and the office pick the person from "PATIENT NAME" at the top.
+- **Dashboard**: risk scores; a summary of the latest readings, coloured against the standard ranges; charts for the last 7 days, a month, 6 months, a year or chosen dates; "Download trends" (a PDF report).
+- **Medical records**: upload PDFs or photos (up to 5 MB, stored in MongoDB), filter by type, then download one or several.
+- **Package information**: dates, amount paid, packages, free sessions and what is monitored, and how often.
+- **Book services**: free physiotherapy or bystander sessions (4, 6 or 8 a year), add-on services, and your bookings.
+- **Invoices**: the charges worked out from each plan.
+- **Caregivers** get My people, Record a visit (vitals, smart-scale readings and the food, toilet, sleep, pain and medicine checks), Risk checks and Medical records. They do **not** see health history: only the family and the office do.
+
+Where the numbers come from (the KareIQ sheet "Draft Data Collection by Caregivers"):
+- `src/app/vitals.js`: standard ranges and the visit checks.
+- `src/app/risk.js`: the risk formulas and bands.
+- `src/app/care.js`: what each package monitors, free sessions and add-on services.
+- `src/app/report.js`: the PDF report. It needs `pdf-lib`, which `npm install` adds.
+
 ### Continue with Google / Facebook (optional)
 
 The sign-in pages (KareNest `/sign-in` and the app) show "Continue with Google" and "Continue with Facebook". A button works only when its keys are set on the API server; until then it says "Not available yet" and email sign-in is used. No key is ever sent to a browser.

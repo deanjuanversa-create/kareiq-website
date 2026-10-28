@@ -9,7 +9,7 @@ const PRODUCTS = {
     id: 'karehome',
     name: 'Kare@Home',
     tagline: 'Care at home',
-    plans: ['homestart', 'homeplus', 'homeelite', 'customized', 'kb-base', 'kb-plus', 'kb-premium']
+    plans: ['homestart', 'homeplus', 'homeelite', 'diabetic', 'customized', 'kb-base', 'kb-plus', 'kb-premium']
   },
   karenest: {
     id: 'karenest',
@@ -24,6 +24,7 @@ const PRODUCTS = {
 const EXTRA_PLANS = {
   ...catalog.karenestPlans,
   'nest-living': { name: 'KareNest community living' },
+  diabetic: { name: 'Diabetic Care' },
   'nest-respite': { name: 'KareNest short stay' }
 };
 

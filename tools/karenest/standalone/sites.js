@@ -5,7 +5,7 @@
 window.KARE_API = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '' : 'https://kareiq-api.onrender.com';
 
 window.KARE_SITES = {
-  kareiq:   'https://kareiq-website-full.vercel.app/',
+  kareiq:   'https://kareiq.co.in/',
   karehome: 'https://kareiq-website-full.vercel.app/kare-at-home',
   karenest: '/'
 };

@@ -38,7 +38,7 @@ const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden=
 
 const VER = '20261027b';
 const SITE_HOST = 'https://karenest.co.in';
-const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq-website-full.vercel.app/' };
+const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
 
 // The main navigation. `x` parts are dropped between 1220px and 1500px so the full menu fits
 // on one line on laptops; links carry an aria-label with the full name.

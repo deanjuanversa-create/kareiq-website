@@ -22,6 +22,9 @@ const db = require('../db');
 const content = require('../content');
 const catalog = require('../catalog');
 const { createOAuth, safeNext } = require('./oauth');
+const risk = require('./risk');
+const care = require('./care');
+const report = require('./report');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -82,6 +85,9 @@ async function setup() {
     console.log(`[app] created the first admin login: ${adminEmail()} (password = ADMIN_PASSWORD)`);
   }
 }
+// On a public demo site (APP_DEMO=true) the shared demo logins cannot be changed or turned off
+const demoLocked = (u) => String(process.env.APP_DEMO || '') === 'true' && /@demo\.kareiq$/i.test(String((u && u.email) || ''));
+const DEMO_LOCKED = 'This is a shared demo login, so its details cannot be changed here. Add a new login to try this.';
 const adminEmail = () => cleanEmail(process.env.ADMIN_EMAIL || 'admin@karenest.co.in');
 
 // ---------- who sees what ----------
@@ -166,6 +172,10 @@ async function visiblePerson(user, personId, product) {
   const kind = user.role === 'caregiver' ? 'caregiver' : 'family';
   const link = await docs.findOne('app_links', { userId: user.id, personId, kind });
   if (!link || person.active === false) throw notFound();
+  if (!product && kind === 'caregiver') {
+    const plans = await docs.find('app_plans', { personId });
+    if (!plans.some((p) => p.status === 'active' || p.status === 'paused')) throw notFound();
+  }
   if (product) {
     const plan = bestPlan(await docs.find('app_plans', { personId }), product);
     if (!plan || (kind === 'caregiver' && plan.status === 'pending')) throw notFound();
@@ -271,6 +281,265 @@ async function planChoices() {
   }));
 }
 
+// ================================================================================================
+// The dashboard (one page per person, across Kare@Home and KareNest)
+
+const RECORD_CATEGORIES = { cardiac: 'Cardiac', sugar: 'Blood Sugar', general: 'General', imaging: 'Imaging', prescription: 'Prescriptions', others: 'Others' };
+const historyAllowed = (user) => user.role === 'admin' || user.role === 'family';
+
+// Office and assigned caregivers may enter readings, risk scores and records
+async function careTeam(user, personId) {
+  if (user.role === 'admin') return true;
+  if (user.role !== 'caregiver') return false;
+  return Boolean(await docs.findOne('app_links', { userId: user.id, personId, kind: 'caregiver' }));
+}
+
+// The brand a visit or booking belongs to: the person's own active plan first (KareNest before
+// the Kare@Home it includes), else any plan.
+function productOf(plans) {
+  const live = plans.filter((p) => p.status === 'active' || p.status === 'paused');
+  const pick = live.find((p) => p.product === 'karenest') || live[0] || plans.find((p) => p.status !== 'ended') || plans[0];
+  return pick ? pick.product : 'karehome';
+}
+
+async function peopleFor(user) {
+  let links = [];
+  let people;
+  if (user.role === 'admin') {
+    people = await docs.find('app_people', { active: { $ne: false } }, { sort: { name: 1 } });
+  } else {
+    const kind = user.role === 'caregiver' ? 'caregiver' : 'family';
+    links = await linksOf(user.id, kind);
+    const ids = links.map((l) => l.personId);
+    people = ids.length ? (await docs.find('app_people', { id: { $in: ids } }, { sort: { name: 1 } })).filter((x) => x.active !== false) : [];
+  }
+  const plans = await plansOfPeople(people.map((x) => x.id));
+  const out = [];
+  for (const x of people) {
+    const mine = plans.filter((pl) => pl.personId === x.id);
+    const open = mine.filter((pl) => pl.status !== 'ended');
+    if (user.role === 'caregiver' && !open.some((pl) => pl.status === 'active')) continue;
+    if (user.role === 'admin' && !open.length) continue;
+    const link = links.find((l) => l.personId === x.id);
+    out.push({
+      id: x.id, name: x.name, relation: link ? link.relation || null : null,
+      plans: open.map(planView), product: productOf(open),
+      status: open.some((pl) => pl.status === 'active') ? 'active' : open.some((pl) => pl.status === 'paused') ? 'paused' : open.length ? 'pending' : 'none'
+    });
+  }
+  return out;
+}
+
+const fmtDay = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' });
+const fmtDayTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
+const fmtShortDay = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
+const istDate = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(ms));
+
+// ?period=7d|1m|6m|1y, or ?from=YYYY-MM-DD&to=YYYY-MM-DD (the calendar), at most 2 years
+function rangeOf(url) {
+  const from = url.searchParams.get('from'), to = url.searchParams.get('to');
+  const iso = /^\d{4}-\d{2}-\d{2}$/;
+  if (from && to && iso.test(from) && iso.test(to) && from <= to) {
+    const fromMs = Date.parse(from + 'T00:00:00+05:30'), toMs = Math.min(Date.now(), Date.parse(to + 'T23:59:59+05:30'));
+    if (toMs - fromMs <= 731 * 86400000) return { key: 'custom', label: `${fmtDay.format(new Date(fromMs))} to ${fmtDay.format(new Date(toMs))}`, fromMs, toMs, from, to: istDate(toMs) };
+  }
+  const key = vitals.PERIODS[url.searchParams.get('period')] ? url.searchParams.get('period') : '7d';
+  const toMs = Date.now(), fromMs = toMs - vitals.PERIODS[key][1] * 86400000;
+  return { key, label: vitals.PERIODS[key][0], fromMs, toMs, from: istDate(fromMs), to: istDate(toMs) };
+}
+
+const ageOf = (person) => (person.birthYear ? new Date().getFullYear() - person.birthYear : null);
+const valueText = (metric, r) => (metric === 'bp' ? `${r.systolic}/${r.diastolic}` : String(r.value));
+
+async function dashboardData(user, person, range) {
+  const [plans, readingsAll, visits, risks] = await Promise.all([
+    docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } }),
+    docs.find('app_readings', { personId: person.id, voided: false }, { sort: { measuredAt: -1 } }),
+    docs.find('app_visits', { personId: person.id }, { sort: { at: -1 }, limit: 60 }),
+    docs.find('app_risks', { personId: person.id }, { sort: { at: -1 } })
+  ]);
+  const sex = person.sex || null;
+  const byIds = [...new Set([...visits.map((v) => v.by), ...risks.map((r) => r.enteredBy)])];
+  const users = byIds.length ? await docs.find('app_users', { id: { $in: byIds } }) : [];
+  const nameOf = (id) => (users.find((u) => u.id === id) || {}).name || 'Care team';
+
+  // latest of each reading, with its status against the standard range
+  const latest = {};
+  for (const r of readingsAll) if (!latest[r.metric]) latest[r.metric] = r;
+  const latestOut = Object.keys(latest).filter((k) => vitals.METRICS[k]).map((k) => {
+    const r = latest[k];
+    const c = vitals.classify(k, r, sex);
+    return { metric: k, label: vitals.METRICS[k].label, unit: vitals.METRICS[k].unit, value: valueText(k, r), context: r.context || null, at: r.measuredAt, level: c.level, status: c.label, range: c.range, group: vitals.METRICS[k].group || 'vitals' };
+  });
+  const order = [...vitals.CARDS, 'height', ...vitals.BODY];
+  latestOut.sort((a, b) => order.indexOf(a.metric) - order.indexOf(b.metric));
+
+  // each metric in the chosen period, oldest first, with an average and its status
+  const inRange = readingsAll.filter((r) => r.measuredMs >= range.fromMs && r.measuredMs <= range.toMs).reverse();
+  const series = [];
+  for (const k of vitals.TRENDS) {
+    const rows = inRange.filter((r) => r.metric === k);
+    if (!rows.length) continue;
+    const m = vitals.METRICS[k];
+    const keys = m.series.map((s) => s[0]);
+    const avg = {};
+    for (const key of keys) { const v = rows.map((r) => r[key]).filter((x) => x != null); avg[key] = v.reduce((a, b) => a + b, 0) / v.length; }
+    let avgFor = avg;
+    if (k === 'glucose') {
+      const fasting = rows.filter((r) => r.context === 'fasting');
+      const use = fasting.length ? fasting : rows;
+      avgFor = { value: use.reduce((a, r) => a + r.value, 0) / use.length, context: fasting.length ? 'fasting' : 'post_meal' };
+    }
+    const rounded = Object.fromEntries(Object.entries(avgFor).map(([a, b]) => [a, typeof b === 'number' ? Math.round(b * (k === 'bp' || k === 'hr' || k === 'spo2' ? 1 : 10)) / (k === 'bp' || k === 'hr' || k === 'spo2' ? 1 : 10) : b]));
+    const c = vitals.classify(k, rounded, sex);
+    series.push({
+      metric: k, label: m.label, unit: m.unit, names: m.series.map((s) => s[1]), keys, group: m.group || 'vitals',
+      average: k === 'bp' ? `${rounded.systolic}/${rounded.diastolic}` : String(rounded.value), averageNote: k === 'glucose' ? (avgFor.context === 'fasting' ? 'fasting readings' : 'all readings') : null,
+      level: c.level, status: c.label, range: c.range,
+      rows: rows.map((r) => {
+        const rc = vitals.classify(k, r, sex);
+        const o = { id: r.id, at: r.measuredAt, ms: r.measuredMs, level: rc.level };
+        for (const key of keys) o[key] = r[key];
+        if (r.context) o.context = r.context;
+        return o;
+      })
+    });
+  }
+
+  // risk scores: the latest of each test, plus BMI from the latest weight and height
+  const riskLatest = [];
+  const seen = new Set();
+  for (const r of risks) {
+    if (seen.has(r.test)) continue;
+    seen.add(r.test);
+    const t = risk.TESTS.find((x) => x.id === r.test);
+    if (!t) continue;
+    riskLatest.push({ id: r.id, test: r.test, group: t.group, groupName: risk.GROUPS[t.group], title: t.title, value: r.value, display: r.display, level: r.level, band: r.band, note: r.note || null, scale: r.scale || '', at: r.at, by: nameOf(r.enteredBy) });
+  }
+  if (latest.bmi) {
+    const b = risk.bmiRisk(latest.bmi.value);
+    riskLatest.push({ id: 'bmi', test: 'bmi', group: 'weight', groupName: risk.GROUPS.weight, title: 'Obesity (Body Mass Index)', ...b, note: null, at: latest.bmi.measuredAt, by: 'From the latest weight and height' });
+  }
+  const groupOrder = Object.keys(risk.GROUPS);
+  riskLatest.sort((a, b) => groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group));
+
+  // the latest wellbeing checks (food, toilet, sleep...) and notes from visits
+  const lastObs = visits.find((v) => v.obs && Object.keys(v.obs).length);
+  const obs = lastObs ? {
+    at: lastObs.at, by: nameOf(lastObs.by), flags: vitals.obsFlags(lastObs.obs),
+    groups: vitals.OBS_GROUPS.map(([title, keys]) => ({ title, items: keys.filter((k) => lastObs.obs[k] !== undefined).map((k) => ({ k, label: vitals.OBS[k].label, text: vitals.obsText(k, lastObs.obs[k]), flag: vitals.obsFlags({ [k]: lastObs.obs[k] }).length > 0 })) })).filter((g) => g.items.length)
+  } : null;
+  const open = plans.filter((pl) => pl.status !== 'ended');
+  return {
+    person: { id: person.id, name: person.name, birthYear: person.birthYear || null, age: ageOf(person), sex, smoker: person.smoker ?? null, parentalMI: person.parentalMI ?? null, diabetic: person.diabetic ?? null, relation: person.relation || null },
+    plans: open.map(planView), product: productOf(open),
+    range: { key: range.key, label: range.label, from: range.from, to: range.to },
+    latest: latestOut, series, risks: riskLatest, obs,
+    notes: visits.filter((v) => v.note).slice(0, 8).map((v) => ({ at: v.at, by: nameOf(v.by), note: v.note, product: v.product })),
+    lastVisit: visits[0] ? { at: visits[0].at, by: nameOf(visits[0].by) } : null,
+    canRecord: await careTeam(user, person.id) && open.some((pl) => pl.status === 'active'),
+    canAssess: await careTeam(user, person.id)
+  };
+}
+
+const fmtRowTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
+function reportInput(d, range, user) {
+  const day = (iso) => fmtDayTime.format(new Date(iso)).replace('Sept', 'Sep');
+  const row = (iso) => fmtRowTime.format(new Date(iso)).replace('Sept', 'Sep');
+  const textOf = (m, r) => (m.metric === 'bp' ? `${r.systolic}/${r.diastolic}` : String(r.value)) + (r.context ? ' ' + (vitals.GLUCOSE_CONTEXTS[r.context] || '').toLowerCase() : '');
+  return {
+    person: { id: d.person.id, name: d.person.name, age: d.person.age, sexName: d.person.sex === 'male' ? 'Male' : d.person.sex === 'female' ? 'Female' : null },
+    plans: d.plans.map((p) => (p.included ? p.productName + ' (included)' : p.name)).join(', '),
+    periodLabel: range.label, from: fmtDay.format(new Date(range.fromMs)), to: fmtDay.format(new Date(range.toMs)), fromMs: range.fromMs, toMs: range.toMs,
+    createdAt: fmtDayTime.format(new Date()), createdBy: user.name,
+    fmtShort: (ms) => fmtShortDay.format(new Date(ms)),
+    latest: d.latest.map((r) => ({ label: r.label, value: r.value + (r.unit ? ' ' + r.unit : ''), level: r.level, status: r.status, range: r.range, at: day(r.at) })),
+    risks: d.risks.map((r) => ({ title: r.title, display: r.display, band: r.band, level: r.level, scale: r.scale, at: fmtDay.format(new Date(r.at)) })),
+    series: d.series.map((m) => ({
+      label: m.label, unit: m.unit, average: m.average, status: m.status, level: m.level, series: m.keys, names: m.names,
+      rows: m.rows.map((r) => ({ ...r, at: row(r.at), text: textOf(m, r) }))
+    })),
+    notes: d.notes.map((v) => ({ at: day(v.at), by: v.by, note: v.note }))
+  };
+}
+
+async function riskPrefill(person) {
+  const rows = await docs.find('app_readings', { personId: person.id, voided: false, metric: { $in: ['bp', 'chol', 'bmi'] } }, { sort: { measuredAt: -1 } });
+  const last = (m) => rows.find((r) => r.metric === m);
+  const yn = (v) => (v === true ? 'yes' : v === false ? 'no' : undefined);
+  return {
+    sex: person.sex || undefined, age: ageOf(person) || undefined,
+    sbp: last('bp') ? last('bp').systolic : undefined, chol: last('chol') ? last('chol').value : undefined, bmi: last('bmi') ? last('bmi').value : undefined,
+    smoker: yn(person.smoker), parentalMI: yn(person.parentalMI), diabetic: yn(person.diabetic)
+  };
+}
+
+// The year a plan's free sessions belong to: from its start date, in 12-month steps
+function planYear(plan) {
+  if (!plan.startDate) return null;
+  let start = plan.startDate;
+  const today = todayIST();
+  while (addMonths(start, 12) < today) { const n = addMonths(start, 12); start = new Date(Date.parse(n + 'T00:00:00Z') + 86400000).toISOString().slice(0, 10); }
+  return { start, end: addMonths(start, 12) };
+}
+
+async function packageData(person) {
+  const plans = (await docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } })).filter((pl) => pl.status !== 'ended');
+  const c = await content.get();
+  const out = [];
+  for (const pl of plans) {
+    const web = c.pricing && c.pricing.packages ? c.pricing.packages.find((x) => x.key === pl.planId) : null;
+    const charge = await care.chargeOf(pl);
+    out.push({
+      ...planView(pl), group: care.groupOf(pl.planId), charge,
+      includes: web ? web.includes : [], monitoring: care.monitoringFor(pl.planId),
+      freeSessions: care.FREE[pl.planId] || 0, discount: care.DISCOUNT[pl.planId] || 0
+    });
+  }
+  // KareNest residents also get Kare@Home
+  const included = withIncluded(plans).filter((pl) => pl.included).map(planView);
+  const main = out.find((pl) => pl.status === 'active') || out[0] || null;
+  const paid = out.filter((pl) => pl.status === 'active' || pl.status === 'paused').reduce((s, pl) => s + (pl.charge.amount || 0), 0);
+  return { person: { id: person.id, name: person.name }, plans: out, included, summary: main ? { startDate: main.startDate, endDate: main.endDate, paid, paidText: paid ? care.fmt(paid) : null, activatedAt: main.startDate } : null };
+}
+
+async function servicesData(user, person) {
+  const plans = (await docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } })).filter((pl) => pl.status !== 'ended');
+  const tier = plans.find((pl) => care.FREE[pl.planId] && (pl.status === 'active' || pl.status === 'paused'));
+  const nest = plans.some((pl) => pl.product === 'karenest' && pl.status !== 'pending');
+  const bookings = (await docs.find('enquiries', { personId: person.id, kind: 'service' }, { sort: { createdAt: -1 } }));
+  let free = null;
+  if (tier) {
+    const year = planYear(tier);
+    const used = bookings.filter((b) => b.free && year && b.createdAt.slice(0, 10) >= year.start && b.createdAt.slice(0, 10) <= year.end).length;
+    const total = care.FREE[tier.planId];
+    free = { total, used, left: Math.max(0, total - used), plan: planName(tier.planId), until: year ? year.end : null };
+  }
+  const discount = tier ? care.DISCOUNT[tier.planId] : 0;
+  const item = (id) => ({ id, name: care.SERVICES[id].name, text: care.SERVICES[id].text, free: Boolean(care.SERVICES[id].free && free) });
+  const included = free ? ['bystander', 'physiotherapy'].map(item) : [];
+  const additional = ['teleconsultation', 'spongebath', 'blood-collection', 'dressing', ...(free ? [] : ['bystander', 'physiotherapy']), ...(nest ? ['family-visit'] : [])].map((id) => ({ ...item(id), free: false }));
+  const names = { new: 'Sent', contacted: 'We are on it', scheduled: 'Arranged', closed: 'Done' };
+  const list = bookings.slice(0, 20).map((b) => ({ reference: b.reference, service: b.service, name: (care.SERVICES[b.service] || {}).name || 'Service', free: Boolean(b.free), date: b.date || null, time: b.time ? catalog.timeSlots[b.time] : null, status: b.status || 'new', statusName: names[b.status] || 'Sent', createdAt: b.createdAt }));
+  return { person: { id: person.id, name: person.name }, product: productOf(plans), free, discount, included, additional, last: list[0] || null, bookings: list, canBook: user.role !== 'caregiver' && plans.some((pl) => pl.status === 'active' || pl.status === 'paused') };
+}
+
+async function invoicesData(person) {
+  const plans = (await docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } })).filter((pl) => pl.status !== 'pending');
+  const rows = [];
+  for (const pl of plans) {
+    const charge = await care.chargeOf(pl);
+    rows.push({
+      number: 'KQ-' + (pl.startDate || pl.createdAt.slice(0, 10)).replace(/-/g, '') + '-' + pl.id.replace(/[^A-Za-z0-9]/g, '').slice(-5).toUpperCase(),
+      date: pl.startDate || pl.createdAt.slice(0, 10), plan: planName(pl.planId), productName: PRODUCTS[pl.product].name,
+      period: pl.startDate ? { from: pl.startDate, to: pl.endDate } : null, months: pl.months || null,
+      amount: charge.amount, amountText: charge.amount ? care.fmt(charge.amount) : null, description: charge.text, gst: charge.gst || null, status: pl.status, statusName: PLAN_STATUS[pl.status]
+    });
+  }
+  const total = rows.reduce((s, r) => s + (r.amount || 0), 0);
+  return { person: { id: person.id, name: person.name }, rows, total, totalText: total ? care.fmt(total) : null };
+}
+
 // ---------- helpers for links in messages ----------
 function appUrl(req, isHttps) {
   if (process.env.APP_URL) return process.env.APP_URL.replace(/\/+$/, '');
@@ -314,6 +583,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     return `${isHttps(req) ? 'https' : 'http'}://${host}`;
   }
   async function handoff(req, user, next) {
+    if (auth.STATELESS) return `${apiBase(req)}/api/app/handoff?t=${auth.sign({ h: user.id, n: safeNext(next), c: Date.now() })}`;
     const t = crypto.randomBytes(32).toString('base64url');
     await docs.removeWhere('app_handoff', { createdAt: { $lt: Date.now() - 120000 } }).catch(() => {});
     await docs.insert('app_handoff', { id: auth.sha(t), userId: user.id, next: safeNext(next), createdAt: Date.now() });
@@ -508,6 +778,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       setCookie(res, '', req, 0);
       return json(res, 200, { ok: true });
     }
+    // public demo site: the shared demo logins keep their details so the next visitor can sign in too
+    if ((p === 'password' || p === 'profile') && req.method === 'POST' && demoLocked(user)) return json(res, 403, { ok: false, message: DEMO_LOCKED });
     if (p === 'password' && req.method === 'POST') {
       if (!auth.checkPassword(String(body.current || ''), user.passwordHash)) return json(res, 400, { ok: false, message: 'Your current password is not right.', errors: { current: 'Not right' } });
       const problem = auth.passwordProblem(body.next);
@@ -547,20 +819,22 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const people = mine.people.map((x) => ({
         ...x,
         lastVisit: (visits.find((v) => v.personId === x.id) || {}).at || null,
-        lastBp: readingOutOrNull(latest.find((r) => r.personId === x.id && r.metric === 'bp'))
+        lastBp: historyAllowed(user) ? readingOutOrNull(latest.find((r) => r.personId === x.id && r.metric === 'bp')) : null
       }));
       return json(res, 200, { ok: true, product: brand(product), people });
     }
 
     if (parts[0] === 'people' && parts[1] && parts.length === 2 && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1], product);
-      return json(res, 200, { ok: true, ...(await personView(user, person, product, url.searchParams.get('period') || '1m')) });
+      const view = await personView(user, person, product, url.searchParams.get('period') || '1m');
+      if (!historyAllowed(user)) Object.assign(view, { latest: {}, trend: [], visits: [] }); // health history: family and office only
+      return json(res, 200, { ok: true, ...view });
     }
 
     if (parts[0] === 'people' && parts[2] === 'visits' && req.method === 'POST') {
-      if (!PRODUCTS[product]) throw notFound();
-      const person = await visiblePerson(user, parts[1], product);
-      if (!(await canRecord(user, person.id, product))) throw forbidden();
+      const person = await visiblePerson(user, parts[1], PRODUCTS[product] ? product : undefined);
+      const prod = PRODUCTS[product] ? product : productOf((await docs.find('app_plans', { personId: person.id })).filter((pl) => pl.status !== 'ended'));
+      if (!(await canRecord(user, person.id, prod))) throw forbidden();
       const last = (await docs.find('app_readings', { personId: person.id, metric: 'height', voided: false }, { sort: { measuredAt: -1 }, limit: 1 }))[0];
       const parsed = vitals.parseVisit(body, last ? last.value : null);
       if (parsed.errors) return json(res, 400, { ok: false, message: parsed.errors.form || 'Please check the highlighted fields.', errors: parsed.errors });
@@ -569,13 +843,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       for (const r of parsed.readings) {
         const { calculated, ...data } = r;
         await docs.insert('app_readings', {
-          id: uid(), personId: person.id, product, ...data, measuredAt: new Date(at).toISOString(), measuredMs: Date.parse(at),
+          id: uid(), personId: person.id, product: prod, ...data, measuredAt: new Date(at).toISOString(), measuredMs: Date.parse(at),
           source: calculated ? 'calculated' : 'caregiver_visit', enteredBy: user.id, enteredAt: now(), visitId, voided: false
         });
       }
       const metrics = [...new Set(parsed.readings.map((r) => r.metric))];
-      await docs.insert('app_visits', { id: visitId, personId: person.id, product, by: user.id, at: new Date(at).toISOString(), note: parsed.note, metrics, createdAt: now() });
-      await audit(user.id, 'visit.save', person.id, { metrics, product });
+      await docs.insert('app_visits', { id: visitId, personId: person.id, product: prod, by: user.id, at: new Date(at).toISOString(), note: parsed.note, metrics, obs: parsed.obs, createdAt: now() });
+      await audit(user.id, 'visit.save', person.id, { metrics, product: prod });
       return json(res, 201, { ok: true, saved: metrics });
     }
 
@@ -594,8 +868,147 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     // recent readings a caregiver may correct
     if (parts[0] === 'people' && parts[2] === 'recent' && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1], product);
-      const rows = await docs.find('app_readings', { personId: person.id, voided: false }, { sort: { measuredAt: -1 }, limit: 20 });
-      return json(res, 200, { ok: true, rows: rows.filter((r) => r.source !== 'calculated').map((r) => ({ ...readingOut(r), mine: r.enteredBy === user.id || user.role === 'admin' })) });
+      let rows = await docs.find('app_readings', { personId: person.id, voided: false }, { sort: { measuredAt: -1 }, limit: 60 });
+      if (!historyAllowed(user)) rows = rows.filter((r) => r.enteredBy === user.id && Date.now() - Date.parse(r.enteredAt) < 86400000);
+      return json(res, 200, { ok: true, rows: rows.filter((r) => r.source !== 'calculated').slice(0, 20).map((r) => ({ ...readingOut(r), mine: r.enteredBy === user.id || user.role === 'admin' })) });
+    }
+
+    // ================================================================ the dashboard (all brands)
+    // People this user can open: family -> their relatives, caregiver -> assigned people with an
+    // active plan, office -> everyone with a plan.
+    if (p === 'people' && req.method === 'GET') {
+      return json(res, 200, { ok: true, people: await peopleFor(user) });
+    }
+
+    // Health history (readings, trends, risk scores, notes): office and family only.
+    if (parts[0] === 'people' && parts[2] === 'dashboard' && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      if (!historyAllowed(user)) throw Object.assign(new Error('Health history is shared with the family and the office team only.'), { status: 403 });
+      const range = rangeOf(url);
+      return json(res, 200, { ok: true, ...(await dashboardData(user, person, range)) });
+    }
+    if (parts[0] === 'people' && parts[2] === 'report.pdf' && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      if (!historyAllowed(user)) throw forbidden();
+      const range = rangeOf(url);
+      const d = await dashboardData(user, person, range);
+      const pdf = await report.build(reportInput(d, range, user));
+      await audit(user.id, 'report.download', person.id, { period: range.key });
+      const name = 'KareIQ-health-report-' + person.name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + range.to + '.pdf';
+      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+      res.end(pdf);
+      return true;
+    }
+
+    // the visit form: readings, smart-scale fields and the wellbeing checks
+    if (p === 'forms/visit' && req.method === 'GET') {
+      return json(res, 200, { ok: true, obs: vitals.OBS, groups: vitals.OBS_GROUPS, body: vitals.BODY.map((k) => ({ k, label: vitals.METRICS[k].label, unit: vitals.METRICS[k].unit })), contexts: vitals.GLUCOSE_CONTEXTS });
+    }
+
+    // ----- risk scores: forms for the care team, saving a result
+    if (p === 'risk/forms' && req.method === 'GET') {
+      const forms = risk.forms();
+      let prefill = {};
+      const pid = url.searchParams.get('person');
+      if (pid) {
+        const person = await visiblePerson(user, pid);
+        prefill = await riskPrefill(person);
+      }
+      return json(res, 200, { ok: true, forms, prefill });
+    }
+    if (parts[0] === 'people' && parts[2] === 'risks' && req.method === 'POST') {
+      const person = await visiblePerson(user, parts[1]);
+      if (!(await careTeam(user, person.id))) throw forbidden();
+      const out = risk.evaluate(String(body.test || ''), body.inputs || {});
+      if (out.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: out.errors });
+      const at = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) && body.date <= todayIST() ? body.date + 'T12:00:00+05:30' : now();
+      const row = { id: uid(), personId: person.id, test: body.test, inputs: out.inputs, ...out.result, at: new Date(at).toISOString(), enteredBy: user.id, createdAt: now() };
+      await docs.insert('app_risks', row);
+      // remember sex and risk factors on the person, so the next form is filled in
+      const keep = {};
+      if (out.inputs.sex && !person.sex) keep.sex = out.inputs.sex;
+      if (out.inputs.smoker !== undefined) keep.smoker = Boolean(out.inputs.smoker);
+      if (out.inputs.parentMI !== undefined) keep.parentalMI = Boolean(out.inputs.parentMI);
+      if (out.inputs.diabetic !== undefined) keep.diabetic = Boolean(out.inputs.diabetic);
+      if (Object.keys(keep).length) await docs.update('app_people', person.id, keep);
+      await audit(user.id, 'risk.save', person.id, { test: body.test });
+      return json(res, 201, { ok: true, result: out.result });
+    }
+    if (parts[0] === 'people' && parts[2] === 'profile' && req.method === 'POST') {
+      const person = await visiblePerson(user, parts[1]);
+      if (!(await careTeam(user, person.id))) throw forbidden();
+      const keep = {};
+      if (body.sex === 'male' || body.sex === 'female') keep.sex = body.sex;
+      const by = Number(body.birthYear);
+      if (body.birthYear !== undefined && body.birthYear !== '') {
+        if (!Number.isInteger(by) || by < 1900 || by > new Date().getFullYear()) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: { birthYear: 'Enter a year like 1950' } });
+        keep.birthYear = by;
+      }
+      for (const k of ['smoker', 'parentalMI', 'diabetic']) if (body[k] === 'yes' || body[k] === 'no') keep[k] = body[k] === 'yes';
+      if (Object.keys(keep).length) await docs.update('app_people', person.id, keep);
+      await audit(user.id, 'person.edit', person.id, { fields: Object.keys(keep) });
+      return json(res, 200, { ok: true });
+    }
+
+    // ----- medical records
+    if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      let rows = await docs.find('app_records', { personId: person.id, removed: { $ne: true } }, { sort: { date: -1 } });
+      if (!historyAllowed(user)) rows = rows.filter((r) => r.uploadedBy === user.id); // caregivers see only what they added
+      const ids = [...new Set(rows.map((r) => r.uploadedBy))];
+      const users = ids.length ? await docs.find('app_users', { id: { $in: ids } }) : [];
+      return json(res, 200, { ok: true, categories: RECORD_CATEGORIES, canUpload: true, canSeeAll: historyAllowed(user), rows: rows.map((r) => ({
+        id: r.id, name: r.name, category: r.category, date: r.date, size: r.size, type: r.mime, uploadedAt: r.uploadedAt,
+        by: (users.find((u) => u.id === r.uploadedBy) || {}).name || 'KareIQ', mine: r.uploadedBy === user.id, canRemove: user.role === 'admin' || r.uploadedBy === user.id
+      })) });
+    }
+    if (parts[0] === 'records' && parts[2] === 'remove' && req.method === 'POST') {
+      const r = await docs.findOne('app_records', { id: String(parts[1]) });
+      if (!r || r.removed) throw notFound();
+      await visiblePerson(user, r.personId);
+      if (user.role !== 'admin' && r.uploadedBy !== user.id) throw forbidden();
+      await docs.update('app_records', r.id, { removed: true, removedBy: user.id, removedAt: now() });
+      await audit(user.id, 'record.remove', r.personId, { name: r.name });
+      return json(res, 200, { ok: true });
+    }
+
+    // ----- package information, services and invoices
+    if (parts[0] === 'people' && parts[2] === 'package' && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      return json(res, 200, { ok: true, ...(await packageData(person)) });
+    }
+    if (parts[0] === 'people' && parts[2] === 'services' && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      return json(res, 200, { ok: true, ...(await servicesData(user, person)) });
+    }
+    if (parts[0] === 'people' && parts[2] === 'services' && req.method === 'POST') {
+      const person = await visiblePerson(user, parts[1]);
+      if (user.role === 'caregiver') throw forbidden();
+      const svc = care.SERVICES[body.service] ? body.service : null;
+      const errors = {};
+      if (!svc) errors.service = 'Choose a service.';
+      const date = clean(body.date, 10);
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date) || date < todayIST()) errors.date = 'Choose today or a later date.';
+      const slot = catalog.timeSlots[body.time] ? body.time : null;
+      const note = typeof body.note === 'string' ? body.note.replace(/[\u0000-\u0009\u000B-\u001F\u007F]/g, ' ').trim().slice(0, 1000) : '';
+      if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
+      const sd = await servicesData(user, person);
+      const item = sd.included.concat(sd.additional).find((x) => x.id === svc);
+      if (!item) return json(res, 400, { ok: false, message: 'This service is not available for this plan.', errors: { service: 'Not available' } });
+      const free = Boolean(item.free && sd.free && sd.free.left > 0);
+      if (limited(req, 'app-request')) return json(res, 429, { ok: false, message: 'You have sent several requests just now. Please wait a few minutes, or message us on WhatsApp.' });
+      const row = await store.add('enquiries', 'KQ', {
+        name: user.name, phone: user.phone || '', email: user.email || '', interest: 'app-service', interestName: 'Service booking: ' + care.SERVICES[svc].name + (free ? ' (free session)' : ''),
+        message: [`Date: ${date}`, slot ? `Time: ${catalog.timeSlots[slot]}` : '', note].filter(Boolean).join('\n'), source: 'app', product: sd.product,
+        userId: user.id, personId: person.id, personName: person.name, kind: 'service', service: svc, free, date, time: slot
+      });
+      await audit(user.id, 'service.booked', person.id, { service: svc, free, reference: row.reference });
+      return json(res, 201, { ok: true, reference: row.reference, free });
+    }
+    if (parts[0] === 'people' && parts[2] === 'invoices' && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      if (user.role === 'caregiver') throw forbidden();
+      return json(res, 200, { ok: true, ...(await invoicesData(person)) });
     }
 
     // ----- families choosing a plan in the app
@@ -930,12 +1343,14 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (parts[0] === 'users' && parts[2] === 'link' && req.method === 'POST') {
       const user = await docs.findOne('app_users', { id: parts[1] });
       if (!user) throw notFound();
+      if (demoLocked(user)) throw bad(DEMO_LOCKED);
       await audit(admin.id, 'user.link', null, { name: user.name });
       return json(res, 200, { ok: true, user: publicUser(user), ...(await welcomeLink(req, user)) });
     }
     if (parts[0] === 'users' && parts.length === 2 && req.method === 'PATCH') {
       const user = await docs.findOne('app_users', { id: parts[1] });
       if (!user) throw notFound();
+      if (demoLocked(user)) throw bad(DEMO_LOCKED);
       const changes = {};
       if (body.active !== undefined) {
         if (user.id === admin.id && !body.active) throw bad('You cannot turn off your own login.');
@@ -1020,6 +1435,67 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     return rows.sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
 
+  // ---------------------------------------------------------------- medical record files
+  const MAX_FILE = 5 * 1024 * 1024;
+  const FILE_TYPES = { 'application/pdf': 'pdf', 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' };
+  function sniff(buf) {
+    if (buf.slice(0, 5).toString('latin1') === '%PDF-') return 'application/pdf';
+    if (buf[0] === 0xFF && buf[1] === 0xD8 && buf[2] === 0xFF) return 'image/jpeg';
+    if (buf.slice(0, 8).equals(Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]))) return 'image/png';
+    if (buf.slice(0, 4).toString('latin1') === 'RIFF' && buf.slice(8, 12).toString('latin1') === 'WEBP') return 'image/webp';
+    return null;
+  }
+  function readRaw(req) {
+    if (Buffer.isBuffer(req.body)) return Promise.resolve(req.body);
+    return new Promise((resolve, reject) => {
+      let size = 0; const chunks = [];
+      req.on('data', (c) => {
+        size += c.length;
+        if (size > MAX_FILE) { reject(Object.assign(new Error('That file is larger than 5 MB. Please send a smaller file or a photo.'), { status: 413 })); req.destroy(); return; }
+        chunks.push(c);
+      });
+      req.on('end', () => resolve(Buffer.concat(chunks)));
+      req.on('error', reject);
+    });
+  }
+  async function uploadRecord(req, res, personId, user) {
+    const person = await visiblePerson(user, personId);
+    if (!(historyAllowed(user) || await careTeam(user, person.id))) throw forbidden();
+    if (failures.over('upload:' + user.id, 40)) return json(res, 429, { ok: false, message: 'You have uploaded many files just now. Please wait a few minutes.' });
+    failures.add('upload:' + user.id);
+    const buf = await readRaw(req);
+    if (!buf.length) return json(res, 400, { ok: false, message: 'Choose a file to upload.' });
+    if (buf.length > MAX_FILE) return json(res, 413, { ok: false, message: 'That file is larger than 5 MB. Please send a smaller file or a photo.' });
+    const mime = sniff(buf);
+    if (!mime) return json(res, 415, { ok: false, message: 'Please upload a PDF or a photo (JPG, PNG or WEBP).' });
+    let name = '';
+    try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')); } catch { name = ''; }
+    name = clean(name.replace(/\.[A-Za-z0-9]{2,5}$/, ''), 80) || 'Report';
+    const category = RECORD_CATEGORIES[req.headers['x-category']] ? String(req.headers['x-category']) : 'others';
+    let date = String(req.headers['x-date'] || '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayIST()) date = todayIST();
+    const fileId = uid();
+    await docs.insert('app_files', { id: fileId, personId: person.id, data: buf.toString('base64'), createdAt: now() });
+    const row = { id: uid(), personId: person.id, name, category, date, mime, ext: FILE_TYPES[mime], size: buf.length, fileId, uploadedBy: user.id, uploadedAt: now() };
+    await docs.insert('app_records', row);
+    await audit(user.id, 'record.add', person.id, { name, category });
+    return json(res, 201, { ok: true, id: row.id });
+  }
+  async function downloadRecord(req, res, id, user, url) {
+    const r = await docs.findOne('app_records', { id: String(id) });
+    if (!r || r.removed) throw notFound();
+    await visiblePerson(user, r.personId);
+    if (!historyAllowed(user) && r.uploadedBy !== user.id) throw notFound();
+    const f = await docs.findOne('app_files', { id: r.fileId });
+    if (!f) throw notFound();
+    const buf = Buffer.from(f.data, 'base64');
+    const file = (r.name.replace(/[^A-Za-z0-9 _-]+/g, '').trim().replace(/\s+/g, '-') || 'record') + '.' + (r.ext || 'pdf');
+    const inline = url.searchParams.get('view') === '1';
+    res.writeHead(200, { 'Content-Type': r.mime, 'Content-Length': buf.length, 'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${file}"`, 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+    res.end(buf);
+    return true;
+  }
+
   const oauth = createOAuth({ json, isHttps, signIn, audit, uid, now });
 
   // ---------------------------------------------------------------- entry point
@@ -1029,8 +1505,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (parts[0] === 'auth') return oauth(req, res, parts, url); // Google / Facebook sign-in
     if (p === 'handoff' && req.method === 'GET') {
       const t = url.searchParams.get('t') || '';
-      const row = t ? await docs.findOne('app_handoff', { id: auth.sha(t) }) : null;
-      if (row) await docs.remove('app_handoff', row.id);
+      let row = null;
+      if (auth.STATELESS) { const d = t.length < 600 ? auth.unsign(t) : null; if (d && d.h) row = { userId: d.h, next: d.n, createdAt: d.c }; }
+      else {
+        row = t ? await docs.findOne('app_handoff', { id: auth.sha(t) }) : null;
+        if (row) await docs.remove('app_handoff', row.id);
+      }
       const user = row && Date.now() - row.createdAt < 120000 ? await docs.findOne('app_users', { id: row.userId }) : null;
       if (!user || !user.active) { res.writeHead(302, { Location: '/app/#/signin?error=' + encodeURIComponent('That sign-in link has expired. Please sign in again.'), 'Cache-Control': 'no-store' }); return res.end(); }
       await signIn(req, res, user);
@@ -1053,11 +1533,14 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 403, { ok: false, message: 'Please refresh the page and try again.' });
     }
     try {
+      // medical record files are sent as raw bytes (not JSON) and downloaded as files
+      if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'POST') return await uploadRecord(req, res, parts[1], signed.user);
+      if (parts[0] === 'records' && parts[2] === 'file' && req.method === 'GET') return await downloadRecord(req, res, parts[1], signed.user, url);
       const handled = await signedInRoute(req, res, parts, url, signed.user, signed.session);
       if (handled === undefined && !res.headersSent) return json(res, 404, { ok: false, message: 'Not found.' });
     } catch (err) {
       if (err.status === 400) return json(res, 400, { ok: false, message: err.message, errors: err.errors });
-      if (err.status === 403 || err.status === 404) return json(res, err.status, { ok: false, message: err.message });
+      if (err.status === 403 || err.status === 404 || err.status === 413 || err.status === 415 || err.status === 503) return json(res, err.status, { ok: false, message: err.message });
       throw err;
     }
   };

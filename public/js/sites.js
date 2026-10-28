@@ -5,7 +5,7 @@
      karenest: 'https://karenest.co.in/'
    Every link marked data-site="kareiq|karehome|karenest" on any page follows these values. */
 window.KARE_SITES = {
-  kareiq:   '/',
+  kareiq:   /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/' : 'https://kareiq.co.in/',
   karehome: '/kare-at-home',
   karenest: 'https://karenest.co.in/'
 };

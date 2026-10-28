@@ -18,6 +18,21 @@ const LINK_DAYS = { setup: 7, reset: 1 };
 const sha = (v) => crypto.createHash('sha256').update(String(v)).digest('hex');
 const token = () => crypto.randomBytes(32).toString('base64url');
 
+// Stateless sessions (APP_STATELESS=true): for the public demo on Vercel without a database,
+// where several short-lived copies of the server each have their own temporary storage.
+// The session lives in the signed cookie itself, so any copy can read it.
+const STATELESS = String(process.env.APP_STATELESS || '') === 'true';
+const KEY = crypto.createHash('sha256').update('kq-stateless:' + (process.env.SESSION_SECRET || 'kareiq-demo')).digest();
+const mac = (b) => crypto.createHmac('sha256', KEY).update(b).digest('base64url');
+function sign(obj) { const b = Buffer.from(JSON.stringify(obj)).toString('base64url'); return b + '.' + mac(b); }
+function unsign(t) {
+  const [b, m] = String(t || '').split('.');
+  if (!b || !m) return null;
+  const want = mac(b);
+  if (m.length !== want.length || !crypto.timingSafeEqual(Buffer.from(m), Buffer.from(want))) return null;
+  try { return JSON.parse(Buffer.from(b, 'base64url').toString('utf8')); } catch { return null; }
+}
+
 // ---------- passwords ----------
 function hashPassword(password) {
   const salt = crypto.randomBytes(16);
@@ -61,8 +76,9 @@ function cookieHeader(value, secure, maxAgeSec) {
 
 // ---------- sessions ----------
 async function startSession(userId) {
-  const t = token();
   const now = Date.now();
+  if (STATELESS) return { token: sign({ u: userId, c: now, x: token() }), maxAgeSec: Math.floor(MAX_MS / 1000) };
+  const t = token();
   await docs.insert('app_sessions', { id: sha(t), userId, csrf: token(), createdAt: now, lastSeen: now });
   return { token: t, maxAgeSec: Math.floor(MAX_MS / 1000) };
 }
@@ -79,6 +95,14 @@ async function sweep() {
 // Returns { session, user } or null. Also keeps the session alive.
 async function sessionOf(req) {
   const t = readCookie(req, COOKIE);
+  if (STATELESS) {
+    const d = t && t.length < 600 ? unsign(t) : null;
+    if (!d || !d.u) return null;
+    if (Date.now() - d.c > MAX_MS) return { expired: true };
+    const u = await docs.findOne('app_users', { id: d.u });
+    if (!u || !u.active) return null;
+    return { session: { id: sha(t), userId: d.u, csrf: d.x, createdAt: d.c, lastSeen: Date.now() }, user: u };
+  }
   if (!t || t.length > 100) return null;
   const s = await docs.findOne('app_sessions', { id: sha(t) });
   if (!s) return null;
@@ -95,11 +119,13 @@ async function sessionOf(req) {
 }
 
 async function endSession(req) {
+  if (STATELESS) return; // the cookie is cleared by the caller
   const t = readCookie(req, COOKIE);
   if (t) await docs.remove('app_sessions', sha(t));
 }
 
 async function endAllSessions(userId, exceptId) {
+  if (STATELESS) return;
   for (const s of await docs.find('app_sessions', { userId })) if (s.id !== exceptId) await docs.remove('app_sessions', s.id);
 }
 
@@ -126,5 +152,5 @@ async function useLink(row) { await docs.remove('app_tokens', row.id); }
 
 module.exports = {
   COOKIE, IDLE_MS, MAX_MS, hashPassword, checkPassword, passwordProblem, cookieHeader,
-  startSession, sessionOf, endSession, endAllSessions, makeLink, readLink, useLink, sha
+  startSession, sessionOf, endSession, endAllSessions, makeLink, readLink, useLink, sha, sign, unsign, STATELESS
 };
