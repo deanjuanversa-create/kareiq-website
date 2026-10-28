@@ -144,7 +144,7 @@ module.exports = function pages(L) {
   // ---------- reused sections ----------
   const FOCUS = `<section class="focus" id="focus" aria-labelledby="focus-title">
   <div class="focus-in">
-    <div class="focus-photo rv-img"><img loading="lazy" decoding="async" src="${img('yoga.webp')}" alt="A smiling member stretching during outdoor yoga" width="900" height="1100"></div>
+    <div class="focus-photo rv-img"><img loading="lazy" decoding="async" src="${img('yoga.webp')}" alt="A member holding a yoga balance pose on the lawn" width="900" height="1100"></div>
     <div class="focus-copy rv">
       <div class="eyebrow">Our focus</div>
       <h2 id="focus-title" style="margin-top:12px"><span class="w1">Health.</span> <span class="w2">Dignity.</span> <span class="w3">Happiness.</span></h2>
@@ -172,19 +172,19 @@ module.exports = function pages(L) {
 
   const ACTIVITIES = [
     ['a1.webp', 'Group yoga on the lawn', 'Mon–Sat · 10:00 AM', 'Yoga &amp; Fitness', 'Stay active, flexible and energised.'],
-    ['a2.webp', 'Members at an arts and crafts table', 'Tue &amp; Fri · 11:15 AM', 'Arts &amp; Crafts', 'Express your creativity.'],
+    ['a2.webp', 'Members painting together at a garden table', 'Tue &amp; Fri · 11:15 AM', 'Arts &amp; Crafts', 'Express your creativity.'],
     ['a3.webp', 'A music and cultural gathering', 'Wed · 3:30 PM', 'Music &amp; Cultural Events', 'Celebrate life, together.'],
     ['a4.webp', 'A walking club on a tree-lined path', 'Mon–Sat · 5:30 PM', 'Walking Clubs', 'Fresh air, good company.'],
-    ['a5.webp', 'A learning session in a classroom', 'Mon &amp; Thu · 2:00 PM', 'Learning Sessions', 'New skills, new hobbies.'],
-    ['a6.webp', 'Friends playing table games', 'Mon–Sat · 4:30 PM', 'Games &amp; Social Moments', 'Because life is better together.']
+    ['a5.webp', 'A group discussion in the garden', 'Mon &amp; Thu · 2:00 PM', 'Learning Sessions', 'New skills, new hobbies.'],
+    ['a6.webp', 'Friends sharing tea and conversation in the garden', 'Mon–Sat · 4:30 PM', 'Games &amp; Social Moments', 'Because life is better together.']
   ];
   const actCards = (items) => items.map(([f, alt, when, h, p], i) => `<article class="act rv" tabindex="0" style="--d:${(i * 0.06).toFixed(2)}s"><div class="act-img"><img loading="lazy" decoding="async" src="${img(f)}" alt="${alt}" width="600" height="450"><span class="when">${ico('clk')}${when}</span></div><div class="act-body"><h3>${h}</h3><p>${p}</p></div></article>`).join('\n      ');
 
   const TILES = `<div class="tiles">
       <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener"><img loading="lazy" decoding="async" src="${img('c1.webp')}" alt="Friends chatting around a garden table" width="600" height="500"><span class="cap"><b>Make New Friends</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.08s"><img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member playing guitar" width="600" height="500"><span class="cap"><b>Share Your Talents</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.16s"><img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="Members walking together" width="600" height="500"><span class="cap"><b>Stay Active</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.24s"><img loading="lazy" decoding="async" src="${img('c4.webp')}" alt="A smiling member in the garden" width="600" height="500"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.08s"><img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member practising tai chi in the garden" width="600" height="500"><span class="cap"><b>Share Your Talents</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.16s"><img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="A couple walking arm in arm through the garden" width="600" height="500"><span class="cap"><b>Stay Active</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.24s"><img loading="lazy" decoding="async" src="${img('c4.webp')}" alt="Friends laughing together on a garden bench" width="600" height="500"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go">${ico('arr')}</span></span></a>
     </div>`;
 
   const kbIcons = {
@@ -213,7 +213,7 @@ module.exports = function pages(L) {
     key: 'home', path: '/', nav: 'home', preload: 'hero.webp',
     title: 'KareNest', description: 'KareNest is a community in Kochi where ageing is embraced with health, dignity and happiness. Live with us, visit for the day, or join a wellness programme.',
     body: () => `<section class="hero" id="hero">
-  <div class="hero-photo" id="heroPhoto"><img src="${img('hero.webp')}" alt="Four KareNest members laughing together on a garden bench" width="1600" height="1000" fetchpriority="high"></div>
+  <div class="hero-photo" id="heroPhoto"><img src="${img('hero.webp')}" alt="Four KareNest members laughing together over tea in the garden" width="1600" height="1000" fetchpriority="high"></div>
   <svg class="sprig" viewBox="0 0 110 170" aria-hidden="true">
     <path d="M30 168C40 120 52 80 92 18"/>
     <path class="lf" style="animation-delay:1.4s,0s" d="M46 112c-22-4-34-18-36-34 18 2 32 14 36 34z"/>
@@ -251,15 +251,15 @@ module.exports = function pages(L) {
     </div>
     <div class="xcards">
       <article class="xcard tilt rv">
-        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('exp1.webp')}" alt="A resident couple chatting in the garden" width="600" height="400"><div class="xicon"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 19 20 7l14 12"/><path d="M10 16v17h20V16"/><path d="M17 33v-8h6v8"/></svg></div></div>
+        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('exp1.webp')}" alt="A resident couple walking together in the garden" width="600" height="400"><div class="xicon"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M6 19 20 7l14 12"/><path d="M10 16v17h20V16"/><path d="M17 33v-8h6v8"/></svg></div></div>
         <div class="xbody"><h3>Live With Us</h3><p>For active living, support, care and a vibrant community.</p><a class="link-arrow" href="${u('/live-with-us')}">Learn More<span class="sr-only"> about living with us</span>${ico('arr')}</a></div>
       </article>
       <article class="xcard tilt rv" style="--d:.1s">
-        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('exp2.webp')}" alt="Day visitors joining a group session" width="600" height="400"><div class="xicon" style="color:var(--teal)"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M10 31C10 17 18 9 32 8c0 14-8 23-22 23Z"/><path d="M10 31 24 17M16 25h5M20 21v-5"/></svg></div></div>
+        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('exp2.webp')}" alt="Day visitors in a guided exercise session" width="600" height="400"><div class="xicon" style="color:var(--teal)"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M10 31C10 17 18 9 32 8c0 14-8 23-22 23Z"/><path d="M10 31 24 17M16 25h5M20 21v-5"/></svg></div></div>
         <div class="xbody"><h3>Visit &amp; Participate</h3><p>Join activities, wellness programmes and community experiences during the day.</p><a class="link-arrow" href="${u('/visit-and-participate')}">Learn More<span class="sr-only"> about visitor passes</span>${ico('arr')}</a></div>
       </article>
       <article class="xcard tilt rv" style="--d:.2s">
-        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('a1.webp')}" alt="Members doing yoga together on the lawn" width="600" height="400"><div class="xicon" style="color:var(--violet)"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32C8 18 17 9 32 8c0 15-9 24-24 24Z"/><path d="M8 32 22 18"/><circle cx="27" cy="27" r="5"/></svg></div></div>
+        <div class="xmedia"><img loading="lazy" decoding="async" src="${img('a1.webp')}" alt="Members meditating together on yoga mats on the lawn" width="600" height="400"><div class="xicon" style="color:var(--violet)"><svg class="ico" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 32C8 18 17 9 32 8c0 15-9 24-24 24Z"/><path d="M8 32 22 18"/><circle cx="27" cy="27" r="5"/></svg></div></div>
         <div class="xbody"><h3>Wellness</h3><p>Personalised programmes for balance, mobility and mental wellbeing: KareBalance and KareMind.</p><a class="link-arrow" href="${u('/wellness')}">Learn More<span class="sr-only"> about wellness programmes</span>${ico('arr')}</a></div>
       </article>
     </div>
@@ -275,9 +275,9 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
       <a class="link-arrow" href="${u('/packages')}">Compare all packages${ico('arr')}</a>
     </div>
     <div class="lcards">
-      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple in the KareNest garden', kick: `From ${D.rupees(55000)} / month`, title: 'Live With Us', text: 'KarePlus shared living or a KarePremium private room, with meals, a diet plan and a Kare@Home check-up plan included.', link: 'See resident packages' })}
-      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors joining a group session', kick: `From ${D.rupees(1499)} / day`, title: 'Visit &amp; Participate', text: 'Bloom for a day, Flourish for a week or Thrive for a month: activities, meals and friendship, all-inclusive.', link: 'See visitor passes' })}
-      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A balance and stretching session on the lawn', kick: `From ${D.rupees(7999)}`, title: 'Wellness', text: 'KareBalance for steadier steps and fewer falls, and KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
+      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple walking in the KareNest garden', kick: `From ${D.rupees(55000)} / month`, title: 'Live With Us', text: 'KarePlus shared living or a KarePremium private room, with meals, a diet plan and a Kare@Home check-up plan included.', link: 'See resident packages' })}
+      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', kick: `From ${D.rupees(1499)} / day`, title: 'Visit &amp; Participate', text: 'Bloom for a day, Flourish for a week or Thrive for a month: activities, meals and friendship, all-inclusive.', link: 'See visitor passes' })}
+      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: `From ${D.rupees(7999)}`, title: 'Wellness', text: 'KareBalance for steadier steps and fewer falls, and KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
     </div>
   </div>
 </section>
@@ -309,8 +309,8 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
       <div class="hl-head"><div><h3>More Than Activities. A Community.</h3><p>KareNest is not just a place. It's a family of caregivers, staff and members, all connected in a shared journey of care, purpose and joy.</p></div></div>
       <div class="mini-tiles">
         <img loading="lazy" decoding="async" src="${img('c1.webp')}" alt="Friends chatting around a garden table" width="300" height="250">
-        <img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member playing guitar" width="300" height="250">
-        <img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="Members walking together" width="300" height="250">
+        <img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member practising tai chi in the garden" width="300" height="250">
+        <img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="A couple walking arm in arm through the garden" width="300" height="250">
       </div>
       <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><a class="btn btn-primary" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/life')}">Life at KareNest${arrow}</a></div>
     </div>
@@ -370,7 +370,7 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
       h1: 'A community where ageing is embraced with <span class="accent">Health</span>, <span class="violet">Dignity &amp; Happiness</span>.',
       lede: "KareNest is not just a place. It's a family of caregivers, staff and members, all connected in a shared journey of care, purpose and joy.",
       actions: `<a class="btn btn-primary mag" href="${u('/packages')}">Explore Our Packages${arrow}</a>${visitBtn()}`,
-      image: 'c4.webp', alt: 'A smiling KareNest member in the garden', caption: `${ico('pin')}Kochi, Kerala · Mon to Sat, 9:30 AM – 6:00 PM`
+      image: 'c4.webp', alt: 'Friends laughing together on a garden bench', caption: `${ico('pin')}Kochi, Kerala · Mon to Sat, 9:30 AM – 6:00 PM`
     })}
 
 ${FOCUS}
@@ -379,8 +379,8 @@ ${FOCUS}
   <div class="wrap">
     <div class="sec-head rv"><div class="eyebrow">Three ways to be part of KareNest</div><h2 class="h2" id="ways-title" style="margin-top:12px">Live with us, visit for the day, or stay connected</h2><p class="sub">Whether you want to live with us, visit for the day, or simply stay connected, there's a place for you in our community.</p></div>
     <div class="lcards">
-      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple chatting in the garden', title: 'Live With Us', text: 'For active living, support, care and a vibrant community.' })}
-      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Day visitors joining a group session', title: 'Visit &amp; Participate', text: 'Join activities, wellness programmes and community experiences during the day.' })}
+      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple walking together in the garden', title: 'Live With Us', text: 'For active living, support, care and a vibrant community.' })}
+      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Day visitors in a guided exercise session', title: 'Visit &amp; Participate', text: 'Join activities, wellness programmes and community experiences during the day.' })}
       ${lcard({ href: 'https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su', ext: true, link: 'Join on WhatsApp', image: 'exp3.webp', alt: 'A member staying in touch on his phone', title: 'Join Our Community', text: 'For seniors, families and caregivers who want to stay connected with KareNest.' })}
     </div>
   </div>
@@ -412,7 +412,7 @@ ${FOCUS}
       h1: 'Every hour has <span class="accent">something to look forward to</span>',
       lede: "We're open Monday to Saturday, 9:30 AM to 6:00 PM. Yoga on the lawn, home-style Kerala lunches, music, games and an evening walk through the garden.",
       actions: `${visitBtn('btn btn-primary mag', 'Plan a Visit')}<a class="btn btn-ghost mag" href="#events">Upcoming events${arrow}</a>`,
-      image: 'c3.webp', alt: 'KareNest members walking together in the garden'
+      image: 'c3.webp', alt: 'A couple walking arm in arm through the KareNest garden'
     })}
 
 <section class="sec day" id="day" aria-labelledby="day-title">
@@ -448,9 +448,9 @@ ${FOCUS}
   <div class="wrap">
     <div class="sec-head center rv"><h2 class="h2" id="life-ways">Come and be part of it</h2><p class="sub">Spend a day with us, come for a week or a month, or make KareNest your home.</p></div>
     <div class="lcards">
-      ${lcard({ href: u('/visit-and-participate/bloom'), image: 'exp2.webp', alt: 'Visitors joining a session', kick: `${D.rupees(1499)} / day`, title: 'Try a day with Bloom', text: 'Ideal for first-time visitors who want to experience KareNest and enjoy a day of activities, meals and social interaction.', link: 'See KareNest Bloom' })}
+      ${lcard({ href: u('/visit-and-participate/bloom'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', kick: `${D.rupees(1499)} / day`, title: 'Try a day with Bloom', text: 'Ideal for first-time visitors who want to experience KareNest and enjoy a day of activities, meals and social interaction.', link: 'See KareNest Bloom' })}
       ${lcard({ href: u('/visit-and-participate'), image: 'a4.webp', alt: 'A walking club on a tree-lined path', kick: 'Weekly and monthly passes', title: 'Make it part of your routine', text: 'Flourish for a week or Thrive for a month, with yoga, training programmes, meals and friendship.', link: 'See visitor passes' })}
-      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple in the garden', kick: 'Resident living', title: 'Live With Us', text: 'For active living, support, care and a vibrant community.', link: 'See resident packages' })}
+      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple walking in the garden', kick: 'Resident living', title: 'Live With Us', text: 'For active living, support, care and a vibrant community.', link: 'See resident packages' })}
     </div>
   </div>
 </section>`
@@ -481,9 +481,9 @@ ${FOCUS}
   <div class="wrap">
     <div class="sec-head rv"><div class="eyebrow">Wellness programmes</div><h2 class="h2" id="wp-title" style="margin-top:12px">Personal programmes, with professionals</h2><p class="sub">Alongside everyday activities, two structured programmes look after balance, mobility and mental wellbeing.</p></div>
     <div class="lcards">
-      ${lcard({ href: u('/karebalance'), image: 'yoga.webp', alt: 'A balance and stretching session on the lawn', kick: 'From ' + D.rupees(7999), title: 'KareBalance', text: 'Better Balance. Stronger Steps. Fewer Falls. A personalised fall prevention and mobility programme.', link: 'Explore KareBalance' })}
+      ${lcard({ href: u('/karebalance'), image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: 'From ' + D.rupees(7999), title: 'KareBalance', text: 'Better Balance. Stronger Steps. Fewer Falls. A personalised fall prevention and mobility programme.', link: 'Explore KareBalance' })}
       ${lcard({ href: u('/karemind'), image: 'c1.webp', alt: 'Friends chatting at a garden table', kick: 'From ' + D.rupees(8999), title: 'KareMind', text: 'Nurture Your Mind. Enhance Your Wellbeing. A structured mental wellness program, personal and compassionate.', link: 'Explore KareMind' })}
-      ${lcard({ href: u('/visit-and-participate'), image: 'a5.webp', alt: 'A learning session in a classroom', kick: 'Included in every visitor pass', title: 'Yoga, training &amp; social activities', text: 'Scheduled yoga classes and monitored activities, access to included training programmes, and recreation with friends.', link: 'See what passes include' })}
+      ${lcard({ href: u('/visit-and-participate'), image: 'a5.webp', alt: 'A group discussion in the garden', kick: 'Included in every visitor pass', title: 'Yoga, training &amp; social activities', text: 'Scheduled yoga classes and monitored activities, access to included training programmes, and recreation with friends.', link: 'See what passes include' })}
     </div>
   </div>
 </section>`
@@ -533,7 +533,7 @@ ${enquiry({ title: 'Not sure which package is right?', lede: 'Tell us a little a
       h1: 'A home with <span class="accent">care</span> and <span class="violet">community</span> around you',
       lede: 'For active living, support, care and a vibrant community. Choose shared living with KarePlus, or the privacy of your own room with KarePremium.',
       actions: `<a class="btn btn-primary mag" href="#packages">See the packages${arrow}</a><a class="btn btn-ghost mag" href="#enquire" data-enquire="">Enquire${arrow}</a>`,
-      image: 'exp1.webp', alt: 'A resident couple chatting in the KareNest garden', caption: `${ico('home')}Meals, diet plan and a Kare@Home check-up plan included`
+      image: 'exp1.webp', alt: 'A resident couple walking together in the KareNest garden', caption: `${ico('home')}Meals, diet plan and a Kare@Home check-up plan included`
     })}
 
 <section class="sec" id="packages" style="padding-top:30px" aria-labelledby="live-pk">
@@ -557,7 +557,7 @@ ${enquiry({ title: 'Ask about living with us', lede: 'Choose a package, leave yo
       h1: 'Your Community. <span class="accent">Your Routine.</span> <span class="violet">Your Well-being.</span>',
       lede: 'Join KareNest for a day, a week or a month. Enjoy wellness activities, nutritious meals, meaningful connections and a welcoming space to make every day count.',
       actions: `<a class="btn btn-primary mag" href="#passes">See the passes${arrow}</a>${visitBtn()}`,
-      image: 'exp2.webp', alt: 'Day visitors joining a group session at KareNest', caption: `${ico('clk')}Mon to Sat · 9:30 AM – 6:00 PM`
+      image: 'exp2.webp', alt: 'Day visitors in a guided exercise session at KareNest', caption: `${ico('clk')}Mon to Sat · 9:30 AM – 6:00 PM`
     })}
 
 <section class="sec" id="passes" style="padding-top:30px" aria-labelledby="passes-t">
@@ -589,7 +589,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
       h1: 'Look after your <span class="accent">body</span> and your <span class="violet">mind</span>',
       lede: 'Wellness & fitness, preventive care, nutrition and mental wellbeing sit at the heart of KareNest. Our structured programmes give you personal support from qualified professionals.',
       actions: `<a class="btn btn-primary mag" href="${u('/karebalance')}">KareBalance${arrow}</a><a class="btn btn-ghost mag" href="${u('/karemind')}">KareMind${arrow}</a>`,
-      image: 'yoga.webp', alt: 'A smiling member stretching during outdoor yoga'
+      image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn'
     })}
 
 <section class="sec" style="padding-top:30px" aria-labelledby="well-t">
@@ -625,7 +625,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
     <div class="sec-head rv"><h2 class="h2" id="every-t">Everyday wellness at KareNest</h2><p class="sub">Wellness is part of every day here, not only a programme.</p></div>
     <div class="lcards">
       ${lcard({ href: u('/activities'), image: 'a1.webp', alt: 'Group yoga on the lawn', title: 'Yoga &amp; activities', text: 'Yoga on the lawn, walking clubs, learning sessions and more, Monday to Saturday.', link: 'See activities' })}
-      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors joining a session', title: 'Visitor passes', text: 'Every pass includes scheduled yoga classes, monitored activities and access to included training programmes.', link: 'See visitor passes' })}
+      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', title: 'Visitor passes', text: 'Every pass includes scheduled yoga classes, monitored activities and access to included training programmes.', link: 'See visitor passes' })}
       ${lcard({ href: 'https://karehome.co.in/', site: 'karehome', image: 'fam.webp', alt: 'A grandmother and granddaughter together', title: 'Preventive check-ups with Kare@Home', text: 'Our resident packages include a Kare@Home preventive check-up plan: HomeStart with KarePlus, HomePlus with KarePremium.', link: 'Visit Kare@Home' })}
     </div>
   </div>
@@ -651,7 +651,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
           </div>
         </div>
         <figure class="kb-photo rv-img">
-          <img src="${img('yoga.webp')}" alt="KareNest members doing a balance and stretching session on the lawn" width="900" height="640" fetchpriority="high">
+          <img src="${img('yoga.webp')}" alt="A KareNest member holding a yoga balance pose on the lawn" width="900" height="640" fetchpriority="high">
           <figcaption class="kb-note">Stay active.<br>Stay independent.</figcaption>
         </figure>
       </div>
@@ -826,9 +826,9 @@ ${enquiry({ title: `${esc(p.cta)}`, lede: 'Leave your name and number and our te
   <div class="wrap">
     <div class="sec-head rv"><h2 class="h2" id="fam-plan">Planning for a parent?</h2><p class="sub">Whether they would like to live with us, spend their days here, or join a wellness programme, every option is open to visit first.</p></div>
     <div class="lcards">
-      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple in the garden', title: 'Live With Us', text: 'Shared living with KarePlus or a private room with KarePremium, with meals and a preventive check-up plan included.', link: 'See resident packages' })}
-      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors joining a session', title: 'Visit &amp; Participate', text: 'A day, a week or a month of activities, meals and friendship, then home in the evening.', link: 'See visitor passes' })}
-      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A balance session on the lawn', title: 'Wellness', text: 'KareBalance for steadier steps, KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
+      ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple walking in the garden', title: 'Live With Us', text: 'Shared living with KarePlus or a private room with KarePremium, with meals and a preventive check-up plan included.', link: 'See resident packages' })}
+      ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', title: 'Visit &amp; Participate', text: 'A day, a week or a month of activities, meals and friendship, then home in the evening.', link: 'See visitor passes' })}
+      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A yoga balance pose on the lawn', title: 'Wellness', text: 'KareBalance for steadier steps, KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
     </div>
   </div>
 </section>
@@ -917,8 +917,8 @@ ${enquiry({ id: 'join', eyebrow: 'Join the community', title: 'Be part of it', l
   <div class="wrap">
     <div class="sec-head rv"><h2 class="h2" id="other-ways">Other ways to get started</h2></div>
     <div class="lcards">
-      ${lcard({ href: `${u('/contact')}?type=karenest-visit#enquiry`, image: 'exp2.webp', alt: 'Visitors at a group session', title: 'Plan a day visit', text: 'Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and we\'ll call to confirm.', link: 'Plan a visit' }).replace('class="link-arrow"', 'class="link-arrow" data-open="visit"')}
-      ${lcard({ href: u('/packages'), image: 'exp1.webp', alt: 'A resident couple in the garden', title: 'Explore our packages', text: 'Resident living, visitor passes and wellness programmes, with prices shown up front.', link: 'See all packages' })}
+      ${lcard({ href: `${u('/contact')}?type=karenest-visit#enquiry`, image: 'exp2.webp', alt: 'Visitors in a guided exercise session', title: 'Plan a day visit', text: 'Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and we\'ll call to confirm.', link: 'Plan a visit' }).replace('class="link-arrow"', 'class="link-arrow" data-open="visit"')}
+      ${lcard({ href: u('/packages'), image: 'exp1.webp', alt: 'A resident couple walking in the garden', title: 'Explore our packages', text: 'Resident living, visitor passes and wellness programmes, with prices shown up front.', link: 'See all packages' })}
       ${lcard({ href: u('/sign-in'), image: 'fam.webp', alt: 'A grandmother and granddaughter together', title: 'Families: sign in', text: 'See your family\'s Kare@Home and KareNest care: visits, health readings and your plan.', link: 'Sign in' })}
     </div>
   </div>

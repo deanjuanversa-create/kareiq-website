@@ -121,7 +121,7 @@
 .kb{--kb-ink:var(--ink);--kb-ink-2:var(--ink-2);--kb-muted:var(--muted);--kb-line:var(--line);--kb-soft:linear-gradient(120deg,var(--g-soft) 0%,var(--b-soft) 55%,var(--v-soft) 100%);
   --kb-c1:var(--teal);--kb-c1d:var(--teal-d);--kb-c2:var(--rose);--kb-c3:var(--violet);--kb-c4:var(--blue);--kb-c5:var(--gold);
   --kb-grad:var(--grad);--kb-head:var(--f-display);--kb-head-weight:560;--kb-body:var(--f-body);--kb-hand:var(--f-display);--kb-hand-style:italic;
-  --kb-ease:var(--ease);--kb-bg-top:var(--soft);--kb-bg-bottom:#fbf8fe;--kb-photo-ratio:7/5;--kb-photo-pos:50% 35%;--kb-for-pos:50% 45%}
+  --kb-ease:var(--ease);--kb-bg-top:var(--soft);--kb-bg-bottom:#fbf8fe;--kb-photo-ratio:7/5;--kb-photo-pos:84% 0%;--kb-for-pos:50% 45%}
 /* KareNest reveals use transform, so keep them on containers (cards keep their own hover lift) */
 .kb .rv-img img{object-fit:cover}
 
