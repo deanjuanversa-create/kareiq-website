@@ -6,7 +6,7 @@
   // ---------------------------------------------------------------- settings
   var SITES = {
     kareiq: 'https://kareiq.co.in/',
-    karehome: 'https://kareiq-website-full.vercel.app/kare-at-home',
+    karehome: 'https://karehome.co.in/',
     karenest: 'https://karenest.co.in/'
   };
   var WHATSAPP = '918129345178';

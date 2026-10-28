@@ -1140,3 +1140,17 @@ html{scroll-padding-top:96px}
 .c-wa{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:#1fa855;color:#fff;box-shadow:0 12px 26px -12px rgba(17,63,61,.6);transition:transform .35s var(--ease),box-shadow .3s}
 .c-wa:hover,.c-wa:focus-visible{transform:translateY(-3px);box-shadow:0 16px 30px -12px rgba(31,168,85,.6)}
 @media (max-width:760px){.c-wa{width:46px;height:46px}.c-btns{gap:8px}}
+
+/* 28 Oct fixes */
+/* long button labels ("Enquire About KareMind Premium") wrap on small phones instead of being cut off */
+@media (max-width:400px){
+  .btn{white-space:normal;text-align:center;line-height:1.25;padding-inline:18px}
+}
+/* three-column comparison tables (Live With Us) fit a phone screen without sideways scrolling;
+   below 360px they scroll sideways as before, with the swipe hint */
+@media (max-width:480px){
+  .cmp-scroll[style*="--minw:0px"] th,.cmp-scroll[style*="--minw:0px"] td{padding:10px 7px;font-size:.8rem}
+  .cmp-scroll[style*="--minw:0px"] tbody th{min-width:0;width:30%}
+  .cmp-scroll[style*="--minw:0px"] + .cmp-hint{display:none}
+}
+@media (max-width:359px){ .cmp-scroll[style*="--minw:0px"] + .cmp-hint{display:block} }

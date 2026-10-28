@@ -38,7 +38,7 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261028d';
+const VER = '20261028f';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
 
@@ -165,7 +165,7 @@ ${SPRITE}
       </ul>
     </nav>
     <div class="nav-cta">
-      <a class="btn btn-primary btn-sm mag" href="${u('/community')}#join" data-open="join"${current(pg, 'community')}>${ico('ppl')}Join Our Community</a>
+      <a class="btn btn-primary btn-sm mag" href="${WA_GROUP}" target="_blank" rel="noopener" aria-label="Join Our Community on WhatsApp (opens in a new tab)">${ico('ppl')}Join Our Community</a>
       <a class="btn btn-ghost btn-sm mag" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a>
     </div>
     <a class="app-in" href="${u('/sign-in')}" data-auth${current(pg, 'signin')}>${ico('user', '')}<span>Sign In</span></a>
@@ -192,7 +192,7 @@ ${SPRITE}
   ${d('families', u('/families'), 'For Families')}
   ${d('contact', u('/contact'), 'Contact Us')}
   ${d('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}
-  <div class="row"><a class="btn btn-primary" href="${u('/community')}#join" data-open="join">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a></div>
+  <div class="row"><a class="btn btn-primary" href="${WA_GROUP}" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a></div>
   <a class="d-back" href="${kareiq}" data-site="kareiq">← Back to KareIQ</a>
   <div class="d-meta"><span>Mon to Sat · 9:30 AM – 6:00 PM</span><span>Kochi, Kerala · hello@karenest.in</span></div>
 </nav>`;
@@ -210,7 +210,7 @@ ${SPRITE}
       </div>
       <div><h2 class="h5">Explore</h2><ul>${f('about', u('/about'), 'About KareNest')}${f('life', u('/life'), 'Life at KareNest')}${f('activities', u('/activities'), 'Activities &amp; Wellness')}${f('families', u('/families'), 'For Families')}</ul></div>
       <div><h2 class="h5">Packages</h2><ul>${f('packages', u('/packages'), 'Our Packages', 1)}${f('live', u('/live-with-us'), 'Live With Us', 1)}${f('visit', u('/visit-and-participate'), 'Visit &amp; Participate', 1)}${f('wellness', u('/wellness'), 'Wellness', 1)}${f('karebalance', u('/karebalance'), 'KareBalance', 1)}${f('karemind', u('/karemind'), 'KareMind', 1)}</ul></div>
-      <div><h2 class="h5">Get involved</h2><ul>${f('community', u('/community'), 'Join Our Community')}<li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}</ul></div>
+      <div><h2 class="h5">Get involved</h2><ul><li><a href="${WA_GROUP}" target="_blank" rel="noopener">Join Our Community</a></li><li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}</ul></div>
       <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><a href="${WA_GROUP}" target="_blank" rel="noopener">WhatsApp community</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
     </div>
     <div class="foot-bot">

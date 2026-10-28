@@ -1,12 +1,12 @@
 /* Where the three websites live. KareIQ is the parent; Kare@Home and KareNest are its brands.
    When the domains are ready, change only these three lines, e.g.
      kareiq:   'https://kareiq.co.in/',
-     karehome: 'https://kareathome.in/',
+     karehome: 'https://karehome.co.in/',
      karenest: 'https://karenest.co.in/'
    Every link marked data-site="kareiq|karehome|karenest" on any page follows these values. */
 window.KARE_SITES = {
   kareiq:   /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/' : 'https://kareiq.co.in/',
-  karehome: '/kare-at-home',
+  karehome: /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/kare-at-home' : 'https://karehome.co.in/',
   karenest: 'https://karenest.co.in/'
 };
 (function () {

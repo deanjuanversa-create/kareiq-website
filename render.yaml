@@ -28,7 +28,7 @@ services:
       - key: SITE_URL          # visitors who open the Render address are sent here
         value: https://karenest.co.in
       - key: ALLOWED_ORIGINS   # websites allowed to send forms and sign in here
-        value: https://kareiq.co.in,https://www.kareiq.co.in,https://kareiq.vercel.app,https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in
+        value: https://kareiq.co.in,https://www.kareiq.co.in,https://kareiq.vercel.app,https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in,https://karehome.co.in,https://www.karehome.co.in
       - key: OAUTH_REDIRECT_BASE # public address of this server, used for Google/Facebook sign-in callbacks
         value: https://kareiq-api.onrender.com
       # Google / Facebook sign-in: add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID and

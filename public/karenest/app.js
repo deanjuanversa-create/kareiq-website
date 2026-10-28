@@ -11,6 +11,7 @@
   const BASE = document.body.dataset.base || '';
   const PAGE = document.body.dataset.page || '';
   const url = (p) => BASE + p;
+  const WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM'; // KareNest WhatsApp community
   const api = () => window.KARE_API || '';
   const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
   const reduce = () => reduceMQ.matches || root.classList.contains('calm');
@@ -423,9 +424,10 @@
     });
     document.addEventListener('pointerdown', (e) => { if (gOpen && !e.target.closest('#guide')) setG(false); });
   }
-  const DEST = { packages: '/packages', activities: '/#activities', events: '/#events', families: '/families', join: '/#join', contact: '/#contact', live: '/live-with-us', top: '/' };
+  const DEST = { packages: '/packages', activities: '/#activities', events: '/#events', families: '/families', contact: '/#contact', live: '/live-with-us', top: '/' };
   function act(q) {
     if (q === 'visit') { openVisit(); return; }
+    if (q === 'join') { window.open(WA_GROUP, '_blank', 'noopener'); return; }
     const d = DEST[q]; if (!d) return;
     const [p, h] = d.split('#');
     const here = location.pathname.replace(/\/$/, '') === url(p).replace(/\/$/, '') || (p === '/' && PAGE === 'home');
@@ -570,7 +572,7 @@
     const recs = [
       { h: 'Live With Us', p: 'A home with support, care and a vibrant community around you, every single day.', l: ['KarePlus shared living or a KarePremium private room', 'Five daily food and beverage services', 'A Kare@Home preventive check-up plan included'], href: '/live-with-us', cta: 'See resident packages' },
       { h: 'Visit & Participate', p: 'Spend your days with us: activities, wellness programmes and good company, then head home in the evening.', l: ['Yoga, walks, arts and learning sessions', 'Lunch with friends', 'A day, a week or a month: Bloom, Flourish or Thrive'], href: '/visit-and-participate', cta: 'See visitor passes' },
-      { h: 'Join Our Community', p: 'Stay connected with KareNest through events, celebrations and regular updates.', l: ['Invites to festivals and talks', "Updates on what's happening", 'A friendly network of seniors and families'], href: '/#join', cta: 'Join Our Community' }
+      { h: 'Join Our Community', p: 'Stay connected with KareNest through events, celebrations and regular updates.', l: ['Invites to festivals and talks', "Updates on what's happening", 'A friendly network of seniors and families'], href: WA_GROUP, cta: 'Join our WhatsApp community' }
     ];
     let step = 0, score = [0, 0, 0], hist = [];
     const prog2 = () => '<div class="fit-prog" aria-hidden="true">' + qs.map((_, i) => '<i class="' + (i < step || step >= qs.length ? 'on' : '') + '"></i>').join('') + '</div>';
@@ -578,7 +580,7 @@
       if (step >= qs.length) {
         const r = recs[score.indexOf(Math.max(...score))];
         fitSays.textContent = "I think you'll love this!";
-        fitMain.innerHTML = prog2() + '<div class="fit-step result"><span class="rtag">Our suggestion</span><h3 tabindex="-1">' + r.h + '</h3><p>' + r.p + '</p><ul>' + r.l.map((x) => '<li><svg class="ico" aria-hidden="true"><use href="#chk"/></svg>' + x + '</li>').join('') + '</ul><div class="row"><a class="btn btn-primary" href="' + url(r.href) + '">' + r.cta + '<svg class="ico arr" aria-hidden="true"><use href="#arr"/></svg></a><button type="button" class="btn btn-ghost" id="fitAgain">Start again</button></div></div>';
+        fitMain.innerHTML = prog2() + '<div class="fit-step result"><span class="rtag">Our suggestion</span><h3 tabindex="-1">' + r.h + '</h3><p>' + r.p + '</p><ul>' + r.l.map((x) => '<li><svg class="ico" aria-hidden="true"><use href="#chk"/></svg>' + x + '</li>').join('') + '</ul><div class="row"><a class="btn btn-primary" href="' + (/^https?:/.test(r.href) ? r.href + '" target="_blank" rel="noopener' : url(r.href)) + '">' + r.cta + '<svg class="ico arr" aria-hidden="true"><use href="#arr"/></svg></a><button type="button" class="btn btn-ghost" id="fitAgain">Start again</button></div></div>';
         $('#fitAgain').addEventListener('click', () => { step = 0; score = [0, 0, 0]; hist = []; fitSays.textContent = "Let's try again!"; renderFit(true); });
         $('h3', fitMain).focus({ preventScroll: true });
         const rr = fitMain.getBoundingClientRect(); burst(rr.left + rr.width / 2, rr.top + 80, 18);

@@ -745,3 +745,31 @@ a.brand-link:hover .brand-go{transform:translateX(3px);opacity:1}
   .p-photo{height:auto}
   .p-photo img{height:auto;width:100%;max-width:420px;max-height:none}
 }
+
+/* =================== 28 Oct fixes =================== */
+/* brand rows on the cards: the arrow keeps its own small size (a general .brand svg rule made it 44-52px) */
+.brand .brand-go{width:20px;height:20px}
+a.brand-link{max-width:100%}
+/* Kare@Home card shows the real Kare@Home logo, in its own colours */
+.brand h3.brand-logo{margin:0;line-height:0;min-width:0}
+.brand h3.brand-logo img{display:block;height:60px;width:auto;max-width:100%}
+.card:hover .brand h3.brand-logo img{transform:none}
+/* commitment quote: opening and closing marks sit with the text */
+.commit blockquote{margin-top:30px}
+.commit blockquote::before{content:none}
+.commit blockquote .q{font-size:1.3em;line-height:0;vertical-align:-.14em;font-weight:700;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;opacity:.75}
+.commit blockquote .q:first-child{margin-right:.05em}
+.commit blockquote .q:last-child{margin-left:.03em}
+/* signature: one line on wide screens, one item per line on phones (no stray dots) */
+.sign{max-width:none!important}
+@media (max-width:640px){
+  .sign{flex-direction:column;gap:4px}
+  .sign b{flex-basis:auto;margin-bottom:4px}
+  .sign span+span::before{content:none}
+}
+/* hero: on tablets and phones the "Care visit complete" card sits on the photo, never over the text below it */
+@media (max-width:860px){
+  .float-card{top:calc(clamp(300px,62vw,460px) - 34px);bottom:auto;left:auto;right:12px;max-width:calc(100% - 24px);transform:translateY(-100%)!important}
+}
+/* "Care that fits real life": the decorative leaf no longer crosses the text on phones */
+@media (max-width:600px){ .values .leaf-r{display:none} }

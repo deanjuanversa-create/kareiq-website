@@ -5,11 +5,11 @@
    - Copies only the KareIQ pages and the files they use from public/.
    - Kare@Home links go to KAREHOME below; KareNest links go to KARENEST.
    - /kare-at-home and /karenest typed on the KareIQ domain redirect there too.
-   When Kare@Home gets its own domain, change KAREHOME and run this again. */
+   Kare@Home has its own domain (tools/karehome/standalone.js builds that site). */
 const fs = require('fs');
 const path = require('path');
 
-const KAREHOME = 'https://kareiq-website-full.vercel.app/kare-at-home';
+const KAREHOME = 'https://karehome.co.in';
 const KARENEST = 'https://karenest.co.in/';
 const API = 'https://kareiq-api.onrender.com';
 
@@ -24,7 +24,7 @@ const FILES = [
   'css/kareiq.css', 'css/loader.css', 'css/auth-popup.css', 'css/page.css',
   'js/api.js', 'js/content.js', 'js/loader.js', 'js/kareiq.js', 'js/forms.js', 'js/auth-popup.js'
 ];
-const IMAGES = (f) => !/^(karehome-(hero|why|logo|logo-white)|favicon-karehome)\./.test(f);
+const IMAGES = (f) => !/^(karehome-(hero|why|logo-white)|favicon-karehome)\./.test(f);
 
 fs.rmSync(OUT, { recursive: true, force: true });
 const copy = (rel) => { const to = path.join(OUT, rel); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(PUB, rel), to); };
@@ -40,7 +40,7 @@ FILES.forEach(copy);
 let sites = fs.readFileSync(path.join(PUB, 'js/sites.js'), 'utf8');
 sites = sites.replace(/window\.KARE_SITES = \{[^}]*\}/, (block) => block
   .replace(/kareiq:\s*[^\n]*,/, "kareiq:   '/',")
-  .replace(/karehome:\s*'[^']*'/, `karehome: '${KAREHOME}'`)
+  .replace(/karehome:\s*[^\n]*,/, `karehome: '${KAREHOME}',`)
   .replace(/karenest:\s*'[^']*'/, `karenest: '${KARENEST}'`));
 if (!sites.includes(`karehome: '${KAREHOME}'`)) throw new Error('sites.js: could not set the Kare@Home address');
 fs.writeFileSync(path.join(OUT, 'js/sites.js'), sites);
