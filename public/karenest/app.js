@@ -502,7 +502,7 @@
       { n: 'Guest Lecture: Healthy Ageing', d: '2026-11-14T10:00:00+05:30', t: '10:00 AM – 12:30 PM', p: 'Learning Centre', i: 'e3' }
     ];
     const mo = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    evsEl.innerHTML = evs.map((e) => '<article class="ev"><div class="ev-img"><div class="ph"><img loading="lazy" src="' + url('/images/' + e.i + '.webp?v=20261028j') + '" alt=""></div><div class="date"><b>' + Number(e.d.slice(8, 10)) + '</b><small>' + mo[Number(e.d.slice(5, 7)) - 1] + '</small></div></div><div class="ev-body"><h3 class="h4">' + e.n + '</h3><span class="m"><svg class="ico" aria-hidden="true"><use href="#clk"/></svg>' + e.t + '</span><span class="m"><svg class="ico" aria-hidden="true"><use href="#pin"/></svg>' + e.p + '</span></div></article>').join('');
+    evsEl.innerHTML = evs.map((e) => '<article class="ev"><div class="ev-img"><div class="ph"><img loading="lazy" src="' + url('/images/' + e.i + '.webp?v=20261028k') + '" alt=""></div><div class="date"><b>' + Number(e.d.slice(8, 10)) + '</b><small>' + mo[Number(e.d.slice(5, 7)) - 1] + '</small></div></div><div class="ev-body"><h3 class="h4">' + e.n + '</h3><span class="m"><svg class="ico" aria-hidden="true"><use href="#clk"/></svg>' + e.t + '</span><span class="m"><svg class="ico" aria-hidden="true"><use href="#pin"/></svg>' + e.p + '</span></div></article>').join('');
     const upcoming = evs.filter((e) => new Date(e.d) > Date.now());
     if (!upcoming.length) $('#next').hidden = true;
     else {

@@ -297,7 +297,7 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
 <section class="sec" id="families-teaser" style="padding-top:0" aria-label="For families and our community">
   <div class="wrap duo">
     <div class="fam rv">
-      <div class="fam-photo rv-img"><img loading="lazy" decoding="async" src="${img('fam.webp')}" alt="A grandmother and granddaughter arranging flowers together" width="700" height="700"><span class="heart">${ico('heart', 'ico', ' style="width:20px;height:20px;fill:currentColor;stroke:none"')}</span></div>
+      <div class="fam-photo rv-img"><img loading="lazy" decoding="async" src="${img('fam.webp')}" alt="Residents enjoying a music session together in the garden" width="700" height="700"><span class="heart">${ico('heart', 'ico', ' style="width:20px;height:20px;fill:currentColor;stroke:none"')}</span></div>
       <div class="fam-copy">
         <span class="kick">For Families</span>
         <h2>Peace of Mind, Always.</h2>
@@ -626,7 +626,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
     <div class="lcards">
       ${lcard({ href: u('/activities'), image: 'a1.webp', alt: 'Group yoga on the lawn', title: 'Yoga &amp; activities', text: 'Yoga on the lawn, walking clubs, learning sessions and more, Monday to Saturday.', link: 'See activities' })}
       ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', title: 'Visitor passes', text: 'Every pass includes scheduled yoga classes, monitored activities and access to included training programmes.', link: 'See visitor passes' })}
-      ${lcard({ href: 'https://karehome.co.in/', site: 'karehome', image: 'fam.webp', alt: 'A grandmother and granddaughter together', title: 'Preventive check-ups with Kare@Home', text: 'Our resident packages include a Kare@Home preventive check-up plan: HomeStart with KarePlus, HomePlus with KarePremium.', link: 'Visit Kare@Home' })}
+      ${lcard({ href: 'https://karehome.co.in/', site: 'karehome', image: 'c4.webp', alt: 'Friends laughing together on a garden bench', title: 'Preventive check-ups with Kare@Home', text: 'Our resident packages include a Kare@Home preventive check-up plan: HomeStart with KarePlus, HomePlus with KarePremium.', link: 'Visit Kare@Home' })}
     </div>
   </div>
 </section>`
@@ -807,7 +807,7 @@ ${enquiry({ title: `${esc(p.cta)}`, lede: 'Leave your name and number and our te
       h1: 'Peace of Mind, <span class="accent">Always.</span>',
       lede: 'Stay connected, get regular updates, and know your loved ones are safe, healthy and happy, wherever they live with us or visit for the day.',
       actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}" data-auth>${ico('user')}Family Sign In</a><a class="btn btn-ghost mag" href="${u('/contact')}#enquiry">Talk to our team${arrow}</a>`,
-      image: 'fam.webp', alt: 'A grandmother and granddaughter arranging flowers together', caption: `${ico('heart')}“Amma loved the music hour”`
+      image: 'fam.webp', alt: 'Residents enjoying a music session together in the garden', caption: `${ico('heart')}“Amma loved the music hour”`
     })}
 
 <section class="sec" style="padding-top:30px" aria-labelledby="fam-app">
@@ -919,7 +919,7 @@ ${enquiry({ id: 'join', eyebrow: 'Join the community', title: 'Be part of it', l
     <div class="lcards">
       ${lcard({ href: `${u('/contact')}?type=karenest-visit#enquiry`, image: 'exp2.webp', alt: 'Visitors in a guided exercise session', title: 'Plan a day visit', text: 'Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and we\'ll call to confirm.', link: 'Plan a visit' }).replace('class="link-arrow"', 'class="link-arrow" data-open="visit"')}
       ${lcard({ href: u('/packages'), image: 'exp1.webp', alt: 'A resident couple walking in the garden', title: 'Explore our packages', text: 'Resident living, visitor passes and wellness programmes, with prices shown up front.', link: 'See all packages' })}
-      ${lcard({ href: u('/sign-in'), image: 'fam.webp', alt: 'A grandmother and granddaughter together', title: 'Families: sign in', text: 'See your family\'s Kare@Home and KareNest care: visits, health readings and your plan.', link: 'Sign in' })}
+      ${lcard({ href: u('/sign-in'), image: 'fam.webp', alt: 'Residents enjoying music together in the garden', title: 'Families: sign in', text: 'See your family\'s Kare@Home and KareNest care: visits, health readings and your plan.', link: 'Sign in' })}
     </div>
   </div>
 </section>`
