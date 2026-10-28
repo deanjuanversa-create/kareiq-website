@@ -11,7 +11,7 @@
   const BASE = document.body.dataset.base || '';
   const PAGE = document.body.dataset.page || '';
   const url = (p) => BASE + p;
-  const WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM'; // KareNest WhatsApp community
+  const WA_GROUP = 'https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su'; // KareNest WhatsApp community
   const api = () => window.KARE_API || '';
   const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
   const reduce = () => reduceMQ.matches || root.classList.contains('calm');

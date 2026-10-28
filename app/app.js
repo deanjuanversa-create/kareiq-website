@@ -62,8 +62,18 @@
   function nowHM() { return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()); }
   function phoneNice(p) { return p ? p.replace(/^\+91(\d{5})(\d{5})$/, '+91 $1 $2') : ''; }
   // "WhatsApp us" opens the KareIQ WhatsApp community (the office's buttons to message a family still use the family's number)
-  var WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM';
-  function waLink() { return (S.content && S.content.whatsappGroup) || WA_GROUP; }
+  var WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM'; // KareIQ community
+  var WA_NEST = 'https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su'; // KareNest community
+  // KareNest families (and the KareNest sign-in screens) get the KareNest community; everyone else the
+  // KareIQ community (editable in admin)
+  function nestOnly() {
+    if (S.me && S.me.user) {
+      var p = (S.me.products || []).map(function (x) { return x.id; });
+      return S.me.user.role !== 'admin' && p.length > 0 && p.every(function (id) { return id === 'karenest'; });
+    }
+    return S.gateBrand === 'karenest';
+  }
+  function waLink() { return nestOnly() ? WA_NEST : ((S.content && S.content.whatsappGroup) || WA_GROUP); }
   function icon(name) {
     var p = {
       grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
@@ -260,6 +270,7 @@
   }
 
   function gateView(kind, r) {
+    S.gateBrand = (r.q && r.q.brand) || '';
     if (kind === 'signin') {
       gateShell(
         '<h1>Sign in</h1><p class="lead">For families, caregivers and the KareIQ team.</p>' + flashHtml() +

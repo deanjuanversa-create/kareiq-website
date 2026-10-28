@@ -181,10 +181,10 @@ module.exports = function pages(L) {
   const actCards = (items) => items.map(([f, alt, when, h, p], i) => `<article class="act rv" tabindex="0" style="--d:${(i * 0.06).toFixed(2)}s"><div class="act-img"><img loading="lazy" decoding="async" src="${img(f)}" alt="${alt}" width="600" height="450"><span class="when">${ico('clk')}${when}</span></div><div class="act-body"><h3>${h}</h3><p>${p}</p></div></article>`).join('\n      ');
 
   const TILES = `<div class="tiles">
-      <a class="tile rv" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener"><img loading="lazy" decoding="async" src="${img('c1.webp')}" alt="Friends chatting around a garden table" width="600" height="500"><span class="cap"><b>Make New Friends</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" style="--d:.08s"><img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member playing guitar" width="600" height="500"><span class="cap"><b>Share Your Talents</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" style="--d:.16s"><img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="Members walking together" width="600" height="500"><span class="cap"><b>Stay Active</b><span class="go">${ico('arr')}</span></span></a>
-      <a class="tile rv" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" style="--d:.24s"><img loading="lazy" decoding="async" src="${img('c4.webp')}" alt="A smiling member in the garden" width="600" height="500"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener"><img loading="lazy" decoding="async" src="${img('c1.webp')}" alt="Friends chatting around a garden table" width="600" height="500"><span class="cap"><b>Make New Friends</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.08s"><img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member playing guitar" width="600" height="500"><span class="cap"><b>Share Your Talents</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.16s"><img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="Members walking together" width="600" height="500"><span class="cap"><b>Stay Active</b><span class="go">${ico('arr')}</span></span></a>
+      <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.24s"><img loading="lazy" decoding="async" src="${img('c4.webp')}" alt="A smiling member in the garden" width="600" height="500"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go">${ico('arr')}</span></span></a>
     </div>`;
 
   const kbIcons = {
@@ -235,7 +235,7 @@ module.exports = function pages(L) {
       <div class="hero-actions">
         <a class="btn btn-primary mag" href="${u('/packages')}">Explore Our Packages${arrow}</a>
         ${visitBtn()}
-        <a class="btn btn-ghost mag" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a>
+        <a class="btn btn-ghost mag" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a>
       </div>
     </div>
   </div>
@@ -312,7 +312,7 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
         <img loading="lazy" decoding="async" src="${img('c2.webp')}" alt="A member playing guitar" width="300" height="250">
         <img loading="lazy" decoding="async" src="${img('c3.webp')}" alt="Members walking together" width="300" height="250">
       </div>
-      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><a class="btn btn-primary" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/life')}">Life at KareNest${arrow}</a></div>
+      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:18px"><a class="btn btn-primary" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/life')}">Life at KareNest${arrow}</a></div>
     </div>
   </div>
 </section>
@@ -381,7 +381,7 @@ ${FOCUS}
     <div class="lcards">
       ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple chatting in the garden', title: 'Live With Us', text: 'For active living, support, care and a vibrant community.' })}
       ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Day visitors joining a group session', title: 'Visit &amp; Participate', text: 'Join activities, wellness programmes and community experiences during the day.' })}
-      ${lcard({ href: 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM', ext: true, link: 'Join on WhatsApp', image: 'exp3.webp', alt: 'A member staying in touch on his phone', title: 'Join Our Community', text: 'For seniors, families and caregivers who want to stay connected with KareNest.' })}
+      ${lcard({ href: 'https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su', ext: true, link: 'Join on WhatsApp', image: 'exp3.webp', alt: 'A member staying in touch on his phone', title: 'Join Our Community', text: 'For seniors, families and caregivers who want to stay connected with KareNest.' })}
     </div>
   </div>
 </section>
@@ -844,7 +844,7 @@ ${enquiry({ title: 'Talk to us about your loved one', lede: 'Tell us what you\'r
       crumbs: [HOME, ['Join Our Community']], eyebrow: 'Join Our Community',
       h1: 'More Than Activities. <span class="accent">A Community.</span>',
       lede: "KareNest is not just a place. It's a family of caregivers, staff and members, all connected in a shared journey of care, purpose and joy.",
-      actions: `<a class="btn btn-primary mag" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">${ico('ppl')}Join the Community</a>${visitBtn()}`,
+      actions: `<a class="btn btn-primary mag" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener">${ico('ppl')}Join the Community</a>${visitBtn()}`,
       image: 'exp3.webp', alt: 'A member staying in touch on his phone'
     })}
 
@@ -878,7 +878,7 @@ ${enquiry({ id: 'join', eyebrow: 'Join the community', title: 'Be part of it', l
         <li><span class="ci">${ico('clk')}</span><span><b>Monday to Saturday</b>9:30 AM to 6:00 PM</span></li>
         <li><span class="ci">${ico('mail')}</span><span><b>Email</b><a href="mailto:hello@karenest.in">hello@karenest.in</a></span></li>
         <li><span class="ci">${ico('pin')}</span><span><b>Visit us</b>Kochi, Kerala</span></li>
-        <li><span class="ci">${ico('wa')}</span><span><b>WhatsApp</b><a href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Join our WhatsApp community</a></span></li>
+        <li><span class="ci">${ico('wa')}</span><span><b>WhatsApp</b><a href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener">Join our WhatsApp community</a></span></li>
       </ul>
       <div class="contact-nestu"><img loading="lazy" decoding="async" src="${img('head.webp')}" alt="" width="58" height="58"><span><b>Nestu says</b>Not sure which to pick? Choose the closest one and we'll guide you on the call.</span></div>
     </div>
