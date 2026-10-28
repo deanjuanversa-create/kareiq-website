@@ -1129,3 +1129,8 @@ html{scroll-padding-top:96px}
 .pkg-dur select:focus-visible{outline:3px solid color-mix(in srgb,var(--c,#12917a) 55%,white);outline-offset:2px}
 .pkg-bill{margin-top:6px;font-size:.9rem;color:var(--muted)}
 .pkg-bill b{color:var(--c,#12917a)}
+.pkg-gst{margin-top:6px;font-size:.84rem;font-weight:700;color:var(--c,#12917a)}
+.kb-plan .pkg-gst{margin-top:2px}
+.soc.wa:hover,.soc.wa:focus-visible{background:#1fa855}
+.pkg-dur{max-width:min(320px,100%);width:100%}
+.pkg-dur select{width:100%;min-width:0}

@@ -723,3 +723,9 @@ a.brand-link h3{text-decoration:underline;text-decoration-color:transparent;text
 a.brand-link:hover h3,a.brand-link:focus-visible h3{text-decoration-color:currentColor}
 .brand-go{width:16px;height:16px;flex:none;opacity:.55;transition:transform .3s var(--smooth),opacity .3s}
 a.brand-link:hover .brand-go{transform:translateX(3px);opacity:1}
+/* team photos */
+.p-photo{margin:-6px -6px 20px;border-radius:18px;overflow:hidden;aspect-ratio:16/12;background:#eef2f6}
+.p-photo img{width:100%;height:100%;object-fit:cover;object-position:50% 22%;display:block;transition:transform .8s var(--smooth,ease)}
+.person:hover .p-photo img{transform:scale(1.03)}
+@media (max-width:560px){.p-photo{margin:-4px -4px 16px;aspect-ratio:1/1;border-radius:16px}}
+@media (prefers-reduced-motion:reduce){.p-photo img{transition:none}.person:hover .p-photo img{transform:none}}

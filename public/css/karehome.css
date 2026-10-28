@@ -764,3 +764,7 @@ html{scroll-padding-top:84px}
 .kh-cards.two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:900px}
 @media (max-width:560px){.kh-cards.two{grid-template-columns:1fr}}
 .kh-explore{background:linear-gradient(180deg,#fff,#f6fafc)}
+
+/* every package: prices include GST */
+.gst-inc{margin:4px 0 0;font-size:.82rem;font-weight:600;color:var(--teal,#11998e);letter-spacing:.01em}
+.kb-plan .gst-inc{margin-top:2px}

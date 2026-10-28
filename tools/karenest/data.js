@@ -6,8 +6,8 @@
 // The server keeps its own list of the same plan ids in src/catalog.js (KARENEST_PLANS)
 // so that an enquiry can only name a real package.
 
-const GST_LIVE = 'Inclusive of 18% GST and applicable service charges.';
-const GST_VISIT = 'All visitor prices include 18% GST. Pass usage is subject to operating hours, scheduled activities, availability and capacity limits.';
+const GST_LIVE = 'Inclusive of all GST and applicable service charges.';
+const GST_VISIT = 'All visitor prices are inclusive of all GST. Pass usage is subject to operating hours, scheduled activities, availability and capacity limits.';
 const KB_FINE = 'Note: Final pricing may vary based on assessment complexity, session frequency, home-visit requirements and service location. Clinical suitability should be established before beginning supervised training. KareBalance is a fall risk reduction and mobility support programme and does not guarantee the prevention of falls.';
 
 const NOT_INCLUDED = [

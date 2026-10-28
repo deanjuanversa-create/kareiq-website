@@ -699,3 +699,4 @@ details.vgroup>summary{cursor:pointer;font-weight:650}
 .pk-h{font-size:1rem;margin:14px 0 8px}
 .pk-best{margin-top:10px;font-size:.92rem;background:var(--accent-soft);padding:10px 12px;border-radius:var(--r-sm)}
 table.ptab td,table.ptab th{white-space:nowrap}
+.pr-gst{font-size:.8rem;font-weight:650;color:var(--good);margin-top:3px}

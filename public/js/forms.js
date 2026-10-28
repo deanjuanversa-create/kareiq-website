@@ -4,7 +4,7 @@
   const CONTACT = {
     phone: '+918129345178',          // change in one place: also update the footer text in the HTML pages
     display: '+91 81293 45178',
-    whatsapp: 'https://wa.me/918129345178'
+    whatsapp: 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM'
   };
 
   function phoneOk(v) {

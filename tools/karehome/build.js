@@ -12,7 +12,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'public');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
-const VER = '20261027c';
+const VER = '20261028b';
 const BASE = '/kare-at-home';
 
 const between = (a, b, from = 0) => {
@@ -58,7 +58,7 @@ function header(key) {
 <div class="kh-top">
   <div class="wrap kh-top-in">
     <a class="back-kiq" href="/" data-site="kareiq"><svg viewBox="0 0 24 24" aria-hidden="true" width="16" height="16"><path d="M19 12H5M11 6l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>Back to KareIQ</a>
-    <span class="kh-meta"><a href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a><span aria-hidden="true">·</span><a href="https://wa.me/918129345178" target="_blank" rel="noopener">WhatsApp us</a></span>
+    <span class="kh-meta"><a href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a><span aria-hidden="true">·</span><a href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">WhatsApp us</a></span>
   </div>
 </div>
 <header class="nav" id="nav">
@@ -113,7 +113,7 @@ const contact = `<section class="kh-contact" id="contact" aria-labelledby="conta
       </div>
       <ul class="kh-ways">
         <li class="rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-phone"/></svg></span><b>Call us</b><a class="big" href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a></li>
-        <li class="rv" style="--d:.1s"><span class="ic"><svg width="24" height="24"><use href="#i-hand-heart"/></svg></span><b>WhatsApp</b><a class="big" href="https://wa.me/918129345178?text=Hi%20Kare%40Home%2C%20I%27d%20like%20to%20know%20more%20about%20home%20care." target="_blank" rel="noopener">Message us on WhatsApp</a></li>
+        <li class="rv" style="--d:.1s"><span class="ic"><svg width="24" height="24"><use href="#i-hand-heart"/></svg></span><b>WhatsApp</b><a class="big" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
         <li class="rv" style="--d:.15s"><span class="ic"><svg width="24" height="24"><use href="#i-assess"/></svg></span><b>Book a home visit</b><button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button></li>
         <li class="rv" style="--d:.2s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Families and caregivers</b><a class="btn btn-line" href="/app/#/signin?brand=karehome" data-app="karehome">Sign in to My KareIQ</a></li>
       </ul>

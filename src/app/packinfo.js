@@ -13,6 +13,8 @@ const content = require('../content');
 const NEST = require('../../tools/karenest/data');
 
 const MONTHS = ['1', '3', '6', '12'];
+const GST = 'Inclusive of all GST.';
+const withGst = (notes) => (notes.some((n) => /GST/i.test(n)) ? notes : [...notes, GST]);
 const PERIOD = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
 const GROUP_OF = { live: 'Community living', visit: 'KareNest passes', karebalance: 'Focused care package', karemind: 'Focused care package' };
 const GROUP_ORDER = ['Preventive package', 'Focused care package', 'Community living', 'KareNest passes'];
@@ -22,7 +24,7 @@ const DIABETIC = {
   tagline: 'Regular tests and monitoring to keep diabetes under control.',
   listTitle: "What's included",
   includes: ['HbA1c test every 3 months', 'Lipid profile every 3 months', 'Kidney function test every 3 months', 'Urine albumin test every 3 months', 'Glycated haemoglobin every month', 'Blood sugar checked on every visit, shared with your family'],
-  model: 'quote', notes: ['Our team confirms the price with you, based on the tests and visits needed.']
+  model: 'quote', notes: ['Our team confirms the price with you, based on the tests and visits needed.', GST]
 };
 
 async function all() {
@@ -33,10 +35,10 @@ async function all() {
       id: p.key, product: 'karehome', group: 'Preventive package', name: p.name, type: 'Kare@Home', tagline: 'Preventive care at home',
       listTitle: 'Includes', includes: p.includes, mrp: p.mrp, model: 'tiers',
       prices: Object.fromEntries(MONTHS.map((m) => [m, { perMonth: p.prices[m][0], total: p.prices[m][1], saving: c.pricing.savings[m] || 0 }])),
-      notes: [c.pricing.annualNote, c.pricing.gstNote].filter(Boolean)
+      notes: withGst([c.pricing.annualNote, c.pricing.gstNote].filter(Boolean))
     });
   }
-  out.push({ id: 'customized', product: 'karehome', group: 'Preventive package', name: 'Customised plan', type: 'Kare@Home', tagline: c.pricing.customized.lead, listTitle: '', includes: [c.pricing.customized.text], model: 'quote', notes: [] });
+  out.push({ id: 'customized', product: 'karehome', group: 'Preventive package', name: 'Customised plan', type: 'Kare@Home', tagline: c.pricing.customized.lead, listTitle: '', includes: [c.pricing.customized.text], model: 'quote', notes: [GST] });
   out.push(DIABETIC);
   const passIncl = NEST.passIncludes.map((x) => `${x[0]}: ${x[1]}`);
   for (const p of NEST.packages) {
@@ -44,7 +46,7 @@ async function all() {
     const item = {
       id: p.id, product: p.group === 'karebalance' ? 'karehome' : 'karenest', group: GROUP_OF[p.group], name: p.name, type: p.type || NEST.groups[p.group].name,
       tagline: p.tagline, listTitle: p.listTitle || "What's included", includes: p.includes && p.includes.length ? p.includes : passIncl,
-      best: p.best || null, desc: p.desc || null, notes: [p.note].filter(Boolean)
+      best: p.best || null, desc: p.desc || null, notes: withGst([p.note].filter(Boolean))
     };
     if (p.unit === 'month') {
       item.model = 'monthly';

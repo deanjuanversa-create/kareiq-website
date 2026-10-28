@@ -61,7 +61,9 @@
   function todayIST() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()); }
   function nowHM() { return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()); }
   function phoneNice(p) { return p ? p.replace(/^\+91(\d{5})(\d{5})$/, '+91 $1 $2') : ''; }
-  function waLink(text) { return 'https://wa.me/' + WHATSAPP + '?text=' + encodeURIComponent(text); }
+  // "WhatsApp us" opens the KareIQ WhatsApp community (the office's buttons to message a family still use the family's number)
+  var WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM';
+  function waLink() { return (S.content && S.content.whatsappGroup) || WA_GROUP; }
   function icon(name) {
     var p = {
       grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
@@ -137,7 +139,11 @@
   }
   function loadSession() {
     return api('GET', 'session').then(function (d) {
-      if (d.signedIn) { S.me = d; S.csrf = d.csrf; } else { S.me = null; S.csrf = ''; if (d.expired) S.flash = { kind: 'info', text: 'You were signed out after a while without activity, to keep health information safe. Please sign in again.' }; }
+      if (d.signedIn) {
+        // a different person signed in on this browser: forget the last one's people and pages
+        if (!S.me || S.me.user.id !== d.user.id) { S.people = null; S.pid = null; S.cache = {}; S.catalog = null; }
+        S.me = d; S.csrf = d.csrf; S.content = { whatsappGroup: d.whatsappGroup };
+      } else { S.me = null; S.csrf = ''; if (d.expired) S.flash = { kind: 'info', text: 'You were signed out after a while without activity, to keep health information safe. Please sign in again.' }; }
       return d;
     });
   }
@@ -698,7 +704,7 @@
     openDialog(pl.name, '<dl class="kv"><dt>Brand</dt><dd>' + e(pl.productName) + '</dd><dt>Status</dt><dd>' + statusPill(pl) + '</dd>' +
       (pl.startDate ? '<dt>Runs</dt><dd>' + e(date(pl.startDate)) + ' to ' + e(date(pl.endDate)) + '</dd>' : '') +
       (pl.months ? '<dt>Payment plan</dt><dd>' + e(PERIOD_NAMES[pl.months] || pl.months + ' months') + (pl.months > 1 ? ' (' + pl.months + ' months)' : '') + '</dd>' : '') +
-      '<dt>Charge</dt><dd>' + (pl.charge.amount ? '<b>' + rs(pl.charge.amount) + '</b>' + (pl.charge.perMonth && pl.charge.months > 1 ? ' <span class="muted small">(' + rs(pl.charge.perMonth) + ' a month)</span>' : '') + (pl.charge.gst ? '<br><span class="muted small">' + e(pl.charge.gst) + '</span>' : '') : e(pl.charge.text)) + '</dd></dl>' +
+      '<dt>Charge</dt><dd>' + (pl.charge.amount ? '<b>' + rs(pl.charge.amount) + '</b>' + (pl.charge.perMonth && pl.charge.months > 1 ? ' <span class="muted small">(' + rs(pl.charge.perMonth) + ' a month)</span>' : '') : e(pl.charge.text)) + '</dd></dl>' +
       '<div style="margin-top:14px">' + includesHtml(pl) + '</div>' +
       (pl.monitoring.length ? '<h3 class="pk-h">What we monitor</h3><ul class="inc">' + pl.monitoring.map(function (m) { return '<li>' + icon('check') + '<span>' + e(m.item) + ' <span class="muted small">(' + e(m.freq.toLowerCase()) + ')</span></span></li>'; }).join('') + '</ul>' : ''),
       '<button class="btn" data-act="close">Done</button>');
@@ -953,6 +959,7 @@
   function first_(n) { return first(n); }
   // ---------------------------------------------------------------- package prices and details
   var PERIOD_NAMES = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
+  var GST_LINE = '<div class="pr-gst">Inclusive of all GST</div>';
   function rs(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
   function hasDuration(pk) { return pk && (pk.model === 'tiers' || pk.model === 'monthly'); }
   function defaultMonths(pk, want) { return ['1', '3', '6', '12'].indexOf(String(want)) > -1 ? String(want) : (pk.model === 'tiers' ? '12' : '1'); }
@@ -962,10 +969,10 @@
     if (hasDuration(pk)) {
       var m = defaultMonths(pk, months), pr = pk.prices[m];
       return '<div class="pr"><b>' + rs(pr.perMonth) + '</b><span>/ month</span></div>' +
-        '<div class="pr-sub">' + (m === '1' ? 'Billed monthly' : rs(pr.total) + ' billed for ' + m + ' months') + (pr.saving ? ' · <b class="save">save ' + pr.saving + '%</b>' : '') + '</div>';
+        '<div class="pr-sub">' + (m === '1' ? 'Billed monthly' : rs(pr.total) + ' billed for ' + m + ' months') + (pr.saving ? ' · <b class="save">save ' + pr.saving + '%</b>' : '') + '</div>' + GST_LINE;
     }
-    if (pk.model === 'fixed') return '<div class="pr"><b>' + rs(pk.price) + '</b><span>' + e(pk.length) + '</span></div>';
-    return '<div class="pr"><b class="quote">Price on call</b></div>';
+    if (pk.model === 'fixed') return '<div class="pr"><b>' + rs(pk.price) + '</b><span>' + e(pk.length) + '</span></div>' + GST_LINE;
+    return '<div class="pr"><b class="quote">Price on call</b></div>' + GST_LINE;
   }
   function durationSelect(pk, months, id) {
     if (!hasDuration(pk)) return '';
@@ -1477,7 +1484,7 @@
       case 'reload': location.reload(); break;
       case 'peek': { var inp = t.previousElementSibling; var show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); break; }
       case 'menu': { var m = t.nextElementSibling; m.hidden = !m.hidden; t.setAttribute('aria-expanded', String(!m.hidden)); break; }
-      case 'signout': ev.preventDefault(); api('POST', 'logout', {}).then(function () { S.me = null; S.csrf = ''; S.cache = {}; S.catalog = null; S.flash = { kind: 'ok', text: 'You are signed out.' }; go('#/signin', true); }); break;
+      case 'signout': ev.preventDefault(); api('POST', 'logout', {}).then(function () { S.me = null; S.csrf = ''; S.cache = {}; S.catalog = null; S.people = null; S.pid = null; try { localStorage.removeItem('kq.pid'); } catch (x) {} S.flash = { kind: 'ok', text: 'You are signed out.' }; go('#/signin', true); }); break;
       case 'start-back': S.start = null; render(); break;
       case 'drawer': { var open = !document.body.classList.contains('drawer-open'); document.body.classList.toggle('drawer-open', open); t.setAttribute('aria-expanded', String(open)); break; }
       case 'drawer-close': document.body.classList.remove('drawer-open'); break;

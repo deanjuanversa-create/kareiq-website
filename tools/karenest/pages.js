@@ -37,11 +37,13 @@ module.exports = function pages(L) {
   const badgeOf = (p) => (p.type === p.tagline ? G[p.group].name : p.type);
   // monthly packages can be paid monthly, quarterly, half-yearly or yearly (savings set in the admin page)
   const DUR = [['1', 'Monthly'], ['3', 'Quarterly (3 months)'], ['6', 'Half-yearly (6 months)'], ['12', 'Yearly (12 months)']];
+  // every package says its price includes GST (resident notes already say so)
+  const gstHtml = (p) => (/GST/i.test(p.note || '') ? '' : '<p class="pkg-gst">Inclusive of all GST</p>');
   const priceHtml = (p) => p.unit === 'month'
     ? `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>/ month</span></div>
   <label class="pkg-dur"><span>Payment plan</span><select data-dur="${p.id}" aria-label="Payment plan for ${esc(p.name)}">${DUR.map((d) => `<option value="${d[0]}" data-label="${d[1]}">${d[1]}</option>`).join('')}</select></label>
-  <p class="pkg-bill" data-bill>Billed monthly</p>`
-    : `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}</span></div>`;
+  <p class="pkg-bill" data-bill>Billed monthly</p>${gstHtml(p)}`
+    : `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}</span></div>${gstHtml(p)}`;
   const list = (items) => `<ul class="pkg-list">${items.map((t) => `<li>${ico('chk')}<span>${esc(t)}</span></li>`).join('')}</ul>`;
 
   function pkgCard(p, { compact = false, level = 3, includes = true } = {}) {
@@ -189,7 +191,7 @@ module.exports = function pages(L) {
   const kbCheck = '<svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
   const kbPlan = (p, i) => `<article class="kb-plan ${['', 'c2', 'c3'][i]}" aria-labelledby="pk-${p.id}">
           <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true">${kbIcons[p.id]}</svg></span><div><h3 class="h4x" id="pk-${p.id}"><a href="${detailHref(p)}">${esc(p.name)}</a></h3><p class="kb-plan-sub">${esc(p.tagline)}</p></div></div>
-          <p class="kb-price" data-pp="${p.id}" data-base="${p.price}">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p>
+          <p class="kb-price" data-pp="${p.id}" data-base="${p.price}">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p><p class="pkg-gst">Inclusive of all GST</p>
           <hr>
           <p class="kb-inc-h">What's included</p>
           <ul class="kb-inc">${p.includes.map((t) => `<li>${kbCheck}<span>${esc(t)}</span></li>`).join('')}</ul>
@@ -239,7 +241,8 @@ module.exports = function pages(L) {
 <section class="sec" id="experience" aria-labelledby="exp-title">
   <div class="wrap exp">
     <div class="rv">
-      <h2 class="h2" id="exp-title">How would you like to experience <span class="kn">KareNest?</span></h2>
+      <div class="eyebrow">Our programs</div>
+      <h2 class="h2" id="exp-title" style="margin-top:12px">How would you like to experience <span class="kn">KareNest?</span></h2>
       <p class="sub">Whether you want to live with us, visit for the day, or look after your health and wellbeing, there's a place for you in our community.</p>
     </div>
     <div class="xcards">
@@ -520,7 +523,7 @@ ${enquiry({ title: 'Not sure which package is right?', lede: 'Tell us a little a
   // ---------------- Live With Us ----------------
   add({
     key: 'live', path: '/live-with-us', nav: 'packages', sub: 'live',
-    title: 'Live With Us: KarePlus and KarePremium', description: 'Resident living at KareNest: KarePlus shared living at ₹55,000 a month and KarePremium private rooms at ₹99,000 a month, inclusive of 18% GST.',
+    title: 'Live With Us: KarePlus and KarePremium', description: 'Resident living at KareNest: KarePlus shared living at ₹55,000 a month and KarePremium private rooms at ₹99,000 a month, inclusive of all GST.',
     body: () => `${hero({
       crumbs: [HOME, PKGS, ['Live With Us']], eyebrow: 'Live With Us · Resident living',
       h1: 'A home with <span class="accent">care</span> and <span class="violet">community</span> around you',
@@ -776,7 +779,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
       body: () => `${hero({
         crumbs: crumbsFor, eyebrow: `${esc(g.name)} · ${esc(badgeOf(p))}`, solo: true,
         h1: `${esc(p.name)}`, lede: esc(p.tagline + (p.desc && p.group !== 'karemind' && p.group !== 'visit' ? '' : '')),
-        extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
+        extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}${/GST/i.test(p.note || '') ? '' : ' · Inclusive of all GST'}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
         actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}">Compare ${esc(g.name)}${arrow}</a>`
       })}
 <section class="sec" style="padding-top:34px" aria-label="${esc(p.name)} details">
@@ -871,6 +874,7 @@ ${enquiry({ id: 'join', eyebrow: 'Join the community', title: 'Be part of it', l
         <li><span class="ci">${ico('clk')}</span><span><b>Monday to Saturday</b>9:30 AM to 6:00 PM</span></li>
         <li><span class="ci">${ico('mail')}</span><span><b>Email</b><a href="mailto:hello@karenest.in">hello@karenest.in</a></span></li>
         <li><span class="ci">${ico('pin')}</span><span><b>Visit us</b>Kochi, Kerala</span></li>
+        <li><span class="ci">${ico('wa')}</span><span><b>WhatsApp</b><a href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Join our WhatsApp community</a></span></li>
       </ul>
       <div class="contact-nestu"><img loading="lazy" decoding="async" src="${img('head.webp')}" alt="" width="58" height="58"><span><b>Nestu says</b>Not sure which to pick? Choose the closest one and we'll guide you on the call.</span></div>
     </div>

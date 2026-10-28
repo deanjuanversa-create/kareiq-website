@@ -21,6 +21,8 @@ const DEFAULTS = {
     phone: '+918129345178',
     phoneDisplay: '+91 81293 45178',
     whatsapp: '918129345178',
+    // every "WhatsApp" button on the websites and in the app opens this community link
+    whatsappGroup: 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM',
     email: 'support@kareiq.co.in',
     instagram: 'kareiq'
   },
@@ -36,7 +38,7 @@ const DEFAULTS = {
   },
   pricing: {
     annualNote: 'All our packages are designed for annual duration. Choose the payment plan that works best for you.',
-    gstNote: 'All prices are exclusive of GST.',
+    gstNote: 'All prices are inclusive of all GST.',
     savings: { 1: 0, 3: 5, 6: 7, 12: 10 },
     packages: [
       {
@@ -114,6 +116,8 @@ let cachedAt = 0;
 function fromSaved(saved) {
   if (!saved) return clone(DEFAULTS);
   const c = merge(DEFAULTS, saved);
+  // prices are now shown inclusive of all GST: replace the old default note if it was never changed
+  if (c.pricing && /^All prices are exclusive of GST\.?$/i.test(c.pricing.gstNote || '')) c.pricing.gstNote = DEFAULTS.pricing.gstNote;
   // packages are matched by key so a saved copy can never drop or rename one
   c.pricing.packages = PACKAGE_KEYS.map((key) => {
     const def = DEFAULTS.pricing.packages.find((p) => p.key === key);
@@ -157,6 +161,8 @@ function validate(input) {
   out.contact.email = str(c.contact.email, 120);
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(out.contact.email)) errors.push('Contact email looks incomplete.');
   out.contact.instagram = str(c.contact.instagram, 60).replace(/^@/, '').replace(/[^A-Za-z0-9._]/g, '');
+  out.contact.whatsappGroup = str(c.contact.whatsappGroup, 200) || DEFAULTS.contact.whatsappGroup;
+  if (!/^https:\/\/(chat\.whatsapp\.com|wa\.me|whatsapp\.com)\/[A-Za-z0-9/?=&._%+-]+$/.test(out.contact.whatsappGroup)) errors.push('WhatsApp link must start with https://chat.whatsapp.com/ (a community or group invite) or https://wa.me/.');
 
   // headlines
   for (const [sec, fields] of Object.entries({ kareiq: ['heroTitle', 'heroHighlight', 'heroLead'], karehome: ['heroLine1', 'heroLine2', 'heroLead'] })) {

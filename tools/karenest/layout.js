@@ -5,7 +5,9 @@
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
 // small line icons (24x24, stroked)
+const WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM';
 const ICONS = {
+  wa: '<path d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/>',
   arr: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   cal: '<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/>',
   ppl: '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.2c2.4-.3 4.2 1.2 4.6 4"/>',
@@ -36,7 +38,7 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261028a';
+const VER = '20261028c';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
 
@@ -204,12 +206,12 @@ ${SPRITE}
       <div>
         <a class="brand" href="${home}" aria-label="KareNest home"><img src="${img('mark.webp')}" alt="" width="52" height="52" loading="lazy"><span class="wm"><b>KareNest</b><small>Live healthy. Live happy. Live with dignity.</small></span></a>
         <p class="tag">A community where ageing is embraced with health, dignity and happiness.</p>
-        <div class="socials"><span class="socials-h">Follow us</span><div class="socials-row"><a class="soc ig" href="https://www.instagram.com/karenestbykareiq/" target="_blank" rel="noopener" aria-label="KareNest on Instagram (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/></svg></a><a class="soc fb" href="https://www.facebook.com/profile.php?id=61590756755250" target="_blank" rel="noopener" aria-label="KareNest on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M13.6 21v-7.6h2.6l.4-3h-3V8.5c0-.9.3-1.5 1.5-1.5h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3.1Z"/></svg></a><a class="soc li" href="https://www.linkedin.com/company/109885415/" target="_blank" rel="noopener" aria-label="KareNest on LinkedIn (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-1.6-4.9-4.2-4.9-1.5 0-2.5.8-2.9 1.6V8.9h-3V20h3.1v-5.8c0-1.5.6-2.6 2-2.6 1.3 0 1.9.9 1.9 2.6V20h3.1v-6.4Z"/></svg></a></div></div>
+        <div class="socials"><span class="socials-h">Follow us</span><div class="socials-row"><a class="soc wa" href="${WA_GROUP}" target="_blank" rel="noopener" aria-label="Join the KareNest WhatsApp community (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg></a><a class="soc ig" href="https://www.instagram.com/karenestbykareiq/" target="_blank" rel="noopener" aria-label="KareNest on Instagram (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/></svg></a><a class="soc fb" href="https://www.facebook.com/profile.php?id=61590756755250" target="_blank" rel="noopener" aria-label="KareNest on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M13.6 21v-7.6h2.6l.4-3h-3V8.5c0-.9.3-1.5 1.5-1.5h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3.1Z"/></svg></a><a class="soc li" href="https://www.linkedin.com/company/109885415/" target="_blank" rel="noopener" aria-label="KareNest on LinkedIn (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-1.6-4.9-4.2-4.9-1.5 0-2.5.8-2.9 1.6V8.9h-3V20h3.1v-5.8c0-1.5.6-2.6 2-2.6 1.3 0 1.9.9 1.9 2.6V20h3.1v-6.4Z"/></svg></a></div></div>
       </div>
       <div><h2 class="h5">Explore</h2><ul>${f('about', u('/about'), 'About KareNest')}${f('life', u('/life'), 'Life at KareNest')}${f('activities', u('/activities'), 'Activities &amp; Wellness')}${f('families', u('/families'), 'For Families')}</ul></div>
       <div><h2 class="h5">Packages</h2><ul>${f('packages', u('/packages'), 'Our Packages', 1)}${f('live', u('/live-with-us'), 'Live With Us', 1)}${f('visit', u('/visit-and-participate'), 'Visit &amp; Participate', 1)}${f('wellness', u('/wellness'), 'Wellness', 1)}${f('karebalance', u('/karebalance'), 'KareBalance', 1)}${f('karemind', u('/karemind'), 'KareMind', 1)}</ul></div>
       <div><h2 class="h5">Get involved</h2><ul>${f('community', u('/community'), 'Join Our Community')}<li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}</ul></div>
-      <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
+      <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><a href="${WA_GROUP}" target="_blank" rel="noopener">WhatsApp community</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
     </div>
     <div class="foot-bot">
       <span>© 2026 KareNest. All rights reserved.</span>
@@ -339,4 +341,4 @@ ${pg.lightbox ? LIGHTBOX + '\n' : ''}${WIDGETS}
   return { u, home, img, ico, esc, page, kareiq };
 }
 
-module.exports = { make, esc, ico, ICONS, VER };
+module.exports = { make, esc, ico, ICONS, VER, WA_GROUP };

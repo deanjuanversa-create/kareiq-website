@@ -592,7 +592,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     const products = await productsFor(user);
     return {
       ok: true, signedIn: true, csrf: session.csrf,
-      user: publicUser(user), products,
+      user: publicUser(user), products, whatsappGroup: ((await content.get()).contact || {}).whatsappGroup || null,
       mail: mailReady
     };
   }
