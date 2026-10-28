@@ -700,3 +700,7 @@ details.vgroup>summary{cursor:pointer;font-weight:650}
 .pk-best{margin-top:10px;font-size:.92rem;background:var(--accent-soft);padding:10px 12px;border-radius:var(--r-sm)}
 table.ptab td,table.ptab th{white-space:nowrap}
 .pr-gst{font-size:.8rem;font-weight:650;color:var(--good);margin-top:3px}
+
+/* All packages: the person's own packages are outlined; the one being looked at is highlighted */
+.pkc.mine{box-shadow:0 0 0 2px var(--accent-soft),0 0 0 1px var(--accent) inset}
+.pkc.sel{box-shadow:0 0 0 3px var(--accent),0 18px 36px -20px rgba(17,153,142,.5)}

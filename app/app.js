@@ -720,7 +720,7 @@
           var has = mine.indexOf(pk.id) > -1;
           var act = role === 'family' ? '<button class="btn sm" data-act="choose-pkg" data-id="' + e(pk.id) + '">' + (has ? 'Change or renew' : 'Choose ' + e(pk.name.replace(/^KareNest |^KareBalance |^KareMind /, ''))) + '</button>'
             : role === 'admin' ? '<button class="btn sm" data-act="add-pkg" data-id="' + e(pk.id) + '">' + icon('plus') + 'Add for ' + e(first(p.name)) + '</button>' : '';
-          return '<article class="bcard pkc" data-pkcard><div class="bc-top"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span>' + (has ? '<span class="pill active"><i></i>Has this</span>' : '') + '</div>' +
+          return '<article class="bcard pkc' + (has ? ' mine' : '') + '" data-pkcard data-pkg="' + e(pk.id) + '"><div class="bc-top"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span>' + (has ? '<span class="pill active"><i></i>Has this</span>' : '') + '</div>' +
             '<h3>' + e(pk.name) + '</h3><p class="muted small">' + e(pk.tagline || '') + '</p><div class="pk-price" data-pkprice>' + priceHtml(pk) + '</div>' + durationSelect(pk) +
             '<div class="pk-acts">' + act + '<button class="arrowlink" data-act="cat-details" data-id="' + e(pk.id) + '">View details' + icon('arrow') + '</button></div></article>';
         }).join('') + '</div>';
@@ -1614,6 +1614,13 @@
   window.addEventListener('resize', function () { clearTimeout(rsz); rsz = setTimeout(function () { if ($('[data-chart]')) drawCharts(); }, 200); });
   document.addEventListener('keydown', function (ev) {
     if (ev.key === 'Escape') { var m = $('.menu:not([hidden])'); if (m) { m.hidden = true; } document.body.classList.remove('drawer-open'); }
+  });
+
+  // "All packages": the package the family or admin picks (clicks a card, View details, Choose) stands out
+  document.addEventListener('click', function (ev) {
+    var card = ev.target.closest && ev.target.closest('[data-pkcard]');
+    if (!card) return;
+    [].forEach.call(document.querySelectorAll('[data-pkcard]'), function (c) { c.classList.toggle('sel', c === card); });
   });
 
   render();

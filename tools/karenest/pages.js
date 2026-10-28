@@ -48,7 +48,7 @@ module.exports = function pages(L) {
 
   function pkgCard(p, { compact = false, level = 3, includes = true } = {}) {
     const h = `h${level}`;
-    return `<article class="pkg c-${p.color}${compact ? ' compact' : ''}" aria-labelledby="pk-${p.id}">
+    return `<article class="pkg c-${p.color}${compact ? ' compact' : ''}" data-pkg="${p.id}" aria-labelledby="pk-${p.id}">
   <div class="pkg-top"><span class="pkg-type">${esc(badgeOf(p))}</span>${p.flag ? `<span class="pkg-flag">${esc(p.flag)}</span>` : ''}</div>
   <${h} id="pk-${p.id}"><a href="${detailHref(p)}">${esc(p.name)}</a></${h}>
   <p class="pkg-tag">${esc(p.tagline)}</p>
@@ -64,15 +64,19 @@ module.exports = function pages(L) {
 </article>`;
   }
 
-  function compare(spec, { id = 'compare', minw = 0, title, sub, level = 2 } = {}) {
+  function compare(spec, { id = 'compare', minw = 0, title, sub, level = 2, selected = '' } = {}) {
     const h = `h${level}`;
+    // each column carries its package id (data-pkg); the package the visitor picked gets class "sel"
+    const ids = spec.ids || [];
+    const at = (i) => (ids[i] ? ` data-pkg="${ids[i]}"` : '') + (ids[i] && ids[i] === selected ? ' class="sel"' : '');
+    const cell = (c, i) => { const yes = /^(Included|Yes|Complimentary)$/.test(c); const sel = ids[i] && ids[i] === selected; const cls = [yes ? 'yes' : '', sel ? 'sel' : ''].filter(Boolean).join(' '); return `<td${ids[i] ? ` data-pkg="${ids[i]}"` : ''}${cls ? ` class="${cls}"` : ''}>${esc(c)}</td>`; };
     return `<div class="cmp" id="${id}">
   <${h} class="h3x">${esc(title || spec.title)}</${h}>
   ${sub ? `<p class="sub">${sub}</p>` : ''}
   <div class="cmp-scroll" role="region" aria-label="${esc(title || spec.title)}" tabindex="0" style="--minw:${minw}px">
     <table>
-      <thead><tr><th scope="col">${spec.cols.length === 2 ? 'Service' : 'Feature'}</th>${spec.cols.map((c) => `<th scope="col">${esc(c)}</th>`).join('')}</tr></thead>
-      <tbody>${spec.rows.map((r) => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map((c) => `<td${/^(Included|Yes|Complimentary)$/.test(c) ? ' class="yes"' : ''}>${esc(c)}</td>`).join('')}</tr>`).join('')}</tbody>
+      <thead><tr><th scope="col">${spec.cols.length === 2 ? 'Service' : 'Feature'}</th>${spec.cols.map((c, i) => `<th scope="col"${at(i)}>${esc(c)}<span class="sel-tag">Your choice</span></th>`).join('')}</tr></thead>
+      <tbody>${spec.rows.map((r) => `<tr><th scope="row">${esc(r[0])}</th>${r.slice(1).map(cell).join('')}</tr>`).join('')}</tbody>
     </table>
   </div>
   ${minw ? '<p class="cmp-hint">Swipe sideways to see every package.</p>' : ''}
@@ -189,7 +193,7 @@ module.exports = function pages(L) {
     'kb-premium': '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/>'
   };
   const kbCheck = '<svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
-  const kbPlan = (p, i) => `<article class="kb-plan ${['', 'c2', 'c3'][i]}" aria-labelledby="pk-${p.id}">
+  const kbPlan = (p, i) => `<article class="kb-plan ${['', 'c2', 'c3'][i]}" data-pkg="${p.id}" aria-labelledby="pk-${p.id}">
           <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true">${kbIcons[p.id]}</svg></span><div><h3 class="h4x" id="pk-${p.id}"><a href="${detailHref(p)}">${esc(p.name)}</a></h3><p class="kb-plan-sub">${esc(p.tagline)}</p></div></div>
           <p class="kb-price" data-pp="${p.id}" data-base="${p.price}">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p><p class="pkg-gst">Inclusive of all GST</p>
           <hr>
@@ -747,7 +751,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
     let main = '';
     if (p.group === 'live') {
       main = `<h2>${esc(p.listTitle)}</h2>${list(p.includes)}
-      ${compare({ title: 'How it compares', cols: D.liveCompare.cols, rows: D.liveCompare.rows }, { id: 'compare', level: 3, sub: `KarePlus and KarePremium side by side. ${esc(D.GST_LIVE)}` })}
+      ${compare({ title: 'How it compares', cols: D.liveCompare.cols, ids: D.liveCompare.ids, rows: D.liveCompare.rows }, { id: 'compare', level: 3, selected: p.id, sub: `KarePlus and KarePremium side by side. ${esc(D.GST_LIVE)}` })}
       ${notIncluded(false)}`;
     } else if (p.group === 'visit') {
       main = `<h2>About this pass</h2><p style="margin-top:12px;color:var(--ink-2)">${esc(p.desc)}</p>
@@ -756,10 +760,10 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
     } else if (p.group === 'karebalance') {
       main = `<h2>${esc(p.listTitle)}</h2>${list(p.includes)}<p class="pkg-best"><b>Best for:</b> ${esc(p.best)}</p>
       <div class="note-box">${esc(D.KB_FINE)}</div>
-      <p style="margin-top:22px"><a class="link-arrow" href="${u('/karebalance')}#kb-plans">Compare all KareBalance programmes${ico('arr')}</a></p>`;
+      <p style="margin-top:22px"><a class="link-arrow" href="${u('/karebalance')}?pkg=${p.id}#kb-plans">Compare all KareBalance programmes${ico('arr')}</a></p>`;
     } else {
       main = `<p style="color:var(--ink-2);font-size:1.05rem">${esc(p.desc)}</p><h2 style="margin-top:26px">${esc(p.listTitle)}</h2>${list(p.includes)}<p class="pkg-best"><b>Best for:</b> ${esc(p.best)}</p>
-      ${compare(D.mindCompare, { id: 'compare', level: 3, minw: 560 })}`;
+      ${compare(D.mindCompare, { id: 'compare', level: 3, minw: 560, selected: p.id })}`;
     }
     const side = `<aside class="pd-side" aria-label="${esc(p.name)} summary">
       <div class="pd-card c-${p.color}">
@@ -780,7 +784,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
         crumbs: crumbsFor, eyebrow: `${esc(g.name)} · ${esc(badgeOf(p))}`, solo: true,
         h1: `${esc(p.name)}`, lede: esc(p.tagline + (p.desc && p.group !== 'karemind' && p.group !== 'visit' ? '' : '')),
         extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}${/GST/i.test(p.note || '') ? '' : ' · Inclusive of all GST'}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
-        actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}">Compare ${esc(g.name)}${arrow}</a>`
+        actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}?pkg=${p.id}${{ live: '#compare', karemind: '#compare', karebalance: '#kb-plans', visit: '#passes' }[p.group] || ''}">Compare ${esc(g.name)}${arrow}</a>`
       })}
 <section class="sec" style="padding-top:34px" aria-label="${esc(p.name)} details">
   <div class="wrap pd">

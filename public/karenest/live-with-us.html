@@ -13,9 +13,9 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..700,30&family=Figtree:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/karenest/loader.css?v=20261028f">
-<script src="/karenest/loader.js?v=20261028f"></script>
-<link rel="stylesheet" href="/karenest/site.css?v=20261028f">
+<link rel="stylesheet" href="/karenest/loader.css?v=20261028g">
+<script src="/karenest/loader.js?v=20261028g"></script>
+<link rel="stylesheet" href="/karenest/site.css?v=20261028g">
 </head>
 <body data-page="live" data-base="/karenest">
 <div class="kn-loader" id="knLoader" role="status" aria-label="Loading KareNest">
@@ -134,7 +134,7 @@
 <section class="sec" id="packages" style="padding-top:30px" aria-labelledby="live-pk">
   <div class="wrap">
     <div class="sec-head rv"><h2 class="h2" id="live-pk">Resident packages</h2><p class="sub">Inclusive of all GST and applicable service charges.</p></div>
-    <div class="pkgs two"><article class="pkg c-teal" aria-labelledby="pk-kareplus">
+    <div class="pkgs two"><article class="pkg c-teal" data-pkg="kareplus" aria-labelledby="pk-kareplus">
   <div class="pkg-top"><span class="pkg-type">Shared Living</span></div>
   <h3 id="pk-kareplus"><a href="/karenest/live-with-us/kareplus">KarePlus</a></h3>
   <p class="pkg-tag">Comfortable Living. Thoughtful Care. Meaningful Connections.</p>
@@ -149,7 +149,7 @@
     <a class="btn btn-primary" href="/karenest/sign-in?plan=kareplus" data-auth data-plan="kareplus">Enquire About KarePlus</a>
     <a class="link-arrow" href="/karenest/live-with-us/kareplus">View details<span class="sr-only"> of KarePlus</span><svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
   </div>
-</article><article class="pkg c-violet" aria-labelledby="pk-karepremium">
+</article><article class="pkg c-violet" data-pkg="karepremium" aria-labelledby="pk-karepremium">
   <div class="pkg-top"><span class="pkg-type">Private Room</span></div>
   <h3 id="pk-karepremium"><a href="/karenest/live-with-us/karepremium">KarePremium</a></h3>
   <p class="pkg-tag">Private Living. Enhanced Wellness. Personal Space.</p>
@@ -170,8 +170,8 @@
   <p class="sub">Place the two packages side by side and see exactly what your monthly price covers.</p>
   <div class="cmp-scroll" role="region" aria-label="What's included in your monthly price?" tabindex="0" style="--minw:0px">
     <table>
-      <thead><tr><th scope="col">Service</th><th scope="col">KarePlus</th><th scope="col">KarePremium</th></tr></thead>
-      <tbody><tr><th scope="row">AC accommodation</th><td>Twin sharing</td><td>Single occupancy</td></tr><tr><th scope="row">Preventive check-up plan</th><td>HomeStart</td><td>HomePlus</td></tr><tr><th scope="row">Morning bed tea</th><td class="yes">Included</td><td class="yes">Included</td></tr><tr><th scope="row">Breakfast, lunch and dinner</th><td class="yes">Included</td><td class="yes">Included</td></tr><tr><th scope="row">Evening tea and snacks</th><td class="yes">Included</td><td class="yes">Included</td></tr><tr><th scope="row">Personalized diet plan</th><td class="yes">Included</td><td class="yes">Included</td></tr><tr><th scope="row">Community membership</th><td class="yes">Complimentary</td><td class="yes">Complimentary</td></tr><tr><th scope="row">GST and applicable service charges</th><td class="yes">Included</td><td class="yes">Included</td></tr></tbody>
+      <thead><tr><th scope="col">Service</th><th scope="col" data-pkg="kareplus">KarePlus<span class="sel-tag">Your choice</span></th><th scope="col" data-pkg="karepremium">KarePremium<span class="sel-tag">Your choice</span></th></tr></thead>
+      <tbody><tr><th scope="row">AC accommodation</th><td data-pkg="kareplus">Twin sharing</td><td data-pkg="karepremium">Single occupancy</td></tr><tr><th scope="row">Preventive check-up plan</th><td data-pkg="kareplus">HomeStart</td><td data-pkg="karepremium">HomePlus</td></tr><tr><th scope="row">Morning bed tea</th><td data-pkg="kareplus" class="yes">Included</td><td data-pkg="karepremium" class="yes">Included</td></tr><tr><th scope="row">Breakfast, lunch and dinner</th><td data-pkg="kareplus" class="yes">Included</td><td data-pkg="karepremium" class="yes">Included</td></tr><tr><th scope="row">Evening tea and snacks</th><td data-pkg="kareplus" class="yes">Included</td><td data-pkg="karepremium" class="yes">Included</td></tr><tr><th scope="row">Personalized diet plan</th><td data-pkg="kareplus" class="yes">Included</td><td data-pkg="karepremium" class="yes">Included</td></tr><tr><th scope="row">Community membership</th><td data-pkg="kareplus" class="yes">Complimentary</td><td data-pkg="karepremium" class="yes">Complimentary</td></tr><tr><th scope="row">GST and applicable service charges</th><td data-pkg="kareplus" class="yes">Included</td><td data-pkg="karepremium" class="yes">Included</td></tr></tbody>
     </table>
   </div>
   
@@ -318,7 +318,7 @@
   </div>
 </dialog>
 
-<script src="/js/sites.js?v=20261028f"></script>
-<script src="/karenest/app.js?v=20261028f"></script>
+<script src="/js/sites.js?v=20261028g"></script>
+<script src="/karenest/app.js?v=20261028g"></script>
 </body>
 </html>

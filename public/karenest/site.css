@@ -1154,3 +1154,14 @@ html{scroll-padding-top:96px}
   .cmp-scroll[style*="--minw:0px"] + .cmp-hint{display:none}
 }
 @media (max-width:359px){ .cmp-scroll[style*="--minw:0px"] + .cmp-hint{display:block} }
+
+/* the package the visitor picked: its column in comparison tables and its card stand out */
+.cmp .sel-tag{display:none}
+.cmp thead th.sel{background:var(--teal)}
+.cmp thead th.sel .sel-tag{display:block;margin-top:5px;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#FFE3A3}
+.cmp tbody tr td.sel,.cmp tbody tr:nth-child(even) td.sel{background:#E7F5F0;color:var(--ink);font-weight:600;box-shadow:inset 2px 0 0 var(--teal),inset -2px 0 0 var(--teal)}
+.cmp tbody tr:last-child td.sel{box-shadow:inset 2px 0 0 var(--teal),inset -2px 0 0 var(--teal),inset 0 -2px 0 var(--teal)}
+.cmp th,.cmp td{transition:background .25s}
+article.pkg.sel,.kb-plan.sel{box-shadow:0 0 0 3px var(--teal),0 18px 40px -18px rgba(18,145,122,.45)}
+article.pkg.sel::before,.kb-plan.sel::before{content:"Your choice";position:absolute;top:-13px;right:22px;z-index:2;padding:5px 12px;border-radius:99px;background:var(--teal);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
+@media (prefers-reduced-motion:reduce){.cmp th,.cmp td{transition:none}}

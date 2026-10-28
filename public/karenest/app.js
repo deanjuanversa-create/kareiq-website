@@ -814,4 +814,25 @@
   }
 
   measure();
+  /* ================= the package the visitor picked stands out =================
+     Comparison tables and package cards carry data-pkg. The chosen package is highlighted when:
+     the page is a package's own page (marked in the HTML), the link says ?pkg=<id> ("Compare ..."),
+     the visitor clicks a package card, or picks a package in an enquiry form. */
+  (function pickedPackage() {
+    const marked = $$('[data-pkg]');
+    if (!marked.length) return;
+    const mark = (id) => {
+      if (!id || !marked.some((el) => el.dataset.pkg === id)) return;
+      marked.forEach((el) => el.classList.toggle('sel', el.dataset.pkg === id));
+    };
+    const fromLink = new URLSearchParams(location.search).get('pkg');
+    if (fromLink) mark(fromLink);
+    document.addEventListener('click', (e) => {
+      const card = e.target.closest('article[data-pkg]');
+      if (card) mark(card.dataset.pkg);
+    });
+    document.addEventListener('change', (e) => {
+      if (e.target.matches('select[name="plan"]')) mark(e.target.value);
+    });
+  })();
 })();

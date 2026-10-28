@@ -201,6 +201,7 @@ const packages = [
 const liveCompare = {
   title: "What's included in your monthly price?",
   cols: ['KarePlus', 'KarePremium'],
+  ids: ['kareplus', 'karepremium'],
   rows: [
     ['AC accommodation', 'Twin sharing', 'Single occupancy'],
     ['Preventive check-up plan', 'HomeStart', 'HomePlus'],
@@ -216,6 +217,7 @@ const liveCompare = {
 const mindCompare = {
   title: 'Package comparison',
   cols: ['Base', 'Plus', 'Premium'],
+  ids: ['km-base', 'km-plus', 'km-premium'],
   rows: [
     ['Duration', 'One-time', '3 months', '6 months'],
     ['Price', '₹8,999', '₹44,999', '₹79,999'],

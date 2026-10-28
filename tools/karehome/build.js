@@ -12,7 +12,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'public');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
-const VER = '20261028d';
+const VER = '20261028e';
 const BASE = '/kare-at-home';
 
 const between = (a, b, from = 0) => {

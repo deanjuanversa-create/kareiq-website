@@ -388,3 +388,17 @@
   }, { rootMargin: '120px 0px' });
   document.querySelectorAll('main > section, footer').forEach(function (s) { io.observe(s); });
 })();
+
+/* The package the visitor picked stands out among the package cards (Care Packages, KareBalance):
+   from a link (?pkg=homeplus), a click on a card, or the package chosen in the booking form. */
+(function () {
+  var cards = [].slice.call(document.querySelectorAll('article[data-plan]'));
+  if (!cards.length) return;
+  function mark(id) {
+    if (!id || !cards.some(function (c) { return c.dataset.plan === id; })) return;
+    cards.forEach(function (c) { c.classList.toggle('sel', c.dataset.plan === id); });
+  }
+  try { mark(new URLSearchParams(location.search).get('pkg')); } catch (e) { /* old browser */ }
+  document.addEventListener('click', function (e) { var c = e.target.closest && e.target.closest('article[data-plan]'); if (c) mark(c.dataset.plan); });
+  document.addEventListener('change', function (e) { if (e.target.name === 'package') mark(e.target.value); });
+})();

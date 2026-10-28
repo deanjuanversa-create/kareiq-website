@@ -770,3 +770,7 @@ html{scroll-padding-top:84px}
 .kb-plan .gst-inc{margin-top:2px}
 .kh-follow{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:center}
 .kh-follow a{display:inline-flex;align-items:center;gap:8px}
+
+/* the package the visitor picked */
+.pk.sel,.pk.popular.sel,.kb-plan.sel{box-shadow:0 0 0 3px #11998e,0 26px 50px -28px rgba(17,153,142,.55)!important}
+.pk.sel::before,.kb-plan.sel::before{content:"Your choice";position:absolute;top:-12px;left:16px;z-index:2;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:#11998e;padding:6px 11px;border-radius:999px;box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
