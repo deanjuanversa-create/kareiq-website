@@ -15,7 +15,13 @@ window.KARE_SITES = {
     var base = S[a.dataset.site];
     if (!base) return;                       // keep the link as written in the HTML
     var path = a.dataset.path || '';
-    a.href = /\/$/.test(base) ? base + path.replace(/^\//, '') : base + path;
+    var href = /\/$/.test(base) ? base + path.replace(/^\//, '') : base + path;
+    // links from the KareIQ website to Kare@Home or KareNest say so (their "Back to KareIQ" link shows)
+    if (document.body.hasAttribute('data-kareiq') && a.dataset.site !== 'kareiq') {
+      var h = href.indexOf('#'), main = h < 0 ? href : href.slice(0, h), hash = h < 0 ? '' : href.slice(h);
+      href = main + (main.indexOf('?') < 0 ? '?' : '&') + 'from=kareiq' + hash;
+    }
+    a.href = href;
     if (/^https?:/.test(base) && base.indexOf(location.host) === -1) { a.target = '_blank'; a.rel = 'noopener'; }
   });
 })();

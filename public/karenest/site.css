@@ -1165,3 +1165,20 @@ html{scroll-padding-top:96px}
 article.pkg.sel,.kb-plan.sel{box-shadow:0 0 0 3px var(--teal),0 18px 40px -18px rgba(18,145,122,.45)}
 article.pkg.sel::before,.kb-plan.sel::before{content:"Your choice";position:absolute;top:-13px;right:22px;z-index:2;padding:5px 12px;border-radius:99px;background:var(--teal);color:#fff;font-size:.72rem;font-weight:700;letter-spacing:.05em;text-transform:uppercase;box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
 @media (prefers-reduced-motion:reduce){.cmp th,.cmp td{transition:none}}
+
+/* "Back to KareIQ" only for visitors who came from the KareIQ website (loader.js) */
+html:not(.from-kareiq) .back-kiq,html:not(.from-kareiq) .d-back{display:none!important}
+/* phones: no empty strip above the header when there is no back link */
+@media (max-width:760px){ html:not(.from-kareiq) .topbar{display:none} }
+/* phones and tablets: "Sign in" is written out, not just an icon */
+@media (max-width:1219px){
+  .app-in{width:auto;padding:0 14px 0 11px;border-color:var(--teal);color:var(--teal-d)}
+  .app-in span{display:inline}
+}
+@media (max-width:360px){ .app-in{padding:0 10px 0 8px;gap:5px;font-size:.8rem} .app-in svg{width:18px;height:18px} }
+@media (max-width:360px){ .nav-in{padding-inline:14px;gap:8px} .burger{width:42px;height:42px;margin-left:0} }
+/* phones: the corner buttons (reading comfort, WhatsApp, Nestu) wait until the visitor scrolls past the
+   top section, so they never cover "Plan a Visit" or "Join Our Community" */
+@media (max-width:760px){
+  .at-top .comfort:not(.keep),.at-top .guide:not(.keep){transform:translateY(160%);opacity:0;pointer-events:none}
+}

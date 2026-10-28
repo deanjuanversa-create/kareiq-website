@@ -1,3 +1,22 @@
+/* "Back to KareIQ" is shown only to visitors who came from the KareIQ website: a KareIQ link
+   (?from=kareiq), a KareIQ page as the previous page, or earlier in this visit (this tab).
+   Someone who types the address or comes from Google sees no back link. */
+(function () {
+  var root = document.documentElement, KEY = 'kq-from-kareiq', from = false;
+  try {
+    var q = new URLSearchParams(location.search);
+    if (q.get('from') === 'kareiq') from = true;
+    if (!from && document.referrer) {
+      var r = new URL(document.referrer);
+      var kiqHost = /^(www\.)?kareiq\.co\.in$|^kareiq(-website-full)?\.vercel\.app$|^(localhost|127\.0\.0\.1)$/.test(r.hostname);
+      if (kiqHost && !/^\/(kare-at-home|karenest|app|admin)(\/|$)/.test(r.pathname)) from = true;
+    }
+    if (from) sessionStorage.setItem(KEY, '1'); else from = sessionStorage.getItem(KEY) === '1';
+    if (q.has('from')) { q.delete('from'); history.replaceState(history.state, '', location.pathname + (q.toString() ? '?' + q : '') + location.hash); }
+  } catch (e) { /* no storage: decide from this page only */ }
+  if (from) root.classList.add('from-kareiq');
+})();
+
 /* KareNest intro animation.
    Loaded in <head> (not deferred) so it decides before the first paint whether to show.
    Like KareIQ's intro it plays on a fresh visit or a reload, and is skipped when moving

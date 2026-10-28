@@ -774,3 +774,14 @@ html{scroll-padding-top:84px}
 /* the package the visitor picked */
 .pk.sel,.pk.popular.sel,.kb-plan.sel{box-shadow:0 0 0 3px #11998e,0 26px 50px -28px rgba(17,153,142,.55)!important}
 .pk.sel::before,.kb-plan.sel::before{content:"Your choice";position:absolute;top:-12px;left:16px;z-index:2;font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#fff;background:#11998e;padding:6px 11px;border-radius:999px;box-shadow:0 6px 14px -6px rgba(0,0,0,.35)}
+
+/* "Back to KareIQ" only for visitors who came from the KareIQ website (js/karehome-loader.js) */
+html:not(.from-kareiq) .back-kiq,html:not(.from-kareiq) .back-kiq-li{display:none!important}
+html:not(.from-kareiq) .kh-top-in{justify-content:flex-end}
+@media (max-width:600px){ html:not(.from-kareiq) .kh-top{display:none} }
+/* phones and tablets: "Sign in" is written out, not just an icon */
+@media (max-width:1080px){
+  .app-in{width:auto;height:44px;padding:0 14px 0 11px;border-color:#11998e;color:#0b7c73}
+  .app-in span{display:inline}
+}
+@media (max-width:360px){ .app-in{padding:0 10px 0 8px;gap:5px;font-size:13.5px} .app-in svg{width:18px;height:18px} }

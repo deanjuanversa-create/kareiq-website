@@ -773,3 +773,23 @@ a.brand-link{max-width:100%}
 }
 /* "Care that fits real life": the decorative leaf no longer crosses the text on phones */
 @media (max-width:600px){ .values .leaf-r{display:none} }
+
+/* phones and tablets: header is logo on the left, then a clear "Sign in" button and the menu button on the right */
+@media (max-width:1060px){
+  .nav-in{gap:10px}
+  .nav-end{margin-left:auto}
+  .app-in,.nav.scrolled .app-in{width:auto;height:44px;padding:0 15px 0 12px;border-color:var(--teal);color:var(--teal-deep);font-size:14.5px}
+  .app-in span{display:inline}
+  .burger{width:44px;height:44px}
+}
+@media (max-width:360px){
+  .logo img,.nav.scrolled .logo img{height:30px}
+  .app-in,.nav.scrolled .app-in{padding:0 11px 0 9px;gap:5px;font-size:13.5px}
+  .app-in svg{width:18px;height:18px}
+}
+/* phones: the floating WhatsApp button waits until the visitor scrolls past the top section,
+   so it never covers "Explore Our Services" */
+@media (max-width:760px){
+  .wa-float{transition:opacity .3s,transform .3s,visibility .3s}
+  html.kq-at-top .wa-float{opacity:0;visibility:hidden;transform:translateY(16px);pointer-events:none}
+}

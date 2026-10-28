@@ -158,3 +158,12 @@ document.querySelectorAll('.person .more').forEach((btn) => {
   }, { rootMargin: '120px 0px' });
   document.querySelectorAll('main > section, footer').forEach(function (s) { io.observe(s); });
 })();
+
+/* phones: hide the floating WhatsApp button while the top section (hero) is on screen */
+(function () {
+  var hero = document.querySelector('.hero'), root = document.documentElement;
+  if (!hero || !('IntersectionObserver' in window)) return;
+  new IntersectionObserver(function (es) {
+    es.forEach(function (e) { root.classList.toggle('kq-at-top', e.intersectionRatio > 0.35); });
+  }, { threshold: [0, 0.35, 0.6, 1] }).observe(hero);
+})();

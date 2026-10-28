@@ -435,6 +435,12 @@
     else location.href = url(p) + (h ? '#' + h : '');
   }
 
+  /* ================= phones: corner buttons wait until the visitor scrolls past the top section ================= */
+  const heroTop = $('.hero');
+  if (heroTop && 'IntersectionObserver' in window) {
+    new IntersectionObserver(([e]) => document.body.classList.toggle('at-top', e.intersectionRatio > 0.35), { threshold: [0, 0.35, 0.6, 1] }).observe(heroTop);
+  }
+
   /* ================= footer: corner buttons step aside ================= */
   const footer = $('footer'), comfortBox = $('#comfort');
   if (footer && 'IntersectionObserver' in window) {

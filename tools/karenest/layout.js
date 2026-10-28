@@ -38,7 +38,7 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261028h';
+const VER = '20261028i';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
 
