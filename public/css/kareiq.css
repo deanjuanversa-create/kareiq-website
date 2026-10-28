@@ -793,3 +793,4 @@ a.brand-link{max-width:100%}
   .wa-float{transition:opacity .3s,transform .3s,visibility .3s}
   html.kq-at-top .wa-float{opacity:0;visibility:hidden;transform:translateY(16px);pointer-events:none}
 }
+.pr-num{display:none}
