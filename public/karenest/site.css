@@ -1134,3 +1134,9 @@ html{scroll-padding-top:96px}
 .soc.wa:hover,.soc.wa:focus-visible{background:#1fa855}
 .pkg-dur{max-width:min(320px,100%);width:100%}
 .pkg-dur select{width:100%;min-width:0}
+
+/* WhatsApp community button, always next to "Aa" */
+.c-btns{display:flex;align-items:center;gap:10px}
+.c-wa{display:grid;place-items:center;width:52px;height:52px;border-radius:50%;background:#1fa855;color:#fff;box-shadow:0 12px 26px -12px rgba(17,63,61,.6);transition:transform .35s var(--ease),box-shadow .3s}
+.c-wa:hover,.c-wa:focus-visible{transform:translateY(-3px);box-shadow:0 16px 30px -12px rgba(31,168,85,.6)}
+@media (max-width:760px){.c-wa{width:46px;height:46px}.c-btns{gap:8px}}

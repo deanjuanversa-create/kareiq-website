@@ -24,7 +24,7 @@ const DEFAULTS = {
     // every "WhatsApp" button on the websites and in the app opens this community link
     whatsappGroup: 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM',
     email: 'support@kareiq.co.in',
-    instagram: 'kareiq'
+    instagram: 'ikareiq'
   },
   kareiq: {
     heroTitle: 'A better way to care for the people who',
@@ -117,6 +117,7 @@ function fromSaved(saved) {
   if (!saved) return clone(DEFAULTS);
   const c = merge(DEFAULTS, saved);
   // prices are now shown inclusive of all GST: replace the old default note if it was never changed
+  if (c.contact && c.contact.instagram === 'kareiq') c.contact.instagram = 'ikareiq'; // the KareIQ account is @ikareiq
   if (c.pricing && /^All prices are exclusive of GST\.?$/i.test(c.pricing.gstNote || '')) c.pricing.gstNote = DEFAULTS.pricing.gstNote;
   // packages are matched by key so a saved copy can never drop or rename one
   c.pricing.packages = PACKAGE_KEYS.map((key) => {

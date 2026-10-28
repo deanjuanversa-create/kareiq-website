@@ -38,7 +38,7 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261028c';
+const VER = '20261028d';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
 
@@ -229,7 +229,7 @@ ${SPRITE}
     <div class="tog">Higher contrast<button type="button" id="tgContrast" aria-pressed="false" aria-label="Higher contrast"></button></div>
     <div class="tog">Calm motion<button type="button" id="tgCalm" aria-pressed="false" aria-label="Calm motion"></button></div>
   </div>
-  <button class="c-btn" id="cBtn" type="button" aria-expanded="false" aria-controls="cPanel" aria-label="Reading comfort"><span class="aa" aria-hidden="true">Aa</span><span class="l">Reading comfort</span></button>
+  <div class="c-btns"><button class="c-btn" id="cBtn" type="button" aria-expanded="false" aria-controls="cPanel" aria-label="Reading comfort"><span class="aa" aria-hidden="true">Aa</span><span class="l">Reading comfort</span></button><a class="c-wa" href="${WA_GROUP}" target="_blank" rel="noopener" aria-label="Join the KareNest WhatsApp community (opens in a new tab)"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg></a></div>
 </div>
 
 <div class="guide" id="guide">

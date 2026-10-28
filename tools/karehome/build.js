@@ -12,7 +12,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'public');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
-const VER = '20261028b';
+const VER = '20261028c';
 const BASE = '/kare-at-home';
 
 const between = (a, b, from = 0) => {
@@ -117,7 +117,7 @@ const contact = `<section class="kh-contact" id="contact" aria-labelledby="conta
         <li class="rv" style="--d:.15s"><span class="ic"><svg width="24" height="24"><use href="#i-assess"/></svg></span><b>Book a home visit</b><button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button></li>
         <li class="rv" style="--d:.2s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Families and caregivers</b><a class="btn btn-line" href="/app/#/signin?brand=karehome" data-app="karehome">Sign in to My KareIQ</a></li>
       </ul>
-      <p class="kh-follow"><a href="https://instagram.com/kareiq" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-camera"/></svg>Follow us @kareiQ</a></p>
+      <p class="kh-follow"><a href="https://www.instagram.com/kare_homebykareiq/" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-camera"/></svg>Follow us @kare_homebykareiq</a><a href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg>Join our WhatsApp community</a></p>
     </div>
   </section>`;
 

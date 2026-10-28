@@ -23,7 +23,7 @@
     a.href = 'mailto:' + ct.email;
     if (a.textContent.includes('@')) a.textContent = ct.email;
   });
-  document.querySelectorAll('a[href*="instagram.com/"]').forEach((a) => {
+  document.querySelectorAll('a[data-ig]').forEach((a) => {
     if (!ct.instagram) return;
     a.href = 'https://instagram.com/' + ct.instagram;
     const t = [...a.childNodes].find((n) => n.nodeType === 3 && n.textContent.includes('@'));
