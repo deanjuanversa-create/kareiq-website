@@ -28,6 +28,8 @@ const exporter = require('./export');
 const risk = require('./risk');
 const care = require('./care');
 const packinfo = require('./packinfo');
+const orders = require('./orders');
+const reportreader = require('./reportreader');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -1034,10 +1036,30 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (!historyAllowed(user)) rows = rows.filter((r) => r.uploadedBy === user.id); // caregivers see only what they added
       const ids = [...new Set(rows.map((r) => r.uploadedBy))];
       const users = ids.length ? await docs.find('app_users', { id: { $in: ids } }) : [];
-      return json(res, 200, { ok: true, categories: RECORD_CATEGORIES, canUpload: true, canSeeAll: historyAllowed(user), rows: rows.map((r) => ({
-        id: r.id, name: r.name, category: r.category, date: r.date, size: r.size, type: r.mime, uploadedAt: r.uploadedAt,
-        by: (users.find((u) => u.id === r.uploadedBy) || {}).name || 'KareIQ', mine: r.uploadedBy === user.id, canRemove: user.role === 'admin' || r.uploadedBy === user.id
+      const canReread = user.role === 'admin';
+      // reports still being read, or waiting for a person to confirm their date, sort by upload time
+      rows.sort((a, b) => String(b.date || b.uploadedAt.slice(0, 10)).localeCompare(String(a.date || a.uploadedAt.slice(0, 10))));
+      return json(res, 200, { ok: true, categories: RECORD_CATEGORIES, canUpload: true, canSeeAll: historyAllowed(user), canReread, rows: rows.map((r) => ({
+        id: r.id, name: r.name, category: r.category, date: r.date || null, dateStatus: r.dateStatus || 'given', dateLabel: r.dateLabel || null, size: r.size, type: r.mime, uploadedAt: r.uploadedAt,
+        by: (users.find((u) => u.id === r.uploadedBy) || {}).name || 'KareIQ', mine: r.uploadedBy === user.id, canRemove: user.role === 'admin' || r.uploadedBy === user.id,
+        ...(canReread ? { dateNote: r.dateNote || null } : {})
       })) });
+    }
+    // Report dates are never typed in by anyone: they come only from reading the report. The office can
+    // ask for a report to be read again (for example after the reading tools were installed).
+    if (parts[0] === 'records' && parts[2] === 'reread' && parts.length === 3 && req.method === 'POST') {
+      if (user.role !== 'admin') throw forbidden();
+      const r = await docs.findOne('app_records', { id: String(parts[1]) });
+      if (!r || r.removed) throw notFound();
+      if (r.dateStatus !== 'review') return json(res, 409, { ok: false, message: 'This report already has its date.' });
+      const f = await docs.findOne('app_files', { id: r.fileId });
+      if (!f) throw notFound();
+      await docs.update('app_records', r.id, { dateStatus: 'processing' });
+      await audit(user.id, 'record.reread', r.personId, { record: r.id });
+      const job = readReportDate(r.id, Buffer.from(f.data, 'base64'), r.mime, r.category);
+      if (process.env.APP_STATELESS === 'true') await Promise.race([job, new Promise((ok) => setTimeout(ok, 9000))]);
+      const now2 = await docs.findOne('app_records', { id: r.id });
+      return json(res, 200, { ok: true, dateStatus: now2.dateStatus, date: now2.date || null });
     }
     if (parts[0] === 'records' && parts[2] === 'remove' && req.method === 'POST') {
       const r = await docs.findOne('app_records', { id: String(parts[1]) });
@@ -1150,6 +1172,62 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       await audit(user.id, 'plan.requested', person.id, { product: prod, planId, reference: row.reference });
       return json(res, 201, { ok: true, product: prod, reference: row.reference, personId: person.id });
     }
+    // ----- buying a package (see src/app/orders.js)
+    if (parts[0] === 'people' && parts[2] === 'orders' && parts.length === 3 && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      if (user.role === 'caregiver') throw forbidden();
+      const rows = await docs.find('app_orders', { personId: person.id }, { sort: { createdAt: -1 }, limit: 30 });
+      return json(res, 200, { ok: true, rows: rows.map((o) => orders.view(o)), payment: { mode: orders.PAYMENT_MODE, online: false } });
+    }
+    if (parts[0] === 'people' && parts[2] === 'orders' && parts.length === 3 && req.method === 'POST') {
+      if (user.role !== 'family') throw forbidden();
+      const person = await visiblePerson(user, parts[1]);
+      const idem = /^[A-Za-z0-9-]{8,64}$/.test(String(body.idem || '')) ? String(body.idem) : null;
+      if (idem) { // the same submission sent twice returns the first order
+        const same = await docs.findOne('app_orders', { idem, userId: user.id });
+        if (same) return json(res, 200, { ok: true, order: orders.view(same), repeated: true });
+      }
+      const pk = await packinfo.byId(clean(body.planId, 40));
+      if (!pk || !PRODUCTS[pk.product] || !PRODUCTS[pk.product].plans.includes(pk.id)) return json(res, 400, { ok: false, message: 'This package is not available.' });
+      if (!orders.purchasable(pk)) return json(res, 400, { ok: false, message: `${pk.name} is priced with our team. Ask for a price and we will call you.` });
+      if (body.agree !== true) return json(res, 400, { ok: false, message: 'Please read and accept the terms to continue.', errors: { agree: 'Required' } });
+      const months = packinfo.durationOf(pk) ? (packinfo.MONTHS.includes(String(body.months)) ? Number(body.months) : null) : null;
+      if (packinfo.durationOf(pk) && !months) return json(res, 400, { ok: false, message: 'Choose a payment plan.', errors: { months: 'Required' } });
+      const mine = await docs.find('app_plans', { personId: person.id });
+      if (mine.some((pl) => pl.planId === pk.id && pl.status === 'active' && (!pl.endDate || pl.endDate >= todayIST()))) {
+        return json(res, 409, { ok: false, message: `${person.name} already has ${pk.name}, and it is active. To renew it when it ends, message us on WhatsApp.` });
+      }
+      const open = (await docs.find('app_orders', { personId: person.id, planId: pk.id, status: 'awaiting_payment' }))[0];
+      if (open) return json(res, 409, { ok: false, message: `An order for ${pk.name} is already waiting for payment (${open.reference}). You can see it under My package.`, order: orders.view(open) });
+      if (limited(req, 'app-order')) return json(res, 429, { ok: false, message: 'You have placed several orders just now. Please wait a few minutes, or message us on WhatsApp.' });
+      const charge = packinfo.priceOf(pk, months);
+      if (!charge.amount) return json(res, 400, { ok: false, message: 'The price for this package could not be worked out. Please message us on WhatsApp.' });
+      const order = {
+        id: uid(), reference: store.makeReference('KO'), personId: person.id, userId: user.id, planId: pk.id, product: pk.product, name: pk.name,
+        months, billing: months ? packinfo.PERIOD[months] : pk.length || '', amount: charge.amount, amountText: care.fmt(charge.amount), gst: charge.gst || null,
+        status: 'awaiting_payment', payment: { mode: orders.PAYMENT_MODE }, idem, createdAt: now()
+      };
+      await docs.insert('app_orders', order);
+      // the office sees it with the other requests, and is told by email when email is set up
+      await store.add('enquiries', 'KQ', {
+        name: user.name, phone: user.phone || '', email: user.email || '', interest: 'app-order', interestName: 'Package bought in the app (awaiting payment)',
+        message: [`Order ${order.reference}: ${pk.name}`, months ? `Payment plan: ${packinfo.PERIOD[months]} (${months === 1 ? '1 month' : months + ' months'})` : (pk.length ? `Length: ${pk.length}` : ''),
+          `Amount: Rs ${Number(charge.amount).toLocaleString('en-IN')}` + (charge.gst ? ` (${charge.gst.replace(/\.$/, '')})` : ''), 'Send a payment link, then record the payment under Orders.'].filter(Boolean).join('\n'),
+        source: 'app', product: pk.product, package: pk.id, billing: months ? String(months) : null, userId: user.id, accountUserId: user.id, personId: person.id, personName: person.name, kind: 'order', orderId: order.id
+      });
+      await audit(user.id, 'order.placed', person.id, { reference: order.reference, planId: pk.id, amount: charge.amount });
+      return json(res, 201, { ok: true, order: orders.view(order) });
+    }
+    if (parts[0] === 'orders' && parts[2] === 'cancel' && parts.length === 3 && req.method === 'POST') {
+      const o = await docs.findOne('app_orders', { id: String(parts[1]) });
+      if (!o) throw notFound();
+      await visiblePerson(user, o.personId);
+      if (user.role !== 'family' && user.role !== 'admin') throw forbidden();
+      if (o.status !== 'awaiting_payment') return json(res, 409, { ok: false, message: 'Only an order that is waiting for payment can be cancelled.' });
+      await docs.update('app_orders', o.id, { status: 'cancelled', cancelledBy: user.id, updatedAt: now() });
+      await audit(user.id, 'order.cancelled', o.personId, { reference: o.reference });
+      return json(res, 200, { ok: true });
+    }
     // add a website booking to an account that already exists (same mobile number)
     if (p === 'claim' && req.method === 'POST') {
       if (user.role !== 'family') throw forbidden();
@@ -1231,6 +1309,61 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         waitingSetup: users.filter((u) => u.active && !u.passwordHash).length,
         generalRequests: requests.filter((r) => !r.product && r.status === 'new').length
       });
+    }
+
+    // ----- reports whose date could not be read with confidence
+    if (p === 'records/review' && req.method === 'GET') {
+      const rows = (await docs.find('app_records', { dateStatus: 'review' })).filter((r) => !r.removed);
+      const people = await docs.find('app_people', { id: { $in: [...new Set(rows.map((r) => r.personId))] } });
+      return json(res, 200, { ok: true, rows: rows.map((r) => ({ id: r.id, personId: r.personId, personName: (people.find((x) => x.id === r.personId) || {}).name || r.personId, name: r.name, uploadedAt: r.uploadedAt, dateNote: r.dateNote || null })) });
+    }
+
+    // ----- orders: the office verifies the payment; only then is the package activated
+    if (p === 'orders' && req.method === 'GET') {
+      const status = orders.ORDER_STATUS[url.searchParams.get('status')] ? url.searchParams.get('status') : null;
+      let rows = await docs.find('app_orders', status ? { status } : {}, { sort: { createdAt: -1 }, limit: 200 });
+      if (product) rows = rows.filter((o) => o.product === product);
+      const people = await docs.find('app_people', { id: { $in: [...new Set(rows.map((o) => o.personId))] } });
+      const users = await namesFor(rows.map((o) => o.userId));
+      return json(res, 200, { ok: true, methods: orders.METHODS, rows: rows.map((o) => orders.view(o, { personName: (people.find((x) => x.id === o.personId) || {}).name || o.personId, buyer: users[o.userId] || '', paymentRef: (o.payment && o.payment.ref) || null })) });
+    }
+    if (parts[0] === 'orders' && parts.length === 3 && req.method === 'POST') {
+      const o = await docs.findOne('app_orders', { id: String(parts[1]) });
+      if (!o) throw notFound();
+      if (o.status !== 'awaiting_payment') return json(res, 409, { ok: false, message: `This order is already ${orders.ORDER_STATUS[o.status].toLowerCase()}.` });
+      if (parts[2] === 'verify') {
+        const errors = {};
+        const method = orders.METHODS[body.method] ? body.method : null;
+        const ref = clean(body.paymentRef, 60);
+        const received = Number(String(body.amount || '').replace(/[^0-9.]/g, ''));
+        if (!method) errors.method = 'Choose how it was paid.';
+        if (ref.length < 4) errors.paymentRef = 'Enter the transaction or receipt number.';
+        if (!(received > 0)) errors.amount = 'Enter the amount received.';
+        else if (Math.round(received) !== Math.round(o.amount)) errors.amount = `The order is for ${o.amountText}. Record the payment only when the full amount has been received.`;
+        if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
+        if ((await docs.find('app_orders', { status: 'paid' })).some((x) => x.payment && x.payment.ref === ref)) return json(res, 409, { ok: false, message: 'This transaction number is already recorded on another order.', errors: { paymentRef: 'Already used' } });
+        const pk = await packinfo.byId(o.planId);
+        if (!pk) return json(res, 400, { ok: false, message: 'This package no longer exists. Cancel the order and refund the payment.' });
+        const startDate = todayIST();
+        const run = orders.runFor(pk, o.months, startDate, addMonths);
+        // the new package replaces an active one of the same kind (e.g. HomePlus -> HomeElite); other kinds stay
+        const groupOf = async (id) => ((await packinfo.byId(id)) || {}).group;
+        for (const pl of await docs.find('app_plans', { personId: o.personId, product: o.product, status: 'active' })) {
+          if (pl.planId && await groupOf(pl.planId) === pk.group) await docs.update('app_plans', pl.id, { status: 'ended', endDate: startDate, endedReason: 'Replaced by order ' + o.reference, updatedAt: now() });
+        }
+        const plan = { id: uid(), personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, activatedBy: admin.id, createdAt: now() };
+        await docs.insert('app_plans', plan);
+        await docs.update('app_orders', o.id, { status: 'paid', paidAt: now(), updatedAt: now(), planRowId: plan.id, payment: { mode: 'manual', method, ref, amount: received, verifiedBy: admin.id, verifiedAt: now() } });
+        await audit(admin.id, 'order.paid', o.personId, { reference: o.reference, method, amount: received });
+        return json(res, 200, { ok: true, plan: planView(plan) });
+      }
+      if (parts[2] === 'fail' || parts[2] === 'cancel') {
+        const note = clean(body.note, 300);
+        await docs.update('app_orders', o.id, parts[2] === 'fail' ? { status: 'failed', failedNote: note || 'The payment did not go through.', updatedAt: now() } : { status: 'cancelled', cancelledBy: admin.id, updatedAt: now() });
+        await audit(admin.id, 'order.' + (parts[2] === 'fail' ? 'failed' : 'cancelled'), o.personId, { reference: o.reference });
+        return json(res, 200, { ok: true });
+      }
+      throw notFound();
     }
 
     if (p === 'requests' && req.method === 'GET') {
@@ -1557,14 +1690,44 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')); } catch { name = ''; }
     name = clean(name.replace(/\.[A-Za-z0-9]{2,5}$/, ''), 80) || 'Report';
     const category = RECORD_CATEGORIES[req.headers['x-category']] ? String(req.headers['x-category']) : 'others';
-    let date = String(req.headers['x-date'] || '');
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || date > todayIST()) date = todayIST();
+    // the report date is read from the report itself (never typed in, never the upload date)
     const fileId = uid();
     await docs.insert('app_files', { id: fileId, personId: person.id, data: buf.toString('base64'), createdAt: now() });
-    const row = { id: uid(), personId: person.id, name, category, date, mime, ext: FILE_TYPES[mime], size: buf.length, fileId, uploadedBy: user.id, uploadedAt: now() };
+    const row = { id: uid(), personId: person.id, name, category, date: null, dateStatus: 'processing', mime, ext: FILE_TYPES[mime], size: buf.length, fileId, uploadedBy: user.id, uploadedAt: now() };
     await docs.insert('app_records', row);
     await audit(user.id, 'record.add', person.id, { name, category });
-    return json(res, 201, { ok: true, id: row.id });
+    const job = readReportDate(row.id, buf, mime, category);
+    // a serverless demo stops working once it has answered, so it reads before answering (briefly)
+    if (process.env.APP_STATELESS === 'true') await Promise.race([job, new Promise((r) => setTimeout(r, 9000))]);
+    const now2 = await docs.findOne('app_records', { id: row.id });
+    return json(res, 201, { ok: true, id: row.id, dateStatus: now2.dateStatus, date: now2.date || null });
+  }
+  async function readReportDate(id, buf, mime, category) {
+    let r;
+    try { r = await reportreader.read(buf, mime, category); } catch { r = { status: 'review', date: null, candidates: [], reason: 'The report could not be read automatically.' }; }
+    const changes = { dateStatus: r.status === 'detected' ? 'detected' : 'review', date: r.status === 'detected' ? r.date : null, dateLabel: r.label || null, dateConfidence: r.confidence || null,
+      datePage: r.page || null, dateNote: r.reason || null, dateReadAt: now(), dateEngine: r.engine ? { opencv: r.engine.opencv || null, tesseract: r.engine.tesseract || null, sources: r.sources || [] } : null };
+    const still = await docs.findOne('app_records', { id });
+    if (still && still.dateStatus === 'processing') await docs.update('app_records', id, changes);
+    return changes;
+  }
+  // Reports saved while this server could not read them (or left half-read by a restart) are read
+  // again automatically, once, shortly after the server starts and the reader is available.
+  if (!global.__kqReread && process.env.APP_STATELESS !== 'true') {
+    global.__kqReread = true;
+    setTimeout(async () => {
+      try {
+        if (!(await reportreader.available()).ok) return;
+        const rows = (await docs.find('app_records', { dateStatus: { $in: ['review', 'processing'] } })).filter((r) => !r.removed && (r.dateStatus === 'processing' || !r.dateReadAt || /not available|not installed|took too long|could not be read/i.test(r.dateNote || ''))).slice(0, 50);
+        for (const r of rows) {
+          const f = await docs.findOne('app_files', { id: r.fileId });
+          if (!f) continue;
+          await docs.update('app_records', r.id, { dateStatus: 'processing' });
+          await readReportDate(r.id, Buffer.from(f.data, 'base64'), r.mime, r.category);
+        }
+        if (rows.length) console.log(`[app] read the dates of ${rows.length} waiting report(s)`);
+      } catch (e) { console.error('[app] reading waiting reports failed:', e.message); }
+    }, 15000).unref();
   }
   async function downloadRecord(req, res, id, user, url) {
     const r = await docs.findOne('app_records', { id: String(id) });

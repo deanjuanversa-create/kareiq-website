@@ -230,3 +230,12 @@ Any host that runs Node.js works (Render, Railway, a VPS with PM2, Hostinger Nod
 - Set `ADMIN_PASSWORD` (and email settings) as environment variables on the host.
 - Set `TRUST_PROXY=true` when the host puts a proxy in front of your app.
 - The `data` folder must be on persistent storage, or bookings are lost when the host restarts. On hosts without persistent disks, attach a volume.
+
+## Report dates (automatic) and package purchases
+
+**Report dates** are never typed in by anyone. When a report is uploaded in Medical records, the server reads its date from the document:
+`ocr/report_reader.py` takes the PDF text layer when there is one, otherwise renders the page (Poppler), prepares it with **OpenCV** (grayscale, resize, denoise, straighten, even lighting, threshold) and reads it with the **Tesseract** OCR engine; `src/app/reportdate.js` then picks the report date by its label (report, collection, test, visit...), ignoring birth, follow-up, bill and expiry dates. If no usable date is in the report, it shows "Date not found in the report" (nothing is guessed). The office can only ask for a report to be read again.
+
+These tools come with the `Dockerfile`. Run the Render service from the Dockerfile (Docker runtime) to switch automatic reading on. On a server without them, uploads still work, and their dates are read automatically as soon as the server has the tools (on the next start).
+
+**Buying a package** (Other packages > Buy now) creates an order with the price worked out on the server. There is no online payment gateway yet: the office sends a payment link, then records the payment (method, transaction number, full amount) under Requests > Orders awaiting payment. Only then does the package become active (it replaces an active package of the same kind). Orders can also be marked failed or cancelled.

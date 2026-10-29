@@ -192,8 +192,21 @@
   window.addEventListener('hashchange', render);
   window.addEventListener('hashchange', render);
 
-  // where families and the office land after signing in (there is no separate dashboard page)
+  // where each role lands after signing in: families get a neutral welcome page (no health data opens
+  // by itself), the office its health pages for a person, caregivers the people they look after
   var HOME_PAGE = '#/health/vitals';
+  function homeOf(role) { return role === 'family' ? '#/welcome' : role === 'caregiver' ? '#/people' : HOME_PAGE; }
+  // a page opened while signed out is remembered and opened after signing in
+  var GATES = ['signin', 'start', 'link', 'forgot', 'join'];
+  function rememberAfter(hash) {
+    var top = (hash || '').replace(/^#\/?/, '').split(/[/?]/)[0];
+    if (!top || GATES.indexOf(top) > -1 || !/^#\/[A-Za-z0-9/?=&%._-]{0,200}$/.test(hash)) return;
+    try { sessionStorage.setItem('kq.after', hash); } catch (x) {}
+  }
+  function takeAfter() {
+    var h = null; try { h = sessionStorage.getItem('kq.after'); sessionStorage.removeItem('kq.after'); } catch (x) {}
+    return h && /^#\/[A-Za-z0-9/?=&%._-]{0,200}$/.test(h) ? h : null;
+  }
   function queryOf(r, extra) {
     var q = Object.assign({}, r.q, extra || {});
     var k = Object.keys(q).filter(function (x) { return q[x] !== '' && q[x] != null; });
@@ -215,6 +228,7 @@
       return loadSession().then(function (d) {
         if (!d.signedIn) {
           if (d.status === 0) return showOffline();
+          rememberAfter(location.hash);
           var q = location.search.match(/brand=(karehome|karenest)/);
           return go('#/signin' + (q ? '?brand=' + q[1] : ''), true);
         }
@@ -224,12 +238,13 @@
     var role = S.me.user.role;
     // old addresses (one page per brand) still work
     if (BRANDS[top]) {
-      if (r.parts[1] === 'p' && r.parts[2]) return go((r.parts[3] === 'visit' ? '#/visit' : role === 'caregiver' ? '#/people' : HOME_PAGE) + '?p=' + encodeURIComponent(r.parts[2]), true);
+      if (r.parts[1] === 'p' && r.parts[2]) return go((r.parts[3] === 'visit' ? '#/visit' : homeOf(role)) + '?p=' + encodeURIComponent(r.parts[2]), true);
       return go(r.parts[1] === 'requests' ? '#/services' : '#/', true);
     }
-    if (top === '') return go(role === 'caregiver' ? '#/people' : HOME_PAGE, true);
+    if (top === '') { var after = takeAfter(); return go(after || homeOf(role), true); }
+    if (top === 'welcome' && role === 'family') return welcomeView(r);
     // former addresses: the dashboard was split into dedicated pages
-    if (top === 'dashboard' && role !== 'caregiver') return go(HOME_PAGE + queryOf(r), true);
+    if (top === 'dashboard' && role !== 'caregiver') return go(homeOf(role) + queryOf(r), true);
     if (top === 'details' && role === 'family') return go('#/profile/personal' + queryOf(r), true);
     if (top === 'services' && role !== 'caregiver') return go('#/package' + queryOf(r, { book: '1' }), true);
     if (top === 'profile' && role === 'family') {
@@ -238,7 +253,7 @@
     }
     if (top === 'health' && role !== 'caregiver') {
       if (r.parts[1] === 'vitals' || r.parts[1] === 'risks') return healthView(r, r.parts[1]);
-      return go(HOME_PAGE + queryOf(r), true);
+      return go('#/health/vitals' + queryOf(r), true);
     }
     if (top === 'packages' && role === 'family') return otherPackagesView(r);
     if (top === 'account') return accountView();
@@ -425,10 +440,12 @@
         (l[0] === 'admin' && S.cache.newCount ? '<b class="count">' + S.cache.newCount + '</b>' : '') + '</a>';
     };
     // a section with sub-pages (Profile, Health details): opens on hover, click, keyboard or tap
-    S.sbOpen = S.sbOpen || {};
+    // A section is open when the page being viewed is inside it, or when it was opened (or closed)
+    // with a click on this page. Moving to another page forgets those clicks, so nothing stays open
+    // that the customer is no longer using. Hovering only peeks (see sbHover below).
+    if (arrived || !S.sbOpen) S.sbOpen = {};
     var group = function (g) {
       var here = g.sub.some(function (x) { return x[0] === active; });
-      if (here && arrived) S.sbOpen[g.k] = true; // arriving on a sub-page opens its section
       var open = S.sbOpen[g.k] != null ? S.sbOpen[g.k] : here;
       return '<div class="sbg' + (open ? ' open' : '') + (here ? ' here' : '') + '" data-group="' + g.k + '">' +
         '<button type="button" class="sbg-btn" data-act="sbg" aria-expanded="' + open + '" aria-controls="sbg-' + g.k + '">' + icon(g.icon) + '<span>' + e(g.label) + '</span><i class="chev" aria-hidden="true">' + icon('down') + '</i></button>' +
@@ -501,6 +518,39 @@
   function fill(html) { var el = $('#pv'); if (el) el.innerHTML = html; }
   var LV = { good: 'good', ok: 'ok', warn: 'warn', bad: 'bad' };
   function dotHtml(level) { return '<i class="dot ' + (LV[level] || 'none') + '" aria-hidden="true"></i>'; }
+
+  // ================================================================ Welcome (families)
+  // A neutral starting page: the people on the account and where to go. Nothing opens by itself and
+  // no health data is shown here; each section is one click away.
+  function welcomeView(r) {
+    shell('welcome', loading(90) + loading(260));
+    loadPeople().then(function (people) {
+      if (!people.length) return go('#/plans', true);
+      var last = null; try { last = localStorage.getItem('kq.pid'); } catch (x) {}
+      var want = r && r.q && r.q.p;
+      var cur = people.filter(function (x) { return x.id === want; })[0] || people.filter(function (x) { return x.id === S.pid || x.id === last; })[0] || people[0];
+      S.pid = cur.id;
+      var q = '?p=' + encodeURIComponent(cur.id);
+      var u = S.me.user;
+      var tiles = [
+        ['#/profile/personal' + q, 'user', 'Profile', 'Personal details, contacts, health conditions and allergies'],
+        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals and risk trends over time'],
+        ['#/records' + q, 'file', 'Medical records', 'Lab reports, scans and prescriptions'],
+        ['#/package' + q, 'box', 'My package', 'What is included, and booking services'],
+        ['#/packages' + q, 'layers', 'Other packages', 'Every Kare@Home, KareNest, KareBalance and KareMind package'],
+        ['#/invoices' + q, 'receipt', 'Invoices', 'Charges for your packages']
+      ];
+      $('#mn').innerHTML = '<div id="pv"><div class="pagehead"><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Welcome to My KareIQ. Choose who and what you would like to see.</p></div>' +
+        '<section aria-labelledby="h-who"><h2 class="sec" id="h-who">' + (people.length > 1 ? 'The people you care for' : 'The person you care for') + '</h2><div class="wpeople" role="group" aria-label="Choose who to show">' + people.map(function (x) {
+          return '<button type="button" class="wperson' + (x.id === cur.id ? ' on' : '') + '" data-act="who-pick" data-id="' + e(x.id) + '" aria-pressed="' + (x.id === cur.id) + '"><span class="av lg">' + e(initials(x.name)) + '</span><span class="wperson-t"><b>' + e(x.name) + '</b>' +
+            (x.relation ? '<span class="muted small">' + e(x.relation) + '</span>' : '') + '<span class="ptags">' + (x.plans || []).map(function (pl) { return '<span class="tagb ' + pl.product + '">' + e(pl.included ? pl.productName + ' (included)' : pl.name) + '</span>'; }).join('') + '</span></span></button>';
+        }).join('') + '</div></section>' +
+        '<section aria-labelledby="h-go"><h2 class="sec" id="h-go">Where would you like to go?</h2><nav class="gotiles" aria-label="Sections">' + tiles.map(function (t) {
+          return '<a class="gotile" href="' + t[0] + '"><span class="gt-i" aria-hidden="true">' + icon(t[1]) + '</span><span class="gt-t"><b>' + e(t[2]) + '</b><span class="muted small">' + e(t[3]) + '</span></span>' + icon('arrow') + '</a>';
+        }).join('') + '</nav></section>' +
+        '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team.</span></p></div>';
+    });
+  }
 
   // ================================================================ Health details: Vitals and Risk trends
   // The former dashboard, split into two pages that share the date filter and Download trends.
@@ -1192,6 +1242,7 @@
       api('GET', 'people/' + encodeURIComponent(p.id) + '/records').then(function (d) {
         if (!d.ok) return pageError(d);
         S.cache.records = d;
+        if (d.rows.some(function (x) { return x.dateStatus === 'processing'; })) pollRecords(p.id, 0);
         var up = '<button class="btn pink" data-act="upload">' + icon('upload') + 'Upload report</button>';
         fill(personBar(p, people, up) + '<div class="rtop"><div class="seg2" role="group" aria-label="Type of record">' +
           [['all', 'All']].concat(Object.keys(d.categories).map(function (k) { return [k, d.categories[k]]; })).map(function (c) {
@@ -1210,16 +1261,44 @@
     var d = S.cache.records, el = $('#rlist'); if (!d || !el) return;
     var cat = S.cache.rcat || 'all', sort = S.cache.rsort || 'new';
     var rows = d.rows.filter(function (x) { return cat === 'all' || x.category === cat; });
-    rows.sort(function (a, b) { return sort === 'name' ? a.name.localeCompare(b.name) : sort === 'old' ? (a.date > b.date ? 1 : -1) : (a.date < b.date ? 1 : -1); });
+    var dk = function (x) { return x.date || String(x.uploadedAt || '').slice(0, 10); };
+    rows.sort(function (a, b) { return sort === 'name' ? a.name.localeCompare(b.name) : sort === 'old' ? (dk(a) > dk(b) ? 1 : -1) : (dk(a) < dk(b) ? 1 : -1); });
     if (!rows.length) { el.innerHTML = '<div class="empty"><b>No records here yet</b>Upload lab reports, scans and prescriptions as PDF or photos. They stay private to the family and the KareIQ team.</div>'; return; }
     el.innerHTML = '<div class="rec-all"><label><input type="checkbox" data-act="rall"> <b>Select all</b></label></div><ul class="recs">' + rows.map(function (x) {
       return '<li><label class="rc"><input type="checkbox" data-act="rpick" value="' + e(x.id) + '"><span class="sr">Select ' + e(x.name) + '</span></label>' +
-        '<div class="ri"><b>' + e(x.name) + '</b><span>' + e(date(x.date)) + ' · ' + e(d.categories[x.category] || x.category) + ' · ' + e(sizeText(x.size)) + ' · added by ' + e(x.by) + '</span></div>' +
+        '<div class="ri"><b>' + e(x.name) + '</b><span>' + recDateHtml(x) + ' · ' + e(d.categories[x.category] || x.category) + ' · ' + e(sizeText(x.size)) + ' · added by ' + e(x.by) + '</span>' +
+          (d.canReread && x.dateStatus === 'review' ? '<button class="link small" data-act="reread" data-id="' + e(x.id) + '">Read the date again</button>' + (x.dateNote ? ' <span class="muted small">' + e(x.dateNote) + '</span>' : '') : '') + '</div>' +
         '<div class="ra"><a class="ib" href="/api/app/records/' + e(x.id) + '/file?view=1" target="_blank" rel="noopener" aria-label="Open ' + e(x.name) + '" title="Open">' + icon('eye') + '</a>' +
         '<a class="ib" href="/api/app/records/' + e(x.id) + '/file" download aria-label="Download ' + e(x.name) + '" title="Download">' + icon('download') + '</a>' +
         (x.canRemove ? '<button class="ib" data-act="rremove" data-id="' + e(x.id) + '" data-name="' + e(x.name) + '" aria-label="Remove ' + e(x.name) + '" title="Remove">' + icon('trash') + '</button>' : '') + '</div></li>';
     }).join('') + '</ul>';
     syncPicks();
+  }
+  var REVIEW_MSG = 'We couldn\'t automatically identify the report date. The report has been uploaded; its date shows once it can be read from the report.';
+  // the report date, or where it is in being read / checked
+  function recDateHtml(x) {
+    if (x.dateStatus === 'processing') return '<span class="dstat proc"><span class="spin" aria-hidden="true"></span>Reading the report date…</span>';
+    if (x.dateStatus === 'review') return '<span class="dstat rev" title="' + e(REVIEW_MSG) + '">' + icon('clock') + 'Date not found in the report</span>';
+    var how = x.dateStatus === 'detected' ? 'Read from the report' + (x.dateLabel ? ' (' + x.dateLabel.toLowerCase() + ')' : '') : '';
+    return '<span' + (how ? ' title="' + e(how) + '"' : '') + '>' + e(date(x.date)) + (x.dateStatus === 'detected' ? ' <span class="dsrc">' + icon('check') + '<span class="sr">' + e(how) + '</span></span>' : '') + '</span>';
+  }
+  // while reports are being read, check every few seconds (for up to two minutes)
+  function pollRecords(pid, tries) {
+    var tok = S.tok;
+    setTimeout(function () {
+      if (tok !== S.tok || !$('#rlist')) return;
+      api('GET', 'people/' + encodeURIComponent(pid) + '/records').then(function (d) {
+        if (!d.ok || tok !== S.tok) return;
+        var before = (S.cache.records.rows || []).filter(function (x) { return x.dateStatus === 'processing'; }).map(function (x) { return x.id; });
+        S.cache.records = d; drawRecords();
+        d.rows.forEach(function (x) {
+          if (before.indexOf(x.id) === -1) return;
+          if (x.dateStatus === 'detected') toast('Report date found for ' + x.name + ': ' + date(x.date) + '.');
+          else if (x.dateStatus === 'review') toast(REVIEW_MSG);
+        });
+        if (d.rows.some(function (x) { return x.dateStatus === 'processing'; }) && tries < 40) pollRecords(pid, tries + 1);
+      });
+    }, 3000);
   }
   function sizeText(n) { return n > 1048576 ? (Math.round(n / 104857.6) / 10) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
   function syncPicks() {
@@ -1232,9 +1311,10 @@
     openDialog('Upload a report', '<form data-form="upload" novalidate><div class="alert bad" data-msg hidden></div>' +
       '<label class="field"><span>File</span><input class="in" type="file" name="file" accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment" required><small>PDF or photo, up to 5 MB. On a phone you can take a photo of the report.</small><em class="err" data-err="file"></em></label>' +
       field('name', 'Name of the report', 'placeholder="e.g. Lipid profile" maxlength="80"') +
-      '<div class="row2"><label class="field"><span>Type</span><select class="in" name="category">' + Object.keys(d.categories).map(function (k) { return '<option value="' + k + '"' + (k === (S.cache.rcat !== 'all' && S.cache.rcat ? S.cache.rcat : 'general') ? ' selected' : '') + '>' + e(d.categories[k]) + '</option>'; }).join('') + '</select></label>' +
-      field('date', 'Date of the report', 'type="date" value="' + todayIST() + '" max="' + todayIST() + '"') + '</div></form>',
-      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Upload</button>');
+      '<label class="field"><span>Type</span><select class="in" name="category">' + Object.keys(d.categories).map(function (k) { return '<option value="' + k + '"' + (k === (S.cache.rcat !== 'all' && S.cache.rcat ? S.cache.rcat : 'general') ? ' selected' : '') + '>' + e(d.categories[k]) + '</option>'; }).join('') + '</select></label>' +
+      '<p class="dl-period">' + icon('cal') + '<span>You do not need to enter the date. KareIQ reads the report date from the document itself after you upload it.</span></p>' +
+      '<div class="upstate" data-upstate role="status" aria-live="polite" hidden></div></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog" data-upgo>Upload</button>');
   }
 
   // ================================================================ Package information
@@ -1243,8 +1323,8 @@
     withPerson(r, 'package', function (p, people) {
       fill(personBar(p, people) + loading(100) + loading(300));
       var pid = encodeURIComponent(p.id);
-      Promise.all([api('GET', 'people/' + pid + '/package'), api('GET', 'people/' + pid + '/services')]).then(function (x) {
-        var d = x[0], sv = x[1];
+      Promise.all([api('GET', 'people/' + pid + '/package'), api('GET', 'people/' + pid + '/services'), S.me.user.role === 'caregiver' ? Promise.resolve(null) : api('GET', 'people/' + pid + '/orders')]).then(function (x) {
+        var d = x[0], sv = x[1], od = x[2];
         if (!d.ok) return pageError(d);
         S.cache.pkg = d; if (sv.ok) S.cache.svc = sv;
         var role = S.me.user.role;
@@ -1253,7 +1333,7 @@
         var head = '<div class="pagehead"><h1>' + (role === 'family' ? 'My package' : 'Package and services') + '</h1><p class="muted">The package' + (d.plans.length > 1 ? 's' : '') + ' for ' + e(first(p.name)) + ', what is included, and booking the services that come with it.</p></div>';
         var more = role === 'family' ? '<p class="muted" style="margin-top:6px">Looking for something else? See <a href="#/packages?p=' + e(p.id) + '">Other packages</a>.</p>' : '';
         if (!d.plans.length) {
-          fill(personBar(p, people, right) + head + '<div class="empty"><b>No package yet</b>' + (role === 'family' ? 'Choose a Kare@Home or KareNest package under <a href="#/packages?p=' + e(p.id) + '">Other packages</a>. Our team will call you to confirm.' : 'Add a package below.') + '</div>' + (role === 'admin' ? catalogHtml(d, p) : ''));
+          fill(personBar(p, people, right) + head + (od && od.ok ? ordersHtml(od.rows, p.id) : '') + '<div class="empty"><b>No package yet</b>' + (role === 'family' ? 'Choose a Kare@Home or KareNest package under <a href="#/packages?p=' + e(p.id) + '">Other packages</a>. Our team will call you to confirm.' : 'Add a package below.') + '</div>' + (role === 'admin' ? catalogHtml(d, p) : ''));
           return;
         }
         var s = d.summary;
@@ -1268,8 +1348,10 @@
         var monHtml = mon ? '<h2 class="sec">What we monitor with ' + e(mon.name) + '</h2><section class="panel tw" style="padding:6px 14px"><table class="mon"><thead><tr><th>What</th><th>How often</th></tr></thead><tbody>' +
           mon.monitoring.map(function (m, i) { var prev = mon.monitoring[i - 1]; return (!prev || prev.category !== m.category ? '<tr class="cat"><td colspan="2">' + e(m.category) + '</td></tr>' : '') + '<tr><td>' + e(m.item) + '</td><td>' + e(m.freq) + '</td></tr>'; }).join('') + '</tbody></table></section>' : '';
         var book = sv.ok ? bookingHtml(sv) : '<section class="booksec" id="book"><h2 class="sec">Book services</h2><div class="alert bad">' + e(sv.message || 'Services could not be loaded. Please refresh the page.') + '</div></section>';
-        fill(personBar(p, people, right) + head + sumBox + cards + more + incl + book + monHtml + (role === 'admin' ? catalogHtml(d, p) : ''));
+        var waiting = od && od.ok ? od.rows.filter(function (o) { return o.status === 'awaiting_payment'; }) : [], past = od && od.ok ? od.rows.filter(function (o) { return o.status !== 'awaiting_payment'; }) : [];
+        fill(personBar(p, people, right) + head + ordersHtml(waiting, p.id) + sumBox + cards + more + incl + book + monHtml + ordersHtml(past, p.id, true) + (role === 'admin' ? catalogHtml(d, p) : ''));
         if (r.q.book) { var b = $('#book'); if (b) b.scrollIntoView({ block: 'start' }); }
+        if (r.q.orders) { var oe = $('#orders') || $('#orders-past'); if (oe) oe.scrollIntoView({ block: 'start' }); }
       });
     });
   }
@@ -1330,13 +1412,66 @@
     if (['homestart', 'homeplus', 'homeelite', 'customized'].indexOf(pk.id) > -1) return siteUrl(SITES.karehome, 'packages#packages');
     return null;
   }
+  // ---------------------------------------------------------------- checkout
+  // 1. review: package, price, payment plan, what is included, terms and the order summary
+  // 2. place the order: the server checks the package and works out the price itself
+  // 3. payment: verified by the KareIQ office (there is no online card/UPI gateway yet); the package
+  //    becomes active only after that, and the order shows its status under My package
+  function checkoutDialog(id, months) {
+    var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
+    if (!pk || !canBuy(pk)) return;
+    var p = (S.people || []).filter(function (x) { return x.id === S.pid; })[0] || { name: d.person.name };
+    var idem = 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+    S.cache.dlgPlans = [pk];
+    openDialog('Buy ' + pk.name, '<form data-form="buy" data-id="' + e(pk.id) + '" data-idem="' + idem + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      '<div class="co-head"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span><b>' + e(pk.name) + '</b>' + (pk.tagline ? '<span class="muted small">' + e(pk.tagline) + '</span>' : '') + '</div>' +
+      (hasDuration(pk) ? durationSelect(pk, months, pk.id).replace('data-act="dur"', 'data-act="co-dur"') : '<p class="muted small">' + e(pk.length || 'One price') + '</p>') +
+      '<details class="mp-more"><summary>' + e(pk.listTitle || "What's included") + (pk.includes ? ' (' + pk.includes.length + ')' : '') + '</summary>' + includesHtml({ includes: pk.includes, listTitle: '', best: pk.best, notes: [] }) + '</details>' +
+      '<section class="co-sum" aria-labelledby="h-cosum"><h3 id="h-cosum">Order summary</h3><dl data-cosum>' + coSummary(pk, months, p.name) + '</dl></section>' +
+      '<div class="co-terms">' + (pk.notes || []).map(function (n) { return '<p class="muted small">' + e(n) + '</p>'; }).join('') +
+        '<p class="muted small">The package starts once the payment is confirmed. Your current package stays as it is until then.</p></div>' +
+      '<label class="ck co-agree"><input type="checkbox" name="agree" data-act="co-agree"><span>I have read the package details and agree to the <a href="' + SITES.kareiq + 'terms" target="_blank" rel="noopener">terms</a> and <a href="' + SITES.kareiq + 'privacy" target="_blank" rel="noopener">privacy policy</a>.</span></label>' +
+      '<p class="note">' + icon('shield') + '<span>Nothing is charged on this screen. After you place the order, the KareIQ team sends a secure payment link to ' + e(phoneNice(S.me.user.phone) || 'your mobile number') + '. Your package is activated as soon as the payment is confirmed.</span></p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog" data-cogo disabled>Place order</button>');
+    var dlg = $('dialog[open]'); if (dlg) dlg.classList.add('wide');
+  }
+  function coSummary(pk, months, who) {
+    var rows = [['Package', pk.name], ['For', who || '']];
+    if (hasDuration(pk)) {
+      var m = defaultMonths(pk, months), pr = pk.prices[m];
+      rows.push(['Payment plan', PERIOD_NAMES[m] + (m === '1' ? '' : ' (' + m + ' months)')], ['Price', rs(pr.perMonth) + ' a month' + (pr.saving ? ', save ' + pr.saving + '%' : '')], ['Total to pay', '<b>' + rs(pr.total) + '</b>']);
+    } else rows.push(['Length', pk.length || 'One-time'], ['Total to pay', '<b>' + rs(pk.price) + '</b>']);
+    rows.push(['Taxes', 'Inclusive of all GST'], ['Payment', 'Secure link from the KareIQ team']);
+    return rows.map(function (r) { return '<div><dt>' + e(r[0]) + '</dt><dd>' + (/^<b>/.test(r[1]) ? r[1] : e(r[1])) + '</dd></div>'; }).join('');
+  }
+  function orderDoneDialog(o, repeated) {
+    openDialog(repeated ? 'Order already placed' : 'Order placed', '<div class="co-done"><span class="co-ic" aria-hidden="true">' + icon('check') + '</span><h3>' + e(o.name) + '</h3>' +
+      '<dl class="kv"><dt>Order</dt><dd><b>' + e(o.reference) + '</b></dd><dt>Amount</dt><dd>' + e(o.amountText) + (o.gst ? ' <span class="muted small">(' + e(o.gst.replace(/\.$/, '')) + ')</span>' : '') + '</dd>' +
+      '<dt>Payment plan</dt><dd>' + e(o.billing || '') + '</dd><dt>Status</dt><dd><span class="pill pending"><i></i>' + e(o.statusName) + '</span></dd></dl>' +
+      '<p>Nothing has been charged yet. The KareIQ team will send a secure payment link to ' + e(phoneNice(S.me.user.phone) || 'your mobile number') + ' shortly. Your package becomes active as soon as the payment is confirmed, and you will see it under My package.</p></div>',
+      '<a class="btn ghost" href="' + waLink('Hello, I placed order ' + o.reference + ' for ' + o.name + ' in the app. Please send the payment link.') + '" target="_blank" rel="noopener">' + icon('wa') + 'WhatsApp us</a><a class="btn" href="#/package?p=' + e(S.pid) + '&orders=1" data-act="close-go">See my orders</a>');
+  }
+  function ordersHtml(rows, pid, past) {
+    if (!rows || !rows.length) return '';
+    var cls = { awaiting_payment: 'pending', paid: 'active', failed: 'bad', cancelled: 'ended' };
+    return '<section class="ordsec" id="' + (past ? 'orders-past' : 'orders') + '" aria-labelledby="h-orders' + (past ? '-past' : '') + '"><h2 class="sec" id="h-orders' + (past ? '-past' : '') + '">' + (past ? 'Past orders' : 'Your orders') + '</h2><section class="panel"><ul class="rlist orders">' + rows.map(function (o) {
+      return '<li data-order="' + e(o.reference) + '"><span><b>' + e(o.name) + '</b> <span class="muted small">' + e(o.reference) + '</span><br><span class="muted small">' + e(o.billing || '') + ' · ' + e(o.amountText) + ' · placed ' + e(ago(o.createdAt)) + (o.paidAt ? ' · paid ' + e(date(o.paidAt)) : '') + '</span>' +
+        (o.status === 'awaiting_payment' ? '<br><span class="small">The KareIQ team will send you a secure payment link. The package starts once the payment is confirmed.</span>' : '') +
+        (o.status === 'failed' ? '<br><span class="small">' + e(o.failedNote || 'The payment did not go through.') + ' <a href="#/packages?p=' + e(pid) + '">Try again</a></span>' : '') + '</span>' +
+        '<span class="ord-r"><span class="pill ' + (cls[o.status] || '') + '"><i></i>' + e(o.statusName) + '</span>' +
+        (o.status === 'awaiting_payment' ? '<button class="btn sm ghost" data-act="order-cancel" data-id="' + e(o.id) + '" data-ref="' + e(o.reference) + '">Cancel order</button>' : '') + '</span></li>';
+    }).join('') + '</ul></section></section>';
+  }
+
   function otherPackagesView(r) {
     withPerson(r, 'packages', function (p, people) {
       fill(personBar(p, people) + loading(100) + loading(360));
-      api('GET', 'people/' + encodeURIComponent(p.id) + '/package').then(function (d) {
+      Promise.all([api('GET', 'people/' + encodeURIComponent(p.id) + '/package'), api('GET', 'people/' + encodeURIComponent(p.id) + '/orders')]).then(function (x) {
+        var d = x[0], od = x[1];
         if (!d.ok) return pageError(d);
-        S.cache.pkg = d;
-        var mine = d.plans.map(function (x) { return x.planId; });
+        S.cache.pkg = d; S.cache.orders = od.ok ? od.rows : [];
+        // packages that are active now; a package waiting for payment is shown as such
+        var mine = d.plans.filter(function (pl) { return pl.status === 'active' || pl.status === 'paused'; }).map(function (pl) { return pl.planId; });
         var tabs = '<nav class="pkgjump" aria-label="Brands">' + PKG_BRANDS.map(function (b) { return '<a href="#pk-' + b.k + '" data-act="det-jump" data-id="pk-' + b.k + '">' + e(b.name) + '</a>'; }).join('') + '</nav>';
         var sections = PKG_BRANDS.map(function (b) {
           var list = d.catalog.filter(b.test);
@@ -1345,21 +1480,27 @@
             (b.logo ? '<img src="' + b.logo + '" alt="" class="pkb-logo">' : '<span class="pkb-mark" aria-hidden="true">' + icon(b.k === 'karebalance' ? 'walk' : 'smile') + '</span>') +
             '<div><h2 id="h-pk-' + b.k + '">' + e(b.name) + '</h2><p class="muted">' + e(b.text) + '</p></div>' +
             '<a class="arrowlink pkb-site" href="' + e(b.site) + '" target="_blank" rel="noopener">' + e(b.name) + ' website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></div>' +
-            '<div class="cards3">' + list.map(function (pk) { return otherPkgCard(pk, mine.indexOf(pk.id) > -1); }).join('') + '</div></section>';
+            '<div class="cards3">' + list.map(function (pk) { return otherPkgCard(pk, mine.indexOf(pk.id) > -1, openOrder(pk.id)); }).join('') + '</div></section>';
         }).join('');
-        fill(personBar(p, people) + '<div class="pagehead"><h1>Other packages</h1><p class="muted">Every KareIQ package for ' + e(first(p.name)) + '. Looking costs nothing and does not change the current package: when you choose one, our team calls you to confirm first.</p></div>' + tabs + sections +
+        fill(personBar(p, people) + '<div class="pagehead"><h1>Other packages</h1><p class="muted">Every KareIQ package for ' + e(first(p.name)) + '. Buy a package here. Your current package only changes once the payment for a new one is confirmed.</p></div>' + tabs + sections +
           '<p class="muted small" style="margin-top:18px">Questions? <a href="' + waLink('Hello, I would like to know more about the KareIQ packages.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
       });
     });
   }
-  function otherPkgCard(pk, has) {
+  function openOrder(planId) { return (S.cache.orders || []).filter(function (o) { return o.planId === planId && o.status === 'awaiting_payment'; })[0] || null; }
+  function canBuy(pk) { return pk.model === 'tiers' || pk.model === 'monthly' || pk.model === 'fixed'; }
+  function otherPkgCard(pk, has, open) {
     var web = pkgWebUrl(pk);
+    var main = has ? '<span class="muted small">This is the current package.</span>'
+      : open ? '<a class="btn sm ghost" href="#/package?p=' + e(S.pid) + '&orders=1">' + icon('clock') + 'Payment pending (' + e(open.reference) + ')</a>'
+      : canBuy(pk) ? '<button class="btn sm" data-act="buy" data-id="' + e(pk.id) + '">Buy now</button>'
+      : '<button class="btn sm ghost" data-act="choose-pkg" data-id="' + e(pk.id) + '" title="This package is priced with our team">Ask for a price</button>';
     var short = pk.includes && pk.includes.length ? '<ul class="inc sm">' + pk.includes.slice(0, 3).map(function (x) { return '<li>' + icon('check') + '<span>' + e(x) + '</span></li>'; }).join('') + '</ul>' + (pk.includes.length > 3 ? '<p class="muted small">and ' + (pk.includes.length - 3) + ' more</p>' : '') : '';
     return '<article class="bcard pkc' + (has ? ' mine' : '') + '" data-pkcard data-pkg="' + e(pk.id) + '"><div class="bc-top"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span>' + (has ? '<span class="pill active"><i></i>Current package</span>' : '') + '</div>' +
       '<h3>' + e(pk.name) + '</h3><p class="muted small">' + e(pk.tagline || '') + '</p>' + short +
       '<div class="pk-price" data-pkprice>' + priceHtml(pk) + '</div>' + durationSelect(pk) +
       (pk.best ? '<p class="pk-best small"><b>Best for:</b> ' + e(pk.best) + '</p>' : '') +
-      '<div class="pk-acts"><button class="btn sm" data-act="choose-pkg" data-id="' + e(pk.id) + '">' + (has ? 'Change or renew' : 'Request this package') + '</button>' +
+      '<div class="pk-acts">' + main +
         '<button class="arrowlink" data-act="cat-details" data-id="' + e(pk.id) + '">View details' + icon('arrow') + '</button>' +
         (web ? '<a class="arrowlink" href="' + e(web) + '" target="_blank" rel="noopener">On the website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a>' : '<span class="muted small">Details are in the app; our team confirms the price.</span>') +
       '</div></article>';
@@ -1399,8 +1540,8 @@
     var web = pkgWebUrl(pk);
     openDialog(pk.name, '<div class="pk-head" style="margin-bottom:10px"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span><div class="pk-price">' + priceHtml(pk) + '</div></div>' + includesHtml(pk) + priceTable(pk) +
       (web ? '<p style="margin-top:12px"><a class="arrowlink" href="' + e(web) + '" target="_blank" rel="noopener">See ' + e(pk.name) + ' on the website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></p>' : '') +
-      '<p class="muted small" style="margin-top:10px">Requesting a package does not change the current one. Our team calls you to confirm first.</p>',
-      '<button class="btn ghost" data-act="close">Close</button>' + (role === 'family' ? '<button class="btn" data-act="choose-pkg" data-id="' + e(pk.id) + '">Request ' + e(pk.name) + '</button>' : role === 'admin' ? '<button class="btn" data-act="add-pkg" data-id="' + e(pk.id) + '">Add for ' + e(first(d.person.name)) + '</button>' : ''));
+      '<p class="muted small" style="margin-top:10px">Buying a package does not change the current one until the payment is confirmed.</p>',
+      '<button class="btn ghost" data-act="close">Close</button>' + (role === 'family' ? (canBuy(pk) ? '<button class="btn" data-act="buy" data-id="' + e(pk.id) + '">Buy now</button>' : '<button class="btn" data-act="choose-pkg" data-id="' + e(pk.id) + '">Ask for a price</button>') : role === 'admin' ? '<button class="btn" data-act="add-pkg" data-id="' + e(pk.id) + '">Add for ' + e(first(d.person.name)) + '</button>' : ''));
   }
   function addPkgDialog(id) {
     var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
@@ -1721,8 +1862,9 @@
 
   function adminToday() {
     adminShell('today', '<div class="skel" style="height:150px;margin-bottom:18px"></div><div class="skel" style="height:300px"></div>', 'Requests and bookings', 'New bookings and requests from both websites and from families in the app.', true);
-    Promise.all([api('GET', 'admin/overview'), api('GET', 'admin/requests' + fq()), needCatalog()]).then(function (res) {
-      var ov = res[0], rq = res[1];
+    Promise.all([api('GET', 'admin/overview'), api('GET', 'admin/requests' + fq()), needCatalog(), api('GET', 'admin/orders?status=awaiting_payment' + (S.filter === 'all' ? '' : '&product=' + S.filter)), api('GET', 'admin/records/review')]).then(function (res) {
+      var ov = res[0], rq = res[1], ords = res[3], revs = res[4];
+      S.cache.adminOrders = ords.ok ? ords.rows : []; S.cache.orderMethods = ords.methods || {};
       if (!ov.ok) return pageError(ov);
       S.cache.requests = rq.rows;
       S.cache.newCount = rq.rows.filter(function (r) { return r.status === 'new'; }).length;
@@ -1739,13 +1881,30 @@
         '<div class="bstat office"><div class="bh">' + icon('people').replace('<svg', '<svg width="30" height="30"') + 'People</div><div class="nums"><span><b>' + ov.families + '</b>family logins</span><span><b>' + ov.caregivers + '</b>caregivers</span><span><b>' + ov.waitingSetup + '</b>no password yet</span></div></div></div>';
       var open = rq.rows.filter(function (r) { return r.status === 'new' || r.status === 'contacted'; });
       var list = S.inbox === 'open' ? open : rq.rows;
-      $('#adm').innerHTML = stats +
+      var ordPanel = S.cache.adminOrders.length ? '<section class="panel offpanel" id="adm-orders"><h2>Orders awaiting payment (' + S.cache.adminOrders.length + ')</h2><p class="muted small">Send the family a payment link. When the full amount is received, record it here: the package becomes active straight away.</p><ul class="rlist">' + S.cache.adminOrders.map(function (o) {
+          return '<li><span><b>' + e(o.name) + '</b> for ' + e(o.personName) + ' <span class="muted small">' + e(o.reference) + '</span><br><span class="muted small">' + e(o.billing || '') + ' · <b>' + e(o.amountText) + '</b> · bought by ' + e(o.buyer) + ', ' + e(ago(o.createdAt)) + '</span></span>' +
+            '<span class="ord-r"><button class="btn sm" data-act="order-verify" data-id="' + e(o.id) + '">' + icon('check') + 'Record payment</button><button class="btn sm ghost" data-act="order-fail" data-id="' + e(o.id) + '">Payment failed</button><button class="btn sm ghost" data-act="order-office-cancel" data-id="' + e(o.id) + '">Cancel</button></span></li>';
+        }).join('') + '</ul></section>' : '';
+      var revPanel = revs.ok && revs.rows.length ? '<section class="panel offpanel" id="adm-review"><h2>Reports without a readable date (' + revs.rows.length + ')</h2><p class="muted small">Dates are only taken from the reports themselves; nobody types them in. These could not be read with confidence. Read again (for example after a clearer copy is uploaded, or once the reading tools are installed on the server).</p><ul class="rlist">' + revs.rows.map(function (x) {
+          return '<li><span><b>' + e(x.name) + '</b> for ' + e(x.personName) + '<br><span class="muted small">' + e(x.dateNote || '') + ' Uploaded ' + e(ago(x.uploadedAt)) + '</span></span><span class="ord-r"><button class="btn sm" data-act="reread" data-id="' + e(x.id) + '">Read again</button><a class="btn sm ghost" href="#/records?p=' + e(x.personId) + '">Open records</a></span></li>';
+        }).join('') + '</ul></section>' : '';
+      $('#adm').innerHTML = stats + ordPanel + revPanel +
         '<div class="panel-h" style="margin-bottom:12px;justify-content:flex-start"><h2 style="margin-right:8px">Inbox</h2><div class="chips"><button data-act="inbox" data-k="open" aria-pressed="' + (S.inbox === 'open') + '">Needs action (' + open.length + ')</button><button data-act="inbox" data-k="all" aria-pressed="' + (S.inbox === 'all') + '">Everything</button></div>' +
         '<span style="flex:1"></span><button class="btn sm" data-act="activate">' + icon('plus') + 'Add a family</button></div>' +
         (list.length ? '<div class="inbox">' + list.map(reqHtml).join('') + '</div>' : '<div class="empty"><b>All caught up</b>New bookings from the websites and requests from families appear here.</div>');
     });
   }
-  var KIND = { service: 'Service booking', 'plan-request': 'New plan (app)', booking: 'Website booking', enquiry: 'Website enquiry', visit: 'Extra visit', 'family-visit': 'Family visit', question: 'Question', plan: 'Plan change', 'signin-help': 'Sign-in help' };
+  function orderVerifyDialog(id) {
+    var o = (S.cache.adminOrders || []).filter(function (x) { return x.id === id; })[0]; if (!o) return;
+    var m = S.cache.orderMethods || {};
+    openDialog('Record the payment for ' + o.reference, '<form data-form="orderverify" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      '<dl class="kv"><dt>Package</dt><dd>' + e(o.name) + ' · ' + e(o.billing || '') + '</dd><dt>For</dt><dd>' + e(o.personName) + '</dd><dt>Amount due</dt><dd><b>' + e(o.amountText) + '</b></dd></dl>' +
+      '<label class="field"><span>Paid by</span><select class="in" name="method"><option value="">Choose…</option>' + Object.keys(m).map(function (k) { return '<option value="' + k + '">' + e(m[k]) + '</option>'; }).join('') + '</select><em class="err" data-err="method"></em></label>' +
+      field('paymentRef', 'Transaction or receipt number', 'maxlength="60" autocomplete="off"') + field('amount', 'Amount received (₹)', 'inputmode="decimal" placeholder="' + e(String(o.amount)) + '"') +
+      '<p class="muted small">Record the payment only after checking it in the bank or payment account. The package becomes active straight away.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Record payment and activate</button>');
+  }
+  var KIND = { order: 'Package bought (app)', service: 'Service booking', 'plan-request': 'New plan (app)', booking: 'Website booking', enquiry: 'Website enquiry', visit: 'Extra visit', 'family-visit': 'Family visit', question: 'Question', plan: 'Plan change', 'signin-help': 'Sign-in help' };
   function reqHtml(r) {
     var b = r.product ? BRANDS[r.product] : null;
     var purchase = (r.type === 'booking' || r.kind === 'plan-request' || (r.type === 'enquiry' && r.source !== 'app')) && r.product;
@@ -1977,6 +2136,31 @@
         return loadSession().then(function () { history.replaceState(null, '', '#/plans'); render(); toast('Your account is ready.'); if (BRANDS[brand]) planDialog(brand); });
       });
     },
+    buy: function (f, v) {
+      var go = $('dialog[open] [data-cogo]');
+      if (!f.elements.agree.checked) return Promise.resolve({ ok: false, message: 'Please read and accept the terms to continue.' });
+      if (go.getAttribute('data-busy')) return Promise.resolve({ ok: true });
+      go.disabled = true; go.setAttribute('data-busy', '1'); go.innerHTML = '<span class="spin" aria-hidden="true"></span>Placing your order…';
+      var months = f.elements.months ? f.elements.months.value : null;
+      return api('POST', 'people/' + encodeURIComponent(S.pid) + '/orders', { planId: f.getAttribute('data-id'), months: months, agree: true, idem: f.getAttribute('data-idem') }).then(function (d) {
+        go.removeAttribute('data-busy'); go.disabled = false; go.textContent = 'Place order';
+        if (!d.ok) {
+          if (d.order) { closeDialog(); orderDoneDialog(d.order, true); return; }
+          return d;
+        }
+        closeDialog(); orderDoneDialog(d.order, d.repeated);
+        var r2 = route(); if (r2.parts[0] === 'packages') { S.cache.orders = (S.cache.orders || []).concat([d.order]); var card = $('.pkc[data-pkg="' + d.order.planId + '"] .pk-acts'); if (card) { var b = $('[data-act=buy]', card); if (b) b.outerHTML = '<a class="btn sm ghost" href="#/package?p=' + e(S.pid) + '&orders=1">' + icon('clock') + 'Payment pending (' + e(d.order.reference) + ')</a>'; } }
+      });
+    },
+    ordercancel: function (f) {
+      return api('POST', 'orders/' + encodeURIComponent(f.getAttribute('data-id')) + '/cancel', {}).then(function (d) { if (!d.ok) return d; closeDialog(); toast('Order cancelled.'); render(); });
+    },
+    orderverify: function (f, v) {
+      return api('POST', 'admin/orders/' + encodeURIComponent(f.getAttribute('data-id')) + '/verify', { method: v.method, paymentRef: v.paymentRef, amount: v.amount }).then(function (d) { if (!d.ok) return d; closeDialog(); toast('Payment recorded. The package is active.'); render(); });
+    },
+    orderfail: function (f, v) {
+      return api('POST', 'admin/orders/' + encodeURIComponent(f.getAttribute('data-id')) + '/' + f.getAttribute('data-kind'), { note: v.note }).then(function (d) { if (!d.ok) return d; closeDialog(); toast('Order updated.'); render(); });
+    },
     'plan-request': function (f, v) {
       v.product = f.getAttribute('data-brand');
       if (v.personId) { delete v.personName; delete v.relation; }
@@ -2038,12 +2222,24 @@
       var input = $('[name=file]', f), file = input && input.files && input.files[0];
       if (!file) return Promise.resolve({ ok: false, errors: { file: 'Choose a file' } });
       if (file.size > 5 * 1024 * 1024) return Promise.resolve({ ok: false, errors: { file: 'This file is larger than 5 MB. Try a photo or a smaller PDF.' } });
+      if (['application/pdf', 'image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) === -1) return Promise.resolve({ ok: false, errors: { file: 'Please choose a PDF or a photo (JPG, PNG or WEBP).' } });
       var name = v.name || file.name;
+      var st = $('[data-upstate]', f), go = $('dialog[open] [data-upgo]');
+      if (go) { go.disabled = true; go.textContent = 'Uploading…'; }
+      if (st) { st.hidden = false; st.innerHTML = '<span class="spin" aria-hidden="true"></span>Uploading the report…'; }
+      var done = function (x) { if (go) { go.disabled = false; go.textContent = 'Upload'; } if (st) st.hidden = true; return x; };
       return fetch('/api/app/people/' + encodeURIComponent(S.pid) + '/records', {
         method: 'POST', credentials: 'same-origin', body: file,
-        headers: { 'Content-Type': 'application/octet-stream', 'X-Requested-With': 'kareiq', 'X-CSRF': S.csrf, 'X-File-Name': encodeURIComponent(name), 'X-Category': v.category, 'X-Date': v.date || '' }
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Requested-With': 'kareiq', 'X-CSRF': S.csrf, 'X-File-Name': encodeURIComponent(name), 'X-Category': v.category }
       }).then(function (r) { return r.json().catch(function () { return { ok: false, message: 'The upload did not finish. Please try again.' }; }); }, function () { return { ok: false, message: 'Could not reach KareIQ. Check your internet connection.' }; })
-        .then(function (d) { if (!d.ok) return d; closeDialog(); toast('Report uploaded.'); render(); });
+        .then(function (d) {
+          if (!d.ok) return done(d);
+          closeDialog();
+          if (d.dateStatus === 'detected') toast('Report uploaded. Report date found: ' + date(d.date) + '.');
+          else if (d.dateStatus === 'review') toast(REVIEW_MSG);
+          else toast('Report uploaded. Reading the report date…');
+          render();
+        });
     },
     risk: function (f, v) {
       var id = f.getAttribute('data-id'), date = v.date; delete v.date;
@@ -2130,6 +2326,38 @@
       case 'menu': { var m = t.nextElementSibling; m.hidden = !m.hidden; t.setAttribute('aria-expanded', String(!m.hidden)); break; }
       case 'signout': ev.preventDefault(); api('POST', 'logout', {}).then(function () { S.me = null; S.csrf = ''; S.cache = {}; S.catalog = null; S.people = null; S.pid = null; try { localStorage.removeItem('kq.pid'); } catch (x) {} S.flash = { kind: 'ok', text: 'You are signed out.' }; go('#/signin', true); }); break;
       case 'start-back': S.start = null; render(); break;
+      case 'buy': {
+        // the payment plan already chosen on the package card carries into the checkout
+        var bcard = t.closest('[data-pkcard]'), bsel = bcard && $('[data-act=dur]', bcard);
+        closeDialog(); checkoutDialog(t.getAttribute('data-id'), bsel ? bsel.value : null); break;
+      }
+      case 'order-cancel':
+        openDialog('Cancel order ' + t.getAttribute('data-ref'), '<form data-form="ordercancel" data-id="' + e(t.getAttribute('data-id')) + '" novalidate><div class="alert bad" data-msg hidden></div><p>Cancel this order? Nothing has been charged. You can buy the package again later.</p></form>',
+          '<button class="btn ghost" data-act="close">Keep the order</button><button class="btn" data-act="submit-dialog">Cancel order</button>');
+        break;
+      case 'reread': {
+        t.disabled = true; t.innerHTML = '<span class="spin" aria-hidden="true"></span>Reading…';
+        api('POST', 'records/' + encodeURIComponent(t.getAttribute('data-id')) + '/reread', {}).then(function (d) {
+          if (!d.ok) { toast(d.message || 'Could not read it again.'); t.disabled = false; t.textContent = 'Read the date again'; return; }
+          toast(d.dateStatus === 'detected' ? 'Report date found: ' + date(d.date) + '.' : d.dateStatus === 'processing' ? 'Reading the report again…' : 'The date still could not be read from this report.');
+          render();
+        });
+        break;
+      }
+      case 'order-verify': orderVerifyDialog(t.getAttribute('data-id')); break;
+      case 'order-fail': case 'order-office-cancel': {
+        var kind = act === 'order-fail' ? 'fail' : 'cancel';
+        openDialog(kind === 'fail' ? 'Payment failed' : 'Cancel the order', '<form data-form="orderfail" data-id="' + e(t.getAttribute('data-id')) + '" data-kind="' + kind + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+          (kind === 'fail' ? '<label class="field"><span>What happened? (the family sees this)</span><input class="in" name="note" maxlength="300" placeholder="e.g. The payment link expired"></label>' : '<p>Cancel this order? The family sees it as cancelled.</p>') + '</form>',
+          '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">' + (kind === 'fail' ? 'Mark as failed' : 'Cancel order') + '</button>');
+        break;
+      }
+      case 'who-pick': {
+        S.pid = t.getAttribute('data-id'); try { localStorage.setItem('kq.pid', S.pid); } catch (x) {}
+        $$('[data-act=who-pick]').forEach(function (b) { var on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
+        $$('.gotile').forEach(function (a) { a.setAttribute('href', a.getAttribute('href').replace(/\?p=[^&]*/, '?p=' + encodeURIComponent(S.pid))); });
+        break;
+      }
       case 'sbg': { sbgSet(t.closest('.sbg'), !t.closest('.sbg').classList.contains('open')); break; }
       case 'drawer': { var open = !document.body.classList.contains('drawer-open'); document.body.classList.toggle('drawer-open', open); t.setAttribute('aria-expanded', String(open)); break; }
       case 'drawer-close': document.body.classList.remove('drawer-open'); break;
@@ -2251,6 +2479,13 @@
     if (act === 'dlc') { $$('dialog[open] [data-act=dlp]').forEach(function (c) { if (!c.disabled) c.checked = t.checked; }); dlSync(); return; }
     if (act === 'det-field') { detToggle(); return; }
     if (act === 'photo-file') { photoUpload(t); return; }
+    if (act === 'co-dur' || act === 'co-agree') {
+      var cf = t.closest('form'), cpk = (S.cache.dlgPlans || [])[0];
+      if (cpk && act === 'co-dur') { $('[data-cosum]', cf).innerHTML = coSummary(cpk, t.value, ((S.people || []).filter(function (x) { return x.id === S.pid; })[0] || {}).name); }
+      var cg = $('dialog[open] [data-cogo]'); if (cg && !cg.getAttribute('data-busy')) cg.disabled = !cf.elements.agree.checked;
+      return;
+    }
+
     if (act === 'range-date') { rangeDateCheck(t); return; }
     if (act === 'req-status') {
       api('PATCH', 'admin/requests/' + t.getAttribute('data-type') + '/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Status saved.' : d.message); });
