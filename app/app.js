@@ -492,7 +492,7 @@
             '<section class="trends" aria-label="Trends">' + trendsHead(d) + '<div id="charts">' + chartsHtml(d, group) + '</div></section>' +
           '</div>' + notesHtml(d) +
           '<p class="note">' + icon('shield') + '<span>Colours compare readings with KareIQ\'s standard ranges. They are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>');
-        drawCharts();
+        drawCharts(true);
       });
     });
   }
@@ -694,15 +694,21 @@
       '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
   }
   // draw charts at their real width after the HTML is on the page
-  function drawCharts() {
+  // anim: the line draws itself and the points pop in (when a chart is opened, not on resize)
+  function drawCharts(anim) {
     var d = S.cache.dash; if (!d) return;
+    anim = anim === true && !reducedMotion();
     $$('[data-chart]').forEach(function (el) {
       var m = d.series.filter(function (x) { return x.metric === el.getAttribute('data-chart'); })[0];
-      if (m) el.innerHTML = chartSvg(m, d.range, el.clientWidth);
+      if (m) el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim);
     });
     $$('[data-rchart]').forEach(function (el) {
       var m = riskSeries(d, el.getAttribute('data-rchart'));
-      if (m && m.rows.length) el.innerHTML = chartSvg(m, d.range, el.clientWidth);
+      if (m && m.rows.length) el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim);
+    });
+    if (anim) $$('svg.chart2.anim polyline').forEach(function (pl) {
+      var len = 0; try { len = pl.getTotalLength(); } catch (x) {}
+      if (len) pl.style.setProperty('--len', Math.ceil(len) + 'px'); else pl.closest('svg').classList.remove('anim');
     });
   }
   // ---- chart dates are worked out in India time (IST = UTC + 5:30)
@@ -740,7 +746,21 @@
     }
     return [[start, ''], [end, '']];
   }
-  function chartSvg(m, range, width) {
+  function reducedMotion() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; }
+  // swap the content of a detail panel: the old content fades down and out, the new one rises in
+  function swapPanel(el, html, after) {
+    if (!el) return;
+    clearTimeout(el._swap); clearTimeout(el._free);
+    if (reducedMotion() || !el.innerHTML.trim()) { el.innerHTML = html; if (after) after(); return; }
+    el.style.minHeight = el.offsetHeight + 'px';
+    el.classList.remove('pin'); el.classList.add('pout');
+    el._swap = setTimeout(function () {
+      el.innerHTML = html; el.classList.remove('pout'); void el.offsetWidth; el.classList.add('pin');
+      if (after) after();
+      el._free = setTimeout(function () { el.style.minHeight = ''; el.classList.remove('pin'); }, 520);
+    }, 170);
+  }
+  function chartSvg(m, range, width, anim) {
     var W = Math.max(300, Math.round(width || 640)), small = W < 560;
     var H = small ? 250 : 320, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
     // x axis: from the first date the person can see (registration or period start) to now
@@ -766,7 +786,7 @@
     // each reading sits at its real date and time
     var x = function (ms) { return x0 + (x1 - x0) * Math.min(1, Math.max(0, (ms - start) / (end - start))); };
     var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
-    var out = '<svg class="chart2" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">';
+    var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">';
     // y grid and labels
     for (var v = lo; v <= hi + 1e-9; v += stepGuess) {
       var yy = y(v).toFixed(1);
@@ -784,13 +804,14 @@
     });
     out += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B) + '" class="ax"/><line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '" class="ax"/>';
     // readings in time order: line, points and a larger invisible target for the tooltip
+    var pIdx = 0, pTotal = Math.max(1, m.rows.length * m.keys.length);
     m.keys.forEach(function (k, si) {
       var pts = m.rows.filter(function (r) { return r[k] != null; }).slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (r) { return [x(r.ms), y(r[k]), r]; });
       var rad = pts.length > 90 ? 2.6 : pts.length > 40 ? 3.6 : 5;
       if (pts.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
       pts.forEach(function (p) {
         var tip = m.tip ? m.tip(p[2]) : dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
-        out += '<g class="pg"><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
+        out += '<g class="pg"' + (anim ? ' style="--d:' + Math.round(150 + 650 * (pIdx++ / pTotal)) + 'ms"' : '') + '><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
           '<circle class="hit" r="11" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"><title>' + e(tip) + '</title></circle></g>';
       });
     });
@@ -2002,22 +2023,21 @@
       case 'jump': case 'vsel': {
         // show only the chosen vital's chart
         var k2 = t.getAttribute('data-k'), dd2 = S.cache.dash; if (!dd2) break;
+        var same = $('[data-act=vsel][data-k="' + k2 + '"][aria-pressed=true]') && $('#vdetail [data-chart="' + k2 + '"], #vdetail .empty');
         S.cache.metric = k2;
         $$('.vcard').forEach(function (c) { c.classList.toggle('on', c.getAttribute('data-k') === k2); });
         $$('[data-act=vsel]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === k2)); });
-        var vd = $('#vdetail'); if (vd) { vd.innerHTML = vitalDetailHtml(dd2, k2); drawCharts(); }
-        if (act === 'jump') {
-          var blk = $('#charts');
-          if (blk) { blk.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); var tb = $('#vdetail .tblock'); if (tb) { tb.classList.add('flash'); setTimeout(function () { tb.classList.remove('flash'); }, 1200); } }
-        }
+        if (!same) swapPanel($('#vdetail'), vitalDetailHtml(dd2, k2), function () { drawCharts(true); });
+        if (act === 'jump') { var blk = $('#charts'); if (blk) blk.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
         break;
       }
       case 'rsel': {
         // show only the chosen risk check's summary and history
         var rk = t.getAttribute('data-k'), dd3 = S.cache.dash; if (!dd3) break;
+        if (t.getAttribute('aria-pressed') === 'true') break; // already showing
         S.cache.riskSel = rk;
         $$('[data-act=rsel]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === rk)); });
-        var rd = $('#rdetail'); if (rd) { rd.innerHTML = riskDetailHtml(dd3, rk); drawCharts(); }
+        swapPanel($('#rdetail'), riskDetailHtml(dd3, rk), function () { drawCharts(true); });
         break;
       }
       case 'photo-pick': { var pin = $('#photoIn'); if (pin) pin.click(); break; }
@@ -2127,7 +2147,7 @@
       var r = route(); go('#/' + r.parts[0] + '?p=' + encodeURIComponent(t.value));
     } else if (act === 'sumgroup') {
       S.cache.sumGroup = t.value; var dd = S.cache.dash;
-      if (dd) { $('#sumlist').innerHTML = summaryList(dd, t.value); $('#charts').innerHTML = chartsHtml(dd, t.value); drawCharts(); }
+      if (dd) { $('#sumlist').innerHTML = summaryList(dd, t.value); $('#charts').innerHTML = chartsHtml(dd, t.value); drawCharts(true); }
     } else if (act === 'rsort') {
       S.cache.rsort = t.value; drawRecords();
     } else if (act === 'rall') {

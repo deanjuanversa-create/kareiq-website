@@ -953,3 +953,37 @@ input[type=date].in:out-of-range,input[type=date].in:invalid{border-color:var(--
 .rbtn .rbv>span{display:inline}
 .histline{display:flex;gap:6px;align-items:flex-start;font-size:.86rem;color:#5d4a12;margin:-2px 0 8px}
 .histline svg{width:16px;height:16px;flex:none;margin-top:2px}
+
+/* ================================================================ selection animations
+   The chosen card springs up; the previous one settles back down. The detail panel fades down and
+   out, then the new one rises in; the chart line draws itself and its points pop in, in time order. */
+.rbtn{transition:transform .32s cubic-bezier(.33,1,.68,1),box-shadow .32s ease,background-color .32s ease}
+.rbtn[aria-pressed="true"]{transform:translateY(-5px) scale(1.025);transition:transform .55s cubic-bezier(.34,1.56,.64,1),box-shadow .4s ease,background-color .3s ease;
+  box-shadow:0 0 0 3px #fff,0 0 0 6px var(--rc),0 18px 30px -18px rgba(20,40,60,.55)}
+.rbtn[aria-pressed="true"]:hover{transform:translateY(-5px) scale(1.025)}
+.rbtn[aria-pressed="true"]::after{animation:kq-tick .5s cubic-bezier(.34,1.56,.64,1) both}
+.rbtn[aria-pressed="true"] .rbi{animation:kq-bump .55s cubic-bezier(.34,1.56,.64,1)}
+.rbtn:active{transform:translateY(-1px) scale(.98)}
+.vbtn{transition:transform .3s cubic-bezier(.33,1,.68,1),background-color .25s ease,border-color .25s ease,color .25s ease,box-shadow .3s ease}
+.vbtn[aria-pressed="true"]{transform:translateY(-3px) scale(1.05);box-shadow:0 12px 20px -12px rgba(22,48,90,.6);
+  transition:transform .5s cubic-bezier(.34,1.56,.64,1),background-color .25s ease,border-color .25s ease,color .25s ease,box-shadow .35s ease}
+.vbtn:active{transform:scale(.96)}
+.vcard{transition:background-color .25s ease,border-color .25s ease,transform .35s cubic-bezier(.33,1,.68,1),box-shadow .3s ease}
+.vcard.on{transform:translateX(5px);box-shadow:0 10px 20px -16px rgba(20,40,60,.6);transition:background-color .25s ease,border-color .25s ease,transform .5s cubic-bezier(.34,1.56,.64,1),box-shadow .3s ease}
+.pout{opacity:0;transform:translateY(8px) scale(.99);transition:opacity .17s ease-in,transform .17s ease-in}
+.pin>*{animation:kq-rise .5s cubic-bezier(.22,1,.36,1) both}
+.pin .rdgrid>*{animation:kq-rise .5s cubic-bezier(.22,1,.36,1) both}
+.pin .rdgrid>*:nth-child(2){animation-delay:.07s}
+.chart2.anim polyline.ln{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:kq-draw .9s cubic-bezier(.45,0,.2,1) .12s forwards}
+.chart2.anim .pg .pt{transform-box:fill-box;transform-origin:center;animation:kq-pop .45s cubic-bezier(.34,1.56,.64,1) var(--d,0ms) both}
+@keyframes kq-draw{to{stroke-dashoffset:0}}
+@keyframes kq-pop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+@keyframes kq-rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes kq-tick{from{opacity:0;transform:scale(0) rotate(-45deg)}to{opacity:1;transform:none}}
+@keyframes kq-bump{0%{transform:scale(1)}40%{transform:scale(1.18)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){
+  .rbtn,.rbtn[aria-pressed="true"],.rbtn[aria-pressed="true"]:hover,.rbtn:active,.vbtn,.vbtn[aria-pressed="true"],.vbtn:active,.vcard,.vcard.on{transition:none;transform:none}
+  .rbtn[aria-pressed="true"]::after,.rbtn[aria-pressed="true"] .rbi,.pin>*,.pin .rdgrid>*{animation:none}
+  .pout{transition:none}
+  .chart2.anim polyline.ln,.chart2.anim .pg .pt{animation:none;stroke-dashoffset:0}
+}
