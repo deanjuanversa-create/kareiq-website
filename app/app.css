@@ -704,3 +704,15 @@ table.ptab td,table.ptab th{white-space:nowrap}
 /* All packages: the person's own packages are outlined; the one being looked at is highlighted */
 .pkc.mine{box-shadow:0 0 0 2px var(--accent-soft),0 0 0 1px var(--accent) inset}
 .pkc.sel{box-shadow:0 0 0 3px var(--accent),0 18px 36px -20px rgba(17,153,142,.5)}
+
+/* Add a plan or booking: plain brand cards in the normal page layout */
+.pagehead{margin:4px 0 22px}
+.pagehead h1{font-family:'Roboto Slab',Georgia,serif;font-size:clamp(1.5rem,2.6vw,2rem);line-height:1.25;margin-bottom:6px}
+.brandcards{grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr))}
+.brandcard{gap:12px}
+.brandcard .bc-logo{display:flex;align-items:center;gap:10px;min-height:56px}
+.brandcard .bc-logo img{height:52px;width:auto;max-width:100%}
+.brandcard .bc-logo img.mk{height:46px}
+.brandcard .bc-logo b{font-family:'Roboto Slab',Georgia,serif;font-size:1.5rem;color:#0b6b59}
+.brandcard .btn{margin-top:auto}
+.claimbox{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px}

@@ -948,22 +948,22 @@
   function plansView(r) {
     var u = S.me.user;
     if (u.role !== 'family') return go('#/', true);
-    setBrand('kareiq');
     var mine = S.me.products, first = !mine.length;
-    var back = '#/';
-    root.innerHTML = '<header class="bar"><div class="bar-in"><a class="logo" href="' + back + '"><img src="/img/kareiq-logo.png" alt="KareIQ"></a><span class="sp"></span>' + meMenu() + '</div></header>' +
-      '<main class="page plans-page"><div class="head" style="justify-content:center;text-align:center"><div><h1>' + (first ? 'Welcome, ' + e(first_(u.name)) + '. What would you like to set up?' : 'Add a plan') + '</h1>' +
-      '<p class="sub" style="justify-content:center">Choose where your loved one will be cared for. Our team calls you to confirm the details and payment before anything starts.</p></div></div>' +
-      '<div class="tiles">' + ['karehome', 'karenest'].map(function (id) {
-        var b = BRANDS[id], has = mine.filter(function (x) { return x.id === id; })[0];
-        return '<button class="tile ' + id + '" data-act="choose-plan" data-id="' + id + '"><img class="bg" src="' + b.photo + '" alt="">' +
-          '<span class="mark">' + (b.logo ? '<img src="' + b.logo + '" alt="' + e(b.name) + '">' : '<img src="' + b.mark + '" alt="">' + e(b.name)) + '</span>' +
-          (has ? '<span class="state incl">' + (has.includedWith ? 'Included with ' + e(has.includedWith) : 'You have this') + '</span>' : '') +
-          '<span class="tbody"><span class="tname">' + e(b.name) + '</span><br><span class="ttag">' + e(id === 'karehome' ? 'Caregivers and nurses visit at home' : 'A caring community to live in. Includes Kare@Home') + '</span>' +
-          '<span class="who"><span>Choose a plan</span></span></span></button>';
-      }).join('') + '</div>' +
-      '<div class="picker-foot"><button class="btn ghost" data-act="claim">Already booked on our website? Add your booking</button></div>' +
-      '<div class="picker-foot"><span class="muted">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing between Kare@Home and KareNest.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</span></div></main>';
+    // same sidebar layout as every other page; plain cards (no full-photo tiles)
+    var cards = ['karehome', 'karenest'].map(function (id) {
+      var b = BRANDS[id], has = mine.filter(function (x) { return x.id === id; })[0];
+      var text = id === 'karehome' ? 'Preventive care at home: caregivers and nurses visit, check vitals and keep the family updated.' : 'A caring community to live in or visit for the day. Resident packages include a Kare@Home check-up plan.';
+      return '<article class="bcard brandcard ' + id + '"><div class="bc-top"><span class="tagb ' + id + '">' + e(b.tag) + '</span>' +
+        (has ? '<span class="pill active"><i></i>' + (has.includedWith ? 'Included with ' + e(has.includedWith) : 'You have this') + '</span>' : '') + '</div>' +
+        '<div class="bc-logo">' + (b.logo ? '<img src="' + b.logo + '" alt="' + e(b.name) + '">' : '<img class="mk" src="' + b.mark + '" alt=""><b>' + e(b.name) + '</b>') + '</div>' +
+        '<p class="muted small">' + text + '</p>' +
+        '<button class="btn sm" data-act="choose-plan" data-id="' + id + '">See ' + e(b.name) + ' packages' + icon('arrow') + '</button></article>';
+    }).join('');
+    shell('plans', '<div class="pagehead"><h1>' + (first ? 'Welcome, ' + e(first_(u.name)) + '. What would you like to set up?' : 'Add a plan or booking') + '</h1>' +
+      '<p class="muted">Choose a package for your loved one. Our team calls you to confirm the details and payment before anything starts.</p></div>' +
+      '<div class="cards3 brandcards">' + cards + '</div>' +
+      '<section class="panel claimbox"><div><b>Already booked on our website?</b><p class="muted small">Add your booking reference to see it here.</p></div><button class="btn ghost sm" data-act="claim">Add your booking</button></section>' +
+      '<p class="muted small" style="margin-top:18px">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing between Kare@Home and KareNest.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
     // coming from a package on the website: open that package's request form once
     if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; planDialog(r.q.brand, r.q.plan, r.q.months); }
   }

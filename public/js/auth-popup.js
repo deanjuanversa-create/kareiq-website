@@ -10,7 +10,7 @@
   var BRAND = (me && me.dataset.brand) || 'kareiq';
   var NAMES = { kareiq: 'KareIQ', karehome: 'Kare@Home', karenest: 'KareNest' };
   var api = function () { return window.KARE_API || ''; };
-  var NEXT = '#/plans';
+  var NEXT = '#/';
   var PLAN_NAMES = { homestart: 'HomeStart', homeplus: 'HomePlus', homeelite: 'HomeElite', customized: 'a customised plan', 'kb-base': 'KareBalance Base', 'kb-plus': 'KareBalance Plus', 'kb-premium': 'KareBalance Premium' };
   var PROV = { google: 'Google', facebook: 'Facebook' };
   var ICON = {
@@ -103,7 +103,7 @@
       var months = plan.indexOf('kb-') === 0 || plan === 'customized' ? '' : (m ? m.dataset.months : '');
       NEXT = '#/plans?brand=' + (BRAND === 'kareiq' ? 'karehome' : BRAND) + '&plan=' + encodeURIComponent(plan) + (months ? '&months=' + months : '');
     } else {
-      NEXT = '#/plans';
+      NEXT = '#/';
     }
     open(t.dataset.auth === 'signup' ? 'signup' : 'signin');
     if (plan) q('#apSub').textContent = 'Sign in or create an account to choose ' + (PLAN_NAMES[plan] || 'this package') + '. One sign-in for Kare@Home and KareNest.';
