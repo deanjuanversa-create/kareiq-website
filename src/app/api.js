@@ -22,9 +22,11 @@ const db = require('../db');
 const content = require('../content');
 const catalog = require('../catalog');
 const { createOAuth, safeNext } = require('./oauth');
+const trends = require('./trends');
+const firstvisit = require('./firstvisit');
+const exporter = require('./export');
 const risk = require('./risk');
 const care = require('./care');
-const report = require('./report');
 const packinfo = require('./packinfo');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
@@ -204,11 +206,13 @@ async function personView(user, person, product, period) {
   const users = userIds.length ? await docs.find('app_users', { id: { $in: userIds } }) : [];
   const nameOf = (id) => (users.find((u) => u.id === id) || {}).name || 'Care team';
 
+  const regMs = trends.registeredMs(person);
+  const readings = trends.dedupe(readingsAll.filter((r) => r.measuredMs >= regMs));
   const latest = {};
-  for (const r of readingsAll) if (!latest[r.metric]) latest[r.metric] = r;
+  for (const r of readings) if (!latest[r.metric]) latest[r.metric] = r;
   const days = (vitals.PERIODS[period] || vitals.PERIODS['1m'])[1];
   const from = new Date(Date.now() - days * 86400 * 1000).toISOString();
-  const trend = readingsAll.filter((r) => vitals.TRENDS.includes(r.metric) && r.measuredMs >= Date.parse(from)).reverse();
+  const trend = readings.filter((r) => vitals.TRENDS.includes(r.metric) && r.measuredMs >= Date.parse(from)).reverse();
 
   const caregivers = links.filter((l) => l.kind === 'caregiver').map((l) => {
     const u = users.find((x) => x.id === l.userId);
@@ -300,6 +304,12 @@ function productOf(plans) {
   return pick ? pick.product : 'karehome';
 }
 
+async function namesFor(ids) {
+  const list = [...new Set(ids.filter(Boolean))];
+  const users = list.length ? await docs.find('app_users', { id: { $in: list } }) : [];
+  return Object.fromEntries(users.map((u) => [u.id, u.name]));
+}
+
 async function peopleFor(user) {
   let links = [];
   let people;
@@ -329,8 +339,6 @@ async function peopleFor(user) {
 }
 
 const fmtDay = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' });
-const fmtDayTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true });
-const fmtShortDay = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
 const istDate = (ms) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(ms));
 
 // ?period=7d|1m|6m|1y, or ?from=YYYY-MM-DD&to=YYYY-MM-DD (the calendar), at most 2 years
@@ -357,13 +365,18 @@ async function dashboardData(user, person, range) {
     docs.find('app_risks', { personId: person.id }, { sort: { at: -1 } })
   ]);
   const sex = person.sex || null;
-  const byIds = [...new Set([...visits.map((v) => v.by), ...risks.map((r) => r.enteredBy)])];
+  // history starts on the person's registration date: nothing earlier is shown or exported
+  const regMs = trends.registeredMs(person);
+  const readings = trends.dedupe(readingsAll.filter((r) => r.measuredMs >= regMs));
+  const risksIn = risks.filter((r) => Date.parse(r.at) >= regMs);
+  const fromMs = Math.max(range.fromMs, regMs);
+  const byIds = [...new Set([...visits.map((v) => v.by), ...risksIn.map((r) => r.enteredBy)])];
   const users = byIds.length ? await docs.find('app_users', { id: { $in: byIds } }) : [];
   const nameOf = (id) => (users.find((u) => u.id === id) || {}).name || 'Care team';
 
   // latest of each reading, with its status against the standard range
   const latest = {};
-  for (const r of readingsAll) if (!latest[r.metric]) latest[r.metric] = r;
+  for (const r of readings) if (!latest[r.metric]) latest[r.metric] = r;
   const latestOut = Object.keys(latest).filter((k) => vitals.METRICS[k]).map((k) => {
     const r = latest[k];
     const c = vitals.classify(k, r, sex);
@@ -373,7 +386,7 @@ async function dashboardData(user, person, range) {
   latestOut.sort((a, b) => order.indexOf(a.metric) - order.indexOf(b.metric));
 
   // each metric in the chosen period, oldest first, with an average and its status
-  const inRange = readingsAll.filter((r) => r.measuredMs >= range.fromMs && r.measuredMs <= range.toMs).reverse();
+  const inRange = readings.filter((r) => r.measuredMs >= fromMs && r.measuredMs <= range.toMs).reverse();
   const series = [];
   for (const k of vitals.TRENDS) {
     const rows = inRange.filter((r) => r.metric === k);
@@ -396,7 +409,7 @@ async function dashboardData(user, person, range) {
       level: c.level, status: c.label, range: c.range,
       rows: rows.map((r) => {
         const rc = vitals.classify(k, r, sex);
-        const o = { id: r.id, at: r.measuredAt, ms: r.measuredMs, level: rc.level };
+        const o = { id: r.id, at: r.measuredAt, ms: r.measuredMs, level: rc.level, status: rc.label || null };
         for (const key of keys) o[key] = r[key];
         if (r.context) o.context = r.context;
         return o;
@@ -407,7 +420,7 @@ async function dashboardData(user, person, range) {
   // risk scores: the latest of each test, plus BMI from the latest weight and height
   const riskLatest = [];
   const seen = new Set();
-  for (const r of risks) {
+  for (const r of risksIn) {
     if (seen.has(r.test)) continue;
     seen.add(r.test);
     const t = risk.TESTS.find((x) => x.id === r.test);
@@ -420,6 +433,13 @@ async function dashboardData(user, person, range) {
   }
   const groupOrder = Object.keys(risk.GROUPS);
   riskLatest.sort((a, b) => groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group));
+  // risk trend: each check against its previous assessment (real assessments only)
+  const riskTrend = trends.riskTrends(risksIn, readings.filter((r) => r.metric === 'bmi'), regMs, {
+    bmi: (v) => risk.bmiRisk(v), title: (t) => (t === 'bmi' ? 'Obesity (Body Mass Index)' : (risk.TESTS.find((x) => x.id === t) || {}).title || t)
+  });
+  const trendOf = Object.fromEntries(riskTrend.map((t) => [t.test, t]));
+  for (const r of riskLatest) r.trend = trendOf[r.test] ? { direction: trendOf[r.test].direction, text: trendOf[r.test].text, previous: trendOf[r.test].previous, change: trendOf[r.test].change, pct: trendOf[r.test].pct, unit: trendOf[r.test].unit } : null;
+  riskTrend.sort((a, b) => riskLatest.findIndex((x) => x.test === a.test) - riskLatest.findIndex((x) => x.test === b.test));
 
   // the latest wellbeing checks (food, toilet, sleep...) and notes from visits
   const lastObs = visits.find((v) => v.obs && Object.keys(v.obs).length);
@@ -431,33 +451,17 @@ async function dashboardData(user, person, range) {
   return {
     person: { id: person.id, name: person.name, birthYear: person.birthYear || null, age: ageOf(person), sex, smoker: person.smoker ?? null, parentalMI: person.parentalMI ?? null, diabetic: person.diabetic ?? null, relation: person.relation || null },
     plans: open.map(planView), product: productOf(open),
-    range: { key: range.key, label: range.label, from: range.from, to: range.to },
+    range: {
+      key: range.key, label: range.label, from: istDate(fromMs), to: range.to, requestedFrom: range.from,
+      registeredOn: istDate(regMs), clamped: range.fromMs < regMs, beforeRegistration: range.toMs < regMs
+    },
+    riskTrend,
+    metrics: vitals.TRENDS.map((k) => ({ k, label: vitals.METRICS[k].label, group: vitals.METRICS[k].group === 'body' ? 'body' : 'vitals', count: (series.find((m) => m.metric === k) || { rows: [] }).rows.length })),
     latest: latestOut, series, risks: riskLatest, obs,
     notes: visits.filter((v) => v.note).slice(0, 8).map((v) => ({ at: v.at, by: nameOf(v.by), note: v.note, product: v.product })),
     lastVisit: visits[0] ? { at: visits[0].at, by: nameOf(visits[0].by) } : null,
     canRecord: await careTeam(user, person.id) && open.some((pl) => pl.status === 'active'),
     canAssess: await careTeam(user, person.id)
-  };
-}
-
-const fmtRowTime = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
-function reportInput(d, range, user) {
-  const day = (iso) => fmtDayTime.format(new Date(iso)).replace('Sept', 'Sep');
-  const row = (iso) => fmtRowTime.format(new Date(iso)).replace('Sept', 'Sep');
-  const textOf = (m, r) => (m.metric === 'bp' ? `${r.systolic}/${r.diastolic}` : String(r.value)) + (r.context ? ' ' + (vitals.GLUCOSE_CONTEXTS[r.context] || '').toLowerCase() : '');
-  return {
-    person: { id: d.person.id, name: d.person.name, age: d.person.age, sexName: d.person.sex === 'male' ? 'Male' : d.person.sex === 'female' ? 'Female' : null },
-    plans: d.plans.map((p) => (p.included ? p.productName + ' (included)' : p.name)).join(', '),
-    periodLabel: range.label, from: fmtDay.format(new Date(range.fromMs)), to: fmtDay.format(new Date(range.toMs)), fromMs: range.fromMs, toMs: range.toMs,
-    createdAt: fmtDayTime.format(new Date()), createdBy: user.name,
-    fmtShort: (ms) => fmtShortDay.format(new Date(ms)),
-    latest: d.latest.map((r) => ({ label: r.label, value: r.value + (r.unit ? ' ' + r.unit : ''), level: r.level, status: r.status, range: r.range, at: day(r.at) })),
-    risks: d.risks.map((r) => ({ title: r.title, display: r.display, band: r.band, level: r.level, scale: r.scale, at: fmtDay.format(new Date(r.at)) })),
-    series: d.series.map((m) => ({
-      label: m.label, unit: m.unit, average: m.average, status: m.status, level: m.level, series: m.keys, names: m.names,
-      rows: m.rows.map((r) => ({ ...r, at: row(r.at), text: textOf(m, r) }))
-    })),
-    notes: d.notes.map((v) => ({ at: day(v.at), by: v.by, note: v.note }))
   };
 }
 
@@ -836,6 +840,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const last = (await docs.find('app_readings', { personId: person.id, metric: 'height', voided: false }, { sort: { measuredAt: -1 }, limit: 1 }))[0];
       const parsed = vitals.parseVisit(body, last ? last.value : null);
       if (parsed.errors) return json(res, 400, { ok: false, message: parsed.errors.form || 'Please check the highlighted fields.', errors: parsed.errors });
+      if (Date.parse(parsed.when) < trends.registeredMs(person)) {
+        return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: { when: 'The visit date cannot be before ' + String(person.name).split(' ')[0] + '\'s registration date (' + fmtDay.format(new Date(trends.registeredMs(person))) + ')' } });
+      }
       const visitId = uid();
       const at = parsed.when;
       for (const r of parsed.readings) {
@@ -885,16 +892,23 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const range = rangeOf(url);
       return json(res, 200, { ok: true, ...(await dashboardData(user, person, range)) });
     }
-    if (parts[0] === 'people' && parts[2] === 'report.pdf' && req.method === 'GET') {
+    // "Download trends": the vitals and report parts the family chose, for the dashboard's period.
+    // report.pdf (older links) is the complete PDF for every vital with readings.
+    if (parts[0] === 'people' && (parts[2] === 'export' || parts[2] === 'report.pdf') && parts.length === 3 && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1]);
       if (!historyAllowed(user)) throw forbidden();
       const range = rangeOf(url);
       const d = await dashboardData(user, person, range);
-      const pdf = await report.build(reportInput(d, range, user));
-      await audit(user.id, 'report.download', person.id, { period: range.key });
-      const name = 'KareIQ-health-report-' + person.name.replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + range.to + '.pdf';
-      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
-      res.end(pdf);
+      let opts;
+      if (parts[2] === 'report.pdf') opts = { metrics: d.series.map((m) => m.metric).length ? d.series.map((m) => m.metric) : ['bp'], parts: exporter.PARTS.slice(), format: 'pdf' };
+      else {
+        opts = exporter.parseOptions(url.searchParams);
+        if (opts.error) return json(res, 400, { ok: false, message: opts.error });
+      }
+      const out = await exporter.build(d, opts, user);
+      await audit(user.id, 'report.download', person.id, { period: range.key, format: opts.format, metrics: opts.metrics.length, parts: opts.parts });
+      res.writeHead(200, { 'Content-Type': out.type, 'Content-Disposition': `attachment; filename="${out.name}"`, 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+      res.end(out.body);
       return true;
     }
 
@@ -946,6 +960,68 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (Object.keys(keep).length) await docs.update('app_people', person.id, keep);
       await audit(user.id, 'person.edit', person.id, { fields: Object.keys(keep) });
       return json(res, 200, { ok: true });
+    }
+
+    // ----- Personal and health details (workbook "Data Collection - Caregiver First Visit", without
+    // the General Checklist). One record per person; every save keeps a version (who, when, which
+    // fields). Families of the person, the person's assigned caregivers and the office may see and edit.
+    if (p === 'forms/details' && req.method === 'GET') {
+      return json(res, 200, { ok: true, ...firstvisit.definitions() });
+    }
+    if (p === 'details' && req.method === 'GET') {
+      if (user.role === 'family') throw forbidden();
+      const people = await peopleFor(user);
+      const rows = people.length ? await docs.find('app_details', { personId: { $in: people.map((x) => x.id) } }) : [];
+      const users = await namesFor(rows.map((r) => r.updatedBy));
+      return json(res, 200, {
+        ok: true, people: people.map((x) => {
+          const r = rows.find((y) => y.personId === x.id);
+          return { id: x.id, name: x.name, status: r ? r.status : 'new', updatedAt: r ? r.updatedAt : null, updatedBy: r ? users[r.updatedBy] || 'KareIQ' : null, updatedByRole: r ? r.updatedByRole : null, progress: firstvisit.progress(r ? r.data : null) };
+        })
+      });
+    }
+    if (parts[0] === 'people' && parts[2] === 'details' && parts.length === 3) {
+      const person = await visiblePerson(user, parts[1]);
+      if (user.role === 'caregiver' && !(await careTeam(user, person.id))) throw forbidden();
+      const id = 'det-' + person.id;
+      const row = await docs.findOne('app_details', { id });
+      if (req.method === 'GET') {
+        const versions = await docs.find('app_details_versions', { personId: person.id }, { sort: { version: -1 }, limit: 10 });
+        const users = await namesFor([...versions.map((v) => v.by), row && row.updatedBy]);
+        const label = (k) => (firstvisit.BY_KEY[k] || firstvisit.BY_KEY[k.replace(/Specify$/, '')] || { label: k }).label;
+        const prefill = row ? null : { name: person.name || '', gender: person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : '' };
+        return json(res, 200, {
+          ok: true, person: { id: person.id, name: person.name },
+          data: row ? row.data : {}, prefill,
+          meta: row ? { version: row.version, status: row.status, updatedAt: row.updatedAt, updatedBy: users[row.updatedBy] || 'KareIQ', updatedByRole: row.updatedByRole, createdAt: row.createdAt } : { version: 0, status: 'new' },
+          age: row ? firstvisit.ageFrom(row.data.dob) : null,
+          history: versions.map((v) => ({ version: v.version, at: v.at, by: users[v.by] || 'KareIQ', byRole: v.byRole, mine: v.by === user.id, status: v.status, fields: v.changed, labels: [...new Set(v.changed.map(label))] }))
+        });
+      }
+      if (req.method === 'POST') {
+        const v = firstvisit.validate(body.data);
+        if (v.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: v.errors });
+        const current = row ? row.version : 0;
+        if (Number(body.version) !== current) return json(res, 409, { ok: false, message: 'Someone else saved these details while you were editing. Reload the page to see the latest version, then make your changes again.' });
+        const changed = firstvisit.changed(row ? row.data : {}, v.data);
+        const status = user.role === 'family' ? (row ? row.status : 'draft') : body.status === 'complete' ? 'complete' : 'draft';
+        if (row && !changed.length && status === row.status) return json(res, 200, { ok: true, unchanged: true, version: current });
+        const at = now(), version = current + 1;
+        const rec = { personId: person.id, data: v.data, version, status, updatedAt: at, updatedBy: user.id, updatedByRole: user.role };
+        if (row) await docs.update('app_details', id, rec);
+        else await docs.insert('app_details', { id, ...rec, createdAt: at });
+        await docs.insert('app_details_versions', { id: uid(), personId: person.id, version, at, by: user.id, byRole: user.role, status, changed, data: v.data });
+        // keep the person's record in step (used by risk checks): name, birth year, sex, smoking, diabetes
+        const sync = {};
+        if (v.data.name && v.data.name !== person.name) sync.name = v.data.name;
+        if (v.data.dob) sync.birthYear = Number(v.data.dob.slice(0, 4));
+        if (v.data.gender === 'Male' || v.data.gender === 'Female') sync.sex = v.data.gender.toLowerCase();
+        if (v.data.smoking) sync.smoker = v.data.smoking !== 'Never';
+        if (v.data.pcDiabetes) sync.diabetic = true;
+        if (Object.keys(sync).length) await docs.update('app_people', person.id, sync);
+        await audit(user.id, 'details.save', person.id, { version, fields: changed.length, status });
+        return json(res, 200, { ok: true, version, status, updatedAt: at });
+      }
     }
 
     // ----- medical records

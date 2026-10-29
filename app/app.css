@@ -716,3 +716,109 @@ table.ptab td,table.ptab th{white-space:nowrap}
 .brandcard .bc-logo b{font-family:'Roboto Slab',Georgia,serif;font-size:1.5rem;color:#0b6b59}
 .brandcard .btn{margin-top:auto}
 .claimbox{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-top:18px}
+
+/* ================================================================ risk cards: the risk colour on all four edges */
+.risk{border:3px solid var(--c-none);border-radius:8px;transition:box-shadow .2s ease,transform .2s ease;position:relative}
+.risk.good{border-color:var(--c-good)}.risk.ok{border-color:var(--c-ok)}.risk.warn{border-color:var(--c-warn)}.risk.bad{border-color:var(--c-bad)}
+.risk:hover{box-shadow:0 10px 24px -14px rgba(20,40,60,.45);transform:translateY(-2px)}
+.risk:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){.risk{transition:none}.risk:hover{transform:none}}
+.risk .rtr{display:flex;flex-wrap:wrap;align-items:center;gap:6px 8px;margin-top:8px}
+/* trend chip: arrow + word (never colour alone) */
+.tchip{display:inline-flex;align-items:center;gap:4px;padding:2px 9px 2px 6px;border-radius:999px;font-size:.8rem;font-weight:700;background:#eef1f4;color:#4a5866;border:1px solid transparent}
+.tchip svg{width:15px;height:15px}
+.tchip.improving{background:#e3f4e8;color:#16692f;border-color:#bfe3c8}
+.tchip.worsening{background:#fbe7e7;color:#8e1c1c;border-color:#efc4c4}
+.tchip.stable{background:#eef1f4;color:#3d4b59;border-color:#d8dee5}
+.tchip.none{padding-left:9px;font-weight:600;color:#5f6b76}
+/* Risk trend panel */
+.trendbox{background:#f4f3ef;border-radius:4px;padding:18px 18px 20px;margin:-14px 0 28px}
+.rtl{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:12px}
+.rtrow{background:#fff;border:1px solid #e1ddd2;border-left:5px solid #c9d1d9;border-radius:6px;padding:14px 16px}
+.rtrow.improving{border-left-color:var(--c-good)}.rtrow.worsening{border-left-color:var(--c-bad)}.rtrow.stable{border-left-color:#8a98a6}
+.rth{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.rth h3{font-size:.95rem;font-family:var(--f-body)!important;font-weight:650!important;line-height:1.3}
+.rtd{display:grid;gap:4px;margin:10px 0 6px}
+.rtd>div{display:grid;grid-template-columns:62px 1fr;gap:8px;align-items:baseline}
+.rtd dt{font-size:.78rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.rtd dd{margin:0;font-size:.92rem;display:flex;flex-wrap:wrap;align-items:center;gap:2px 6px}
+.rtd dd .muted{width:100%}
+.rtx{font-size:.86rem;color:var(--ink-2);margin:0}
+/* history begins on the registration date */
+.histnote{display:flex;gap:8px;align-items:flex-start;background:#fff8e6;border:1px solid #f1dfae;color:#5d4a12;border-radius:6px;padding:10px 12px;font-size:.9rem;margin:0 0 14px}
+.histnote svg{width:18px;height:18px;flex:none;margin-top:2px}
+.thead .dl{background:none;border:0;padding:0;cursor:pointer;font:inherit}
+
+/* ================================================================ Download trends dialog */
+dialog.wide{width:min(760px,calc(100vw - 24px))}
+.dl-period{display:flex;gap:8px;align-items:flex-start;background:var(--wash);border-radius:var(--r-sm);padding:10px 12px;font-size:.92rem;margin-bottom:16px}
+.dl-period svg{width:18px;height:18px;flex:none;margin-top:2px}
+.dls{margin-bottom:18px}
+.dls-h{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:8px}
+.dls-h h3{font-size:1.02rem;font-family:var(--f-body)!important;font-weight:700!important}
+.dls-tools{display:flex;gap:16px;margin-bottom:8px}
+.ckset{border:0;padding:0;margin:0 0 10px}
+.ckset legend{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.ckgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:8px}
+.ck{display:flex;gap:10px;align-items:flex-start;border:1.5px solid var(--line);border-radius:var(--r-sm);padding:10px 12px;cursor:pointer;background:#fff;transition:border-color .15s,background .15s}
+.ck:hover{border-color:var(--line-2)}
+.ck input{width:18px;height:18px;margin:2px 0 0;flex:none;accent-color:var(--accent)}
+.ck span{display:grid;gap:1px;font-weight:600;font-size:.94rem;line-height:1.3}
+.ck small{font-weight:400;color:var(--muted);font-size:.8rem}
+.ck:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.ck:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.ck.strong{margin-bottom:8px}
+.ck.off{opacity:.5;cursor:not-allowed}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+
+/* ================================================================ Personal & health details / Client information */
+.detmeta{display:flex;flex-wrap:wrap;align-items:center;gap:8px;color:var(--muted);font-size:.92rem;margin-top:6px}
+.newnote{background:#eef6ff;border:1px solid #cfe2f7;border-radius:8px;padding:10px 12px;color:#1e3f66;margin:0 0 14px}
+.detnav{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px;position:sticky;top:64px;z-index:3;background:var(--cream,#fcfaf4);padding:8px 0}
+.detnav a{font-size:.88rem;font-weight:600;padding:6px 12px;border-radius:999px;background:#fff;border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.detnav a:hover,.detnav a:focus-visible{border-color:var(--accent);color:var(--accent-d)}
+.dets{margin-bottom:16px;scroll-margin-top:120px}
+.dets h2{font-size:1.25rem;margin-bottom:12px}
+.dets h2:focus{outline:none}
+.detg{font-size:.98rem;font-family:var(--f-body)!important;font-weight:700!important;margin:6px 0 10px;color:var(--ink-2)}
+.detgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:0 18px}
+.det-f.wide{grid-column:1/-1}
+.det-f[hidden]{display:none}
+.det-f input,.det-f select,.det-f textarea{width:100%;box-sizing:border-box}
+.det-f.ro input{background:var(--wash);color:var(--ink-2)}
+.det-f .hint{font-size:.8rem;color:var(--muted)}
+.det-f.fresh>label,.det-f.fresh legend{color:#1e3f66}
+.det-f.fresh input,.det-f.fresh select,.det-f.fresh textarea{border-color:#7fb0e6;box-shadow:0 0 0 3px #e3effc}
+.newtag{display:inline-block;font-size:.7rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;background:#2b6cb0;color:#fff;border-radius:4px;padding:1px 6px;margin-left:4px;vertical-align:1px}
+.multi{border:0;padding:0;margin:0}
+.multi legend{font-weight:600;font-size:.95rem;margin-bottom:8px;padding:0}
+.chips2{display:flex;flex-wrap:wrap;gap:8px}
+.chipck{display:inline-flex;align-items:center;gap:7px;border:1.5px solid var(--line);border-radius:999px;padding:7px 13px;cursor:pointer;background:#fff;font-size:.9rem;min-height:40px;box-sizing:border-box}
+.chipck input{width:16px;height:16px;margin:0;accent-color:var(--accent)}
+.chipck:has(input:checked){border-color:var(--accent);background:var(--accent-soft);font-weight:600}
+.chipck:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:2px}
+.spec{margin-top:10px;max-width:520px;display:grid;gap:6px}
+.spec[hidden]{display:none}
+.dethist{margin-bottom:90px}
+.dethist summary{cursor:pointer;font-weight:700}
+.dethist ol{margin:12px 0 0;padding-left:20px;display:grid;gap:10px}
+.detbar{position:sticky;bottom:0;z-index:4;display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px 16px;margin:0 -16px;background:rgba(252,250,244,.96);border-top:1px solid var(--line);backdrop-filter:blur(6px)}
+.cinfo h3{margin:4px 0 2px}
+.meter{height:6px;border-radius:99px;background:#ebe7dc;overflow:hidden;width:100%}
+.meter i{display:block;height:100%;background:var(--accent);border-radius:99px}
+.pill.newinfo{background:#e3effc;color:#1e3f66}
+@media (max-width:640px){
+  .detnav{top:56px;overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none}
+  .detnav a{white-space:nowrap}
+  .detbar .btn{flex:1 1 140px;justify-content:center}
+  .trendbox{padding:14px 10px}
+  .rtd>div{grid-template-columns:54px 1fr}
+}
+textarea.in{min-height:84px;resize:vertical;font:inherit}
+.det-f>label{font-weight:600;font-size:.95rem}
+.det-f .err{color:var(--bad);font-size:.88rem;font-weight:500;min-height:0}
+.det-f .err:empty{display:none}
+.in[aria-invalid=true]{border-color:var(--bad);box-shadow:0 0 0 3px var(--bad-soft)}
+/* the save bar stays inside the page column */
+.detbar{margin:0 0 0;border:1px solid var(--line);border-radius:12px;box-shadow:0 -10px 30px -22px rgba(20,40,60,.35);bottom:12px}
+.det-f{align-content:start}

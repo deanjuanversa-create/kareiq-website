@@ -125,6 +125,8 @@ async function ensureIndexes() {
     await (await db.col('app_audit')).createIndex({ at: -1 });
     await (await db.col('app_risks')).createIndex({ personId: 1, at: -1 });
     await (await db.col('app_records')).createIndex({ personId: 1, date: -1 });
+    await (await db.col('app_details')).createIndex({ personId: 1 });
+    await (await db.col('app_details_versions')).createIndex({ personId: 1, version: -1 });
   } catch (e) { indexed = false; console.error('[app] index setup failed:', e.message); }
 }
 

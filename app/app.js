@@ -76,6 +76,11 @@
   function waLink() { return nestOnly() ? WA_NEST : ((S.content && S.content.whatsappGroup) || WA_GROUP); }
   function icon(name) {
     var p = {
+      idcard: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.3"/><path d="M5.8 16.2c.6-1.7 1.8-2.6 3.2-2.6s2.6.9 3.2 2.6M14.5 10h3.5M14.5 13.5h3.5"/>',
+      clip: '<rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V3.8A1.3 1.3 0 0 1 10.3 2.5h3.4A1.3 1.3 0 0 1 15 3.8v.7M9 10.5h6M9 14h6M9 17.5h4"/>',
+      up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
+      dn: '<path d="M12 5v14M6 13l6 6 6-6"/>',
+      flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
       grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
       heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20Z"/>',
       inbox: '<path d="M4 13.5 6.2 5.6A2 2 0 0 1 8.1 4h7.8a2 2 0 0 1 1.9 1.6L20 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4.5Z"/><path d="M4 13.5h4.5l1.2 2.2h4.6l1.2-2.2H20"/>',
@@ -211,6 +216,8 @@
     if (top === 'assess' && role !== 'family') return assessView(r);
     if (top === 'dashboard' && role !== 'caregiver') return dashboardView(r);
     if (top === 'records') return recordsView(r);
+    if (top === 'details' && role === 'family') return detailsView(r);
+    if (top === 'clientinfo' && role !== 'family') return r.q.p ? detailsView(r) : clientInfoView();
     if (top === 'package') return packageView(r);
     if (top === 'services' && role !== 'caregiver') return servicesView(r);
     if (top === 'invoices' && role !== 'caregiver') return invoicesView(r);
@@ -360,15 +367,15 @@
   // assigned to them (no health history); the office sees everyone plus the office pages.
   var MENUS = {
     family: [
-      ['dashboard', 'Dashboard', 'grid'], ['records', 'Medical records', 'file'], ['package', 'Package information', 'box'],
+      ['dashboard', 'Dashboard', 'grid'], ['records', 'Medical records', 'file'], ['details', 'Personal & health details', 'idcard'], ['package', 'Package information', 'box'],
       ['services', 'Book services', 'cal'], ['invoices', 'Invoices', 'receipt']
     ],
     caregiver: [
-      ['people', 'My people', 'people'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge'], ['records', 'Medical records', 'file']
+      ['people', 'My people', 'people'], ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge'], ['records', 'Medical records', 'file']
     ],
     admin: [
       ['dashboard', 'Dashboard', 'grid'], ['records', 'Medical records', 'file'], ['package', 'Package information', 'box'],
-      ['services', 'Book services', 'cal'], ['invoices', 'Invoices', 'receipt'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge']
+      ['services', 'Book services', 'cal'], ['invoices', 'Invoices', 'receipt'], ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge']
     ]
   };
   var OFFICE = [['admin', 'Requests', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock']];
@@ -377,7 +384,7 @@
     setBrand('kareiq');
     var u = S.me.user, role = u.role;
     var items = MENUS[role] || MENUS.family;
-    var withP = function (k) { return S.pid && ['dashboard', 'records', 'package', 'services', 'invoices', 'visit', 'assess'].indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
+    var withP = function (k) { return S.pid && ['dashboard', 'records', 'details', 'package', 'services', 'invoices', 'visit', 'assess'].indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
     var link = function (l) {
       return '<a href="#/' + l[0] + withP(l[0]) + '"' + (l[0] === active ? ' aria-current="page"' : '') + '>' + icon(l[2]) + '<span>' + e(l[1]) + '</span>' +
         (l[0] === 'admin' && S.cache.newCount ? '<b class="count">' + S.cache.newCount + '</b>' : '') + '</a>';
@@ -492,16 +499,43 @@
         '<a class="btn ghost" href="tel:+918129345178">' + icon('phone') + 'Call ' + PHONE + '</a></div></section></div>';
   }
 
+  var TREND_WORD = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'No trend yet' };
+  var TREND_ICON = { improving: 'up', worsening: 'dn', stable: 'flat' };
+  // an arrow that points the way the score moved; the word says whether that is better or worse
+  function trendChip(t) {
+    if (!t || t.direction === 'none') return '<span class="tchip none">' + TREND_WORD.none + '</span>';
+    var moved = t.change == null || t.change === 0 ? 'flat' : t.change > 0 ? 'up' : 'dn';
+    return '<span class="tchip ' + t.direction + '">' + icon(t.direction === 'stable' ? 'flat' : moved) + TREND_WORD[t.direction] + '</span>';
+  }
+  function changeText(t) {
+    if (!t || t.change == null || !t.previous) return '';
+    return (t.change > 0 ? '+' : t.change < 0 ? '−' : '') + Math.abs(t.change) + (t.unit ? ' ' + t.unit : '') + (t.pct != null && t.change !== 0 ? ' (' + (t.pct > 0 ? '+' : '−') + Math.abs(t.pct) + '%)' : '');
+  }
   function riskHtml(d) {
     var list = d.risks;
     var body = list.length ? '<div class="risks">' + list.map(function (x) {
-      return '<article class="risk ' + (LV[x.level] || 'none') + '"><div class="rg">' + e(x.groupName) + '</div><h3>' + e(x.title) + '</h3>' +
+      var lv = LV[x.level] || 'none';
+      return '<article class="risk ' + lv + '" aria-label="' + e(x.title + ': ' + x.display + ', ' + x.band) + '"><div class="rg">' + e(x.groupName) + '</div><h3>' + e(x.title) + '</h3>' +
         '<div class="rv">' + e(x.display) + '</div><div class="rb">' + dotHtml(x.level) + e(x.band) + '</div>' +
+        '<div class="rtr">' + trendChip(x.trend) + (x.trend && x.trend.previous ? '<span class="muted small">vs ' + e(x.trend.previous.display) + ' on ' + e(date(x.trend.previous.at)) + '</span>' : '') + '</div>' +
         '<div class="rw">' + e(date(x.at)) + (x.by ? ' · ' + e(x.by) : '') + '</div>' +
         (x.scale || x.note ? '<details><summary>What this means</summary>' + (x.scale ? '<p>' + e(x.scale) + '</p>' : '') + (x.note ? '<p>' + e(x.note) + '</p>' : '') + '</details>' : '') + '</article>';
     }).join('') + '</div>'
       : '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div>';
-    return '<section class="riskbox" aria-labelledby="h-risk"><div class="sec-h"><h2 id="h-risk">Risk score</h2><span class="muted small">A guide to support the doctor\'s review</span></div>' + body + '</section>';
+    return '<section class="riskbox" aria-labelledby="h-risk"><div class="sec-h"><h2 id="h-risk">Risk score</h2><span class="muted small">A guide to support the doctor\'s review</span></div>' + body + '</section>' + riskTrendHtml(d);
+  }
+  // Risk trend: each check against its previous assessment (from the server; nothing is estimated)
+  function riskTrendHtml(d) {
+    var list = d.riskTrend || [];
+    if (!list.length) return '';
+    return '<section class="trendbox" aria-labelledby="h-rtrend"><div class="sec-h"><h2 id="h-rtrend">Risk trend</h2><span class="muted small">Is each risk improving, worsening or stable since the previous check?</span></div>' +
+      '<div class="rtl">' + list.map(function (t) {
+        return '<article class="rtrow ' + t.direction + '"><div class="rth"><h3>' + e(t.title) + '</h3>' + trendChip(t) + '</div>' +
+          '<dl class="rtd"><div><dt>Now</dt><dd><b>' + e(t.current.display) + '</b> ' + dotHtml(t.current.level) + e(t.current.band) + '<span class="muted small">' + e(date(t.current.at)) + '</span></dd></div>' +
+          '<div><dt>Before</dt><dd>' + (t.previous ? '<b>' + e(t.previous.display) + '</b> ' + dotHtml(t.previous.level) + e(t.previous.band) + '<span class="muted small">' + e(date(t.previous.at)) + '</span>' : '<span class="muted">No earlier check</span>') + '</dd></div>' +
+          (t.previous ? '<div><dt>Change</dt><dd><b>' + e(changeText(t) || 'No change') + '</b></dd></div>' : '') + '</dl>' +
+          '<p class="rtx">' + e(t.text) + '</p></article>';
+      }).join('') + '</div></section>';
   }
 
   function summaryList(d, group) {
@@ -533,15 +567,19 @@
     return '<div class="thead"><div class="chips" role="group" aria-label="Period">' + PERIODS.map(function (x) {
       return '<button data-act="period" data-k="' + x[0] + '" aria-pressed="' + (!custom && x[0] === r.key) + '">' + x[1] + '</button>';
     }).join('') + '<button class="cal" data-act="calendar" aria-pressed="' + custom + '" aria-label="Choose dates" title="Choose dates">' + icon('cal') + '</button></div>' +
-      '<a class="dl" href="/api/app/people/' + encodeURIComponent(d.person.id) + '/report.pdf?' + qp + '" download>Download trends' + icon('arrow') + '</a></div>' +
+      '<button class="dl" data-act="dl" aria-haspopup="dialog">Download trends' + icon('arrow') + '</button></div>' +
       (custom ? '<p class="muted small" style="margin:-4px 0 10px">Showing ' + e(r.label) + ' · <button class="link" data-act="period" data-k="7d">Back to last 7 days</button></p>' : '');
   }
 
   function chartsHtml(d, group) {
     var list = d.series.filter(function (m) { return group === 'body' ? m.group === 'body' : m.group !== 'body'; });
     if (group === 'wellbeing') list = d.series.filter(function (m) { return m.group !== 'body'; });
-    if (!list.length) return '<div class="empty"><b>No readings in this period</b>Try a longer period, or choose dates with the calendar.</div>';
-    return list.map(function (m) {
+    var reg = d.range.registeredOn ? date(d.range.registeredOn) : '';
+    if (!list.length) return d.range.clamped
+      ? '<div class="empty"><b>No previous data available for this period</b>' + e(first(d.person.name)) + '\'s recorded history begins on ' + e(reg) + ', the registration date.</div>'
+      : '<div class="empty"><b>No readings in this period</b>Try a longer period, or choose dates with the calendar.</div>';
+    var head = d.range.clamped ? '<p class="histnote">' + icon('clock') + '<span>' + e(first(d.person.name)) + '\'s recorded history begins on <b>' + e(reg) + '</b>, the registration date, so this view starts there. There is no earlier data for this period.</span></p>' : '';
+    var out = list.map(function (m) {
       var span = date(d.range.from) + ' – ' + date(d.range.to);
       return '<div class="tblock" id="t-' + m.metric + '"><h3>' + e(m.label) + '</h3>' +
         '<div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
@@ -550,6 +588,7 @@
         (m.keys.length > 1 ? '<div class="legend2"><span><i class="s1"></i>' + e(m.names[0]) + '</span><span><i class="s2"></i>' + e(m.names[1]) + '</span></div>' : '') +
         '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
     }).join('');
+    return head + out;
   }
   // draw charts at their real width after the HTML is on the page
   function drawCharts() {
@@ -616,6 +655,216 @@
     openDialog('Choose dates', '<form data-form="range" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' +
       field('from', 'From', 'type="date" value="' + e(d.range.from) + '" max="' + todayIST() + '"') + field('to', 'To', 'type="date" value="' + e(d.range.to) + '" max="' + todayIST() + '"') +
       '</div><p class="muted small">Up to 2 years at a time.</p></form>', '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Show</button>');
+  }
+
+  // ================================================================ Download trends
+  // The dashboard's period decides the dates; here the family picks the vitals, what the report
+  // contains and the file type. The server builds the file from the same data as the dashboard.
+  var DL_PARTS = [['charts', 'Historical trend charts', 'A chart of each vital over the period'], ['readings', 'Recorded measurements', 'Every reading with its date and time'],
+    ['averages', 'Average values', 'Averages of the readings in the period'], ['latest', 'Latest measurements and status', 'The most recent reading of each vital and its status'],
+    ['risktrend', 'Risk trend summary', 'Improving, worsening or stable, from real assessments']];
+  var DL_FORMATS = [['pdf', 'PDF report', 'Charts and tables, ready to print or share'], ['xlsx', 'Excel workbook', 'A sheet per vital, with native charts'], ['csv', 'CSV data file', 'Plain data for other apps (no charts)']];
+  function dlDialog() {
+    var d = S.cache.dash; if (!d) return;
+    var keep = S.cache.dl || {};
+    var withData = d.metrics.filter(function (m) { return m.count; }).map(function (m) { return m.k; });
+    var sel = keep.metrics || (withData.filter(function (k) { return ['bp', 'hr', 'glucose', 'spo2', 'pi'].indexOf(k) > -1; }));
+    if (!sel.length) sel = withData.slice(0, 1);
+    var parts = keep.parts || ['charts', 'readings', 'averages', 'latest'], fmt = keep.format || 'pdf';
+    var r = d.range, period = (r.key === 'custom' ? r.label : r.label + ' (' + date(r.from) + ' – ' + date(r.to) + ')');
+    var box = function (m) {
+      return '<label class="ck"><input type="checkbox" data-act="dlm" value="' + m.k + '"' + (sel.indexOf(m.k) > -1 ? ' checked' : '') + '><span>' + e(m.label) +
+        '<small>' + (m.count ? m.count + ' reading' + (m.count === 1 ? '' : 's') : 'no data in this period') + '</small></span></label>';
+    };
+    var group = function (g, title) {
+      var list = d.metrics.filter(function (m) { return m.group === g; });
+      return '<fieldset class="ckset"><legend>' + title + '</legend><div class="ckgrid">' + list.map(box).join('') + '</div></fieldset>';
+    };
+    var body = '<div class="dl-period">' + icon('cal') + '<span><b>Period:</b> ' + e(period) + '. Change it with the dashboard\'s date filter.' + (r.clamped ? ' History begins on ' + e(date(r.registeredOn)) + '.' : '') + '</span></div>' +
+      '<section class="dls"><div class="dls-h"><h3>1. Vitals to download</h3><span class="muted small" id="dlCount"></span></div>' +
+        '<div class="dls-tools"><button type="button" class="link" data-act="dl-all">Select all</button><button type="button" class="link" data-act="dl-none">Clear selection</button></div>' +
+        group('vitals', 'Vitals') + group('body', 'Body composition') + '</section>' +
+      '<section class="dls"><div class="dls-h"><h3>2. What to include</h3></div>' +
+        '<label class="ck strong"><input type="checkbox" data-act="dlc"' + (parts.length === DL_PARTS.length ? ' checked' : '') + '><span>Complete report<small>Everything below</small></span></label>' +
+        '<div class="ckgrid">' + DL_PARTS.map(function (p) { return '<label class="ck"><input type="checkbox" data-act="dlp" value="' + p[0] + '"' + (parts.indexOf(p[0]) > -1 ? ' checked' : '') + '><span>' + p[1] + '<small>' + p[2] + '</small></span></label>'; }).join('') + '</div>' +
+        '<p class="muted small" id="dlCsvNote" hidden>Charts cannot go into a CSV file. Choose PDF or Excel to include them.</p></section>' +
+      '<section class="dls"><div class="dls-h"><h3>3. File type</h3></div><div class="ckgrid fmt" role="radiogroup" aria-label="File type">' +
+        DL_FORMATS.map(function (x) { return '<label class="ck"><input type="radio" name="dlfmt" data-act="dlf" value="' + x[0] + '"' + (x[0] === fmt ? ' checked' : '') + '><span>' + x[1] + '<small>' + x[2] + '</small></span></label>'; }).join('') + '</div></section>' +
+      '<div class="alert bad" id="dlMsg" role="alert" hidden></div>';
+    var dlg = openDialog('Download trends', body, '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="dl-go" id="dlGo">' + icon('download') + 'Download report</button>');
+    dlg.classList.add('wide');
+    dlSync();
+  }
+  function dlState() {
+    var dlg = $('dialog[open]'); if (!dlg) return null;
+    var vals = function (sel) { return $$(sel, dlg).filter(function (x) { return x.checked && !x.disabled; }).map(function (x) { return x.value; }); };
+    var fmtEl = $$('[data-act=dlf]', dlg).filter(function (x) { return x.checked; })[0];
+    return { dlg: dlg, metrics: vals('[data-act=dlm]'), parts: vals('[data-act=dlp]'), format: fmtEl ? fmtEl.value : 'pdf' };
+  }
+  function dlSync() {
+    var st = dlState(); if (!st) return;
+    var csv = st.format === 'csv', charts = $('[data-act=dlp][value=charts]', st.dlg);
+    charts.disabled = csv; charts.closest('.ck').classList.toggle('off', csv);
+    $('#dlCsvNote', st.dlg).hidden = !csv;
+    st = dlState();
+    var total = $$('[data-act=dlm]', st.dlg).length;
+    $('#dlCount', st.dlg).textContent = st.metrics.length + ' of ' + total + ' selected';
+    var all = $$('[data-act=dlp]', st.dlg).filter(function (x) { return !x.disabled; });
+    $('[data-act=dlc]', st.dlg).checked = all.length && all.every(function (x) { return x.checked; });
+    var go = $('#dlGo', st.dlg);
+    go.disabled = !st.metrics.length || !st.parts.length;
+    go.title = !st.metrics.length ? 'Choose at least one vital' : !st.parts.length ? 'Choose what to include' : '';
+    S.cache.dl = { metrics: st.metrics, parts: st.parts, format: st.format };
+  }
+  function dlGo() {
+    var st = dlState(), d = S.cache.dash; if (!st || !d || !st.metrics.length || !st.parts.length) return;
+    var r = d.range, go = $('#dlGo', st.dlg), msg = $('#dlMsg', st.dlg);
+    var q = (r.key === 'custom' ? 'from=' + r.requestedFrom + '&to=' + r.to : 'period=' + r.key) + '&metrics=' + st.metrics.join(',') + '&parts=' + st.parts.join(',') + '&format=' + st.format;
+    go.disabled = true; go.innerHTML = 'Preparing…'; msg.hidden = true;
+    fetch('/api/app/people/' + encodeURIComponent(d.person.id) + '/export?' + q, { credentials: 'same-origin', headers: { 'X-Requested-With': 'kareiq' } })
+      .then(function (res) {
+        if (!res.ok) return res.json().catch(function () { return {}; }).then(function (x) { throw new Error(x.message || 'The report could not be made. Please try again.'); });
+        var cd = res.headers.get('Content-Disposition') || '', m = cd.match(/filename="([^"]+)"/);
+        return res.blob().then(function (b) { return { blob: b, name: m ? m[1] : 'health-trends.' + st.format }; });
+      })
+      .then(function (o) {
+        var a = document.createElement('a'); a.href = URL.createObjectURL(o.blob); a.download = o.name; document.body.appendChild(a); a.click();
+        setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+        closeDialog(); toast('Downloaded ' + o.name);
+      })
+      .catch(function (err) { msg.textContent = err.message; msg.hidden = false; go.disabled = false; go.innerHTML = icon('download') + 'Download report'; });
+  }
+
+  // ================================================================ Personal and health details
+  // The workbook "Data Collection - Caregiver First Visit" (without the General Checklist).
+  // Families: "Personal & health details". Caregivers and the office: "Client information".
+  function clientInfoView() {
+    shell('clientinfo', '<div id="pv">' + loading(80) + loading(260) + '</div>');
+    api('GET', 'details').then(function (d) {
+      if (!d.ok) return pageError(d);
+      if (!d.people.length) return fill('<div class="empty"><b>No one is assigned to you yet</b>The office team will assign the people you care for.</div>');
+      var word = { new: 'Not started', draft: 'Draft', complete: 'Complete' };
+      fill('<div class="pagehead"><h1>Client information</h1><p class="muted">Personal and health details collected at the first visit. Choose a person to add or update their details.</p></div>' +
+        '<div class="cards3">' + d.people.map(function (p) {
+          var filled = 0, total = 0; Object.keys(p.progress).forEach(function (k) { filled += p.progress[k].filled; total += p.progress[k].total; });
+          var fam = p.updatedByRole === 'family';
+          return '<a class="bcard cinfo" href="#/clientinfo?p=' + encodeURIComponent(p.id) + '"><div class="bc-top"><span class="pill ' + (p.status === 'complete' ? 'active' : p.status === 'draft' ? 'pending' : '') + '"><i></i>' + word[p.status] + '</span>' +
+            (fam ? '<span class="pill newinfo">Updated by family</span>' : '') + '</div><h3>' + e(p.name) + '</h3>' +
+            '<div class="meter" role="img" aria-label="' + filled + ' of ' + total + ' fields filled"><i style="width:' + Math.round(100 * filled / total) + '%"></i></div>' +
+            '<p class="muted small">' + filled + ' of ' + total + ' fields filled' + (p.updatedAt ? ' · last saved ' + e(date(p.updatedAt)) + ' by ' + e(p.updatedBy) : '') + '</p>' +
+            '<span class="arrowlink">' + (p.status === 'new' ? 'Start' : 'Open') + icon('arrow') + '</span></a>';
+        }).join('') + '</div>');
+    });
+  }
+  function detailsView(r) {
+    var role = S.me.user.role, page = role === 'family' ? 'details' : 'clientinfo';
+    withPerson(r, page, function (p, people) {
+      fill(personBar(p, people) + loading(240));
+      Promise.all([S.cache.detDef ? Promise.resolve(S.cache.detDef) : api('GET', 'forms/details'), api('GET', 'people/' + encodeURIComponent(p.id) + '/details')]).then(function (x) {
+        var def = x[0], d = x[1];
+        if (!def.ok) return pageError(def);
+        if (!d.ok) return pageError(d);
+        S.cache.detDef = def; S.cache.det = d;
+        var data = d.meta.version ? d.data : Object.assign({}, d.prefill || {});
+        var latest = d.history[0];
+        // fields someone else changed in the latest save are marked, so new information stands out
+        var fresh = latest && !latest.mine ? latest.fields : [];
+        var word = { new: 'Not started', draft: 'Draft', complete: 'Complete' };
+        var who = function (h) { return e(h.by) + (h.byRole === 'family' ? ' (family)' : h.byRole === 'caregiver' ? ' (caregiver)' : ' (KareIQ office)'); };
+        var status = d.meta.version ? '<p class="detmeta">' + (role !== 'family' ? '<span class="pill ' + (d.meta.status === 'complete' ? 'active' : 'pending') + '"><i></i>' + word[d.meta.status] + '</span>' : '') +
+          '<span>Last saved ' + e(dt(d.meta.updatedAt)) + ' by ' + who({ by: d.meta.updatedBy, byRole: d.meta.updatedByRole }) + '</span></p>' : '<p class="detmeta"><span>' + (role === 'family' ? 'Not filled in yet. Add what you know; the care team completes the rest at the first visit.' : 'Not started yet.') + '</span></p>';
+        var freshNote = fresh.length ? '<p class="note newnote">' + icon('pen') + '<span><b>New information</b> from ' + who(latest) + ' on ' + e(dt(latest.at)) + ': ' + e(latest.labels.join(', ')) + '. These fields are marked below.</span></p>' : '';
+        var nav = '<nav class="detnav" aria-label="Sections">' + def.sections.map(function (sec) { return '<a href="#det-' + sec.id + '" data-act="det-jump" data-id="det-' + sec.id + '">' + e(sec.title) + '</a>'; }).join('') + '</nav>';
+        var form = '<form class="detform" data-form="details" novalidate><div class="alert bad" data-msg hidden></div>' + def.sections.map(function (sec) {
+          return '<section class="panel dets" id="det-' + sec.id + '"><h2>' + e(sec.title) + '</h2>' + sec.groups.map(function (g) {
+            return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<div class="detgrid">' + g.fields.map(function (fd) { return detField(fd, data, fresh, d.age); }).join('') + '</div>';
+          }).join('') + '</section>';
+        }).join('') + '</form>';
+        var hist = d.history.length ? '<details class="panel dethist"><summary>History of changes</summary><ol>' + d.history.map(function (h) {
+          return '<li><b>' + e(dt(h.at)) + '</b> · ' + who(h) + (h.status && role !== 'family' ? ' · ' + word[h.status] : '') + '<br><span class="muted small">' + (h.labels.length ? e(h.labels.join(', ')) : 'Status changed') + '</span></li>';
+        }).join('') + '</ol></details>' : '';
+        var bar = '<div class="detbar">' + (role === 'family'
+          ? '<button class="btn" data-act="det-save">' + icon('check') + 'Save details</button>'
+          : '<button class="btn ghost" data-act="det-save" data-status="draft">Save draft</button><button class="btn" data-act="det-save" data-status="complete">' + icon('check') + 'Save and mark complete</button>') +
+          '<span class="muted small" id="detSaved" role="status" aria-live="polite"></span></div>';
+        fill(personBar(p, people) + '<div class="pagehead"><h1>' + (role === 'family' ? 'Personal & health details' : 'Client information') + '</h1>' + status + '</div>' + freshNote + nav + form + hist + bar);
+        detToggle();
+      });
+    });
+  }
+  function detField(fd, data, fresh, age) {
+    var v = data[fd.k], id = 'f-' + fd.k, mark = fresh.indexOf(fd.k) > -1 || (fd.specify && fresh.indexOf(fd.specify) > -1);
+    var lab = '<label for="' + id + '">' + e(fd.label) + (mark ? ' <span class="newtag">New</span>' : '') + '</label>';
+    var wrap = function (inner, cls) { return '<div class="field det-f' + (cls ? ' ' + cls : '') + (mark ? ' fresh' : '') + '" data-k="' + fd.k + '"' + (fd.showIf ? ' data-show="' + fd.showIf.join(':') + '"' : '') + '>' + inner + '<span class="err" id="' + id + '-err"></span></div>'; };
+    if (fd.type === 'computed') return wrap('<label for="' + id + '">' + e(fd.label) + '</label><input class="in" id="' + id + '" readonly value="' + (age != null ? age + ' years' : '') + '" placeholder="From the date of birth"><span class="hint">' + e(fd.help) + '</span>', 'ro');
+    if (fd.type === 'select') {
+      return wrap(lab + '<select class="in" id="' + id + '" name="' + fd.k + '" data-act="det-field"><option value="">Choose…</option>' + fd.options.map(function (o) { return '<option' + (o === v ? ' selected' : '') + '>' + e(o) + '</option>'; }).join('') + '</select>');
+    }
+    if (fd.type === 'multi') {
+      var chosen = v || [];
+      var spec = fd.specify ? '<div class="spec" data-spec="' + fd.k + '"><label for="' + id + '-s">Please specify</label><input class="in" id="' + id + '-s" name="' + fd.specify + '" maxlength="300" value="' + e(data[fd.specify] || '') + '"></div>' : '';
+      return wrap('<fieldset class="multi"><legend>' + e(fd.label) + (mark ? ' <span class="newtag">New</span>' : '') + '</legend><div class="chips2">' + fd.options.map(function (o, i) {
+        return '<label class="chipck"><input type="checkbox" name="' + fd.k + '" value="' + e(o) + '" data-act="det-field"' + (chosen.indexOf(o) > -1 ? ' checked' : '') + '><span>' + e(o) + '</span></label>';
+      }).join('') + '</div>' + spec + '</fieldset>', 'wide');
+    }
+    if (fd.type === 'textarea') return wrap(lab + '<textarea class="in" id="' + id + '" name="' + fd.k + '" maxlength="' + fd.max + '" rows="3">' + e(v || '') + '</textarea>', 'wide');
+    var type = fd.type === 'date' ? 'date' : fd.format === 'email' ? 'email' : fd.format === 'phone' ? 'tel' : 'text';
+    var extra = fd.type === 'date' ? ' max="' + todayIST() + '" min="1900-01-01"' : ' maxlength="' + fd.max + '"' + (fd.format === 'phone' ? ' inputmode="tel" autocomplete="tel"' : fd.format === 'email' ? ' autocomplete="email"' : '');
+    return wrap(lab + '<input class="in" id="' + id + '" name="' + fd.k + '" type="' + type + '" value="' + e(v || '') + '"' + extra + '>' + (fd.hint ? '<span class="hint">' + e(fd.hint) + '</span>' : ''));
+  }
+  // follow-up questions and "Please specify" boxes appear only when they apply
+  function detToggle() {
+    var form = $('form[data-form=details]'); if (!form) return;
+    $$('[data-show]', form).forEach(function (el) {
+      var p = el.getAttribute('data-show').split(':'), src = form.elements[p[0]];
+      var on = src && src.value && src.value !== 'Never';
+      el.hidden = !on;
+    });
+    $$('[data-spec]', form).forEach(function (el) {
+      var k = el.getAttribute('data-spec');
+      el.hidden = !$$('input[name="' + k + '"]', form).some(function (c) { return c.checked && /\(specify\)/i.test(c.value); });
+    });
+  }
+  function detCollect() {
+    var form = $('form[data-form=details]'), def = S.cache.detDef, out = {};
+    def.sections.forEach(function (sec) { sec.groups.forEach(function (g) { g.fields.forEach(function (fd) {
+      if (fd.type === 'computed') return;
+      var hidden = (function () { var el = form.querySelector('.det-f[data-k="' + fd.k + '"]'); return el && el.hidden; })();
+      if (hidden) return;
+      if (fd.type === 'multi') {
+        var list = $$('input[name="' + fd.k + '"]', form).filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+        if (list.length) out[fd.k] = list;
+        var sp = form.elements[fd.specify]; if (sp && !sp.closest('[data-spec]').hidden && sp.value.trim()) out[fd.specify] = sp.value.trim();
+      } else { var el = form.elements[fd.k]; if (el && el.value.trim()) out[fd.k] = el.value.trim(); }
+    }); }); });
+    return out;
+  }
+  function detSave(status) {
+    var d = S.cache.det, form = $('form[data-form=details]'); if (!d || !form) return;
+    var btns = $$('[data-act=det-save]'), msg = form.querySelector('[data-msg]');
+    btns.forEach(function (b) { b.disabled = true; });
+    $$('.err', form).forEach(function (x) { x.textContent = ''; }); $$('[aria-invalid]', form).forEach(function (x) { x.removeAttribute('aria-invalid'); });
+    msg.hidden = true;
+    api('POST', 'people/' + encodeURIComponent(d.person.id) + '/details', { data: detCollect(), version: d.meta.version, status: status || undefined }).then(function (x) {
+      btns.forEach(function (b) { b.disabled = false; });
+      if (!x.ok) {
+        msg.textContent = x.message; msg.hidden = false;
+        if (x.status === 409) msg.innerHTML = e(x.message) + ' <button type="button" class="link" data-act="det-reload">Reload now</button>';
+        var firstBad = null;
+        Object.keys(x.errors || {}).forEach(function (k) {
+          var err = $('#f-' + k + '-err'), inp = form.elements[k];
+          if (err) err.textContent = x.errors[k];
+          if (inp && inp.setAttribute) { inp.setAttribute('aria-invalid', 'true'); inp.setAttribute('aria-describedby', 'f-' + k + '-err'); }
+          if (!firstBad && inp && inp.focus) firstBad = inp;
+        });
+        (firstBad || msg).scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+        if (firstBad) firstBad.focus({ preventScroll: true });
+        return;
+      }
+      toast(x.unchanged ? 'Nothing has changed since the last save.' : status === 'complete' ? 'Saved and marked complete.' : 'Details saved.');
+      S.people = null; // a new name or birth year shows everywhere
+      render();
+    });
   }
 
   // ================================================================ Medical records
@@ -1501,6 +1750,13 @@
       case 'drawer-close': document.body.classList.remove('drawer-open'); break;
       case 'period': go('#/dashboard?p=' + encodeURIComponent(S.pid) + '&period=' + t.getAttribute('data-k')); break;
       case 'calendar': calendarDialog(); break;
+      case 'dl': dlDialog(); break;
+      case 'dl-all': $$('dialog[open] [data-act=dlm]').forEach(function (c) { c.checked = true; }); dlSync(); break;
+      case 'dl-none': $$('dialog[open] [data-act=dlm]').forEach(function (c) { c.checked = false; }); dlSync(); break;
+      case 'dl-go': dlGo(); break;
+      case 'det-save': ev.preventDefault(); detSave(t.getAttribute('data-status')); break;
+      case 'det-reload': render(); break;
+      case 'det-jump': { ev.preventDefault(); var tgt = document.getElementById(t.getAttribute('data-id')); if (tgt) { tgt.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var h = tgt.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } break; }
       case 'jump': {
         var k2 = t.getAttribute('data-k'), blk = $('#t-' + k2);
         S.cache.metric = k2; $$('.vcard').forEach(function (c) { c.classList.toggle('on', c === t); });
@@ -1585,6 +1841,9 @@
 
   document.addEventListener('change', function (ev) {
     var t = ev.target, act = t.getAttribute('data-act');
+    if (act === 'dlm' || act === 'dlp' || act === 'dlf') { dlSync(); return; }
+    if (act === 'dlc') { $$('dialog[open] [data-act=dlp]').forEach(function (c) { if (!c.disabled) c.checked = t.checked; }); dlSync(); return; }
+    if (act === 'det-field') { detToggle(); return; }
     if (act === 'req-status') {
       api('PATCH', 'admin/requests/' + t.getAttribute('data-type') + '/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Status saved.' : d.message); });
     } else if (act === 'plan-status') {

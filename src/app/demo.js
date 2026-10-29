@@ -36,7 +36,9 @@ async function seed() {
     { id: 'P-DEMO04', name: 'Kamala Iyer', birthYear: 1949, sex: 'female', diabetic: false, smoker: false, parentalMI: false },
     { id: 'P-DEMO05', name: 'Mohan Das', birthYear: 1944, sex: 'male', diabetic: false, smoker: false, parentalMI: false }
   ];
-  for (const x of people) await docs.insert('app_people', { ...x, active: true, createdAt: iso() });
+  // registered about two months ago (the demo history starts then); Saraswathi has only just joined
+  const regAgo = { 'P-DEMO01': 62, 'P-DEMO02': 62, 'P-DEMO03': 3, 'P-DEMO04': 62, 'P-DEMO05': 62 };
+  for (const x of people) await docs.insert('app_people', { ...x, active: true, registeredAt: new Date(now.getTime() - regAgo[x.id] * 86400000).toISOString(), createdAt: iso() });
 
   const link = (user, personId, kind, relation) => docs.insert('app_links', { id: `demo-l-${user}-${personId}`, userId: ids[user], personId, kind, relation: relation || null, createdAt: iso() });
   await link('family', 'P-DEMO01', 'family', 'Mother');
@@ -115,8 +117,16 @@ async function seed() {
   const day0 = (n) => new Date(now.getTime() - n * 86400000).toISOString();
   const addRisk = async (personId, test, inputs, ago, by) => {
     const out = risk.evaluate(test, inputs);
-    if (out.result) await docs.insert('app_risks', { id: `demo-r-${personId}-${test}`, personId, test, inputs: out.inputs, ...out.result, at: day0(ago), enteredBy: by, createdAt: day0(ago) });
+    const key = `demo-r-${personId}-${test}` + (ago > 40 && earlier.has(personId + test) ? '-1' : '');
+    if (out.result) await docs.insert('app_risks', { id: key, personId, test, inputs: out.inputs, ...out.result, at: day0(ago), enteredBy: by, createdAt: day0(ago) });
   };
+  // earlier checks, so the risk trend compares real assessments: improving, worsening and stable
+  const earlier = new Set(['P-DEMO01phq9', 'P-DEMO01tug', 'P-DEMO02chair30', 'P-DEMO02mmse', 'P-DEMO04tug']);
+  await addRisk('P-DEMO01', 'phq9', { score: 11 }, 55, ids.nurse);          // moderate -> mild: improving
+  await addRisk('P-DEMO01', 'tug', { seconds: 16.8 }, 48, ids.nurse);       // same band, a little faster: stable
+  await addRisk('P-DEMO02', 'chair30', { sex: 'male', age: 79, count: 9 }, 50, ids.nest); // below average -> average: improving
+  await addRisk('P-DEMO02', 'mmse', { score: 26 }, 58, ids.nest);           // unchanged: stable
+  await addRisk('P-DEMO04', 'tug', { seconds: 17 }, 45, ids.nurse);         // good -> fall risk: worsening
   await addRisk('P-DEMO01', 'cvd', { sex: 'female', age: 75, sbp: 136, tc: 212, hdl: 48, crp: 2.4, smoker: 'no', parentMI: 'no', diabetic: 'yes', hba1c: 7.1 }, 20, ids.admin);
   await addRisk('P-DEMO01', 'idrs', { score: 60 }, 40, ids.nurse);
   await addRisk('P-DEMO01', 'tug', { seconds: 14.5 }, 12, ids.nurse);
@@ -125,7 +135,7 @@ async function seed() {
   await addRisk('P-DEMO01', 'kidney', { sex: 'female', age: 75, egfr: 52, acr: 45, acrUnit: 'mg/g' }, 20, ids.admin);
   await addRisk('P-DEMO02', 'cvd', { sex: 'male', age: 79, sbp: 128, tc: 190, hdl: 44, crp: 1.8, smoker: 'no', parentMI: 'yes', diabetic: 'no' }, 25, ids.admin);
   await addRisk('P-DEMO02', 'chair30', { sex: 'male', age: 79, count: 12 }, 10, ids.nest);
-  await addRisk('P-DEMO02', 'mmse', { score: 26 }, 45, ids.nest);
+  await addRisk('P-DEMO02', 'mmse', { score: 26 }, 30, ids.nest);
   await addRisk('P-DEMO04', 'tug', { seconds: 21 }, 8, ids.nurse);
   await addRisk('P-DEMO04', 'balance4', { stage: 3 }, 8, ids.nurse);
   await addRisk('P-DEMO04', 'gad7', { score: 4 }, 30, ids.nurse);
