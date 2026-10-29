@@ -452,7 +452,8 @@ async function dashboardData(user, person, range) {
     person: { id: person.id, name: person.name, birthYear: person.birthYear || null, age: ageOf(person), sex, smoker: person.smoker ?? null, parentalMI: person.parentalMI ?? null, diabetic: person.diabetic ?? null, relation: person.relation || null },
     plans: open.map(planView), product: productOf(open),
     range: {
-      key: range.key, label: range.label, from: istDate(fromMs), to: range.to, requestedFrom: range.from,
+      key: range.key, label: range.key === 'custom' ? `${fmtDay.format(new Date(fromMs))} to ${fmtDay.format(new Date(range.toMs))}` : range.label,
+      from: istDate(fromMs), to: range.to, requestedFrom: range.from,
       registeredOn: istDate(regMs), clamped: range.fromMs < regMs, beforeRegistration: range.toMs < regMs
     },
     riskTrend,

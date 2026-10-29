@@ -822,3 +822,24 @@ textarea.in{min-height:84px;resize:vertical;font:inherit}
 /* the save bar stays inside the page column */
 .detbar{margin:0 0 0;border:1px solid var(--line);border-radius:12px;box-shadow:0 -10px 30px -22px rgba(20,40,60,.35);bottom:12px}
 .det-f{align-content:start}
+
+/* ================================================================ health trend charts: wider, date axis */
+.mn{max-width:1480px}
+@media (min-width:1281px){ .dgrid{grid-template-columns:minmax(240px,300px) minmax(0,1fr)} }
+/* below 1280px the summary sits above the charts, so the charts get the full width */
+@media (max-width:1280px){
+  .dgrid{grid-template-columns:minmax(0,1fr)}
+  .sum{position:static;max-height:none}
+  #sumlist{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,230px),1fr));gap:10px;align-items:start}
+  #sumlist .vcard{margin:0}
+  #sumlist>.empty,#sumlist>p,#sumlist>.obsg{grid-column:1/-1}
+}
+.cwrap{padding:10px 6px 2px}
+.chart2 .vg{stroke:#f1eee6;stroke-width:1}
+.chart2 .tk{stroke:#555;stroke-width:1.2}
+.chart2 text{font-size:12.5px}
+.chart2 .hit{fill:transparent;cursor:pointer}
+.chart2 .pg:hover .pt,.chart2 .pg:focus-within .pt{stroke:#fff;stroke-width:2;r:7}
+.chart2 .ln{stroke-width:2.4}
+/* date fields: earlier than the registration date are out of range */
+input[type=date].in:out-of-range,input[type=date].in:invalid{border-color:var(--bad);background:var(--bad-soft)}

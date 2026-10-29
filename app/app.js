@@ -598,36 +598,84 @@
       if (m) el.innerHTML = chartSvg(m, d.range, el.clientWidth);
     });
   }
+  // ---- chart dates are worked out in India time (IST = UTC + 5:30)
+  var IST = 19800000, DAY = 86400000;
+  function istDayStart(ms) { return Math.floor((ms + IST) / DAY) * DAY - IST; }
+  function istParts(ms) { var d = new Date(ms + IST); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate(), wd: d.getUTCDay() }; }
+  function istMonthStart(y, m) { return Date.UTC(y, m, 1) - IST; }
+  var MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  // date ticks that fit the chart width: days, weeks or months, never crowded
+  function dateTicks(start, end, plotW) {
+    var span = end - start, maxN = Math.max(2, Math.floor(plotW / 78));
+    var dayCands = [1, 2, 3, 7, 14], out = [];
+    for (var i = 0; i < dayCands.length; i++) {
+      var step = dayCands[i] * DAY;
+      if (span / step <= maxN) {
+        for (var t = istDayStart(start) + (istDayStart(start) < start ? DAY : 0); t <= end; t += step) out.push(t);
+        var short = span <= 10 * DAY;
+        return out.map(function (t) { var p = istParts(t); return [t, short ? WD[p.wd] + ' ' + p.d : p.d + ' ' + MON[p.m]]; });
+      }
+    }
+    var monthCands = [1, 2, 3, 6, 12];
+    for (var k = 0; k < monthCands.length; k++) {
+      var mstep = monthCands[k], s = istParts(start), list = [];
+      for (var y = s.y, mo = s.m; ; mo += mstep) {
+        while (mo > 11) { mo -= 12; y++; }
+        var tm = istMonthStart(y, mo);
+        if (tm > end) break;
+        if (tm >= start) list.push(tm);
+        if (list.length > 400) break;
+      }
+      if (list.length <= maxN) {
+        var years = istParts(start).y !== istParts(end).y;
+        return list.map(function (t, n) { var p = istParts(t); return [t, MON[p.m] + (years && (n === 0 || p.m === 0) ? ' ' + p.y : '')]; });
+      }
+    }
+    return [[start, ''], [end, '']];
+  }
   function chartSvg(m, range, width) {
-    var W = Math.max(300, Math.round(width || 640)), H = W < 520 ? 220 : 280, L = 44, R = 14, T = 16, B = 34;
-    var start = Date.parse(range.from + 'T00:00:00+05:30'), end = Date.parse(range.to + 'T23:59:59+05:30');
-    var days = Math.round((end - start) / 86400000);
+    var W = Math.max(300, Math.round(width || 640)), small = W < 560;
+    var H = small ? 250 : 320, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
+    // x axis: from the first date the person can see (registration or period start) to now
+    var start = Date.parse(range.from + 'T00:00:00+05:30');
+    var end = Math.min(Date.parse(range.to + 'T23:59:59+05:30'), Date.now());
+    if (!(end > start)) end = start + DAY;
     var vals = [];
     m.rows.forEach(function (r) { m.keys.forEach(function (k) { if (r[k] != null) vals.push(r[k]); }); });
     var lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
     var stepGuess = niceStep((hi - lo) || Math.abs(hi) * 0.2 || 1);
     lo = Math.floor((lo - stepGuess * 0.5) / stepGuess) * stepGuess; hi = Math.ceil((hi + stepGuess * 0.5) / stepGuess) * stepGuess;
     if (m.metric === 'bp') { lo = Math.min(lo, 40); hi = Math.max(hi, 200); stepGuess = 40; }
-    var x = function (ms) { return L + (W - L - R) * (ms - start) / (end - start); };
+    var x0 = L + PAD, x1 = W - R - PAD;
+    // each reading sits at its real date and time
+    var x = function (ms) { return x0 + (x1 - x0) * Math.min(1, Math.max(0, (ms - start) / (end - start))); };
     var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
-    var out = '<svg class="chart2" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label) + ' chart">';
-    out += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B) + '" class="ax"/><line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '" class="ax"/>';
+    var out = '<svg class="chart2" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">';
+    // y grid and labels
     for (var v = lo; v <= hi + 1e-9; v += stepGuess) {
       var yy = y(v).toFixed(1);
       if (v > lo) out += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + yy + '" y2="' + yy + '" class="gl"/>';
       out += '<text x="' + (L - 8) + '" y="' + (Number(yy) + 4) + '" text-anchor="end">' + fmtNum(v) + '</text>';
     }
-    // x labels: weekdays for a week, otherwise dates
-    var ticks = [];
-    if (days <= 8) { for (var t = start + 43200000; t < end; t += 86400000) ticks.push([t, new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short' }).format(new Date(t))]); }
-    else { var n = W < 520 ? 4 : 6; for (var i = 0; i <= n; i++) { var tt = start + (end - start) * i / n; ticks.push([tt, fmtS.format(new Date(tt))]); } }
-    ticks.forEach(function (tk, i) { out += '<text x="' + x(tk[0]).toFixed(1) + '" y="' + (H - 10) + '" text-anchor="' + (days > 8 && i === 0 ? 'start' : days > 8 && i === ticks.length - 1 ? 'end' : 'middle') + '">' + e(tk[1]) + '</text>'; });
+    // x ticks: light vertical guides, short tick marks and labels that never overlap
+    var ticks = dateTicks(start, end, x1 - x0), lastRight = -1e9;
+    ticks.forEach(function (tk) {
+      var tx = x(tk[0]);
+      out += '<line class="vg" x1="' + tx.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '"/>' +
+        '<line class="tk" x1="' + tx.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y1="' + (H - B) + '" y2="' + (H - B + 5) + '"/>';
+      var wLab = tk[1].length * 7.2, left = Math.min(Math.max(tx - wLab / 2, L), W - R - wLab);
+      if (tk[1] && left > lastRight + 10) { out += '<text x="' + (left + wLab / 2).toFixed(1) + '" y="' + (H - 14) + '" text-anchor="middle">' + e(tk[1]) + '</text>'; lastRight = left + wLab; }
+    });
+    out += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B) + '" class="ax"/><line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '" class="ax"/>';
+    // readings in time order: line, points and a larger invisible target for the tooltip
     m.keys.forEach(function (k, si) {
-      var pts = m.rows.filter(function (r) { return r[k] != null; }).map(function (r) { return [x(r.ms), y(r[k]), r]; });
+      var pts = m.rows.filter(function (r) { return r[k] != null; }).slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (r) { return [x(r.ms), y(r[k]), r]; });
+      var rad = pts.length > 90 ? 2.6 : pts.length > 40 ? 3.6 : 5;
       if (pts.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
       pts.forEach(function (p) {
-        var val = p[2][k];
-        out += '<circle class="pt s' + (si + 1) + '" r="' + (pts.length > 60 ? 3 : 6) + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"><title>' + e(dt(p[2].at)) + ': ' + val + ' ' + e(m.unit) + '</title></circle>';
+        var tip = dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
+        out += '<g class="pg"><circle class="pt s' + (si + 1) + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
+          '<circle class="hit" r="11" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"><title>' + e(tip) + '</title></circle></g>';
       });
     });
     return out + '</svg>';
@@ -652,9 +700,21 @@
   }
   function calendarDialog() {
     var d = S.cache.dash; if (!d) return;
-    openDialog('Choose dates', '<form data-form="range" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' +
-      field('from', 'From', 'type="date" value="' + e(d.range.from) + '" max="' + todayIST() + '"') + field('to', 'To', 'type="date" value="' + e(d.range.to) + '" max="' + todayIST() + '"') +
+    var min = d.range.registeredOn || '', max = todayIST();
+    var fromV = d.range.from < min ? min : d.range.from;
+    openDialog('Choose dates', '<form data-form="range" novalidate data-min="' + e(min) + '"><div class="alert bad" data-msg hidden></div>' +
+      (min ? '<p class="dl-period">' + icon('cal') + '<span>Health trends are available from <b>' + e(date(min)) + '</b>, ' + e(first(d.person.name)) + '\'s registration date. Earlier dates cannot be chosen.</span></p>' : '') +
+      '<div class="row2">' +
+      field('from', 'From', 'type="date" data-act="range-date" value="' + e(fromV) + '" min="' + e(min) + '" max="' + e(max) + '"') + field('to', 'To', 'type="date" data-act="range-date" value="' + e(d.range.to) + '" min="' + e(min) + '" max="' + e(max) + '"') +
       '</div><p class="muted small">Up to 2 years at a time.</p></form>', '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Show</button>');
+  }
+  // a date typed in by keyboard that is outside the allowed range is corrected straight away
+  function rangeDateCheck(inp) {
+    var f = inp.form, min = inp.min, max = inp.max, msg = f.querySelector('[data-msg]');
+    if (!inp.value) return;
+    if (min && inp.value < min) { inp.value = min; inp.setAttribute('data-fixed', min); msg.textContent = 'Dates before ' + date(min) + ' (the registration date) are not available, so the date was set to ' + date(min) + '.'; msg.hidden = false; }
+    else if (max && inp.value > max) { inp.value = max; inp.setAttribute('data-fixed', max); msg.textContent = 'Dates after today are not available.'; msg.hidden = false; }
+    else if (inp.getAttribute('data-fixed') !== inp.value) msg.hidden = true;
   }
 
   // ================================================================ Download trends
@@ -1647,7 +1707,10 @@
       });
     },
     range: function (f, v) {
+      var min = f.getAttribute('data-min') || '';
       if (!v.from || !v.to || v.from > v.to) return Promise.resolve({ ok: false, message: 'Choose a start date before the end date.' });
+      if (min && v.from < min) return Promise.resolve({ ok: false, message: 'Health trends are available from ' + date(min) + ', the registration date. Choose a start date on or after it.' });
+      if (v.to > todayIST()) return Promise.resolve({ ok: false, message: 'Choose an end date up to today.' });
       closeDialog(); go('#/dashboard?p=' + encodeURIComponent(S.pid) + '&from=' + v.from + '&to=' + v.to);
     },
     upload: function (f, v) {
@@ -1844,6 +1907,7 @@
     if (act === 'dlm' || act === 'dlp' || act === 'dlf') { dlSync(); return; }
     if (act === 'dlc') { $$('dialog[open] [data-act=dlp]').forEach(function (c) { if (!c.disabled) c.checked = t.checked; }); dlSync(); return; }
     if (act === 'det-field') { detToggle(); return; }
+    if (act === 'range-date') { rangeDateCheck(t); return; }
     if (act === 'req-status') {
       api('PATCH', 'admin/requests/' + t.getAttribute('data-type') + '/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Status saved.' : d.message); });
     } else if (act === 'plan-status') {
