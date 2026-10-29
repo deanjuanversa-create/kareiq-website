@@ -530,6 +530,7 @@
       var want = r && r.q && r.q.p;
       var cur = people.filter(function (x) { return x.id === want; })[0] || people.filter(function (x) { return x.id === S.pid || x.id === last; })[0] || people[0];
       S.pid = cur.id;
+      try { localStorage.setItem('kq.pid', cur.id); } catch (x) {}
       var q = '?p=' + encodeURIComponent(cur.id);
       var u = S.me.user;
       var tiles = [
@@ -540,11 +541,8 @@
         ['#/packages' + q, 'layers', 'Other packages', 'Every Kare@Home, KareNest, KareBalance and KareMind package'],
         ['#/invoices' + q, 'receipt', 'Invoices', 'Charges for your packages']
       ];
-      $('#mn').innerHTML = '<div id="pv"><div class="pagehead"><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Welcome to My KareIQ. Choose who and what you would like to see.</p></div>' +
-        '<section aria-labelledby="h-who"><h2 class="sec" id="h-who">' + (people.length > 1 ? 'The people you care for' : 'The person you care for') + '</h2><div class="wpeople" role="group" aria-label="Choose who to show">' + people.map(function (x) {
-          return '<button type="button" class="wperson' + (x.id === cur.id ? ' on' : '') + '" data-act="who-pick" data-id="' + e(x.id) + '" aria-pressed="' + (x.id === cur.id) + '"><span class="av lg">' + e(initials(x.name)) + '</span><span class="wperson-t"><b>' + e(x.name) + '</b>' +
-            (x.relation ? '<span class="muted small">' + e(x.relation) + '</span>' : '') + '<span class="ptags">' + (x.plans || []).map(function (pl) { return '<span class="tagb ' + pl.product + '">' + e(pl.included ? pl.productName + ' (included)' : pl.name) + '</span>'; }).join('') + '</span></span></button>';
-        }).join('') + '</div></section>' +
+      // the same "PERSON NAME ▾" selector as every other page (relationship and package tags included)
+      $('#mn').innerHTML = '<div id="pv">' + personBar(cur, people) + '<div class="pagehead"><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Welcome to My KareIQ. Choose who and what you would like to see.</p></div>' +
         '<section aria-labelledby="h-go"><h2 class="sec" id="h-go">Where would you like to go?</h2><nav class="gotiles" aria-label="Sections">' + tiles.map(function (t) {
           return '<a class="gotile" href="' + t[0] + '"><span class="gt-i" aria-hidden="true">' + icon(t[1]) + '</span><span class="gt-t"><b>' + e(t[2]) + '</b><span class="muted small">' + e(t[3]) + '</span></span>' + icon('arrow') + '</a>';
         }).join('') + '</nav></section>' +
@@ -2350,12 +2348,6 @@
         openDialog(kind === 'fail' ? 'Payment failed' : 'Cancel the order', '<form data-form="orderfail" data-id="' + e(t.getAttribute('data-id')) + '" data-kind="' + kind + '" novalidate><div class="alert bad" data-msg hidden></div>' +
           (kind === 'fail' ? '<label class="field"><span>What happened? (the family sees this)</span><input class="in" name="note" maxlength="300" placeholder="e.g. The payment link expired"></label>' : '<p>Cancel this order? The family sees it as cancelled.</p>') + '</form>',
           '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">' + (kind === 'fail' ? 'Mark as failed' : 'Cancel order') + '</button>');
-        break;
-      }
-      case 'who-pick': {
-        S.pid = t.getAttribute('data-id'); try { localStorage.setItem('kq.pid', S.pid); } catch (x) {}
-        $$('[data-act=who-pick]').forEach(function (b) { var on = b === t; b.classList.toggle('on', on); b.setAttribute('aria-pressed', String(on)); });
-        $$('.gotile').forEach(function (a) { a.setAttribute('href', a.getAttribute('href').replace(/\?p=[^&]*/, '?p=' + encodeURIComponent(S.pid))); });
         break;
       }
       case 'sbg': { sbgSet(t.closest('.sbg'), !t.closest('.sbg').classList.contains('open')); break; }
