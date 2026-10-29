@@ -795,26 +795,48 @@ a.brand-link{max-width:100%}
 }
 .pr-num{display:none}
 
-/* =================== Premium layer (29 Oct): every section a softly rounded panel on a warm canvas,
-   tighter rhythm between sections =================== */
-:root{--canvas:#f3f1ec;--gap-x:clamp(8px,1.3vw,20px);--gap-y:clamp(8px,1vw,14px);--r-sec:clamp(24px,2.8vw,40px);--sec:clamp(44px,5vw,72px)}
-body{background:var(--canvas)}
-main>section{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip;background-color:#fff;border:1px solid rgba(22,48,74,.05);box-shadow:0 1px 2px rgba(22,48,74,.04),0 22px 44px -36px rgba(22,48,74,.22)}
-main>section:first-child{margin-top:var(--gap-y)}
+/* =================== Premium layer (29 Oct): sections flow into each other with no gaps; each one
+   rises over the one before with softly curved top corners and a gentle shadow; curved header =================== */
+:root{--r-sec:clamp(28px,3vw,44px)}
+main>section{position:relative;isolation:isolate;margin:0;border:0;border-radius:var(--r-sec) var(--r-sec) 0 0;overflow:clip;background-color:#fff;box-shadow:0 -18px 36px -28px rgba(22,48,74,.26)}
+main>section:first-of-type{border-radius:0;box-shadow:none}
+main>section+section{margin-top:calc(-1 * var(--r-sec))}
+/* room at the bottom of every section for the curve of the next one (it is covered, never the content) */
+main>section::after{content:"";display:block;height:var(--r-sec)}
+footer{position:relative;isolation:isolate;margin-top:calc(-1 * var(--r-sec));border-radius:var(--r-sec) var(--r-sec) 0 0;overflow:clip;box-shadow:0 -18px 36px -28px rgba(22,48,74,.26)}
+.nav{border-radius:0 0 30px 30px}
+@media (max-width:760px){ :root{--r-sec:26px} .nav{border-radius:0 0 22px 22px} }
+body{background:#f7f8f6}
+:root{--sec:clamp(44px,5vw,72px)}
+.nav{background:#fff;box-shadow:0 1px 0 var(--line),0 16px 30px -28px rgba(19,48,74,.5)}
+.nav.scrolled{background:#fff;box-shadow:0 1px 0 var(--line),0 22px 40px -24px rgba(19,48,74,.45)}
 .our-values{padding-block:clamp(40px,4.5vw,60px) clamp(36px,4vw,52px)}
 .values{padding-block:clamp(44px,5vw,64px)}
-/* "What we do today" and the two brand cards read as one panel */
-#what-we-do{margin-bottom:0;border-bottom:0;border-radius:var(--r-sec) var(--r-sec) 0 0;box-shadow:none;padding-bottom:12px}
-#ecosystem{border-top:0;border-radius:0 0 var(--r-sec) var(--r-sec);padding-top:8px;padding-bottom:clamp(36px,4vw,56px)}
-/* the contact band is already its own rounded card */
-main>section.cta{background:transparent;border:0;box-shadow:none;overflow:visible;padding-block:0}
+/* "What we do today" and the two brand cards read as one section */
+#ecosystem{margin-top:0;border-radius:0;box-shadow:none;padding-top:8px;padding-bottom:clamp(36px,4vw,56px)}
+#what-we-do{padding-bottom:12px}
+#what-we-do::after{display:none}
+main>section.cta{background:#fff;padding-block:clamp(24px,3vw,40px) 0}
 .cta .band{border-radius:var(--r-sec)}
-footer{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);border:1px solid rgba(22,48,74,.05)}
-@media (max-width:760px){
-  :root{--gap-x:8px;--gap-y:8px;--r-sec:24px}
-}
 /* ecosystem diagram: the Kare@Home node shows the real Kare@Home logo (emblem and wordmark) */
 .node img.lockup{width:72%;height:auto;flex:none;margin-top:4%}
 .n-home small{margin-top:5px}
-/* header blends into the warm canvas so the panels float */
-.nav{background:rgba(243,241,236,.86)}
+/* header: curved bottom edge that clearly shows, the top section slides up under it */
+.nav{border-radius:0 0 30px 30px;box-shadow:0 1px 0 rgba(19,48,74,.06),0 14px 34px -18px rgba(19,48,74,.32)}
+.nav.scrolled{box-shadow:0 1px 0 rgba(19,48,74,.06),0 18px 40px -18px rgba(19,48,74,.38)}
+main>section:first-of-type{margin-top:-30px;padding-top:30px}
+@media (max-width:760px){ main>section:first-of-type{margin-top:-22px;padding-top:22px} }
+
+/* "Because peace of mind…" band: photo on the left half, text centred in the right half, edges aligned */
+main>section.cta{padding:clamp(28px,3.5vw,48px) 0 clamp(28px,3.5vw,48px)}
+.cta .band{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:stretch;background:linear-gradient(120deg,#fcf6f3 0%,#fbf0f4 60%,#f7eef7 100%);box-shadow:0 22px 50px -34px rgba(19,48,74,.35)}
+.cta .band-photo{min-height:340px}
+.cta .band-photo img{object-position:50% 45%}
+.cta .band-photo::after{background:none}
+.cta .band-copy{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;padding:clamp(28px,4vw,56px)}
+.cta .band h2{max-width:16ch}
+.cta .band p{margin:16px 0 26px}
+@media (max-width:900px){
+  .cta .band{grid-template-columns:1fr}
+  .cta .band-photo{min-height:0;aspect-ratio:16/9}
+}

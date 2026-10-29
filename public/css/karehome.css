@@ -786,17 +786,25 @@ html:not(.from-kareiq) .kh-top-in{justify-content:flex-end}
 }
 @media (max-width:360px){ .app-in{padding:0 10px 0 8px;gap:5px;font-size:13.5px} .app-in svg{width:18px;height:18px} }
 
-/* =================== Premium layer (29 Oct): every section a softly rounded panel, tighter rhythm =================== */
-:root{--canvas:#eef3f7;--gap-x:clamp(8px,1.3vw,20px);--gap-y:clamp(8px,1vw,14px);--r-sec:clamp(24px,2.8vw,40px)}
-body{background:var(--canvas)}
-main>section{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip;background-color:#fff;border:1px solid rgba(22,48,90,.05);box-shadow:0 1px 2px rgba(22,48,90,.04),0 22px 44px -36px rgba(22,48,90,.22)}
-main>section:first-child,main>.kh-crumbs+section{margin-top:var(--gap-y)}
-.why,.how{border-top:1px solid rgba(22,48,90,.05)}
+/* =================== Premium layer (29 Oct): sections flow into each other with no gaps; each one
+   rises over the one before with softly curved top corners and a gentle shadow; curved header =================== */
+:root{--r-sec:clamp(28px,3vw,44px)}
+main>section{position:relative;isolation:isolate;margin:0;border:0;border-radius:var(--r-sec) var(--r-sec) 0 0;overflow:clip;background-color:#fff;box-shadow:0 -18px 36px -28px rgba(22,48,90,.26)}
+main>section:first-of-type{border-radius:0;box-shadow:none}
+main>section+section{margin-top:calc(-1 * var(--r-sec))}
+/* room at the bottom of every section for the curve of the next one (it is covered, never the content) */
+main>section::after{content:"";display:block;height:var(--r-sec)}
+footer{position:relative;isolation:isolate;margin-top:calc(-1 * var(--r-sec));border-radius:var(--r-sec) var(--r-sec) 0 0;overflow:clip;box-shadow:0 -18px 36px -28px rgba(22,48,90,.26)}
+.nav{border-radius:0 0 30px 30px}
+@media (max-width:760px){ :root{--r-sec:26px} .nav{border-radius:0 0 22px 22px} }
+body{background:#fff}
+.nav{box-shadow:0 1px 0 var(--line),0 16px 30px -28px rgba(22,48,90,.5)}
+.nav.scrolled{box-shadow:0 1px 0 var(--line),0 22px 40px -24px rgba(22,48,90,.45)}
+.why,.how{border-top:0}
 .services{padding-block:clamp(44px,5vw,64px)}
 .how{padding-block:clamp(40px,4.5vw,56px)}
 .kh-explore{padding-block:clamp(44px,5vw,72px)}
 .kh-contact{padding-block:clamp(36px,4vw,56px) clamp(44px,5vw,64px)}
-footer.foot{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip}
 
 /* Why Kare@Home: the photo is a rounded card that shows both people (no more cut-off) */
 .why-in{grid-template-columns:minmax(0,1.2fr) minmax(0,1.8fr);padding:clamp(10px,1.2vw,16px);gap:clamp(8px,1vw,16px)}
@@ -804,7 +812,10 @@ footer.foot{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overfl
 .why-photo img{inset:-24px 0;height:calc(100% + 48px);object-position:42% 42%}
 .why-copy{padding:clamp(20px,2.4vw,34px) clamp(14px,2vw,28px)}
 @media (max-width:1100px){.why-in{grid-template-columns:1fr}.why-photo{min-height:0;aspect-ratio:1056/651}}
-@media (max-width:760px){
-  :root{--gap-x:8px;--gap-y:8px;--r-sec:24px}
-  .why-photo{border-radius:18px}
-}
+@media (max-width:760px){ .why-photo{border-radius:18px} }
+/* header: curved bottom edge that clearly shows, the top section slides up under it */
+.nav{border-radius:0 0 30px 30px;box-shadow:0 1px 0 rgba(22,48,90,.06),0 14px 34px -18px rgba(22,48,90,.32)}
+.nav.scrolled{box-shadow:0 1px 0 rgba(22,48,90,.06),0 18px 40px -18px rgba(22,48,90,.38)}
+main>section:first-of-type,main>.kh-crumbs{margin-top:-30px;padding-top:30px}
+main>.kh-crumbs+section{margin-top:0}
+@media (max-width:760px){ .nav{border-radius:0 0 22px 22px} main>section:first-of-type,main>.kh-crumbs{margin-top:-22px;padding-top:22px} }
