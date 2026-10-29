@@ -785,3 +785,26 @@ html:not(.from-kareiq) .kh-top-in{justify-content:flex-end}
   .app-in span{display:inline}
 }
 @media (max-width:360px){ .app-in{padding:0 10px 0 8px;gap:5px;font-size:13.5px} .app-in svg{width:18px;height:18px} }
+
+/* =================== Premium layer (29 Oct): every section a softly rounded panel, tighter rhythm =================== */
+:root{--canvas:#eef3f7;--gap-x:clamp(8px,1.3vw,20px);--gap-y:clamp(8px,1vw,14px);--r-sec:clamp(24px,2.8vw,40px)}
+body{background:var(--canvas)}
+main>section{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip;background-color:#fff;border:1px solid rgba(22,48,90,.05);box-shadow:0 1px 2px rgba(22,48,90,.04),0 22px 44px -36px rgba(22,48,90,.22)}
+main>section:first-child,main>.kh-crumbs+section{margin-top:var(--gap-y)}
+.why,.how{border-top:1px solid rgba(22,48,90,.05)}
+.services{padding-block:clamp(44px,5vw,64px)}
+.how{padding-block:clamp(40px,4.5vw,56px)}
+.kh-explore{padding-block:clamp(44px,5vw,72px)}
+.kh-contact{padding-block:clamp(36px,4vw,56px) clamp(44px,5vw,64px)}
+footer.foot{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip}
+
+/* Why Kare@Home: the photo is a rounded card that shows both people (no more cut-off) */
+.why-in{grid-template-columns:minmax(0,1.2fr) minmax(0,1.8fr);padding:clamp(10px,1.2vw,16px);gap:clamp(8px,1vw,16px)}
+.why-photo{min-height:380px;border-radius:calc(var(--r-sec) - 10px)}
+.why-photo img{inset:-24px 0;height:calc(100% + 48px);object-position:42% 42%}
+.why-copy{padding:clamp(20px,2.4vw,34px) clamp(14px,2vw,28px)}
+@media (max-width:1100px){.why-in{grid-template-columns:1fr}.why-photo{min-height:0;aspect-ratio:1056/651}}
+@media (max-width:760px){
+  :root{--gap-x:8px;--gap-y:8px;--r-sec:24px}
+  .why-photo{border-radius:18px}
+}

@@ -794,3 +794,27 @@ a.brand-link{max-width:100%}
   html.kq-at-top .wa-float{opacity:0;visibility:hidden;transform:translateY(16px);pointer-events:none}
 }
 .pr-num{display:none}
+
+/* =================== Premium layer (29 Oct): every section a softly rounded panel on a warm canvas,
+   tighter rhythm between sections =================== */
+:root{--canvas:#f3f1ec;--gap-x:clamp(8px,1.3vw,20px);--gap-y:clamp(8px,1vw,14px);--r-sec:clamp(24px,2.8vw,40px);--sec:clamp(44px,5vw,72px)}
+body{background:var(--canvas)}
+main>section{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);overflow:clip;background-color:#fff;border:1px solid rgba(22,48,74,.05);box-shadow:0 1px 2px rgba(22,48,74,.04),0 22px 44px -36px rgba(22,48,74,.22)}
+main>section:first-child{margin-top:var(--gap-y)}
+.our-values{padding-block:clamp(40px,4.5vw,60px) clamp(36px,4vw,52px)}
+.values{padding-block:clamp(44px,5vw,64px)}
+/* "What we do today" and the two brand cards read as one panel */
+#what-we-do{margin-bottom:0;border-bottom:0;border-radius:var(--r-sec) var(--r-sec) 0 0;box-shadow:none;padding-bottom:12px}
+#ecosystem{border-top:0;border-radius:0 0 var(--r-sec) var(--r-sec);padding-top:8px;padding-bottom:clamp(36px,4vw,56px)}
+/* the contact band is already its own rounded card */
+main>section.cta{background:transparent;border:0;box-shadow:none;overflow:visible;padding-block:0}
+.cta .band{border-radius:var(--r-sec)}
+footer{margin:0 var(--gap-x) var(--gap-y);border-radius:var(--r-sec);border:1px solid rgba(22,48,74,.05)}
+@media (max-width:760px){
+  :root{--gap-x:8px;--gap-y:8px;--r-sec:24px}
+}
+/* ecosystem diagram: the Kare@Home node shows the real Kare@Home logo (emblem and wordmark) */
+.node img.lockup{width:72%;height:auto;flex:none;margin-top:4%}
+.n-home small{margin-top:5px}
+/* header blends into the warm canvas so the panels float */
+.nav{background:rgba(243,241,236,.86)}
