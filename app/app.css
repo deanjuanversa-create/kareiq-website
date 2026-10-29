@@ -987,3 +987,107 @@ input[type=date].in:out-of-range,input[type=date].in:invalid{border-color:var(--
   .pout{transition:none}
   .chart2.anim polyline.ln,.chart2.anim .pg .pt{animation:none;stroke-dashoffset:0}
 }
+
+/* ================================================================ side menu sections with sub-pages (Profile, Health details) */
+.sb a span,.sbg-btn span{line-height:1.25}
+.sb a{padding-top:6px;padding-bottom:6px}
+.sbg-btn{display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:6px 12px;border:0;background:none;border-radius:4px;color:var(--ink);font:inherit;font-size:1rem;cursor:pointer;text-align:left}
+.sbg-btn>svg{width:20px;height:20px;flex:none;opacity:.8}
+.sbg-btn:hover,.sbg.peek>.sbg-btn{background:var(--cream-2)}
+.sbg-btn:focus-visible{outline:3px solid color-mix(in srgb,var(--accent) 70%,white);outline-offset:2px}
+.sbg.here>.sbg-btn{font-weight:600}
+.sbg.here>.sbg-btn>svg{opacity:1}
+.sbg-btn .chev{margin-left:auto;display:grid;place-items:center;transition:transform .28s cubic-bezier(.33,1,.68,1)}
+.sbg-btn .chev svg{width:16px;height:16px}
+.sbg.open .chev,.sbg.peek .chev{transform:rotate(180deg)}
+.sbg-sub{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s cubic-bezier(.33,1,.68,1)}
+.sbg.open>.sbg-sub,.sbg.peek>.sbg-sub{grid-template-rows:1fr}
+.sbg-in{overflow:hidden;min-height:0;display:flex;flex-direction:column;gap:2px;position:relative;padding-left:22px}
+.sbg-in::before{content:"";position:absolute;left:22px;top:6px;bottom:6px;width:2px;border-radius:2px;background:#e3ddcb}
+.sbg-sub a{min-height:42px;font-size:.95rem;margin-left:8px;padding-left:12px;visibility:hidden;transition:visibility 0s linear .3s,background-color .2s}
+.sbg.open>.sbg-sub a,.sbg.peek>.sbg-sub a{visibility:visible;transition-delay:0s}
+.sbg-sub a svg{width:18px;height:18px}
+.sbg-sub a[aria-current="page"]{box-shadow:inset 3px 0 0 var(--ink)}
+@media (prefers-reduced-motion:reduce){.sbg-sub,.sbg-btn .chev,.sbg-sub a{transition:none}}
+
+/* page tools (Risk trends: period and download) */
+.ptools{margin:0 0 14px}
+.ptools .thead{margin-bottom:0}
+.sec-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.booksec{margin-top:28px;scroll-margin-top:84px}
+
+/* ================================================================ My package */
+.mypkgs{display:grid;gap:14px;margin:18px 0 8px}
+.mypkg{background:#fff;border:1px solid #e6e2d8;border-left:5px solid var(--accent);border-radius:12px;padding:18px 20px}
+.mypkg.karehome{border-left-color:#16305a}.mypkg.karenest{border-left-color:#0e4a44}
+.mp-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mp-tags{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-bottom:6px}
+.mp-head h2{font-size:1.35rem}
+.mp-facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,190px),1fr));gap:10px 22px;margin:14px 0 4px}
+.mp-facts dt{font-size:.76rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.mp-facts dd{margin:3px 0 0}
+.mp-more{margin-top:12px}
+.mp-more summary{cursor:pointer;color:var(--accent-d);font-weight:600}
+.mp-more[open] summary{margin-bottom:8px}
+
+/* ================================================================ Other packages */
+.pkgjump{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 18px}
+.pkgjump a{display:inline-flex;align-items:center;min-height:40px;padding:0 14px;border:1.5px solid #d9d4c7;border-radius:999px;background:#fff;color:var(--ink);text-decoration:none;font-weight:600;font-size:.92rem}
+.pkgjump a:hover{border-color:var(--ink-2)}
+.pkbrand{margin:0 0 30px;scroll-margin-top:84px}
+.pkb-head{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.pkb-head>div{flex:1 1 260px;min-width:0}
+.pkb-head h2{font-size:1.4rem}
+.pkb-logo{height:40px;width:auto;max-width:140px;object-fit:contain}
+.pkb-mark{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-d)}
+.pkb-mark svg{width:22px;height:22px}
+.pkbrand.karebalance .pkb-mark{background:#e6eefb;color:#1f4fa8}.pkbrand.karemind .pkb-mark{background:#fbe9ee;color:#a2334f}
+.pkb-site{white-space:nowrap}
+.inc.sm li{font-size:.88rem}
+.pk-acts{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+@media (max-width:560px){.mp-head{flex-direction:column}.pkb-site{white-space:normal}}
+
+/* ================================================================ side menu motion: hover, press, the current page and the dropdowns */
+.sb a,.sbg-btn{position:relative;isolation:isolate;transition:transform .18s ease,color .2s ease}
+.sb a::before,.sbg-btn::before{content:"";position:absolute;inset:0;border-radius:inherit;background:var(--cream-2);z-index:-1;opacity:0;transform:scaleX(.55);transform-origin:left center;transition:opacity .22s ease,transform .32s cubic-bezier(.22,1,.36,1)}
+.sb a:hover,.sbg-btn:hover,.sbg.peek>.sbg-btn{background:transparent}
+.sb a:hover::before,.sbg-btn:hover::before,.sbg.peek>.sbg-btn::before{opacity:1;transform:none}
+.sb a[aria-current="page"]::before{display:none}
+.sb a>svg,.sbg-btn>svg{transition:transform .35s cubic-bezier(.34,1.56,.64,1),opacity .2s}
+.sb a:hover>svg,.sbg-btn:hover>svg{transform:translateX(2px) scale(1.14);opacity:1}
+.sb a:active,.sbg-btn:active{transform:scale(.97)}
+.sb a.arrive{animation:kq-hi .5s cubic-bezier(.34,1.56,.64,1)}
+.sb a.arrive>svg{animation:kq-bump .55s cubic-bezier(.34,1.56,.64,1) .08s}
+@keyframes kq-hi{0%{transform:scale(.94);background-color:transparent}60%{transform:scale(1.02)}100%{transform:none}}
+.sbg.open>.sbg-btn .chev,.sbg.peek>.sbg-btn .chev{transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+/* sub-pages slide down one after the other when a section opens, and fold back up when it closes */
+.sbg-sub a{opacity:0;transform:translateY(-8px);transition:opacity .16s ease,transform .2s ease,visibility 0s linear .3s,color .2s}
+.sbg.open>.sbg-sub a,.sbg.peek>.sbg-sub a{opacity:1;transform:none;transition:opacity .28s ease,transform .38s cubic-bezier(.34,1.56,.64,1),visibility 0s,color .2s}
+.sbg.open>.sbg-sub a:nth-child(1),.sbg.peek>.sbg-sub a:nth-child(1){transition-delay:.06s,.06s,0s,0s}
+.sbg.open>.sbg-sub a:nth-child(2),.sbg.peek>.sbg-sub a:nth-child(2){transition-delay:.12s,.12s,0s,0s}
+.sbg.open>.sbg-sub a:active,.sbg.peek>.sbg-sub a:active{transform:scale(.97);transition-delay:0s}
+.sbg-in::before{transform-origin:top;transform:scaleY(0);transition:transform .3s ease}
+.sbg.open .sbg-in::before,.sbg.peek .sbg-in::before{transform:none;transition:transform .45s cubic-bezier(.22,1,.36,1) .05s}
+
+/* ================================================================ page sections: hover and press */
+.mn #pv>*{animation:kq-rise .45s cubic-bezier(.22,1,.36,1) both}
+.mn #pv>*:nth-child(2){animation-delay:.04s}.mn #pv>*:nth-child(3){animation-delay:.08s}.mn #pv>*:nth-child(4){animation-delay:.12s}.mn #pv>*:nth-child(n+5){animation-delay:.16s}
+.bcard,.mypkg,.vfacts>div,.rof,.pkgsum>div{transition:transform .3s cubic-bezier(.33,1,.68,1),box-shadow .3s ease,border-color .25s ease}
+.bcard:hover,.mypkg:hover{transform:translateY(-4px);box-shadow:0 18px 30px -22px rgba(20,40,60,.55)}
+.bcard:active,.mypkg:active{transform:translateY(-1px) scale(.995)}
+.vfacts>div:hover{transform:translateY(-2px);box-shadow:0 10px 18px -14px rgba(20,40,60,.5)}
+.pkgjump a,.detnav a,.thead .chips button,.btn,.arrowlink{transition:transform .2s cubic-bezier(.34,1.56,.64,1),background-color .2s ease,border-color .2s ease,color .2s ease,box-shadow .2s ease}
+.pkgjump a:hover,.detnav a:hover{transform:translateY(-2px);box-shadow:0 8px 14px -10px rgba(20,40,60,.5)}
+.pkgjump a:active,.detnav a:active,.thead .chips button:active,.btn:active{transform:scale(.96)}
+.thead .chips button:hover{transform:translateY(-1px)}
+.arrowlink svg{transition:transform .25s cubic-bezier(.34,1.56,.64,1)}
+.arrowlink:hover svg,.thead .dl:hover svg{transform:translateX(4px)}
+.mp-more summary,.rmean summary,.rlist summary,.dethist summary{transition:color .2s}
+.mp-more[open]>*:not(summary),.rmean[open]>*:not(summary),.rlist[open]>*:not(summary){animation:kq-rise .35s cubic-bezier(.22,1,.36,1) both}
+
+@media (prefers-reduced-motion:reduce){
+  .sb a,.sbg-btn,.sb a::before,.sbg-btn::before,.sb a>svg,.sbg-btn>svg,.sbg-sub a,.sbg-in::before,.bcard,.mypkg,.vfacts>div,.pkgjump a,.detnav a,.thead .chips button,.btn,.arrowlink,.arrowlink svg{transition:none!important}
+  .sb a.arrive,.sb a.arrive>svg,.mn #pv>*,.mp-more[open]>*,.rmean[open]>*,.rlist[open]>*{animation:none!important}
+  .sb a:hover>svg,.sbg-btn:hover>svg,.bcard:hover,.mypkg:hover,.vfacts>div:hover,.pkgjump a:hover,.detnav a:hover,.thead .chips button:hover,.arrowlink:hover svg{transform:none}
+  .sbg-sub a{transform:none}
+}

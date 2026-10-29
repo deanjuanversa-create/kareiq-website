@@ -92,6 +92,8 @@
       brain: '<path d="M9.5 4.5A3 3 0 0 0 6.5 7a3 3 0 0 0-2 5.2A3 3 0 0 0 7 17a3 3 0 0 0 5 1.5V6a2.5 2.5 0 0 0-2.5-1.5ZM14.5 4.5A3 3 0 0 1 17.5 7a3 3 0 0 1 2 5.2A3 3 0 0 1 17 17a3 3 0 0 1-5 1.5"/>',
       walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="m9.5 21 2.5-6.5 2.5 2.5v4M7.5 11.5l3-3.5 3 .5 2 3 2.5 1M12 8l-1 6.5"/>',
       ribbon: '<path d="M12 12.5 8 20.5l-2-2.5-3 .5L8.5 9M12 12.5l4 8 2-2.5 3 .5L15.5 9"/><circle cx="12" cy="7.5" r="4"/>',
+      pulse: '<path d="M3 12h4l2.2-5.5L13 18l2.4-6H21"/>',
+      layers: '<path d="m12 3.5 8.5 4.5-8.5 4.5L3.5 8Z"/><path d="m3.5 12 8.5 4.5 8.5-4.5M3.5 16l8.5 4.5 8.5-4.5"/>',
       user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.7 4-5.6 7.5-5.6s6.3 1.9 7.5 5.6"/>',
       camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.6-2.2h5.8L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="12.8" r="3.3"/>',
       inbox: '<path d="M4 13.5 6.2 5.6A2 2 0 0 1 8.1 4h7.8a2 2 0 0 1 1.9 1.6L20 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4.5Z"/><path d="M4 13.5h4.5l1.2 2.2h4.6l1.2-2.2H20"/>',
@@ -190,6 +192,13 @@
   window.addEventListener('hashchange', render);
   window.addEventListener('hashchange', render);
 
+  // where families and the office land after signing in (there is no separate dashboard page)
+  var HOME_PAGE = '#/health/vitals';
+  function queryOf(r, extra) {
+    var q = Object.assign({}, r.q, extra || {});
+    var k = Object.keys(q).filter(function (x) { return q[x] !== '' && q[x] != null; });
+    return k.length ? '?' + k.map(function (x) { return encodeURIComponent(x) + '=' + encodeURIComponent(q[x]); }).join('&') : '';
+  }
   function render() {
     S.tok = (S.tok || 0) + 1;
     var r = route();
@@ -215,22 +224,32 @@
     var role = S.me.user.role;
     // old addresses (one page per brand) still work
     if (BRANDS[top]) {
-      if (r.parts[1] === 'p' && r.parts[2]) return go((r.parts[3] === 'visit' ? '#/visit' : role === 'caregiver' ? '#/people' : '#/dashboard') + '?p=' + encodeURIComponent(r.parts[2]), true);
+      if (r.parts[1] === 'p' && r.parts[2]) return go((r.parts[3] === 'visit' ? '#/visit' : role === 'caregiver' ? '#/people' : HOME_PAGE) + '?p=' + encodeURIComponent(r.parts[2]), true);
       return go(r.parts[1] === 'requests' ? '#/services' : '#/', true);
     }
-    if (top === '') return go(role === 'caregiver' ? '#/people' : '#/dashboard', true);
+    if (top === '') return go(role === 'caregiver' ? '#/people' : HOME_PAGE, true);
+    // former addresses: the dashboard was split into dedicated pages
+    if (top === 'dashboard' && role !== 'caregiver') return go(HOME_PAGE + queryOf(r), true);
+    if (top === 'details' && role === 'family') return go('#/profile/personal' + queryOf(r), true);
+    if (top === 'services' && role !== 'caregiver') return go('#/package' + queryOf(r, { book: '1' }), true);
+    if (top === 'profile' && role === 'family') {
+      if (r.parts[1] === 'personal' || r.parts[1] === 'conditions') return detailsView(r, r.parts[1]);
+      return go('#/profile/personal' + queryOf(r), true);
+    }
+    if (top === 'health' && role !== 'caregiver') {
+      if (r.parts[1] === 'vitals' || r.parts[1] === 'risks') return healthView(r, r.parts[1]);
+      return go(HOME_PAGE + queryOf(r), true);
+    }
+    if (top === 'packages' && role === 'family') return otherPackagesView(r);
     if (top === 'account') return accountView();
     if (top === 'plans') return plansView(r);
     if (top === 'admin') { if (role !== 'admin') return go('#/', true); return adminView(r.parts[1] || 'today', r); }
     if (top === 'people' && role !== 'family') return peopleView();
     if (top === 'visit' && role !== 'family') return visitView(r);
     if (top === 'assess' && role !== 'family') return assessView(r);
-    if (top === 'dashboard' && role !== 'caregiver') return dashboardView(r);
     if (top === 'records') return recordsView(r);
-    if (top === 'details' && role === 'family') return detailsView(r);
     if (top === 'clientinfo' && role !== 'family') return r.q.p ? detailsView(r) : clientInfoView();
     if (top === 'package') return packageView(r);
-    if (top === 'services' && role !== 'caregiver') return servicesView(r);
     if (top === 'invoices' && role !== 'caregiver') return invoicesView(r);
     go('#/', true);
   }
@@ -378,29 +397,45 @@
   // assigned to them (no health history); the office sees everyone plus the office pages.
   var MENUS = {
     family: [
-      ['dashboard', 'Dashboard', 'grid'], ['records', 'Medical records', 'file'], ['details', 'Personal & health details', 'idcard'], ['package', 'Package information', 'box'],
-      ['services', 'Book services', 'cal'], ['invoices', 'Invoices', 'receipt']
+      { k: 'profile', label: 'Profile', icon: 'user', sub: [['profile/personal', 'Personal details', 'idcard'], ['profile/conditions', 'Pre-existing health conditions', 'clip']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge']] },
+      ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt']
     ],
     caregiver: [
       ['people', 'My people', 'people'], ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge'], ['records', 'Medical records', 'file']
     ],
     admin: [
-      ['dashboard', 'Dashboard', 'grid'], ['records', 'Medical records', 'file'], ['package', 'Package information', 'box'],
-      ['services', 'Book services', 'cal'], ['invoices', 'Invoices', 'receipt'], ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge']
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge']] },
+      ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['invoices', 'Invoices', 'receipt'],
+      ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge']
     ]
   };
+  // pages that belong to one person (the link keeps ?p= so the same person stays open)
+  var PERSON_PAGES = ['profile/personal', 'profile/conditions', 'health/vitals', 'health/risks', 'records', 'package', 'packages', 'invoices', 'visit', 'assess'];
   var OFFICE = [['admin', 'Requests', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock']];
 
   function shell(active, inner) {
     setBrand('kareiq');
     var u = S.me.user, role = u.role;
     var items = MENUS[role] || MENUS.family;
-    var withP = function (k) { return S.pid && ['dashboard', 'records', 'details', 'package', 'services', 'invoices', 'visit', 'assess'].indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
+    var arrived = S.sbActive !== active; S.sbActive = active; // a new page: its menu item animates in
+    var withP = function (k) { return S.pid && PERSON_PAGES.indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
     var link = function (l) {
-      return '<a href="#/' + l[0] + withP(l[0]) + '"' + (l[0] === active ? ' aria-current="page"' : '') + '>' + icon(l[2]) + '<span>' + e(l[1]) + '</span>' +
+      return '<a href="#/' + l[0] + withP(l[0]) + '"' + (l[0] === active ? ' aria-current="page"' + (arrived ? ' class="arrive"' : '') : '') + '>' + icon(l[2]) + '<span>' + e(l[1]) + '</span>' +
         (l[0] === 'admin' && S.cache.newCount ? '<b class="count">' + S.cache.newCount + '</b>' : '') + '</a>';
     };
-    var side = '<nav class="sb" id="sb" aria-label="Main"><div class="sb-in">' + items.map(link).join('') +
+    // a section with sub-pages (Profile, Health details): opens on hover, click, keyboard or tap
+    S.sbOpen = S.sbOpen || {};
+    var group = function (g) {
+      var here = g.sub.some(function (x) { return x[0] === active; });
+      if (here && arrived) S.sbOpen[g.k] = true; // arriving on a sub-page opens its section
+      var open = S.sbOpen[g.k] != null ? S.sbOpen[g.k] : here;
+      return '<div class="sbg' + (open ? ' open' : '') + (here ? ' here' : '') + '" data-group="' + g.k + '">' +
+        '<button type="button" class="sbg-btn" data-act="sbg" aria-expanded="' + open + '" aria-controls="sbg-' + g.k + '">' + icon(g.icon) + '<span>' + e(g.label) + '</span><i class="chev" aria-hidden="true">' + icon('down') + '</i></button>' +
+        '<div class="sbg-sub" id="sbg-' + g.k + '" role="group" aria-label="' + e(g.label) + '"><div class="sbg-in">' + g.sub.map(link).join('') + '</div></div></div>';
+    };
+    var item = function (l) { return Array.isArray(l) ? link(l) : group(l); };
+    var side = '<nav class="sb" id="sb" aria-label="Main"><div class="sb-in">' + items.map(item).join('') +
       (role === 'admin' ? '<p class="sb-h">Office</p>' + OFFICE.map(link).join('') + '<a href="/admin/" target="_blank" rel="noopener">' + icon('globe') + '<span>Website text and prices</span></a>' : '') +
       '<div class="sb-foot">' +
         (role === 'family' ? '<a href="#/plans"' + (active === 'plans' ? ' aria-current="page"' : '') + '>' + icon('plus') + '<span>Add a plan or booking</span></a>' : '') +
@@ -467,31 +502,40 @@
   var LV = { good: 'good', ok: 'ok', warn: 'warn', bad: 'bad' };
   function dotHtml(level) { return '<i class="dot ' + (LV[level] || 'none') + '" aria-hidden="true"></i>'; }
 
-  // ================================================================ Dashboard
-  function dashboardView(r) {
-    withPerson(r, 'dashboard', function (p, people) {
+  // ================================================================ Health details: Vitals and Risk trends
+  // The former dashboard, split into two pages that share the date filter and Download trends.
+  function healthView(r, kind) {
+    var page = 'health/' + kind;
+    withPerson(r, page, function (p, people) {
       var role = S.me.user.role;
-      if (role === 'caregiver') return go('#/people', true);
       var q = r.q.from && r.q.to ? 'from=' + encodeURIComponent(r.q.from) + '&to=' + encodeURIComponent(r.q.to) : 'period=' + encodeURIComponent(r.q.period || '7d');
       fill(personBar(p, people) + loading(160) + loading(420));
       api('GET', 'people/' + encodeURIComponent(p.id) + '/dashboard?' + q).then(function (d) {
         if (!d.ok) return pageError(d);
-        S.cache.dash = d;
+        S.cache.dash = d; S.cache.page = page;
         var active = d.plans.filter(function (x) { return x.status !== 'pending'; });
         if (!active.length && d.plans.length && role === 'family') { fill(personBar(p, people) + pendingHtml(p, d)); return; }
-        var group = S.cache.sumGroup || 'vitals';
         var actions = (d.canRecord ? '<a class="btn sm" href="#/visit?p=' + e(p.id) + '">' + icon('plus') + 'Record visit</a>' : '') +
           (d.canAssess ? '<a class="btn sm ghost" href="#/assess?p=' + e(p.id) + '">' + icon('gauge') + 'Add a risk check</a>' : '');
+        var guide = '<p class="note">' + icon('shield') + '<span>Colours compare readings with KareIQ\'s standard ranges. They are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>';
+        if (kind === 'risks') {
+          fill(personBar(p, people, actions) +
+            '<div class="pagehead"><h1>Risk trends</h1><p class="muted">Each risk check compared with the one before it. Choose a check to see its history for the period.</p></div>' +
+            '<div class="ptools">' + trendsHead(d) + '</div>' +
+            (role === 'family' ? '' : riskHtml(d)) + riskTrendHtml(d) + guide);
+          drawCharts(true);
+          return;
+        }
+        var group = S.cache.sumGroup || 'vitals';
         fill(personBar(p, people, actions) +
-          (role === 'family' ? '' : riskHtml(d)) + riskTrendHtml(d) +
+          '<div class="pagehead"><h1>Vitals</h1><p class="muted">Latest readings, and the history of the one you choose.</p></div>' +
           '<div class="dgrid">' +
             '<section class="sum" aria-labelledby="h-sum"><h2 id="h-sum">Summary</h2>' +
               '<label class="sumsel"><span class="sr">Show</span><select data-act="sumgroup">' + [['vitals', 'Vitals'], ['body', 'Body composition'], ['wellbeing', 'Wellbeing checks']].map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === group ? ' selected' : '') + '>' + o[1].toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' +
               '<div id="sumlist">' + summaryList(d, group) + '</div>' +
             '</section>' +
             '<section class="trends" aria-label="Trends">' + trendsHead(d) + '<div id="charts">' + chartsHtml(d, group) + '</div></section>' +
-          '</div>' + notesHtml(d) +
-          '<p class="note">' + icon('shield') + '<span>Colours compare readings with KareIQ\'s standard ranges. They are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>');
+          '</div>' + notesHtml(d) + guide);
         drawCharts(true);
       });
     });
@@ -557,7 +601,7 @@
   }
   function riskTrendHtml(d) {
     var items = riskItems(d);
-    var head = '<div class="sec-h"><h2 id="h-rtrend">Risk trend</h2><span class="muted small">Choose a risk check to see whether it is improving, worsening or stable, and its history</span></div>';
+    var head = '<div class="sec-h"><h2 id="h-rtrend">Your risk checks</h2><span class="muted small">Choose one to see whether it is improving, worsening or stable, and its history</span></div>';
     if (!items.length) return '<section class="trendbox" aria-labelledby="h-rtrend">' + head + '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div></section>';
     var sel = riskSelected(d);
     return '<section class="trendbox" aria-labelledby="h-rtrend">' + head +
@@ -863,11 +907,13 @@
   var DL_FORMATS = [['pdf', 'PDF report', 'Charts and tables, ready to print or share'], ['xlsx', 'Excel workbook', 'A sheet per vital, with native charts'], ['csv', 'CSV data file', 'Plain data for other apps (no charts)']];
   function dlDialog() {
     var d = S.cache.dash; if (!d) return;
-    var keep = S.cache.dl || {};
+    // each page remembers its own choices; Risk trends starts with the risk checks, Vitals with the main vitals
+    var pg = dlPage(), keep = (S.cache.dlBy || {})[pg] || {};
     var withData = d.metrics.filter(function (m) { return m.count; }).map(function (m) { return m.k; });
-    var sel = keep.metrics || (withData.filter(function (k) { return ['bp', 'hr', 'glucose', 'spo2', 'pi'].indexOf(k) > -1; }));
-    if (!sel.length) sel = withData.slice(0, 1);
-    var parts = keep.parts || ['charts', 'readings', 'averages', 'latest'], fmt = keep.format || 'pdf';
+    var risksWithData = riskItems(d).filter(function (it) { return it.r.test !== 'bmi' && riskInPeriod(d, it.t).length; }).map(function (it) { return 'risk:' + it.r.test; });
+    var sel = keep.metrics || (pg === 'risks' ? risksWithData : withData.filter(function (k) { return ['bp', 'hr', 'glucose', 'spo2', 'pi'].indexOf(k) > -1; }));
+    if (!sel.length) sel = pg === 'risks' ? riskItems(d).filter(function (it) { return it.r.test !== 'bmi'; }).slice(0, 1).map(function (it) { return 'risk:' + it.r.test; }) : withData.slice(0, 1);
+    var parts = keep.parts || (pg === 'risks' ? ['charts', 'readings', 'latest', 'risktrend'] : ['charts', 'readings', 'averages', 'latest']), fmt = keep.format || 'pdf';
     var r = d.range, period = (r.key === 'custom' ? r.label : r.label + ' (' + date(r.from) + ' – ' + date(r.to) + ')');
     var box = function (m) {
       return '<label class="ck"><input type="checkbox" data-act="dlm" value="' + m.k + '"' + (sel.indexOf(m.k) > -1 ? ' checked' : '') + '><span>' + e(m.label) +
@@ -884,7 +930,7 @@
         '<small>' + (m.count ? m.count + ' assessment' + (m.count === 1 ? '' : 's') + ' in this period' : 'no assessment in this period') + '</small></span></label>';
     };
     var riskGroup = risks.length ? '<fieldset class="ckset"><legend>Risk checks</legend><div class="ckgrid">' + risks.map(riskBox).join('') + '</div></fieldset>' : '';
-    var body = '<div class="dl-period">' + icon('cal') + '<span><b>Period:</b> ' + e(period) + '. Change it with the dashboard\'s date filter.' + (r.clamped ? ' History begins on ' + e(date(r.registeredOn)) + '.' : '') + '</span></div>' +
+    var body = '<div class="dl-period">' + icon('cal') + '<span><b>Period:</b> ' + e(period) + '. Change it with the date filter on this page.' + (r.clamped ? ' History begins on ' + e(date(r.registeredOn)) + '.' : '') + '</span></div>' +
       '<section class="dls"><div class="dls-h"><h3>1. Vitals and risk checks to download</h3><span class="muted small" id="dlCount"></span></div>' +
         '<div class="dls-tools"><button type="button" class="link" data-act="dl-all">Select all</button><button type="button" class="link" data-act="dl-none">Clear selection</button></div>' +
         group('vitals', 'Vitals') + group('body', 'Body composition') + riskGroup + '</section>' +
@@ -899,6 +945,7 @@
     dlg.classList.add('wide');
     dlSync();
   }
+  function dlPage() { return S.cache.page === 'health/risks' ? 'risks' : 'vitals'; }
   function dlState() {
     var dlg = $('dialog[open]'); if (!dlg) return null;
     var vals = function (sel) { return $$(sel, dlg).filter(function (x) { return x.checked && !x.disabled; }).map(function (x) { return x.value; }); };
@@ -918,7 +965,7 @@
     var go = $('#dlGo', st.dlg);
     go.disabled = !st.metrics.length || !st.parts.length;
     go.title = !st.metrics.length ? 'Choose at least one vital or risk check' : !st.parts.length ? 'Choose what to include' : '';
-    S.cache.dl = { metrics: st.metrics, parts: st.parts, format: st.format };
+    S.cache.dlBy = S.cache.dlBy || {}; S.cache.dlBy[dlPage()] = { metrics: st.metrics, parts: st.parts, format: st.format };
   }
   function dlGo() {
     var st = dlState(), d = S.cache.dash; if (!st || !d || !st.metrics.length || !st.parts.length) return;
@@ -960,8 +1007,13 @@
         }).join('') + '</div>');
     });
   }
-  function detailsView(r) {
-    var role = S.me.user.role, page = role === 'family' ? 'details' : 'clientinfo';
+  // Families: Profile > Personal details (general, emergency contacts, doctor) and Profile >
+  // Pre-existing health conditions (conditions, then allergies), both read-only.
+  // Caregivers and the office: Client information, the whole form, editable.
+  var DET_PARTS = { personal: ['general', 'emergency', 'doctors'], conditions: ['conditions', 'allergies'] };
+  function detailsView(r, part) {
+    var role = S.me.user.role, page = role === 'family' ? 'profile/' + (part || 'personal') : 'clientinfo';
+    part = role === 'family' ? (part || 'personal') : null;
     withPerson(r, page, function (p, people) {
       fill(personBar(p, people) + loading(240));
       Promise.all([S.cache.detDef ? Promise.resolve(S.cache.detDef) : api('GET', 'forms/details'), api('GET', 'people/' + encodeURIComponent(p.id) + '/details')]).then(function (x) {
@@ -972,22 +1024,28 @@
         // families read their details; the care team and the office keep them up to date (the server enforces this)
         var canEdit = d.canEdit === true && role !== 'family';
         var data = d.meta.version ? d.data : Object.assign({}, d.prefill || {});
-        var latest = d.history[0];
+        // the sections on this page, in the page's order
+        var sections = part ? DET_PARTS[part].map(function (id) { return def.sections.filter(function (x) { return x.id === id; })[0]; }).filter(Boolean) : def.sections;
+        var label = {};
+        sections.forEach(function (sec) { sec.groups.forEach(function (g) { g.fields.forEach(function (fd) { label[fd.k] = fd.label; if (fd.specify) label[fd.specify] = fd.label; }); }); });
+        var mineOnly = function (h) { var ks = (h.fields || []).filter(function (k) { return label[k]; }); return Object.assign({}, h, { fields: ks, labels: ks.map(function (k) { return label[k]; }).filter(function (x, i, a) { return a.indexOf(x) === i; }) }); };
+        var history = part ? d.history.map(mineOnly).filter(function (h) { return h.fields.length; }) : d.history;
+        var latest = part ? (d.history[0] ? mineOnly(d.history[0]) : null) : d.history[0];
         // fields someone else changed in the latest save are marked, so new information stands out
         var fresh = latest && !latest.mine ? latest.fields : [];
         var word = { new: 'Not started', draft: 'Draft', complete: 'Complete' };
         var who = function (h) { return e(h.by) + (h.byRole === 'family' ? ' (family)' : h.byRole === 'caregiver' ? ' (caregiver)' : ' (KareIQ office)'); };
         var status = d.meta.version ? '<p class="detmeta">' + (canEdit ? '<span class="pill ' + (d.meta.status === 'complete' ? 'active' : 'pending') + '"><i></i>' + word[d.meta.status] + '</span>' : '') +
           '<span>Last updated ' + e(dt(d.meta.updatedAt)) + ' by ' + who({ by: d.meta.updatedBy, byRole: d.meta.updatedByRole }) + '</span></p>' : '<p class="detmeta"><span>' + (canEdit ? 'Not started yet.' : 'The care team fills these in at the first visit.') + '</span></p>';
-        var freshNote = fresh.length ? '<p class="note newnote">' + icon('pen') + '<span><b>New information</b> from ' + who(latest) + ' on ' + e(dt(latest.at)) + ': ' + e(latest.labels.join(', ')) + '. These fields are marked below.</span></p>' : '';
-        var nav = '<nav class="detnav" aria-label="Sections">' + def.sections.map(function (sec) { return '<a href="#det-' + sec.id + '" data-act="det-jump" data-id="det-' + sec.id + '">' + e(sec.title) + '</a>'; }).join('') + '</nav>';
-        var head = photoHeader(d, data, canEdit);
-        var hist = d.history.length ? '<details class="panel dethist"><summary>History of changes</summary><ol>' + d.history.map(function (h) {
+        var freshNote = fresh.length && latest.labels.length ? '<p class="note newnote">' + icon('pen') + '<span><b>New information</b> from ' + who(latest) + ' on ' + e(dt(latest.at)) + ': ' + e(latest.labels.join(', ')) + '. These fields are marked below.</span></p>' : '';
+        var nav = '<nav class="detnav" aria-label="Sections">' + sections.map(function (sec) { return '<a href="#det-' + sec.id + '" data-act="det-jump" data-id="det-' + sec.id + '">' + e(sec.title) + '</a>'; }).join('') + '</nav>';
+        var head = part === 'conditions' ? '' : photoHeader(d, data, canEdit);
+        var hist = history.length ? '<details class="panel dethist"><summary>History of changes</summary><ol>' + history.map(function (h) {
           return '<li><b>' + e(dt(h.at)) + '</b> · ' + who(h) + (h.status && canEdit ? ' · ' + word[h.status] : '') + '<br><span class="muted small">' + (h.labels.length ? e(h.labels.join(', ')) : 'Status changed') + '</span></li>';
         }).join('') + '</ol></details>' : '';
-        var title = '<div class="pagehead"><h1>' + (role === 'family' ? 'Personal & health details' : 'Client information') + '</h1>' + status + '</div>';
+        var title = '<div class="pagehead"><h1>' + (part === 'conditions' ? 'Pre-existing health conditions' : part ? 'Personal details' : 'Client information') + '</h1>' + status + '</div>';
         if (!canEdit) {
-          var view = '<div class="detview">' + def.sections.map(function (sec) {
+          var view = '<div class="detview">' + sections.map(function (sec) {
             return '<section class="panel dets ro" id="det-' + sec.id + '"><h2>' + e(sec.title) + '</h2>' + sec.groups.map(function (g) {
               var items = g.fields.filter(function (fd) { return roApplies(fd, data); }).map(function (fd) { return roField(fd, data, fresh, d.age); }).join('');
               return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<dl class="rogrid">' + items + '</dl>';
@@ -1048,7 +1106,7 @@
     else if (fd.type === 'multi') { text = (v || []).join(', '); if (fd.specify && data[fd.specify]) text += (text ? ' — ' : '') + data[fd.specify]; }
     else if (fd.type === 'date') text = v ? date(v) : '';
     else text = v || '';
-    var wide = fd.type === 'multi' || fd.type === 'textarea';
+    var wide = fd.type === 'textarea' || text.length > 90;
     return '<div class="rof' + (wide ? ' wide' : '') + (mark ? ' fresh' : '') + '"><dt>' + e(fd.label) + (mark ? ' <span class="newtag">New</span>' : '') + '</dt>' +
       '<dd>' + (text ? e(text) : '<span class="muted">Not recorded</span>') + '</dd></div>';
   }
@@ -1180,43 +1238,131 @@
   }
 
   // ================================================================ Package information
+  // My package: the packages this person has, what they include, and booking the services that come with them
   function packageView(r) {
     withPerson(r, 'package', function (p, people) {
       fill(personBar(p, people) + loading(100) + loading(300));
-      api('GET', 'people/' + encodeURIComponent(p.id) + '/package').then(function (d) {
+      var pid = encodeURIComponent(p.id);
+      Promise.all([api('GET', 'people/' + pid + '/package'), api('GET', 'people/' + pid + '/services')]).then(function (x) {
+        var d = x[0], sv = x[1];
         if (!d.ok) return pageError(d);
-        S.cache.pkg = d;
-        var canAsk = S.me.user.role !== 'caregiver';
+        S.cache.pkg = d; if (sv.ok) S.cache.svc = sv;
+        var role = S.me.user.role;
+        var canAsk = role !== 'caregiver';
         var right = canAsk ? '<button class="btn pink" data-act="ask" data-kind="plan">Modify package</button>' : '';
-        if (!d.plans.length) { fill(personBar(p, people, right) + '<div class="empty"><b>No package yet</b>Choose a Kare@Home or KareNest package below. Our team will call you to confirm.</div>' + catalogHtml(d, p)); return; }
+        var head = '<div class="pagehead"><h1>' + (role === 'family' ? 'My package' : 'Package and services') + '</h1><p class="muted">The package' + (d.plans.length > 1 ? 's' : '') + ' for ' + e(first(p.name)) + ', what is included, and booking the services that come with it.</p></div>';
+        var more = role === 'family' ? '<p class="muted" style="margin-top:6px">Looking for something else? See <a href="#/packages?p=' + e(p.id) + '">Other packages</a>.</p>' : '';
+        if (!d.plans.length) {
+          fill(personBar(p, people, right) + head + '<div class="empty"><b>No package yet</b>' + (role === 'family' ? 'Choose a Kare@Home or KareNest package under <a href="#/packages?p=' + e(p.id) + '">Other packages</a>. Our team will call you to confirm.' : 'Add a package below.') + '</div>' + (role === 'admin' ? catalogHtml(d, p) : ''));
+          return;
+        }
         var s = d.summary;
         var sumBox = s ? '<div class="pkgsum"><div><span>Package activation date</span><b>' + (s.startDate ? e(date(s.startDate)) : 'After confirmation') + '</b></div>' +
           '<div><span>Package expiry date</span><b>' + (s.endDate ? e(date(s.endDate)) : '–') + '</b></div>' +
           '<div><span>Total amount paid</span><b>' + (s.paidText ? e(s.paidText) : 'Confirmed by our team') + '</b></div></div>' : '';
-        var groups = {};
-        d.plans.forEach(function (pl) { (groups[pl.group] = groups[pl.group] || []).push(pl); });
-        var order = ['Preventive package', 'Focused care package', 'Community living', 'Other'];
-        var cards = order.filter(function (g) { return groups[g]; }).map(function (g) {
-          return '<h2 class="sec">' + e(g) + '</h2><div class="cards3">' + groups[g].map(function (pl) {
-            return '<article class="bcard"><div class="bc-top">' + statusPill(pl) + '<span class="tagb ' + pl.product + '">' + e(pl.productName) + '</span></div><h3>' + e(pl.name) + '</h3>' +
-              (pl.startDate ? '<p class="muted small">' + e(date(pl.startDate)) + ' to ' + e(date(pl.endDate)) + '</p>' : '<p class="muted small">Starts after our team confirms</p>') +
-              '<button class="arrowlink" data-act="pkgdetails" data-id="' + e(pl.id) + '">View details' + icon('arrow') + '</button></article>';
-          }).join('') + '</div>';
-        }).join('');
+        var cards = '<div class="mypkgs">' + d.plans.map(myPackageHtml).join('') + '</div>';
         var incl = d.included.length ? '<h2 class="sec">Included with your plan</h2><div class="cards3">' + d.included.map(function (pl) {
           return '<article class="bcard"><div class="bc-top"><span class="tagb ' + pl.product + '">' + e(pl.productName) + '</span></div><h3>' + e(pl.productName) + '</h3><p class="muted small">Included with ' + e(pl.viaName) + ' (' + e(pl.viaPlan) + '): home visits, readings and services.</p></article>';
         }).join('') + '</div>' : '';
-        var tier = d.plans.filter(function (pl) { return pl.freeSessions; })[0];
-        var addOns = tier ? '<h2 class="sec">Add on services offered with your package</h2><p class="muted" style="margin:-6px 0 14px">You can book these sessions from the <a href="#/services?p=' + e(p.id) + '">Book services</a> page.</p>' +
-          '<div class="cards3">' + [['Bystander', 'Someone to help with daily activities at home or in hospital.'], ['Physiotherapy', 'Sessions at home for strength, balance and pain.']].map(function (s2) {
-            return '<article class="bcard"><span class="freepill">' + tier.freeSessions + ' free sessions a year</span><h3>' + s2[0] + '</h3><p class="muted small">' + s2[1] + ' Shared allowance: ' + tier.freeSessions + ' physiotherapy or bystander sessions a year.</p></article>';
-          }).join('') + '<article class="bcard"><span class="freepill">' + tier.discount + '% off</span><h3>Other add-on services</h3><p class="muted small">Teleconsultation, sponge bath, blood collection, dressing and more, at ' + tier.discount + '% off with ' + e(tier.name) + '.</p></article></div>' : '';
         var mon = d.plans.filter(function (pl) { return pl.monitoring && pl.monitoring.length; })[0];
         var monHtml = mon ? '<h2 class="sec">What we monitor with ' + e(mon.name) + '</h2><section class="panel tw" style="padding:6px 14px"><table class="mon"><thead><tr><th>What</th><th>How often</th></tr></thead><tbody>' +
           mon.monitoring.map(function (m, i) { var prev = mon.monitoring[i - 1]; return (!prev || prev.category !== m.category ? '<tr class="cat"><td colspan="2">' + e(m.category) + '</td></tr>' : '') + '<tr><td>' + e(m.item) + '</td><td>' + e(m.freq) + '</td></tr>'; }).join('') + '</tbody></table></section>' : '';
-        fill(personBar(p, people, right) + sumBox + cards + incl + addOns + monHtml + catalogHtml(d, p));
+        var book = sv.ok ? bookingHtml(sv) : '<section class="booksec" id="book"><h2 class="sec">Book services</h2><div class="alert bad">' + e(sv.message || 'Services could not be loaded. Please refresh the page.') + '</div></section>';
+        fill(personBar(p, people, right) + head + sumBox + cards + more + incl + book + monHtml + (role === 'admin' ? catalogHtml(d, p) : ''));
+        if (r.q.book) { var b = $('#book'); if (b) b.scrollIntoView({ block: 'start' }); }
       });
     });
+  }
+  // one current package: name, brand, category, status, dates, payment plan, charge and what it includes
+  function myPackageHtml(pl) {
+    var charge = pl.charge.amount ? '<b>' + rs(pl.charge.amount) + '</b>' + (pl.charge.perMonth && pl.charge.months > 1 ? ' <span class="muted small">(' + rs(pl.charge.perMonth) + ' a month)</span>' : '') : e(pl.charge.text);
+    return '<article class="mypkg ' + e(pl.product) + '"><div class="mp-head"><div><div class="mp-tags"><span class="tagb ' + pl.product + '">' + e(pl.productName) + '</span><span class="muted small">' + e(pl.group || '') + '</span></div>' +
+      '<h2>' + e(pl.name) + '</h2>' + (pl.tagline ? '<p class="pk-tag">' + e(pl.tagline) + '</p>' : '') + '</div>' + statusPill(pl) + '</div>' +
+      '<dl class="mp-facts">' +
+        '<div><dt>Runs</dt><dd>' + (pl.startDate ? e(date(pl.startDate)) + ' to ' + e(date(pl.endDate)) : 'Starts after our team confirms') + '</dd></div>' +
+        (pl.months ? '<div><dt>Payment plan</dt><dd>' + e(PERIOD_NAMES[pl.months] || pl.months + ' months') + (pl.months > 1 ? ' (' + pl.months + ' months)' : '') + '</dd></div>' : '') +
+        '<div><dt>Charge</dt><dd>' + charge + '</dd></div>' +
+        (pl.freeSessions ? '<div><dt>Free sessions</dt><dd>' + pl.freeSessions + ' physiotherapy or bystander sessions a year</dd></div>' : '') +
+        (pl.discount ? '<div><dt>Other services</dt><dd>' + pl.discount + '% off</dd></div>' : '') +
+      '</dl>' +
+      (pl.includes && pl.includes.length ? '<details class="mp-more"><summary>' + e(pl.listTitle || "What's included") + ' (' + pl.includes.length + ')</summary>' + includesHtml({ includes: pl.includes, listTitle: '', best: pl.best, notes: pl.notes }) + '</details>' : '') +
+      '</article>';
+  }
+  // the services that come with the package, and booking them (formerly the Book services page)
+  function bookingHtml(d) {
+    var card = function (s, freeText) {
+      return '<article class="bcard">' + (freeText ? '<span class="freepill">' + e(freeText) + '</span>' : '') + '<h3>' + e(s.name) + '</h3><p class="muted small">' + e(s.text) + '</p>' +
+        (d.canBook ? '<button class="arrowlink" data-act="book" data-k="' + e(s.id) + '">Book now' + icon('arrow') + '</button>' : '') + '</article>';
+    };
+    var last = d.last ? '<h3 class="sec2">Last ordered service</h3><div class="cards3"><article class="bcard"><span class="freepill ' + (d.last.status === 'closed' ? 'grey' : '') + '">' + e(d.last.statusName) + '</span><h3>' + e(d.last.name) + '</h3>' +
+      '<p class="muted small">' + (d.last.date ? 'For ' + e(date(d.last.date)) + (d.last.time ? ', ' + e(d.last.time) : '') + '. ' : '') + (d.last.free ? 'Free session from your package.' : '') + ' Ref ' + e(d.last.reference) + '</p>' +
+      (d.canBook ? '<button class="arrowlink" data-act="book" data-k="' + e(d.last.service) + '">Book again' + icon('arrow') + '</button>' : '') + '</article></div>' : '';
+    var freeText = d.free ? (d.free.left ? d.free.left + ' free session' + (d.free.left === 1 ? '' : 's') + ' available' : 'Free sessions used this year') : null;
+    var incl = d.included.length ? '<h3 class="sec2">Included in your package</h3>' + (d.free ? '<p class="muted" style="margin:-6px 0 14px">' + e(d.free.plan) + ' includes ' + d.free.total + ' free physiotherapy or bystander sessions a year (' + d.free.used + ' used' + (d.free.until ? ', renews after ' + e(date(d.free.until)) : '') + ').</p>' : '') +
+      '<div class="cards3">' + d.included.map(function (s) { return card(s, freeText); }).join('') + '</div>' : '';
+    var add = d.additional.length ? '<h3 class="sec2">Additional services (paid)</h3>' + (d.discount ? '<p class="muted" style="margin:-6px 0 14px">' + d.discount + '% off with your package. Our team confirms the price when they call.</p>' : '<p class="muted" style="margin:-6px 0 14px">Our team confirms the price and time when they call.</p>') +
+      '<div class="cards3">' + d.additional.map(function (s) { return card(s, null); }).join('') + '</div>' : '';
+    var names = { new: 'new', contacted: 'active', scheduled: 'active', closed: 'ended' };
+    var list = d.bookings.length ? '<h3 class="sec2">Your bookings</h3><section class="panel"><ul class="rlist">' + d.bookings.map(function (b) {
+      return '<li><span><b>' + e(b.name) + '</b>' + (b.free ? ' <span class="freepill sm">Free</span>' : '') + '<br><span class="muted small">' + (b.date ? e(date(b.date)) + (b.time ? ', ' + e(b.time) : '') + ' · ' : '') + 'Ref ' + e(b.reference) + ', sent ' + e(ago(b.createdAt)) + '</span></span><span class="pill ' + (names[b.status] || 'new') + '">' + e(b.statusName) + '</span></li>';
+    }).join('') + '</ul></section>' : '';
+    var ask = S.me.user.role !== 'caregiver' ? '<button class="btn sm ghost" data-act="ask" data-kind="question">' + icon('chat') + 'Ask the care team</button>' : '';
+    return '<section class="booksec" id="book" aria-labelledby="h-book"><div class="sec-row"><h2 class="sec" id="h-book">Book services</h2>' + ask + '</div>' +
+      (d.canBook ? '' : '<p class="note">' + icon('clock') + '<span>Services can be booked once the plan is active.</span></p>') + last + incl + add + list + '</section>';
+  }
+
+  // ================================================================ Other packages
+  // Every package in the KareIQ family, grouped by brand, with a link to its page on the brand's website.
+  // Looking or asking never changes the current package: choosing sends a request and our team calls.
+  var PKG_BRANDS = [
+    { k: 'karenest', name: 'KareNest', logo: '/karenest/images/mark.webp', text: 'A caring community to live in or visit for the day. Resident packages include a Kare@Home check-up plan.', site: SITES.karenest, test: function (pk) { return pk.product === 'karenest' && !/^km-/.test(pk.id); } },
+    { k: 'karehome', name: 'Kare@Home', logo: '/img/karehome-logo.png', text: 'Preventive care at home: caregivers and nurses visit, check vitals and keep the family updated.', site: siteUrl(SITES.karehome, 'packages'), test: function (pk) { return pk.product === 'karehome' && !/^kb-/.test(pk.id); } },
+    { k: 'karebalance', name: 'KareBalance', logo: null, text: 'A personalised fall prevention and mobility programme.', site: siteUrl(SITES.karenest, 'karebalance'), test: function (pk) { return /^kb-/.test(pk.id); } },
+    { k: 'karemind', name: 'KareMind', logo: null, text: 'A structured mental wellness programme for emotional wellbeing and stress management.', site: siteUrl(SITES.karenest, 'karemind'), test: function (pk) { return /^km-/.test(pk.id); } }
+  ];
+  // the package's own page on the brand website (only pages that exist)
+  function siteUrl(base, path) { return String(base).replace(/\/$/, '') + '/' + path; }
+  function pkgWebUrl(pk) {
+    if (/^kb-/.test(pk.id)) return siteUrl(SITES.karenest, 'karebalance/') + pk.id.slice(3);
+    if (/^km-/.test(pk.id)) return siteUrl(SITES.karenest, 'karemind/') + pk.id.slice(3);
+    if (pk.id === 'kareplus' || pk.id === 'karepremium') return siteUrl(SITES.karenest, 'live-with-us/') + pk.id;
+    if (['bloom', 'flourish', 'thrive'].indexOf(pk.id) > -1) return siteUrl(SITES.karenest, 'visit-and-participate/') + pk.id;
+    if (['homestart', 'homeplus', 'homeelite', 'customized'].indexOf(pk.id) > -1) return siteUrl(SITES.karehome, 'packages#packages');
+    return null;
+  }
+  function otherPackagesView(r) {
+    withPerson(r, 'packages', function (p, people) {
+      fill(personBar(p, people) + loading(100) + loading(360));
+      api('GET', 'people/' + encodeURIComponent(p.id) + '/package').then(function (d) {
+        if (!d.ok) return pageError(d);
+        S.cache.pkg = d;
+        var mine = d.plans.map(function (x) { return x.planId; });
+        var tabs = '<nav class="pkgjump" aria-label="Brands">' + PKG_BRANDS.map(function (b) { return '<a href="#pk-' + b.k + '" data-act="det-jump" data-id="pk-' + b.k + '">' + e(b.name) + '</a>'; }).join('') + '</nav>';
+        var sections = PKG_BRANDS.map(function (b) {
+          var list = d.catalog.filter(b.test);
+          if (!list.length) return '';
+          return '<section class="pkbrand ' + b.k + '" id="pk-' + b.k + '" aria-labelledby="h-pk-' + b.k + '"><div class="pkb-head">' +
+            (b.logo ? '<img src="' + b.logo + '" alt="" class="pkb-logo">' : '<span class="pkb-mark" aria-hidden="true">' + icon(b.k === 'karebalance' ? 'walk' : 'smile') + '</span>') +
+            '<div><h2 id="h-pk-' + b.k + '">' + e(b.name) + '</h2><p class="muted">' + e(b.text) + '</p></div>' +
+            '<a class="arrowlink pkb-site" href="' + e(b.site) + '" target="_blank" rel="noopener">' + e(b.name) + ' website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></div>' +
+            '<div class="cards3">' + list.map(function (pk) { return otherPkgCard(pk, mine.indexOf(pk.id) > -1); }).join('') + '</div></section>';
+        }).join('');
+        fill(personBar(p, people) + '<div class="pagehead"><h1>Other packages</h1><p class="muted">Every KareIQ package for ' + e(first(p.name)) + '. Looking costs nothing and does not change the current package: when you choose one, our team calls you to confirm first.</p></div>' + tabs + sections +
+          '<p class="muted small" style="margin-top:18px">Questions? <a href="' + waLink('Hello, I would like to know more about the KareIQ packages.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
+      });
+    });
+  }
+  function otherPkgCard(pk, has) {
+    var web = pkgWebUrl(pk);
+    var short = pk.includes && pk.includes.length ? '<ul class="inc sm">' + pk.includes.slice(0, 3).map(function (x) { return '<li>' + icon('check') + '<span>' + e(x) + '</span></li>'; }).join('') + '</ul>' + (pk.includes.length > 3 ? '<p class="muted small">and ' + (pk.includes.length - 3) + ' more</p>' : '') : '';
+    return '<article class="bcard pkc' + (has ? ' mine' : '') + '" data-pkcard data-pkg="' + e(pk.id) + '"><div class="bc-top"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span>' + (has ? '<span class="pill active"><i></i>Current package</span>' : '') + '</div>' +
+      '<h3>' + e(pk.name) + '</h3><p class="muted small">' + e(pk.tagline || '') + '</p>' + short +
+      '<div class="pk-price" data-pkprice>' + priceHtml(pk) + '</div>' + durationSelect(pk) +
+      (pk.best ? '<p class="pk-best small"><b>Best for:</b> ' + e(pk.best) + '</p>' : '') +
+      '<div class="pk-acts"><button class="btn sm" data-act="choose-pkg" data-id="' + e(pk.id) + '">' + (has ? 'Change or renew' : 'Request this package') + '</button>' +
+        '<button class="arrowlink" data-act="cat-details" data-id="' + e(pk.id) + '">View details' + icon('arrow') + '</button>' +
+        (web ? '<a class="arrowlink" href="' + e(web) + '" target="_blank" rel="noopener">On the website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a>' : '<span class="muted small">Details are in the app; our team confirms the price.</span>') +
+      '</div></article>';
   }
   function pkgDetails(id) {
     var d = S.cache.pkg, pl = d && d.plans.filter(function (x) { return x.id === id; })[0];
@@ -1250,8 +1396,11 @@
     var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
     if (!pk) return;
     var role = S.me.user.role;
-    openDialog(pk.name, '<div class="pk-head" style="margin-bottom:10px"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span><div class="pk-price">' + priceHtml(pk) + '</div></div>' + includesHtml(pk) + priceTable(pk),
-      '<button class="btn ghost" data-act="close">Close</button>' + (role === 'family' ? '<button class="btn" data-act="choose-pkg" data-id="' + e(pk.id) + '">Choose ' + e(pk.name) + '</button>' : role === 'admin' ? '<button class="btn" data-act="add-pkg" data-id="' + e(pk.id) + '">Add for ' + e(first(d.person.name)) + '</button>' : ''));
+    var web = pkgWebUrl(pk);
+    openDialog(pk.name, '<div class="pk-head" style="margin-bottom:10px"><span class="tagb ' + pk.product + '">' + e(pk.type) + '</span><div class="pk-price">' + priceHtml(pk) + '</div></div>' + includesHtml(pk) + priceTable(pk) +
+      (web ? '<p style="margin-top:12px"><a class="arrowlink" href="' + e(web) + '" target="_blank" rel="noopener">See ' + e(pk.name) + ' on the website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></p>' : '') +
+      '<p class="muted small" style="margin-top:10px">Requesting a package does not change the current one. Our team calls you to confirm first.</p>',
+      '<button class="btn ghost" data-act="close">Close</button>' + (role === 'family' ? '<button class="btn" data-act="choose-pkg" data-id="' + e(pk.id) + '">Request ' + e(pk.name) + '</button>' : role === 'admin' ? '<button class="btn" data-act="add-pkg" data-id="' + e(pk.id) + '">Add for ' + e(first(d.person.name)) + '</button>' : ''));
   }
   function addPkgDialog(id) {
     var d = S.cache.pkg, pk = d && d.catalog.filter(function (x) { return x.id === id; })[0];
@@ -1265,34 +1414,6 @@
     S.cache.dlgPlans = [pk];
   }
 
-  // ================================================================ Book services
-  function servicesView(r) {
-    withPerson(r, 'services', function (p, people) {
-      fill(personBar(p, people) + loading(240) + loading(240));
-      api('GET', 'people/' + encodeURIComponent(p.id) + '/services').then(function (d) {
-        if (!d.ok) return pageError(d);
-        S.cache.svc = d;
-        var card = function (s, freeText) {
-          return '<article class="bcard">' + (freeText ? '<span class="freepill">' + e(freeText) + '</span>' : '') + '<h3>' + e(s.name) + '</h3><p class="muted small">' + e(s.text) + '</p>' +
-            (d.canBook ? '<button class="arrowlink" data-act="book" data-k="' + e(s.id) + '">Book now' + icon('arrow') + '</button>' : '') + '</article>';
-        };
-        var last = d.last ? '<h2 class="sec">Last ordered service</h2><div class="cards3"><article class="bcard"><span class="freepill ' + (d.last.status === 'closed' ? 'grey' : '') + '">' + e(d.last.statusName) + '</span><h3>' + e(d.last.name) + '</h3>' +
-          '<p class="muted small">' + (d.last.date ? 'For ' + e(date(d.last.date)) + (d.last.time ? ', ' + e(d.last.time) : '') + '. ' : '') + (d.last.free ? 'Free session from your package.' : '') + ' Ref ' + e(d.last.reference) + '</p>' +
-          (d.canBook ? '<button class="arrowlink" data-act="book" data-k="' + e(d.last.service) + '">Book again' + icon('arrow') + '</button>' : '') + '</article></div>' : '';
-        var freeText = d.free ? (d.free.left ? d.free.left + ' free session' + (d.free.left === 1 ? '' : 's') + ' available' : 'Free sessions used this year') : null;
-        var incl = d.included.length ? '<h2 class="sec">Included in your package</h2>' + (d.free ? '<p class="muted" style="margin:-6px 0 14px">' + e(d.free.plan) + ' includes ' + d.free.total + ' free physiotherapy or bystander sessions a year (' + d.free.used + ' used' + (d.free.until ? ', renews after ' + e(date(d.free.until)) : '') + ').</p>' : '') +
-          '<div class="cards3">' + d.included.map(function (s) { return card(s, freeText); }).join('') + '</div>' : '';
-        var add = '<h2 class="sec">Additional services</h2>' + (d.discount ? '<p class="muted" style="margin:-6px 0 14px">' + d.discount + '% off with your package. Our team confirms the price when they call.</p>' : '<p class="muted" style="margin:-6px 0 14px">Our team confirms the price and time when they call.</p>') +
-          '<div class="cards3">' + d.additional.map(function (s) { return card(s, null); }).join('') + '</div>';
-        var names = { new: 'new', contacted: 'active', scheduled: 'active', closed: 'ended' };
-        var list = d.bookings.length ? '<h2 class="sec">Your bookings</h2><section class="panel"><ul class="rlist">' + d.bookings.map(function (b) {
-          return '<li><span><b>' + e(b.name) + '</b>' + (b.free ? ' <span class="freepill sm">Free</span>' : '') + '<br><span class="muted small">' + (b.date ? e(date(b.date)) + (b.time ? ', ' + e(b.time) : '') + ' · ' : '') + 'Ref ' + e(b.reference) + ', sent ' + e(ago(b.createdAt)) + '</span></span><span class="pill ' + (names[b.status] || 'new') + '">' + e(b.statusName) + '</span></li>';
-        }).join('') + '</ul></section>' : '';
-        var ask = S.me.user.role !== 'caregiver' ? '<button class="btn sm ghost" data-act="ask" data-kind="question">' + icon('chat') + 'Ask the care team</button>' : '';
-        fill(personBar(p, people, ask) + (d.canBook ? '' : '<p class="note">' + icon('clock') + '<span>Services can be booked once the plan is active.</span></p>') + last + incl + add + list);
-      });
-    });
-  }
   function bookDialog(k) {
     var d = S.cache.svc; if (!d) return;
     var s = d.included.concat(d.additional).filter(function (x) { return x.id === k; })[0]; if (!s) return;
@@ -1408,7 +1529,7 @@
         if (!t) {
           var groups = {};
           d.forms.forEach(function (x) { if (x.women && d.prefill.sex === 'male') return; (groups[x.groupName] = groups[x.groupName] || []).push(x); });
-          fill(personBar(p, people) + '<div class="head"><div><h1>Risk checks for ' + e(p.name) + '</h1><p class="sub">Choose a check, enter the result, and the score is worked out with the KareIQ formulas. The family sees it on their dashboard.</p></div></div>' +
+          fill(personBar(p, people) + '<div class="head"><div><h1>Risk checks for ' + e(p.name) + '</h1><p class="sub">Choose a check, enter the result, and the score is worked out with the KareIQ formulas. The family sees it under Health details, Risk trends.</p></div></div>' +
             (!d.prefill.sex || !d.prefill.age ? profileForm(p, d.prefill) : '') +
             '<div class="cards3">' + Object.keys(groups).map(function (g) {
               return groups[g].map(function (x) {
@@ -1632,7 +1753,7 @@
     if (r.kind === 'signin-help' && r.userId) act = '<button class="btn sm" data-act="relink" data-id="' + e(r.userId) + '">' + icon('key') + 'Send sign-in link</button>';
     else if (purchase && !r.appPlanId) act = '<button class="btn sm" data-act="activate" data-ref="' + e(r.reference) + '">' + icon('check') + 'Activate plan</button>';
     else if (purchase && r.appPlanId && r.status !== 'scheduled' && r.status !== 'closed') act = '<button class="btn sm" data-act="activate" data-ref="' + e(r.reference) + '">' + icon('check') + 'Activate plan</button>';
-    if (r.personId) act += '<a class="btn sm ghost" href="#/dashboard?p=' + e(r.personId) + '">Open</a>';
+    if (r.personId) act += '<a class="btn sm ghost" href="#/health/vitals?p=' + e(r.personId) + '">Open</a>';
     var meta = [r.reference, phoneNice(r.phone), r.area, ago(r.createdAt)].filter(Boolean).map(e).join(', ');
     return '<article class="req ' + (r.product || '') + '"><span class="stripe"></span><div>' +
       '<div class="rt"><b>' + e(r.name) + '</b>' + (b ? '<span class="tagb ' + r.product + '">' + e(b.name) + '</span>' : '<span class="tagb">KareIQ</span>') + '<span class="pill">' + e(KIND[r.kind] || r.kind) + '</span>' +
@@ -1717,7 +1838,7 @@
     var freeFam = users.filter(function (u) { return u.role === 'family' && u.active && !x.family.some(function (c) { return c.id === u.id; }); });
     var open = x.plans.filter(function (p) { return p.status !== 'ended'; })[0];
     openDialog(x.name,
-      '<p class="muted" style="margin-bottom:14px">' + e(x.id) + (open ? ' <a href="#/dashboard?p=' + e(x.id) + '" data-act="close-go">Open their dashboard</a>' : '') + '</p>' +
+      '<p class="muted" style="margin-bottom:14px">' + e(x.id) + (open ? ' <a href="#/health/vitals?p=' + e(x.id) + '" data-act="close-go">Open their health details</a>' : '') + '</p>' +
       '<h3>Plans</h3><ul class="rlist">' + (plans || '<li class="muted">No plans</li>') + '</ul>' +
       '<details style="margin:6px 0 16px"><summary class="link" style="text-decoration:none">Add another plan</summary><form data-form="addplan" data-id="' + e(x.id) + '" style="margin-top:12px"><div class="row2">' +
         '<label class="field"><span>Brand</span><select class="in" name="product" data-act="addplan-brand">' + cat.products.map(function (p) { return '<option value="' + p.id + '">' + e(p.name) + '</option>'; }).join('') + '</select></label>' +
@@ -1865,7 +1986,7 @@
         S.cache.planOpts = null;
         closeDialog();
         S.people = null;
-        return loadSession().then(function () { go('#/dashboard?p=' + encodeURIComponent(d.personId)); toast('Sent (' + d.reference + '). We will call you soon to confirm.'); });
+        return loadSession().then(function () { go('#/package?p=' + encodeURIComponent(d.personId)); toast('Sent (' + d.reference + '). We will call you soon to confirm.'); });
       });
     },
     claim: function (f, v) {
@@ -1874,7 +1995,7 @@
         S.cache.planOpts = null;
         closeDialog();
         S.people = null;
-        return loadSession().then(function () { go('#/dashboard'); toast('Booking added to your account.'); });
+        return loadSession().then(function () { go('#/package'); toast('Booking added to your account.'); });
       });
     },
     visit: function (f, v) {
@@ -1890,7 +2011,7 @@
       return api('POST', 'people/' + encodeURIComponent(id) + '/visits', body).then(function (d) {
         if (!d.ok) return d;
         toast('Visit saved. The family can see it now.');
-        go(S.me.user.role === 'admin' ? '#/dashboard?p=' + encodeURIComponent(id) : '#/people');
+        go(S.me.user.role === 'admin' ? '#/health/vitals?p=' + encodeURIComponent(id) : '#/people');
       });
     },
     ask: function (f, v) {
@@ -1911,7 +2032,7 @@
       if (!v.from || !v.to || v.from > v.to) return Promise.resolve({ ok: false, message: 'Choose a start date before the end date.' });
       if (min && v.from < min) return Promise.resolve({ ok: false, message: 'Health trends are available from ' + date(min) + ', the registration date. Choose a start date on or after it.' });
       if (v.to > todayIST()) return Promise.resolve({ ok: false, message: 'Choose an end date up to today.' });
-      closeDialog(); go('#/dashboard?p=' + encodeURIComponent(S.pid) + '&from=' + v.from + '&to=' + v.to);
+      closeDialog(); go('#/' + (S.cache.page || 'health/vitals') + '?p=' + encodeURIComponent(S.pid) + '&from=' + v.from + '&to=' + v.to);
     },
     upload: function (f, v) {
       var input = $('[name=file]', f), file = input && input.files && input.files[0];
@@ -1931,7 +2052,7 @@
         var x = d.result, box = $('#riskres');
         if (box) box.innerHTML = '<h2>Result</h2><div class="risk ' + (x.level || 'none') + '" style="border:0;padding:0;box-shadow:none"><div class="rv">' + e(x.display) + '</div><div class="rb">' + dotHtml(x.level) + e(x.band) + '</div>' +
           (x.scale ? '<p class="muted small" style="margin-top:8px">' + e(x.scale) + '</p>' : '') + (x.note ? '<p class="small" style="margin-top:8px">' + e(x.note) + '</p>' : '') + '</div>' +
-          '<p class="muted small" style="margin-top:12px">Saved. The family sees it on their dashboard.</p><a class="btn sm ghost" style="margin-top:12px" href="#/assess?p=' + e(id) + '">Do another check</a>';
+          '<p class="muted small" style="margin-top:12px">Saved. The family sees it under Health details, Risk trends.</p><a class="btn sm ghost" style="margin-top:12px" href="#/assess?p=' + e(id) + '">Do another check</a>';
         toast('Saved.');
         if (box && window.innerWidth < 980) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
@@ -2009,9 +2130,10 @@
       case 'menu': { var m = t.nextElementSibling; m.hidden = !m.hidden; t.setAttribute('aria-expanded', String(!m.hidden)); break; }
       case 'signout': ev.preventDefault(); api('POST', 'logout', {}).then(function () { S.me = null; S.csrf = ''; S.cache = {}; S.catalog = null; S.people = null; S.pid = null; try { localStorage.removeItem('kq.pid'); } catch (x) {} S.flash = { kind: 'ok', text: 'You are signed out.' }; go('#/signin', true); }); break;
       case 'start-back': S.start = null; render(); break;
+      case 'sbg': { sbgSet(t.closest('.sbg'), !t.closest('.sbg').classList.contains('open')); break; }
       case 'drawer': { var open = !document.body.classList.contains('drawer-open'); document.body.classList.toggle('drawer-open', open); t.setAttribute('aria-expanded', String(open)); break; }
       case 'drawer-close': document.body.classList.remove('drawer-open'); break;
-      case 'period': go('#/dashboard?p=' + encodeURIComponent(S.pid) + '&period=' + t.getAttribute('data-k')); break;
+      case 'period': go('#/' + (S.cache.page || 'health/vitals') + '?p=' + encodeURIComponent(S.pid) + '&period=' + t.getAttribute('data-k')); break;
       case 'calendar': calendarDialog(); break;
       case 'dl': dlDialog(); break;
       case 'dl-all': $$('dialog[open] [data-act=dlm]').forEach(function (c) { c.checked = true; }); dlSync(); break;
@@ -2169,7 +2291,43 @@
   var rsz;
   window.addEventListener('resize', function () { clearTimeout(rsz); rsz = setTimeout(function () { if ($('[data-chart]')) drawCharts(); }, 200); });
   document.addEventListener('keydown', function (ev) {
+    // side menu sections: arrow keys move through a section, Escape closes it
+    var g = ev.target.closest && ev.target.closest('.sbg');
+    if (g) {
+      var btn = $('.sbg-btn', g), links = $$('.sbg-sub a', g), i = links.indexOf(ev.target);
+      if (ev.target === btn && ev.key === 'ArrowDown') { ev.preventDefault(); sbgSet(g, true); links[0].focus(); return; }
+      if (i > -1 && ev.key === 'ArrowDown') { ev.preventDefault(); (links[i + 1] || links[0]).focus(); return; }
+      if (i > -1 && ev.key === 'ArrowUp') { ev.preventDefault(); (i ? links[i - 1] : btn).focus(); return; }
+      if (ev.key === 'Escape' && (g.classList.contains('open') || g.classList.contains('peek'))) { ev.preventDefault(); sbgSet(g, false); btn.focus(); return; }
+    }
     if (ev.key === 'Escape') { var m = $('.menu:not([hidden])'); if (m) { m.hidden = true; } document.body.classList.remove('drawer-open'); }
+  });
+  // open or close a side menu section (remembered while the app is open)
+  function sbgSet(g, open) {
+    if (!g) return;
+    clearTimeout(g._peek); clearTimeout(g._leave);
+    g.classList.remove('peek'); g.classList.toggle('open', open);
+    S.sbOpen = S.sbOpen || {}; S.sbOpen[g.getAttribute('data-group')] = open;
+    $('.sbg-btn', g).setAttribute('aria-expanded', String(open));
+  }
+  // with a mouse, resting on a section opens it; it stays open while the pointer is in its sub-menu
+  function sbHover() { return window.matchMedia && matchMedia('(hover: hover) and (pointer: fine) and (min-width: 981px)').matches; }
+  document.addEventListener('mouseover', function (ev) {
+    var g = ev.target.closest && ev.target.closest('.sbg');
+    if (!g || !sbHover() || g.classList.contains('open') || (ev.relatedTarget && g.contains(ev.relatedTarget))) return;
+    clearTimeout(g._leave);
+    if (g.classList.contains('peek')) return;
+    g._peek = setTimeout(function () { g.classList.add('peek'); $('.sbg-btn', g).setAttribute('aria-expanded', 'true'); }, 140);
+  });
+  document.addEventListener('mouseout', function (ev) {
+    var g = ev.target.closest && ev.target.closest('.sbg');
+    if (!g || (ev.relatedTarget && g.contains(ev.relatedTarget))) return;
+    clearTimeout(g._peek);
+    if (!g.classList.contains('peek')) return;
+    g._leave = setTimeout(function () {
+      if (g.contains(document.activeElement) && document.activeElement !== $('.sbg-btn', g)) return;
+      g.classList.remove('peek'); if (!g.classList.contains('open')) $('.sbg-btn', g).setAttribute('aria-expanded', 'false');
+    }, 300);
   });
 
   // "All packages": the package the family or admin picks (clicks a card, View details, Choose) stands out

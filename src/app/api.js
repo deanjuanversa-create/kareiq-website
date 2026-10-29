@@ -1072,6 +1072,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const sd = await servicesData(user, person);
       const item = sd.included.concat(sd.additional).find((x) => x.id === svc);
       if (!item) return json(res, 400, { ok: false, message: 'This service is not available for this plan.', errors: { service: 'Not available' } });
+      // the same service for the same day is booked once (until our team closes it)
+      const dup = (await docs.find('enquiries', { personId: person.id, kind: 'service', service: svc, date })).find((x) => x.status !== 'closed');
+      if (dup) return json(res, 409, { ok: false, message: `${care.SERVICES[svc].name} is already booked for this day (reference ${dup.reference}). Our team will call you to confirm; to change it, message us on WhatsApp.` });
       const free = Boolean(item.free && sd.free && sd.free.left > 0);
       if (limited(req, 'app-request')) return json(res, 429, { ok: false, message: 'You have sent several requests just now. Please wait a few minutes, or message us on WhatsApp.' });
       const row = await store.add('enquiries', 'KQ', {
