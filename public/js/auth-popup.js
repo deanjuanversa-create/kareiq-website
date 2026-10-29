@@ -11,6 +11,7 @@
   var NAMES = { kareiq: 'KareIQ', karehome: 'Kare@Home', karenest: 'KareNest' };
   var api = function () { return window.KARE_API || ''; };
   var NEXT = '#/plans';
+  var PLAN_NAMES = { homestart: 'HomeStart', homeplus: 'HomePlus', homeelite: 'HomeElite', customized: 'a customised plan', 'kb-base': 'KareBalance Base', 'kb-plus': 'KareBalance Plus', 'kb-premium': 'KareBalance Premium' };
   var PROV = { google: 'Google', facebook: 'Facebook' };
   var ICON = {
     google: '<svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M21.6 12.2c0-.7-.1-1.4-.2-2H12v3.8h5.4a4.6 4.6 0 0 1-2 3v2.5h3.2c1.9-1.7 3-4.3 3-7.3z"/><path fill="#34A853" d="M12 22c2.7 0 5-.9 6.6-2.4l-3.2-2.5c-.9.6-2 1-3.4 1-2.6 0-4.8-1.8-5.6-4.1H3.1v2.6A10 10 0 0 0 12 22z"/><path fill="#FBBC05" d="M6.4 14c-.2-.6-.3-1.3-.3-2s.1-1.4.3-2V7.4H3.1A10 10 0 0 0 2 12c0 1.6.4 3.2 1.1 4.6L6.4 14z"/><path fill="#EA4335" d="M12 6c1.5 0 2.8.5 3.8 1.5l2.8-2.8A10 10 0 0 0 3.1 7.4L6.4 10C7.2 7.7 9.4 6 12 6z"/></svg>',
@@ -95,7 +96,17 @@
     if (!t || e.ctrlKey || e.metaKey || e.shiftKey) return;
     e.preventDefault();
     var nav = document.getElementById('nav'); if (nav && nav.classList.contains('open')) nav.classList.remove('open');
+    // a package button: after signing in, the app opens that package with the payment plan chosen on the page
+    var plan = t.dataset.plan || '';
+    if (plan) {
+      var m = document.querySelector('.billing [aria-checked="true"]');
+      var months = plan.indexOf('kb-') === 0 || plan === 'customized' ? '' : (m ? m.dataset.months : '');
+      NEXT = '#/plans?brand=' + (BRAND === 'kareiq' ? 'karehome' : BRAND) + '&plan=' + encodeURIComponent(plan) + (months ? '&months=' + months : '');
+    } else {
+      NEXT = '#/plans';
+    }
     open(t.dataset.auth === 'signup' ? 'signup' : 'signin');
+    if (plan) q('#apSub').textContent = 'Sign in or create an account to choose ' + (PLAN_NAMES[plan] || 'this package') + '. One sign-in for Kare@Home and KareNest.';
   });
 
   function send(form, path, body) {

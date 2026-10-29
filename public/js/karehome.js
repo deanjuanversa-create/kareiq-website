@@ -287,7 +287,7 @@
       const card = document.querySelector(`.pk[data-plan="${p.key}"]`);
       if (!card) return;
       card.querySelector('h3').textContent = p.name;
-      const btn = card.querySelector('[data-book]');
+      const btn = card.querySelector('[data-book],[data-auth]');
       btn.setAttribute('aria-label', 'Choose ' + p.name);
       btn.firstChild.textContent = 'Choose ' + p.name + ' ';
       card.querySelector('.offer').hidden = !p.offer;
