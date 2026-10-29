@@ -83,6 +83,17 @@
       flat: '<path d="M5 12h14M13 6l6 6-6 6"/>',
       grid: '<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
       heart: '<path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7.3a4.3 4.3 0 0 1 7.5 2.5C19.5 15.4 12 20 12 20Z"/>',
+      kidney: '<path d="M10 5.5C6.5 4 4 7 4 11s2 8 5.5 8c2.2 0 2.7-2 2-3.6-.8-1.8-.9-3.4.4-4.6 1.4-1.3 1.6-4-1.9-5.3Z"/><path d="M14 5.5c3.5-1.5 6 1.5 6 5.5s-2 8-5.5 8"/>',
+      liver: '<path d="M3.5 9.5c0-2.5 2.5-4 6-4h7c2.5 0 4 1.5 4 3.5 0 4-4.5 9.5-9 9.5-3 0-3-3-4.5-4.5S3.5 12 3.5 9.5Z"/>',
+      drop: '<path d="M12 3.5s6 6.4 6 10.8a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5Z"/>',
+      scale: '<rect x="3.5" y="4" width="17" height="16" rx="3.5"/><path d="M8.5 9.5a5 5 0 0 1 7 0L12 12.5Z"/>',
+      moon: '<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10Z"/>',
+      smile: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.4 2.1 2 3.5 2s2.6-.6 3.5-2M9 9.5h.01M15 9.5h.01"/>',
+      brain: '<path d="M9.5 4.5A3 3 0 0 0 6.5 7a3 3 0 0 0-2 5.2A3 3 0 0 0 7 17a3 3 0 0 0 5 1.5V6a2.5 2.5 0 0 0-2.5-1.5ZM14.5 4.5A3 3 0 0 1 17.5 7a3 3 0 0 1 2 5.2A3 3 0 0 1 17 17a3 3 0 0 1-5 1.5"/>',
+      walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="m9.5 21 2.5-6.5 2.5 2.5v4M7.5 11.5l3-3.5 3 .5 2 3 2.5 1M12 8l-1 6.5"/>',
+      ribbon: '<path d="M12 12.5 8 20.5l-2-2.5-3 .5L8.5 9M12 12.5l4 8 2-2.5 3 .5L15.5 9"/><circle cx="12" cy="7.5" r="4"/>',
+      user: '<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.7 4-5.6 7.5-5.6s6.3 1.9 7.5 5.6"/>',
+      camera: '<path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.6-2.2h5.8L16.5 7h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5Z"/><circle cx="12" cy="12.8" r="3.3"/>',
       inbox: '<path d="M4 13.5 6.2 5.6A2 2 0 0 1 8.1 4h7.8a2 2 0 0 1 1.9 1.6L20 13.5V18a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-4.5Z"/><path d="M4 13.5h4.5l1.2 2.2h4.6l1.2-2.2H20"/>',
       people: '<circle cx="9" cy="8" r="3.4"/><path d="M2.8 19.5c.6-3.4 3.1-5.3 6.2-5.3s5.6 1.9 6.2 5.3"/><circle cx="17.2" cy="9" r="2.5"/><path d="M16.8 14.3c2.4.1 4 1.6 4.4 4"/>',
       key: '<circle cx="8" cy="15" r="4"/><path d="m11 12 8.5-8.5M16 7l2.5 2.5M14 9l2 2"/>',
@@ -472,7 +483,7 @@
         var actions = (d.canRecord ? '<a class="btn sm" href="#/visit?p=' + e(p.id) + '">' + icon('plus') + 'Record visit</a>' : '') +
           (d.canAssess ? '<a class="btn sm ghost" href="#/assess?p=' + e(p.id) + '">' + icon('gauge') + 'Add a risk check</a>' : '');
         fill(personBar(p, people, actions) +
-          riskHtml(d) +
+          (role === 'family' ? '' : riskHtml(d)) + riskTrendHtml(d) +
           '<div class="dgrid">' +
             '<section class="sum" aria-labelledby="h-sum"><h2 id="h-sum">Summary</h2>' +
               '<label class="sumsel"><span class="sr">Show</span><select data-act="sumgroup">' + [['vitals', 'Vitals'], ['body', 'Body composition'], ['wellbeing', 'Wellbeing checks']].map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === group ? ' selected' : '') + '>' + o[1].toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' +
@@ -499,7 +510,7 @@
         '<a class="btn ghost" href="tel:+918129345178">' + icon('phone') + 'Call ' + PHONE + '</a></div></section></div>';
   }
 
-  var TREND_WORD = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'No trend yet' };
+  var TREND_WORD = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'Insufficient data' };
   var TREND_ICON = { improving: 'up', worsening: 'dn', stable: 'flat' };
   // an arrow that points the way the score moved; the word says whether that is better or worse
   function trendChip(t) {
@@ -522,20 +533,88 @@
         (x.scale || x.note ? '<details><summary>What this means</summary>' + (x.scale ? '<p>' + e(x.scale) + '</p>' : '') + (x.note ? '<p>' + e(x.note) + '</p>' : '') + '</details>' : '') + '</article>';
     }).join('') + '</div>'
       : '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div>';
-    return '<section class="riskbox" aria-labelledby="h-risk"><div class="sec-h"><h2 id="h-risk">Risk score</h2><span class="muted small">A guide to support the doctor\'s review</span></div>' + body + '</section>' + riskTrendHtml(d);
+    return '<section class="riskbox" aria-labelledby="h-risk"><div class="sec-h"><h2 id="h-risk">Risk score</h2><span class="muted small">A guide to support the doctor\'s review</span></div>' + body + '</section>';
   }
-  // Risk trend: each check against its previous assessment (from the server; nothing is estimated)
+  // Risk trend: one button per risk check (coloured by its latest category). The selected check
+  // shows its summary (now, before, change, status) and a chart of its real assessments in the
+  // dashboard's period. Everything comes from the server; nothing is estimated.
+  var RISK_ICON = { heart: 'heart', kidney: 'kidney', liver: 'liver', diabetes: 'drop', weight: 'scale', sleep: 'moon', mood: 'smile', memory: 'brain', falls: 'walk', breast: 'ribbon' };
+  var NO_HISTORY = 'Not enough historical data to determine your risk trend yet.';
+  function riskItems(d) {
+    var tr = {}; (d.riskTrend || []).forEach(function (t) { tr[t.test] = t; });
+    return (d.risks || []).map(function (x) { return { r: x, t: tr[x.test] || null }; });
+  }
+  function periodMs(d) { return [Date.parse(d.range.from + 'T00:00:00+05:30'), Date.parse(d.range.to + 'T23:59:59+05:30')]; }
+  function riskInPeriod(d, t) {
+    if (!t) return [];
+    var p = periodMs(d);
+    return t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; });
+  }
+  function riskSelected(d) {
+    var items = riskItems(d), sel = S.cache.riskSel;
+    if (!items.some(function (x) { return x.r.test === sel; })) sel = items.length ? items[0].r.test : null;
+    return sel;
+  }
   function riskTrendHtml(d) {
-    var list = d.riskTrend || [];
-    if (!list.length) return '';
-    return '<section class="trendbox" aria-labelledby="h-rtrend"><div class="sec-h"><h2 id="h-rtrend">Risk trend</h2><span class="muted small">Is each risk improving, worsening or stable since the previous check?</span></div>' +
-      '<div class="rtl">' + list.map(function (t) {
-        return '<article class="rtrow ' + t.direction + '"><div class="rth"><h3>' + e(t.title) + '</h3>' + trendChip(t) + '</div>' +
-          '<dl class="rtd"><div><dt>Now</dt><dd><b>' + e(t.current.display) + '</b> ' + dotHtml(t.current.level) + e(t.current.band) + '<span class="muted small">' + e(date(t.current.at)) + '</span></dd></div>' +
-          '<div><dt>Before</dt><dd>' + (t.previous ? '<b>' + e(t.previous.display) + '</b> ' + dotHtml(t.previous.level) + e(t.previous.band) + '<span class="muted small">' + e(date(t.previous.at)) + '</span>' : '<span class="muted">No earlier check</span>') + '</dd></div>' +
-          (t.previous ? '<div><dt>Change</dt><dd><b>' + e(changeText(t) || 'No change') + '</b></dd></div>' : '') + '</dl>' +
-          '<p class="rtx">' + e(t.text) + '</p></article>';
-      }).join('') + '</div></section>';
+    var items = riskItems(d);
+    var head = '<div class="sec-h"><h2 id="h-rtrend">Risk trend</h2><span class="muted small">Choose a risk check to see whether it is improving, worsening or stable, and its history</span></div>';
+    if (!items.length) return '<section class="trendbox" aria-labelledby="h-rtrend">' + head + '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div></section>';
+    var sel = riskSelected(d);
+    return '<section class="trendbox" aria-labelledby="h-rtrend">' + head +
+      '<div class="rsel" role="group" aria-label="Risk checks">' + items.map(function (it) { return riskButton(it, it.r.test === sel); }).join('') + '</div>' +
+      '<div id="rdetail" class="rdetail" aria-live="polite">' + riskDetailHtml(d, sel) + '</div></section>';
+  }
+  function riskButton(it, on) {
+    var x = it.r, lv = LV[x.level] || 'none';
+    return '<button type="button" class="rbtn ' + lv + '" data-act="rsel" data-k="' + e(x.test) + '" aria-pressed="' + on + '" aria-controls="rdetail">' +
+      '<span class="rbi" aria-hidden="true">' + icon(RISK_ICON[x.group] || 'gauge') + '</span>' +
+      '<span class="rbt"><b>' + e(x.title) + '</b><span class="rbv">' + dotHtml(x.level) + '<span>' + e(x.display) + ' · ' + e(x.band) + '</span></span></span>' +
+      trendChip(x.trend) + '</button>';
+  }
+  function riskDetailHtml(d, test) {
+    var it = riskItems(d).filter(function (x) { return x.r.test === test; })[0];
+    if (!it) return '';
+    var x = it.r, t = it.t, lv = LV[x.level] || 'none', rows = riskInPeriod(d, t);
+    var cur = t ? t.current : x, prev = t ? t.previous : null;
+    var status = t ? t.direction : 'none';
+    var sum = '<article class="rsum ' + lv + '"><div class="rsum-h"><div><span class="rg">' + e(x.groupName) + '</span><h3>' + e(x.title) + '</h3></div>' + trendChip(t || x.trend) + '</div>' +
+      '<dl class="rfacts">' +
+        '<div><dt>Current</dt><dd><b>' + e(cur.display) + '</b><span class="rbv">' + dotHtml(cur.level) + e(cur.band) + '</span><span class="muted small">' + e(date(cur.at)) + (x.by ? ' · ' + e(x.by) : '') + '</span></dd></div>' +
+        '<div><dt>Previous</dt><dd>' + (prev ? '<b>' + e(prev.display) + '</b><span class="rbv">' + dotHtml(prev.level) + e(prev.band) + '</span><span class="muted small">' + e(date(prev.at)) + '</span>' : '<span class="muted">No earlier assessment</span>') + '</dd></div>' +
+        '<div><dt>Change</dt><dd>' + (prev ? '<b>' + e(changeText(t) || (t.change === 0 ? 'No change' : 'Not calculable for this check')) + '</b>' : '<span class="muted">Needs two assessments</span>') + '</dd></div>' +
+        '<div><dt>Status</dt><dd><b class="rst ' + status + '">' + TREND_WORD[status] + '</b></dd></div>' +
+      '</dl><p class="rtx">' + e(t ? t.text : NO_HISTORY) + '</p>' +
+      (x.scale || x.note ? '<details class="rmean"><summary>What this means</summary>' + (x.scale ? '<p>' + e(x.scale) + '</p>' : '') + (x.note ? '<p>' + e(x.note) + '</p>' : '') + '</details>' : '') + '</article>';
+    var span = date(d.range.from) + ' – ' + date(d.range.to);
+    var hist = '<div class="rchart"><div class="rchart-h"><h3>History</h3><span class="muted small">' + e(span) + ' · ' + rows.length + ' assessment' + (rows.length === 1 ? '' : 's') + '</span></div>';
+    if (d.range.clamped) hist += '<p class="histline">' + icon('clock') + '<span>History begins on the registration date, <b>' + e(date(d.range.registeredOn)) + '</b>. There is no earlier data.</span></p>';
+    if (!rows.length) {
+      hist += '<div class="empty small"><b>No ' + e(x.title) + ' assessments in this period</b>' +
+        (t || x.at ? 'The latest assessment was ' + e(cur.display) + ' (' + e(cur.band) + ') on ' + e(date(cur.at)) + '. ' : '') + 'Choose a longer period to see more history.</div>';
+    } else if (t.kind === 'numeric') {
+      hist += '<div class="cwrap" data-rchart="' + e(test) + '"></div>' +
+        '<div class="legend2 lvkey"><span><i class="s1"></i>' + e(x.title) + (t.axis[2] ? ' (' + e(t.axis[2]) + ')' : '') + '</span><span class="muted small">Point colour shows the category:</span>' +
+        '<span>' + dotHtml('good') + 'Good</span><span>' + dotHtml('ok') + 'Fair</span><span>' + dotHtml('warn') + 'Watch</span><span>' + dotHtml('bad') + 'High</span></div>' +
+        (rows.length === 1 ? '<p class="muted small">Only one assessment in this period, so there is no line yet.</p>' : '') +
+        '<details class="rlist"><summary>All assessments in this period (' + rows.length + ')</summary>' + riskListHtml(rows) + '</details>';
+    } else {
+      hist += '<p class="muted small">This check gives a category rather than a number, so its history is shown as a list.</p>' + riskListHtml(rows);
+    }
+    return '<div class="rdgrid">' + sum + hist + '</div></div>';
+  }
+  function riskListHtml(rows) {
+    return '<ol class="rhist">' + rows.slice().reverse().map(function (h) {
+      return '<li><span class="muted small">' + e(dt(h.at)) + '</span><b>' + e(h.display) + '</b><span class="rbv">' + dotHtml(h.level) + e(h.band || '') + '</span></li>';
+    }).join('') + '</ol>';
+  }
+  // a risk check's assessments in the period, shaped for chartSvg
+  function riskSeries(d, test) {
+    var it = riskItems(d).filter(function (x) { return x.r.test === test; })[0];
+    if (!it || !it.t) return null;
+    var t = it.t;
+    return { metric: 'risk-' + test, label: it.r.title, keys: ['value'], names: [it.r.title], unit: t.axis[2] || '', axis: t.axis, levels: true,
+      rows: riskInPeriod(d, t).map(function (h) { return { ms: h.ms, at: h.at, value: h.value, level: h.level, display: h.display, band: h.band }; }),
+      tip: function (r) { return dt(r.at) + ': ' + r.display + (r.band ? ' (' + r.band + ')' : ''); } };
   }
 
   function summaryList(d, group) {
@@ -571,24 +650,48 @@
       (custom ? '<p class="muted small" style="margin:-4px 0 10px">Showing ' + e(r.label) + ' · <button class="link" data-act="period" data-k="7d">Back to last 7 days</button></p>' : '');
   }
 
+  // Vitals on demand: a button per vital; only the chosen vital's chart is shown
+  function vitalList(d, group) {
+    return d.latest.filter(function (x) { return group === 'body' ? x.group === 'body' : x.group !== 'body'; });
+  }
+  function vitalSelected(d, group) {
+    var list = vitalList(d, group), sel = S.cache.metric;
+    if (list.some(function (x) { return x.metric === sel; })) return sel;
+    var withData = list.filter(function (x) { return d.series.some(function (m) { return m.metric === x.metric; }); })[0];
+    return withData ? withData.metric : list.length ? list[0].metric : null;
+  }
   function chartsHtml(d, group) {
-    var list = d.series.filter(function (m) { return group === 'body' ? m.group === 'body' : m.group !== 'body'; });
-    if (group === 'wellbeing') list = d.series.filter(function (m) { return m.group !== 'body'; });
+    var list = vitalList(d, group);
     var reg = d.range.registeredOn ? date(d.range.registeredOn) : '';
-    if (!list.length) return d.range.clamped
-      ? '<div class="empty"><b>No previous data available for this period</b>' + e(first(d.person.name)) + '\'s recorded history begins on ' + e(reg) + ', the registration date.</div>'
-      : '<div class="empty"><b>No readings in this period</b>Try a longer period, or choose dates with the calendar.</div>';
+    if (!list.length) return '<div class="empty"><b>No readings yet</b>' + (group === 'body' ? 'Body composition from the smart scale appears here.' : 'Blood pressure, heart rate, sugar and oxygen appear here after the first visit.') + '</div>';
+    var sel = vitalSelected(d, group);
+    var count = function (k) { var m = d.metrics.filter(function (x) { return x.k === k; })[0]; return m ? m.count : 0; };
     var head = d.range.clamped ? '<p class="histnote">' + icon('clock') + '<span>' + e(first(d.person.name)) + '\'s recorded history begins on <b>' + e(reg) + '</b>, the registration date, so this view starts there. There is no earlier data for this period.</span></p>' : '';
-    var out = list.map(function (m) {
-      var span = date(d.range.from) + ' – ' + date(d.range.to);
-      return '<div class="tblock" id="t-' + m.metric + '"><h3>' + e(m.label) + '</h3>' +
-        '<div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
-          (m.status ? '<span class="ast">● ' + e(m.status) + '</span>' : '<span></span>') + '<span class="aspan">' + e(span) + '</span></div>' +
-        '<div class="cwrap" data-chart="' + m.metric + '"></div>' +
-        (m.keys.length > 1 ? '<div class="legend2"><span><i class="s1"></i>' + e(m.names[0]) + '</span><span><i class="s2"></i>' + e(m.names[1]) + '</span></div>' : '') +
-        '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
-    }).join('');
-    return head + out;
+    var picker = '<div class="vsel" role="group" aria-label="Choose a vital to show">' + list.map(function (x) {
+      var n = count(x.metric);
+      return '<button type="button" class="vbtn ' + (LV[x.level] || 'none') + '" data-act="vsel" data-k="' + x.metric + '" aria-pressed="' + (x.metric === sel) + '" aria-controls="vdetail">' +
+        dotHtml(x.level) + '<span>' + e(x.label) + '<small>' + (n ? n + ' reading' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+    }).join('') + '</div>';
+    return picker + head + '<div id="vdetail" aria-live="polite">' + vitalDetailHtml(d, sel) + '</div>';
+  }
+  function vitalDetailHtml(d, k) {
+    var m = d.series.filter(function (x) { return x.metric === k; })[0];
+    var lat = d.latest.filter(function (x) { return x.metric === k; })[0] || {};
+    var label = m ? m.label : lat.label || (METRICS[k] ? METRICS[k].label : 'this vital');
+    if (!m) return '<div class="empty"><b>No ' + e(label.toLowerCase()) + ' readings in this period</b>' +
+      (lat.at ? 'The latest reading was ' + e(lat.value) + (lat.unit ? ' ' + e(lat.unit) : '') + ' on ' + e(date(lat.at)) + '. ' : '') + 'Try a longer period, or choose dates with the calendar.</div>';
+    var span = date(d.range.from) + ' – ' + date(d.range.to);
+    var last = m.rows[m.rows.length - 1];
+    var lastVal = m.keys.map(function (x) { return last[x]; }).filter(function (v) { return v != null; }).join('/');
+    return '<div class="tblock" id="t-' + m.metric + '"><h3>' + e(m.label) + '</h3>' +
+      '<div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
+        (m.status ? '<span class="ast">● ' + e(m.status) + '</span>' : '<span></span>') + '<span class="aspan">' + e(span) + '</span></div>' +
+      '<dl class="vfacts"><div><dt>Latest in this period</dt><dd><b>' + e(lastVal) + (m.unit ? ' ' + e(m.unit) : '') + '</b>' + (last.status ? ' ' + dotHtml(last.level) + e(last.status) : '') + '<span class="muted small">' + e(dt(last.at)) + '</span></dd></div>' +
+        (lat.range ? '<div><dt>Normal range</dt><dd><b>' + e(lat.range) + '</b></dd></div>' : '') +
+        '<div><dt>Readings</dt><dd><b>' + m.rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div></dl>' +
+      '<div class="cwrap" data-chart="' + m.metric + '"></div>' +
+      '<div class="legend2">' + m.keys.map(function (x, i) { return '<span><i class="s' + (i + 1) + '"></i>' + e(m.names[i]) + (m.unit ? ' (' + e(m.unit) + ')' : '') + '</span>'; }).join('') + '</div>' +
+      '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
   }
   // draw charts at their real width after the HTML is on the page
   function drawCharts() {
@@ -596,6 +699,10 @@
     $$('[data-chart]').forEach(function (el) {
       var m = d.series.filter(function (x) { return x.metric === el.getAttribute('data-chart'); })[0];
       if (m) el.innerHTML = chartSvg(m, d.range, el.clientWidth);
+    });
+    $$('[data-rchart]').forEach(function (el) {
+      var m = riskSeries(d, el.getAttribute('data-rchart'));
+      if (m && m.rows.length) el.innerHTML = chartSvg(m, d.range, el.clientWidth);
     });
   }
   // ---- chart dates are worked out in India time (IST = UTC + 5:30)
@@ -646,6 +753,15 @@
     var stepGuess = niceStep((hi - lo) || Math.abs(hi) * 0.2 || 1);
     lo = Math.floor((lo - stepGuess * 0.5) / stepGuess) * stepGuess; hi = Math.ceil((hi + stepGuess * 0.5) / stepGuess) * stepGuess;
     if (m.metric === 'bp') { lo = Math.min(lo, 40); hi = Math.max(hi, 200); stepGuess = 40; }
+    if (m.axis) {
+      var vmin = Math.min.apply(null, vals), vmax = Math.max.apply(null, vals);
+      if (m.axis[0] != null) lo = Math.min(m.axis[0], vmin);
+      if (m.axis[1] != null) hi = Math.max(m.axis[1], vmax);
+      stepGuess = niceStep((hi - lo) || 1);
+      if (m.axis[0] == null) lo = Math.floor((vmin - stepGuess * 0.5) / stepGuess) * stepGuess;
+      if (m.axis[1] == null) hi = Math.ceil((vmax + stepGuess * 0.5) / stepGuess) * stepGuess;
+      if (!(hi > lo)) hi = lo + stepGuess;
+    }
     var x0 = L + PAD, x1 = W - R - PAD;
     // each reading sits at its real date and time
     var x = function (ms) { return x0 + (x1 - x0) * Math.min(1, Math.max(0, (ms - start) / (end - start))); };
@@ -673,8 +789,8 @@
       var rad = pts.length > 90 ? 2.6 : pts.length > 40 ? 3.6 : 5;
       if (pts.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
       pts.forEach(function (p) {
-        var tip = dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
-        out += '<g class="pg"><circle class="pt s' + (si + 1) + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
+        var tip = m.tip ? m.tip(p[2]) : dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
+        out += '<g class="pg"><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
           '<circle class="hit" r="11" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"><title>' + e(tip) + '</title></circle></g>';
       });
     });
@@ -720,9 +836,9 @@
   // ================================================================ Download trends
   // The dashboard's period decides the dates; here the family picks the vitals, what the report
   // contains and the file type. The server builds the file from the same data as the dashboard.
-  var DL_PARTS = [['charts', 'Historical trend charts', 'A chart of each vital over the period'], ['readings', 'Recorded measurements', 'Every reading with its date and time'],
-    ['averages', 'Average values', 'Averages of the readings in the period'], ['latest', 'Latest measurements and status', 'The most recent reading of each vital and its status'],
-    ['risktrend', 'Risk trend summary', 'Improving, worsening or stable, from real assessments']];
+  var DL_PARTS = [['charts', 'Historical trend charts', 'A chart of each chosen vital and risk check'], ['readings', 'Recorded measurements', 'Every reading with its date and time'],
+    ['averages', 'Average values', 'Averages of the readings in the period'], ['latest', 'Latest measurements and status', 'The most recent reading or assessment and its status'],
+    ['risktrend', 'Trend summary', 'Improving, worsening or stable, from real measurements and assessments']];
   var DL_FORMATS = [['pdf', 'PDF report', 'Charts and tables, ready to print or share'], ['xlsx', 'Excel workbook', 'A sheet per vital, with native charts'], ['csv', 'CSV data file', 'Plain data for other apps (no charts)']];
   function dlDialog() {
     var d = S.cache.dash; if (!d) return;
@@ -740,10 +856,17 @@
       var list = d.metrics.filter(function (m) { return m.group === g; });
       return '<fieldset class="ckset"><legend>' + title + '</legend><div class="ckgrid">' + list.map(box).join('') + '</div></fieldset>';
     };
+    // risk checks (BMI is already under Body composition)
+    var risks = riskItems(d).filter(function (it) { return it.r.test !== 'bmi'; }).map(function (it) { return { k: 'risk:' + it.r.test, label: it.r.title, count: riskInPeriod(d, it.t).length, risk: true }; });
+    var riskBox = function (m) {
+      return '<label class="ck"><input type="checkbox" data-act="dlm" value="' + e(m.k) + '"' + (sel.indexOf(m.k) > -1 ? ' checked' : '') + '><span>' + e(m.label) +
+        '<small>' + (m.count ? m.count + ' assessment' + (m.count === 1 ? '' : 's') + ' in this period' : 'no assessment in this period') + '</small></span></label>';
+    };
+    var riskGroup = risks.length ? '<fieldset class="ckset"><legend>Risk checks</legend><div class="ckgrid">' + risks.map(riskBox).join('') + '</div></fieldset>' : '';
     var body = '<div class="dl-period">' + icon('cal') + '<span><b>Period:</b> ' + e(period) + '. Change it with the dashboard\'s date filter.' + (r.clamped ? ' History begins on ' + e(date(r.registeredOn)) + '.' : '') + '</span></div>' +
-      '<section class="dls"><div class="dls-h"><h3>1. Vitals to download</h3><span class="muted small" id="dlCount"></span></div>' +
+      '<section class="dls"><div class="dls-h"><h3>1. Vitals and risk checks to download</h3><span class="muted small" id="dlCount"></span></div>' +
         '<div class="dls-tools"><button type="button" class="link" data-act="dl-all">Select all</button><button type="button" class="link" data-act="dl-none">Clear selection</button></div>' +
-        group('vitals', 'Vitals') + group('body', 'Body composition') + '</section>' +
+        group('vitals', 'Vitals') + group('body', 'Body composition') + riskGroup + '</section>' +
       '<section class="dls"><div class="dls-h"><h3>2. What to include</h3></div>' +
         '<label class="ck strong"><input type="checkbox" data-act="dlc"' + (parts.length === DL_PARTS.length ? ' checked' : '') + '><span>Complete report<small>Everything below</small></span></label>' +
         '<div class="ckgrid">' + DL_PARTS.map(function (p) { return '<label class="ck"><input type="checkbox" data-act="dlp" value="' + p[0] + '"' + (parts.indexOf(p[0]) > -1 ? ' checked' : '') + '><span>' + p[1] + '<small>' + p[2] + '</small></span></label>'; }).join('') + '</div>' +
@@ -773,7 +896,7 @@
     $('[data-act=dlc]', st.dlg).checked = all.length && all.every(function (x) { return x.checked; });
     var go = $('#dlGo', st.dlg);
     go.disabled = !st.metrics.length || !st.parts.length;
-    go.title = !st.metrics.length ? 'Choose at least one vital' : !st.parts.length ? 'Choose what to include' : '';
+    go.title = !st.metrics.length ? 'Choose at least one vital or risk check' : !st.parts.length ? 'Choose what to include' : '';
     S.cache.dl = { metrics: st.metrics, parts: st.parts, format: st.format };
   }
   function dlGo() {
@@ -825,32 +948,88 @@
         if (!def.ok) return pageError(def);
         if (!d.ok) return pageError(d);
         S.cache.detDef = def; S.cache.det = d;
+        // families read their details; the care team and the office keep them up to date (the server enforces this)
+        var canEdit = d.canEdit === true && role !== 'family';
         var data = d.meta.version ? d.data : Object.assign({}, d.prefill || {});
         var latest = d.history[0];
         // fields someone else changed in the latest save are marked, so new information stands out
         var fresh = latest && !latest.mine ? latest.fields : [];
         var word = { new: 'Not started', draft: 'Draft', complete: 'Complete' };
         var who = function (h) { return e(h.by) + (h.byRole === 'family' ? ' (family)' : h.byRole === 'caregiver' ? ' (caregiver)' : ' (KareIQ office)'); };
-        var status = d.meta.version ? '<p class="detmeta">' + (role !== 'family' ? '<span class="pill ' + (d.meta.status === 'complete' ? 'active' : 'pending') + '"><i></i>' + word[d.meta.status] + '</span>' : '') +
-          '<span>Last saved ' + e(dt(d.meta.updatedAt)) + ' by ' + who({ by: d.meta.updatedBy, byRole: d.meta.updatedByRole }) + '</span></p>' : '<p class="detmeta"><span>' + (role === 'family' ? 'Not filled in yet. Add what you know; the care team completes the rest at the first visit.' : 'Not started yet.') + '</span></p>';
+        var status = d.meta.version ? '<p class="detmeta">' + (canEdit ? '<span class="pill ' + (d.meta.status === 'complete' ? 'active' : 'pending') + '"><i></i>' + word[d.meta.status] + '</span>' : '') +
+          '<span>Last updated ' + e(dt(d.meta.updatedAt)) + ' by ' + who({ by: d.meta.updatedBy, byRole: d.meta.updatedByRole }) + '</span></p>' : '<p class="detmeta"><span>' + (canEdit ? 'Not started yet.' : 'The care team fills these in at the first visit.') + '</span></p>';
         var freshNote = fresh.length ? '<p class="note newnote">' + icon('pen') + '<span><b>New information</b> from ' + who(latest) + ' on ' + e(dt(latest.at)) + ': ' + e(latest.labels.join(', ')) + '. These fields are marked below.</span></p>' : '';
         var nav = '<nav class="detnav" aria-label="Sections">' + def.sections.map(function (sec) { return '<a href="#det-' + sec.id + '" data-act="det-jump" data-id="det-' + sec.id + '">' + e(sec.title) + '</a>'; }).join('') + '</nav>';
+        var head = photoHeader(d, data, canEdit);
+        var hist = d.history.length ? '<details class="panel dethist"><summary>History of changes</summary><ol>' + d.history.map(function (h) {
+          return '<li><b>' + e(dt(h.at)) + '</b> · ' + who(h) + (h.status && canEdit ? ' · ' + word[h.status] : '') + '<br><span class="muted small">' + (h.labels.length ? e(h.labels.join(', ')) : 'Status changed') + '</span></li>';
+        }).join('') + '</ol></details>' : '';
+        var title = '<div class="pagehead"><h1>' + (role === 'family' ? 'Personal & health details' : 'Client information') + '</h1>' + status + '</div>';
+        if (!canEdit) {
+          var view = '<div class="detview">' + def.sections.map(function (sec) {
+            return '<section class="panel dets ro" id="det-' + sec.id + '"><h2>' + e(sec.title) + '</h2>' + sec.groups.map(function (g) {
+              var items = g.fields.filter(function (fd) { return roApplies(fd, data); }).map(function (fd) { return roField(fd, data, fresh, d.age); }).join('');
+              return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<dl class="rogrid">' + items + '</dl>';
+            }).join('') + '</section>';
+          }).join('') + '</div>';
+          var help = '<p class="note">' + icon('shield') + '<span>Only the KareIQ care team can change these details. If something is wrong or out of date, <a href="' + waLink('Hello, some of the personal details for ' + (d.person.name || '') + ' need updating.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>';
+          fill(personBar(p, people) + title + head + freshNote + nav + view + help + hist);
+          return;
+        }
         var form = '<form class="detform" data-form="details" novalidate><div class="alert bad" data-msg hidden></div>' + def.sections.map(function (sec) {
           return '<section class="panel dets" id="det-' + sec.id + '"><h2>' + e(sec.title) + '</h2>' + sec.groups.map(function (g) {
             return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<div class="detgrid">' + g.fields.map(function (fd) { return detField(fd, data, fresh, d.age); }).join('') + '</div>';
           }).join('') + '</section>';
         }).join('') + '</form>';
-        var hist = d.history.length ? '<details class="panel dethist"><summary>History of changes</summary><ol>' + d.history.map(function (h) {
-          return '<li><b>' + e(dt(h.at)) + '</b> · ' + who(h) + (h.status && role !== 'family' ? ' · ' + word[h.status] : '') + '<br><span class="muted small">' + (h.labels.length ? e(h.labels.join(', ')) : 'Status changed') + '</span></li>';
-        }).join('') + '</ol></details>' : '';
-        var bar = '<div class="detbar">' + (role === 'family'
-          ? '<button class="btn" data-act="det-save">' + icon('check') + 'Save details</button>'
-          : '<button class="btn ghost" data-act="det-save" data-status="draft">Save draft</button><button class="btn" data-act="det-save" data-status="complete">' + icon('check') + 'Save and mark complete</button>') +
+        var bar = '<div class="detbar"><button class="btn ghost" data-act="det-save" data-status="draft">Save draft</button><button class="btn" data-act="det-save" data-status="complete">' + icon('check') + 'Save and mark complete</button>' +
           '<span class="muted small" id="detSaved" role="status" aria-live="polite"></span></div>';
-        fill(personBar(p, people) + '<div class="pagehead"><h1>' + (role === 'family' ? 'Personal & health details' : 'Client information') + '</h1>' + status + '</div>' + freshNote + nav + form + hist + bar);
+        fill(personBar(p, people) + title + head + freshNote + nav + form + hist + bar);
         detToggle();
       });
     });
+  }
+  // the photo at the top: everyone who may see the person sees it; only the care team can change it
+  function photoHeader(d, data, canEdit) {
+    var pid = d.person.id, name = data.name || d.person.name || '';
+    var src = d.person.photo ? '/api/app/people/' + encodeURIComponent(pid) + '/photo?v=' + encodeURIComponent(d.person.photo) : '';
+    var facts = [d.age != null ? d.age + ' years' : '', data.gender || ''].filter(Boolean).join(' · ');
+    var pic = src ? '<img src="' + e(src) + '" alt="Photo of ' + e(name) + '" width="112" height="112" decoding="async">'
+      : '<span class="ph" role="img" aria-label="No photo yet">' + icon('user') + '</span>';
+    var ctl = canEdit ? '<div class="phctl"><input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" data-act="photo-file" data-id="' + e(pid) + '" hidden aria-hidden="true" tabindex="-1">' +
+      '<button type="button" class="btn sm ghost" data-act="photo-pick">' + icon('camera') + (src ? 'Replace photo' : 'Upload photo') + '</button>' +
+      (src ? '<button type="button" class="btn sm ghost" data-act="photo-remove" data-id="' + e(pid) + '">' + icon('trash') + 'Remove photo</button>' : '') +
+      '<span class="muted small">JPG, PNG or WEBP, up to 2 MB</span><span class="phmsg" id="photoMsg" role="status" aria-live="polite"></span></div>' : '';
+    return '<section class="phead" aria-label="Photo and name"><div class="avatar">' + pic + '</div><div class="phead-t"><h2>' + e(name) + '</h2>' +
+      (facts ? '<p class="muted">' + e(facts) + '</p>' : '') + ctl + '</div></section>';
+  }
+  function photoUpload(inp) {
+    var file = inp.files && inp.files[0], msg = $('#photoMsg'), pid = inp.getAttribute('data-id');
+    if (!file) return;
+    var say = function (t, bad) { if (msg) { msg.textContent = t; msg.className = 'phmsg' + (bad ? ' bad' : ''); } };
+    if (['image/jpeg', 'image/png', 'image/webp'].indexOf(file.type) === -1) { inp.value = ''; return say('Please choose a photo in JPG, PNG or WEBP format.', true); }
+    if (file.size > 2 * 1024 * 1024) { inp.value = ''; return say('That photo is larger than 2 MB. Please choose a smaller photo.', true); }
+    say('Uploading…');
+    fetch('/api/app/people/' + encodeURIComponent(pid) + '/photo', { method: 'POST', credentials: 'same-origin', body: file,
+      headers: { 'Content-Type': file.type, 'X-Requested-With': 'kareiq', 'X-CSRF': S.csrf } })
+      .then(function (res) { return res.json().catch(function () { return { ok: false }; }); })
+      .then(function (x) { inp.value = ''; if (!x.ok) return say(x.message || 'The photo could not be saved. Please try again.', true); toast('Photo saved.'); render(); })
+      .catch(function () { inp.value = ''; say('The photo could not be saved. Please check the connection and try again.', true); });
+  }
+  // read-only view: follow-up questions show only when they apply
+  function roApplies(fd, data) {
+    if (!fd.showIf) return true;
+    var v = data[fd.showIf[0]];
+    return Boolean(v) && v !== 'Never';
+  }
+  function roField(fd, data, fresh, age) {
+    var v = data[fd.k], mark = fresh.indexOf(fd.k) > -1 || (fd.specify && fresh.indexOf(fd.specify) > -1), text;
+    if (fd.type === 'computed') text = age != null ? age + ' years' : '';
+    else if (fd.type === 'multi') { text = (v || []).join(', '); if (fd.specify && data[fd.specify]) text += (text ? ' — ' : '') + data[fd.specify]; }
+    else if (fd.type === 'date') text = v ? date(v) : '';
+    else text = v || '';
+    var wide = fd.type === 'multi' || fd.type === 'textarea';
+    return '<div class="rof' + (wide ? ' wide' : '') + (mark ? ' fresh' : '') + '"><dt>' + e(fd.label) + (mark ? ' <span class="newtag">New</span>' : '') + '</dt>' +
+      '<dd>' + (text ? e(text) : '<span class="muted">Not recorded</span>') + '</dd></div>';
   }
   function detField(fd, data, fresh, age) {
     var v = data[fd.k], id = 'f-' + fd.k, mark = fresh.indexOf(fd.k) > -1 || (fd.specify && fresh.indexOf(fd.specify) > -1);
@@ -1820,13 +1999,32 @@
       case 'det-save': ev.preventDefault(); detSave(t.getAttribute('data-status')); break;
       case 'det-reload': render(); break;
       case 'det-jump': { ev.preventDefault(); var tgt = document.getElementById(t.getAttribute('data-id')); if (tgt) { tgt.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var h = tgt.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } break; }
-      case 'jump': {
-        var k2 = t.getAttribute('data-k'), blk = $('#t-' + k2);
-        S.cache.metric = k2; $$('.vcard').forEach(function (c) { c.classList.toggle('on', c === t); });
-        if (blk) { blk.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); blk.classList.add('flash'); setTimeout(function () { blk.classList.remove('flash'); }, 1200); }
-        else toast('No ' + (METRICS[k2] ? METRICS[k2].label.toLowerCase() : 'readings') + ' in this period. Try a longer period.');
+      case 'jump': case 'vsel': {
+        // show only the chosen vital's chart
+        var k2 = t.getAttribute('data-k'), dd2 = S.cache.dash; if (!dd2) break;
+        S.cache.metric = k2;
+        $$('.vcard').forEach(function (c) { c.classList.toggle('on', c.getAttribute('data-k') === k2); });
+        $$('[data-act=vsel]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === k2)); });
+        var vd = $('#vdetail'); if (vd) { vd.innerHTML = vitalDetailHtml(dd2, k2); drawCharts(); }
+        if (act === 'jump') {
+          var blk = $('#charts');
+          if (blk) { blk.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' }); var tb = $('#vdetail .tblock'); if (tb) { tb.classList.add('flash'); setTimeout(function () { tb.classList.remove('flash'); }, 1200); } }
+        }
         break;
       }
+      case 'rsel': {
+        // show only the chosen risk check's summary and history
+        var rk = t.getAttribute('data-k'), dd3 = S.cache.dash; if (!dd3) break;
+        S.cache.riskSel = rk;
+        $$('[data-act=rsel]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === rk)); });
+        var rd = $('#rdetail'); if (rd) { rd.innerHTML = riskDetailHtml(dd3, rk); drawCharts(); }
+        break;
+      }
+      case 'photo-pick': { var pin = $('#photoIn'); if (pin) pin.click(); break; }
+      case 'photo-remove':
+        openDialog('Remove the photo', '<form data-form="photoremove" data-id="' + e(t.getAttribute('data-id')) + '" novalidate><div class="alert bad" data-msg hidden></div><p>Remove this photo? A plain placeholder will show instead until a new photo is added.</p></form>',
+          '<button class="btn ghost" data-act="close">Keep it</button><button class="btn" data-act="submit-dialog">Remove photo</button>');
+        break;
       case 'showall': {
         var m = (S.cache.dash.series || []).filter(function (x) { return x.metric === t.getAttribute('data-k'); })[0], box = t.nextElementSibling;
         var show = box.hidden; if (show && m) box.innerHTML = allDataHtml(m);
@@ -1893,6 +2091,9 @@
       }
     }
   });
+  FORMS.photoremove = function (f) {
+    return api('DELETE', 'people/' + encodeURIComponent(f.getAttribute('data-id')) + '/photo').then(function (d) { if (!d.ok) return d; closeDialog(); toast('Photo removed.'); render(); });
+  };
   FORMS.rremove = function (f) {
     return api('POST', 'records/' + encodeURIComponent(f.getAttribute('data-id')) + '/remove', {}).then(function (d) { if (!d.ok) return d; closeDialog(); toast('Record removed.'); render(); });
   };
@@ -1907,6 +2108,7 @@
     if (act === 'dlm' || act === 'dlp' || act === 'dlf') { dlSync(); return; }
     if (act === 'dlc') { $$('dialog[open] [data-act=dlp]').forEach(function (c) { if (!c.disabled) c.checked = t.checked; }); dlSync(); return; }
     if (act === 'det-field') { detToggle(); return; }
+    if (act === 'photo-file') { photoUpload(t); return; }
     if (act === 'range-date') { rangeDateCheck(t); return; }
     if (act === 'req-status') {
       api('PATCH', 'admin/requests/' + t.getAttribute('data-type') + '/' + encodeURIComponent(t.getAttribute('data-id')), { status: t.value }).then(function (d) { toast(d.ok ? 'Status saved.' : d.message); });

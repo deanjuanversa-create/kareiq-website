@@ -20,6 +20,12 @@ const BETTER = {
 const PCT = new Set(['cvd', 'kidney', 'fib4', 'elf', 'tug', 'reach', 'chair30', 'bmi']);
 const UNIT = { cvd: 'percentage points', kidney: 'percentage points', tug: 'seconds', reach: 'cm', chair30: 'stands', bmi: 'kg/m²', balance4: 'stages' };
 const NO_HISTORY = 'Not enough historical data to determine your risk trend yet.';
+// chart axis for each test: the scale its score is reported on (null = from the data)
+const AXIS = {
+  cvd: [0, null, '%'], kidney: [0, null, '%'], fib4: [0, null, ''], nfs: [null, null, ''], elf: [null, null, ''], idrs: [0, 100, 'points'],
+  psqi: [0, 21, 'points'], phq9: [0, 27, 'points'], gad7: [0, 21, 'points'], mmse: [0, 30, 'points'], tug: [0, null, 'seconds'],
+  balance4: [0, 4, 'stages'], reach: [0, null, 'cm'], chair30: [0, null, 'stands'], snehita: [0, 1, ''], bmi: [null, null, 'kg/m²']
+};
 
 const decimals = (v) => { const s = String(v); return s.includes('.') ? s.split('.')[1].length : 0; };
 const roundTo = (v, d) => Math.round(v * 10 ** d) / 10 ** d;
@@ -66,8 +72,11 @@ function riskTrends(risks, bmiReadings, fromMs, describe) {
     const uniq = list.filter((x, i) => i === 0 || x.ms !== list[i - 1].ms);
     const cur = uniq[0], prev = uniq[1] || null;
     const t = compare(test, cur, prev);
+    // every assessment from registration onwards, oldest first, for the history chart
+    const history = uniq.slice().reverse().map((x) => ({ value: typeof x.value === 'number' ? x.value : null, display: x.display, band: x.band, level: x.level || null, at: x.at, ms: x.ms }));
+    const numeric = history.every((h) => h.value != null);
     out.push({
-      test, title: describe.title(test),
+      test, title: describe.title(test), history, kind: numeric ? 'numeric' : 'categorical', axis: AXIS[test] || [null, null, ''],
       current: { value: cur.value, display: cur.display, band: cur.band, level: cur.level || null, at: cur.at },
       previous: prev ? { value: prev.value, display: prev.display, band: prev.band, level: prev.level || null, at: prev.at } : null,
       assessments: uniq.length, ...t
@@ -92,4 +101,4 @@ function dedupe(readings) {
   return readings.filter((r) => { const k = r.metric + '|' + r.measuredMs; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-module.exports = { compare, riskTrends, registeredMs, dayStartIST, dedupe, NO_HISTORY, BETTER, RANK };
+module.exports = { AXIS, compare, riskTrends, registeredMs, dayStartIST, dedupe, NO_HISTORY, BETTER, RANK };

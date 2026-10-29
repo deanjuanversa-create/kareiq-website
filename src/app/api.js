@@ -992,7 +992,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         const label = (k) => (firstvisit.BY_KEY[k] || firstvisit.BY_KEY[k.replace(/Specify$/, '')] || { label: k }).label;
         const prefill = row ? null : { name: person.name || '', gender: person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : '' };
         return json(res, 200, {
-          ok: true, person: { id: person.id, name: person.name },
+          ok: true, person: { id: person.id, name: person.name, photo: person.photoAt || null },
+          canEdit: user.role !== 'family',
           data: row ? row.data : {}, prefill,
           meta: row ? { version: row.version, status: row.status, updatedAt: row.updatedAt, updatedBy: users[row.updatedBy] || 'KareIQ', updatedByRole: row.updatedByRole, createdAt: row.createdAt } : { version: 0, status: 'new' },
           age: row ? firstvisit.ageFrom(row.data.dob) : null,
@@ -1000,12 +1001,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         });
       }
       if (req.method === 'POST') {
+        if (user.role === 'family') throw forbidden(); // families view their details; the care team and office keep them up to date
         const v = firstvisit.validate(body.data);
         if (v.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: v.errors });
         const current = row ? row.version : 0;
         if (Number(body.version) !== current) return json(res, 409, { ok: false, message: 'Someone else saved these details while you were editing. Reload the page to see the latest version, then make your changes again.' });
         const changed = firstvisit.changed(row ? row.data : {}, v.data);
-        const status = user.role === 'family' ? (row ? row.status : 'draft') : body.status === 'complete' ? 'complete' : 'draft';
+        const status = body.status === 'complete' ? 'complete' : 'draft';
         if (row && !changed.length && status === row.status) return json(res, 200, { ok: true, unchanged: true, version: current });
         const at = now(), version = current + 1;
         const rec = { personId: person.id, data: v.data, version, status, updatedAt: at, updatedBy: user.id, updatedByRole: user.role };
@@ -1576,6 +1578,43 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     return true;
   }
 
+  // ---------------------------------------------------------------- profile photo
+  // Anyone who may see the person can see the photo; only the office and the person's assigned
+  // caregivers may add, replace or remove it. JPG, PNG or WEBP up to 2 MB, checked by content.
+  const MAX_PHOTO = 2 * 1024 * 1024;
+  async function photoRoute(req, res, personId, user) {
+    const person = await visiblePerson(user, personId);
+    if (req.method === 'GET') {
+      const f = person.photoId ? await docs.findOne('app_files', { id: person.photoId }) : null;
+      if (!f) throw notFound();
+      const buf = Buffer.from(f.data, 'base64');
+      res.writeHead(200, { 'Content-Type': f.mime || sniff(buf) || 'image/jpeg', 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+      res.end(buf);
+      return true;
+    }
+    if (!(await careTeam(user, person.id))) throw forbidden();
+    if (req.method === 'DELETE') {
+      if (person.photoId) await docs.remove('app_files', person.photoId);
+      await docs.update('app_people', person.id, { photoId: null, photoAt: null });
+      await audit(user.id, 'photo.remove', person.id, null);
+      return json(res, 200, { ok: true });
+    }
+    if (req.method !== 'POST') throw notFound();
+    if (failures.over('upload:' + user.id, 40)) return json(res, 429, { ok: false, message: 'You have uploaded many files just now. Please wait a few minutes.' });
+    failures.add('upload:' + user.id);
+    const buf = await readRaw(req);
+    if (!buf.length) return json(res, 400, { ok: false, message: 'Choose a photo to upload.' });
+    if (buf.length > MAX_PHOTO) return json(res, 413, { ok: false, message: 'That photo is larger than 2 MB. Please choose a smaller photo.' });
+    const mime = sniff(buf);
+    if (!mime || mime === 'application/pdf') return json(res, 415, { ok: false, message: 'Please upload a photo in JPG, PNG or WEBP format.' });
+    const fileId = uid(), at = now();
+    await docs.insert('app_files', { id: fileId, personId: person.id, kind: 'photo', mime, data: buf.toString('base64'), createdAt: at });
+    if (person.photoId) await docs.remove('app_files', person.photoId);
+    await docs.update('app_people', person.id, { photoId: fileId, photoAt: at });
+    await audit(user.id, 'photo.set', person.id, { size: buf.length });
+    return json(res, 201, { ok: true, photo: at });
+  }
+
   const oauth = createOAuth({ json, isHttps, signIn, audit, uid, now });
 
   // ---------------------------------------------------------------- entry point
@@ -1616,6 +1655,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       // medical record files are sent as raw bytes (not JSON) and downloaded as files
       if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'POST') return await uploadRecord(req, res, parts[1], signed.user);
       if (parts[0] === 'records' && parts[2] === 'file' && req.method === 'GET') return await downloadRecord(req, res, parts[1], signed.user, url);
+      if (parts[0] === 'people' && parts[2] === 'photo' && parts.length === 3) return await photoRoute(req, res, parts[1], signed.user);
       const handled = await signedInRoute(req, res, parts, url, signed.user, signed.session);
       if (handled === undefined && !res.headersSent) return json(res, 404, { ok: false, message: 'Not found.' });
     } catch (err) {

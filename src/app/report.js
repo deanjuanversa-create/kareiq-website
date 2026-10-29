@@ -49,7 +49,7 @@ async function build(data) {
   function dot(x, yy, level) { page.drawCircle({ x, y: yy, size: 3.2, color: col(C[level] || C.none) }); }
 
   const has = (p) => (data.parts || []).includes(p);
-  const arrow = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'No trend yet' };
+  const arrow = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'Insufficient data' };
   const trendColor = { improving: C.good, worsening: C.bad, stable: C.muted, none: C.muted };
 
   // ---------------------------------------------------------------- cover
@@ -63,8 +63,10 @@ async function build(data) {
   const facts = [data.person.age ? data.person.age + ' years' : null, data.person.sexName].filter(Boolean).join(' | ');
   if (facts) { text(facts, M, y, 10, font, C.muted); y -= 14; }
   for (const l of wrap('Reporting period: ' + data.periodLine, 10, W - 2 * M)) { text(l, M, y, 10, font, C.muted); y -= 13; }
-  text('Data covered: ' + (data.covered ? data.covered.from + ' to ' + data.covered.to : 'no measurements for the chosen vitals in this period'), M, y, 10, font, C.muted); y -= 13;
-  for (const l of wrap('Vitals: ' + data.metrics.map((m) => m.label).join(', '), 10, W - 2 * M)) { text(l, M, y, 10, font, C.muted); y -= 13; }
+  text('Data covered: ' + (data.covered ? data.covered.from + ' to ' + data.covered.to : 'no measurements or assessments for the chosen items in this period'), M, y, 10, font, C.muted); y -= 13;
+  const risks = data.risks || [];
+  if (data.metrics.length) for (const l of wrap('Vitals: ' + data.metrics.map((m) => m.label).join(', '), 10, W - 2 * M)) { text(l, M, y, 10, font, C.muted); y -= 13; }
+  if (risks.length) for (const l of wrap('Risk checks: ' + risks.map((t) => t.title).join(', '), 10, W - 2 * M)) { text(l, M, y, 10, font, C.muted); y -= 13; }
   for (const l of wrap('Includes: ' + data.partNames.join(', '), 10, W - 2 * M)) { text(l, M, y, 10, font, C.muted); y -= 13; }
   text(`Created ${data.createdAt} by ${data.createdBy}`, M, y, 10, font, C.muted); y -= 6;
 
@@ -72,7 +74,7 @@ async function build(data) {
   if (has('latest')) {
     heading('Latest measurements and status');
     const cols = [M, M + 150, M + 270, M + 390];
-    [['Vital', 0], ['Latest value', 1], ['Status', 2], ['Measured', 3]].forEach(([h, i]) => text(h, cols[i], y, 8.5, bold, C.muted));
+    [['Vital or risk check', 0], ['Latest value', 1], ['Status', 2], ['Measured', 3]].forEach(([h, i]) => text(h, cols[i], y, 8.5, bold, C.muted));
     y -= 14;
     for (const m of data.metrics) {
       need(16);
@@ -84,12 +86,24 @@ async function build(data) {
       text(fit(m.latest.at, 8, W - M - cols[3]), cols[3], y, 8, font, C.muted);
       y -= 15;
     }
+    for (const t of risks) {
+      need(16);
+      text(fit(t.title, 9.5, 145, bold), cols[0], y, 9.5, bold);
+      const h = t.rows[t.rows.length - 1];
+      if (t.none) { text('No assessments recorded yet', cols[1], y, 9, font, C.muted); y -= 15; continue; }
+      const cur = h || { display: t.current.display, band: t.current.band, level: t.current.level, at: t.currentAt + ' (before this period)' };
+      text(fit(cur.display, 9.5, 115), cols[1], y, 9.5);
+      if (cur.level) dot(cols[2] + 3, y + 3.2, cur.level);
+      text(fit(cur.band || '-', 9, 110), cols[2] + (cur.level ? 10 : 0), y, 9, font, cur.level ? C[cur.level] : C.muted);
+      text(fit(cur.at, 8, W - M - cols[3]), cols[3], y, 8, font, C.muted);
+      y -= 15;
+    }
   }
 
   // ---------------------------------------------------------------- trend summary
   if (has('risktrend')) {
-    heading('Risk trend summary');
-    text('Vitals in this period (first and latest measurement)', M, y, 9.5, bold, C.muted); y -= 14;
+    heading('Trend summary');
+    if (data.metrics.length) { text('Vitals in this period (first and latest measurement)', M, y, 9.5, bold, C.muted); y -= 14; }
     for (const m of data.metrics) {
       const lines = wrap(m.trend ? m.trend.text : 'No measurements recorded in this period.', 8.5, W - 2 * M - 190);
       need(14 + lines.length * 11);
@@ -99,8 +113,8 @@ async function build(data) {
       y -= Math.max(14, lines.length * 11 + 4);
     }
     y -= 4;
-    text('Risk checks (each compared with its previous assessment)', M, y, 9.5, bold, C.muted); y -= 14;
-    if (!data.riskTrend.length) { text('No risk checks recorded yet.', M, y, 9.5); y -= 14; }
+    if (risks.length) { text('Risk checks (each compared with its previous assessment)', M, y, 9.5, bold, C.muted); y -= 14; }
+    for (const t of risks.filter((x) => x.none)) { need(14); text(fit(t.title, 10, 330, bold), M, y, 10, bold); text('No data', M + 345, y, 10, bold, C.muted); y -= 12; text('No assessments recorded yet.', M + 12, y, 8.5); y -= 16; }
     for (const t of data.riskTrend) {
       const detail = `Now ${t.current.display} (${t.current.band}) on ${t.at}` + (t.previous ? `; before ${t.previous.display} (${t.previous.band}) on ${t.prevAt}` : '') +
         (t.change != null && t.previous ? `; change ${t.change > 0 ? '+' : ''}${t.change}${t.pct != null ? ' (' + (t.pct > 0 ? '+' : '') + t.pct + '%)' : ''}` : '') + '. ' + t.text;
@@ -112,7 +126,7 @@ async function build(data) {
       lines.forEach((l) => { text(l, M + 12, y, 8.5, font, C.ink); y -= 11; });
       y -= 5;
     }
-    text('Risk scores support, and do not replace, a doctor\'s review.', M, y, 8, font, C.muted); y -= 6;
+    if (risks.length) { text('Risk scores support, and do not replace, a doctor\'s review.', M, y, 8, font, C.muted); y -= 6; }
   }
 
   // ---------------------------------------------------------------- each vital
@@ -169,6 +183,47 @@ async function build(data) {
           text(fit(r.at, 7.5, 92), x + 9, y, 7.5, font, C.muted);
           text(fit(r.text, 8.5, colW - 105), x + 102, y, 8.5, bold);
         }
+        y -= 12;
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------- each risk check
+  if (has('charts') || has('readings')) for (const t of risks) {
+    need(t.rows.length && has('charts') && t.kind === 'numeric' ? 210 : 70);
+    heading(t.title + (t.axis && t.axis[2] ? ' (' + t.axis[2] + ')' : ''));
+    if (t.none || !t.rows.length) { text(t.none ? 'No assessments recorded yet.' : 'No assessments in this period.' + (t.current ? ` The latest one was ${t.current.display} (${t.current.band}) on ${t.currentAt}.` : ''), M, y, 10, font, C.muted); y -= 14; continue; }
+    if (has('charts') && t.kind === 'numeric') {
+      const cx = M + 30, cw = W - 2 * M - 40, ch = 110, cy = y - ch - 6;
+      const vals = t.rows.map((r) => r.value);
+      let lo = t.axis[0] != null ? t.axis[0] : Math.min(...vals), hi = t.axis[1] != null ? t.axis[1] : Math.max(...vals);
+      if (t.axis[0] == null || t.axis[1] == null) { const pad = Math.max((hi - lo) * 0.15, 1); if (t.axis[0] == null) lo -= pad; if (t.axis[1] == null) hi += pad; }
+      if (hi <= lo) hi = lo + 1;
+      const t0 = data.fromMs, t1 = data.toMs;
+      const X = (v) => cx + cw * Math.min(1, Math.max(0, (v - t0) / (t1 - t0)));
+      const Y = (v) => cy + ch * ((v - lo) / (hi - lo));
+      page.drawRectangle({ x: cx, y: cy, width: cw, height: ch, borderColor: col(C.line), borderWidth: 0.7 });
+      [lo, (lo + hi) / 2, hi].forEach((v) => {
+        page.drawLine({ start: { x: cx, y: Y(v) }, end: { x: cx + cw, y: Y(v) }, thickness: 0.4, color: col(C.line), dashArray: [2, 3] });
+        const lab = String(Math.round(v * 10) / 10);
+        text(lab, cx - 4 - width(lab, 7.5), Y(v) - 2.5, 7.5, font, C.muted);
+      });
+      [t0, (t0 + t1) / 2, t1].forEach((v, i) => {
+        const lab = data.fmtShort(v); const w = width(lab, 7.5);
+        text(lab, i === 0 ? cx : i === 1 ? X(v) - w / 2 : cx + cw - w, cy - 11, 7.5, font, C.muted);
+      });
+      const pts = t.rows.map((r) => [X(r.ms), Y(r.value), r.level]);
+      for (let i = 1; i < pts.length; i++) page.drawLine({ start: { x: pts[i - 1][0], y: pts[i - 1][1] }, end: { x: pts[i][0], y: pts[i][1] }, thickness: 1.3, color: col(C.s1) });
+      for (const p of pts) page.drawCircle({ x: p[0], y: p[1], size: 2.6, color: col(C[p[2]] || C.s1) });
+      y = cy - 24;
+    }
+    if (has('readings') || t.kind !== 'numeric') {
+      for (const r of t.rows.slice().reverse()) {
+        need(13);
+        if (r.level) dot(M + 3, y + 2.8, r.level);
+        text(fit(r.at, 8, 140), M + 10, y, 8, font, C.muted);
+        text(fit(r.display, 9, 150, bold), M + 155, y, 9, bold);
+        text(fit(r.band || '', 8.5, W - M - (M + 315)), M + 315, y, 8.5, font, r.level ? C[r.level] : C.muted);
         y -= 12;
       }
     }

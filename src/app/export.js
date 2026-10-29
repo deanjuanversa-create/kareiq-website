@@ -7,9 +7,11 @@ const vitals = require('./vitals');
 const xlsx = require('./xlsx');
 const report = require('./report');
 const { RANK } = require('./trends');
+const risk = require('./risk');
+const RISK_IDS = risk.TESTS.map((t) => t.id);
 
 const PARTS = ['charts', 'readings', 'averages', 'latest', 'risktrend'];
-const PART_NAMES = { charts: 'Historical trend charts', readings: 'Recorded measurements', averages: 'Average values', latest: 'Latest measurements and status', risktrend: 'Risk trend summary' };
+const PART_NAMES = { charts: 'Historical trend charts', readings: 'Recorded measurements', averages: 'Average values', latest: 'Latest measurements and status', risktrend: 'Trend summary' };
 const FORMATS = { pdf: 'application/pdf', xlsx: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', csv: 'text/csv; charset=utf-8' };
 
 const tz = { timeZone: 'Asia/Kolkata' };
@@ -25,15 +27,17 @@ const ctx = (r) => (r.context ? vitals.GLUCOSE_CONTEXTS[r.context] || r.context 
 // checks the request: returns { metrics, parts, format } or { error }
 function parseOptions(q) {
   const all = vitals.TRENDS;
-  const metrics = String(q.get('metrics') || '').split(',').map((s) => s.trim()).filter((k) => all.includes(k));
-  if (!metrics.length) return { error: 'Choose at least one vital to download.' };
+  const asked = String(q.get('metrics') || '').split(',').map((s) => s.trim());
+  const metrics = asked.filter((k) => all.includes(k));
+  const risks = [...new Set(asked.filter((k) => /^risk:/.test(k)).map((k) => k.slice(5)).filter((k) => RISK_IDS.includes(k)))];
+  if (!metrics.length && !risks.length) return { error: 'Choose at least one vital or risk check to download.' };
   let parts = String(q.get('parts') || '').split(',').map((s) => s.trim());
   if (parts.includes('complete')) parts = PARTS.slice();
   parts = PARTS.filter((p) => parts.includes(p));
   if (!parts.length) return { error: 'Choose what the report should include.' };
   const format = FORMATS[q.get('format')] ? q.get('format') : null;
   if (!format) return { error: 'Choose PDF, Excel or CSV.' };
-  return { metrics: [...new Set(metrics)].sort((a, b) => all.indexOf(a) - all.indexOf(b)), parts, format };
+  return { metrics: [...new Set(metrics)].sort((a, b) => all.indexOf(a) - all.indexOf(b)), risks: risks.sort((a, b) => RISK_IDS.indexOf(a) - RISK_IDS.indexOf(b)), parts, format };
 }
 
 // the content shared by every format
@@ -51,26 +55,35 @@ function dataset(d, opts, user) {
     } else if (rows.length >= 2) trend = { direction: 'stable', from: first, to: last, unrated: true };
     return { ...m, noData: false, latest: last, firstRow: first, trend };
   });
+  const fromMs = Date.parse(d.range.from + 'T00:00:00+05:30'), toMs = Date.parse(d.range.to + 'T23:59:59+05:30');
+  const risks = (opts.risks || []).map((id) => {
+    const t = (d.riskTrend || []).find((x) => x.test === id);
+    const title = (risk.TESTS.find((x) => x.id === id) || {}).title || id;
+    if (!t) return { test: id, title, none: true, inPeriod: [] };
+    return { ...t, none: false, inPeriod: t.history.filter((h) => h.ms >= fromMs && h.ms <= toMs) };
+  });
   const withData = pick.filter((m) => !m.noData);
-  const allMs = withData.flatMap((m) => m.rows.map((r) => r.ms));
+  const allMs = withData.flatMap((m) => m.rows.map((r) => r.ms)).concat(risks.flatMap((r) => r.inPeriod.map((h) => h.ms)));
   return {
     person: d.person, generatedAt: niceT(new Date().toISOString()), generatedBy: user.name,
     period: { label: d.range.label, from: d.range.from, to: d.range.to, clamped: d.range.clamped, registeredOn: d.range.registeredOn, requestedFrom: d.range.requestedFrom },
     covered: allMs.length ? { from: nice(new Date(Math.min(...allMs)).toISOString()), to: nice(new Date(Math.max(...allMs)).toISOString()) } : null,
-    metrics: pick, parts: opts.parts, riskTrend: d.riskTrend || []
+    metrics: pick, parts: opts.parts, risks
   };
 }
 
 const slug = (s) => String(s).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 function fileName(ds, opts) {
-  const labels = opts.metrics.map((k) => vitals.METRICS[k].label);
-  const part = opts.metrics.length === vitals.TRENDS.length ? 'all-vitals' : labels.length <= 3 ? labels.map(slug).join('-') : labels.length + '-vitals';
+  const short = (id) => ({ cvd: 'heart-risk', kidney: 'kidney-risk', fib4: 'fib4', nfs: 'nfs', elf: 'elf', idrs: 'diabetes-risk', psqi: 'sleep-quality', phq9: 'phq9', gad7: 'gad7', mmse: 'mmse', tug: 'tug', balance4: 'balance', reach: 'reach', chair30: 'chair-stand', snehita: 'breast-risk' }[id] || id);
+  const labels = opts.metrics.map((k) => slug(vitals.METRICS[k].label)).concat((opts.risks || []).map(short));
+  const n = labels.length;
+  const part = opts.metrics.length === vitals.TRENDS.length && !(opts.risks || []).length ? 'all-vitals' : n <= 3 ? labels.join('-') : n + '-items';
   return `health-trends-${part}-${ds.period.to}.${opts.format}`;
 }
 
 const periodLine = (ds) => `${ds.period.label}: ${nice(ds.period.from + 'T12:00:00+05:30')} to ${nice(ds.period.to + 'T12:00:00+05:30')}` +
   (ds.period.clamped ? ` (history begins on ${nice(ds.period.registeredOn + 'T12:00:00+05:30')}, the registration date)` : '');
-const trendWord = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'No trend yet' };
+const trendWord = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'Insufficient data' };
 
 // ---------------------------------------------------------------- CSV
 function csv(ds) {
@@ -89,9 +102,19 @@ function csv(ds) {
     if (ds.parts.includes('latest')) out.push(['Latest', m.label, fmtDate.format(new Date(m.latest.ms)), fmtTime.format(new Date(m.latest.ms)), valueOf(m.metric, m.latest), m.unit, ctx(m.latest), m.latest.status || '', 'Most recent measurement in this period']);
     if (ds.parts.includes('risktrend')) out.push(['Trend in period', m.label, '', '', '', '', '', m.trend ? trendWord[m.trend.direction] : 'Not enough data', vitalTrendText(m)]);
   }
-  if (ds.parts.includes('risktrend')) {
-    if (!ds.riskTrend.length) out.push(['Risk trend', '', '', '', '', '', '', '', 'No risk checks recorded yet.']);
-    for (const t of ds.riskTrend) out.push(['Risk trend', t.title, fmtDate.format(new Date(t.current.at)), '', t.current.display, '', '', trendWord[t.direction], (t.previous ? `Previous ${t.previous.display} (${t.previous.band}) on ${fmtDate.format(new Date(t.previous.at))}. ` : '') + t.text]);
+  for (const t of ds.risks) {
+    if (t.none) { out.push(['No data', t.title, '', '', '', '', '', '', 'No assessments recorded yet.']); continue; }
+    if (ds.parts.includes('readings')) {
+      if (!t.inPeriod.length) out.push(['No data', t.title, '', '', '', '', '', '', 'No assessments in this period.']);
+      for (const h of t.inPeriod) out.push(['Assessment', t.title, fmtDate.format(new Date(h.ms)), fmtTime.format(new Date(h.ms)), h.display, t.axis[2] || '', '', h.band || '', '']);
+    }
+    if (ds.parts.includes('averages')) out.push(['Note', t.title, '', '', '', '', '', '', 'Averages are not given for risk scores; each assessment stands on its own.']);
+    if (ds.parts.includes('latest')) {
+      const h = t.inPeriod[t.inPeriod.length - 1];
+      out.push(h ? ['Latest assessment', t.title, fmtDate.format(new Date(h.ms)), fmtTime.format(new Date(h.ms)), h.display, t.axis[2] || '', '', h.band || '', 'Most recent assessment in this period']
+        : ['Latest assessment', t.title, fmtDate.format(new Date(t.current.at)), '', t.current.display, '', '', t.current.band || '', 'No assessment in this period; this is the latest one, from before it']);
+    }
+    if (ds.parts.includes('risktrend')) out.push(['Risk trend', t.title, fmtDate.format(new Date(t.current.at)), '', t.current.display, '', '', trendWord[t.direction], (t.previous ? `Previous ${t.previous.display} (${t.previous.band}) on ${fmtDate.format(new Date(t.previous.at))}. ` : '') + t.text]);
   }
   return Buffer.from('﻿' + out.map((r) => r.map(q).join(',')).join('\r\n') + '\r\n', 'utf8');
 }
@@ -114,7 +137,8 @@ function excel(ds) {
     ['Generated', ds.generatedAt + ' by ' + ds.generatedBy],
     ['Reporting period', periodLine(ds)],
     ['Data covered', ds.covered ? `${ds.covered.from} to ${ds.covered.to}` : 'No measurements for the chosen vitals in this period'],
-    ['Vitals', ds.metrics.map((m) => m.label).join(', ')],
+    ['Vitals', ds.metrics.length ? ds.metrics.map((m) => m.label).join(', ') : 'None chosen'],
+    ['Risk checks', ds.risks.length ? ds.risks.map((t) => t.title).join(', ') : 'None chosen'],
     ['Includes', ds.parts.map((p) => PART_NAMES[p]).join(', ')], []
   ];
   for (const m of ds.metrics) if (m.noData) summary.push([m.label, { v: 'No measurements recorded in this period.', s: 3 }]);
@@ -153,15 +177,36 @@ function excel(ds) {
     // put the chart sheet straight after the summary
     sheets.splice(1, 0, chartSheet);
   }
+  // risk checks: one sheet with every assessment in the period (also the source of their charts)
+  const riskWith = ds.risks.filter((t) => !t.none && t.inPeriod.length);
+  if (ds.risks.length && (has('readings') || has('charts'))) {
+    const rows = [['Risk check', 'When (IST)', 'Date', 'Score', 'Shown as', 'Category']];
+    const blocks = [];
+    for (const t of ds.risks) {
+      if (t.none || !t.inPeriod.length) { rows.push([t.title, '', '', null, t.none ? 'No assessments recorded yet' : 'No assessments in this period', '']); continue; }
+      const r0 = rows.length;
+      for (const h of t.inPeriod) rows.push([t.title, fmtDate.format(new Date(h.ms)).slice(5) + ' ' + fmtTime.format(new Date(h.ms)), fmtDate.format(new Date(h.ms)), h.value, h.display, h.band || '']);
+      blocks.push({ t, r0, r1: rows.length - 1 });
+    }
+    const sheet = { name: 'Risk checks', rows, header: 0, widths: [44, 14, 12, 10, 22, 34], hidden: !has('readings') };
+    sheets.push(sheet);
+    if (has('charts')) {
+      const cs = sheets.find((x) => x.name === 'Charts') || (() => { const c = { name: 'Charts', rows: [[{ v: 'Trend charts: ' + periodLine(ds), s: 2 }]], widths: [], charts: [] }; sheets.splice(1, 0, c); return c; })();
+      blocks.filter((b) => b.t.kind === 'numeric').forEach((b) => {
+        const i = cs.charts.length;
+        cs.charts.push({ title: b.t.title, unit: b.t.axis[2] || '', sheet: 'Risk checks', cat: [1, b.r0, b.r1], series: [{ name: 'Score', col: 3, r1: b.r0, r2: b.r1 }], anchor: [i % 2 ? 10 : 0, 2 + Math.floor(i / 2) * 20] });
+      });
+    }
+  }
   if (has('averages')) sheets.push({ name: 'Averages', header: 0, widths: [24, 14, 10, 22, 24, 12, 40], rows: [['Vital', 'Average', 'Unit', 'Status', 'Based on', 'Readings', 'Period'],
     ...ds.metrics.map((m) => (m.noData ? [m.label, '', m.unit, '', '', 0, 'No measurements recorded in this period'] : [m.label, m.metric === 'bp' ? m.average : Number(m.average), m.unit, m.status || '', m.averageNote || 'all readings', m.rows.length, `${ds.period.from} to ${ds.period.to}`]))] });
-  if (has('latest')) sheets.push({ name: 'Latest', header: 0, widths: [24, 14, 10, 12, 22, 22], rows: [['Vital', 'Latest value', 'Unit', 'Context', 'Status', 'Measured (IST)'],
-    ...ds.metrics.map((m) => (m.noData ? [m.label, 'No data', m.unit, '', '', ''] : [m.label, m.metric === 'bp' ? valueOf('bp', m.latest) : Number(m.latest.value), m.unit, ctx(m.latest), m.latest.status || '', niceT(m.latest.at)]))] });
+  if (has('latest')) sheets.push({ name: 'Latest', header: 0, widths: [34, 16, 10, 12, 30, 22], rows: [['Vital or risk check', 'Latest value', 'Unit', 'Context', 'Status', 'Measured (IST)'],
+    ...ds.metrics.map((m) => (m.noData ? [m.label, 'No data', m.unit, '', '', ''] : [m.label, m.metric === 'bp' ? valueOf('bp', m.latest) : Number(m.latest.value), m.unit, ctx(m.latest), m.latest.status || '', niceT(m.latest.at)])),
+    ...ds.risks.map((t) => { const h = t.inPeriod && t.inPeriod[t.inPeriod.length - 1]; return t.none ? [t.title, 'No data', '', '', '', ''] : h ? [t.title, h.display, t.axis[2] || '', '', h.band || '', niceT(h.at)] : [t.title, t.current.display + ' (before this period)', t.axis[2] || '', '', t.current.band || '', niceT(t.current.at)]; })] });
   if (has('risktrend')) {
     const rows = [['Vital or test', 'Trend', 'Current', 'Current category', 'Measured', 'Previous', 'Previous category', 'Measured', 'Change', 'Change %', 'Explanation']];
     for (const m of ds.metrics) rows.push([m.label + ' (this period)', m.noData ? 'No data' : m.trend ? trendWord[m.trend.direction] : 'Not enough data', m.noData ? '' : valueOf(m.metric, m.latest), m.noData ? '' : m.latest.status || '', m.noData ? '' : nice(m.latest.at), m.trend ? valueOf(m.metric, m.trend.from) : '', m.trend ? m.trend.from.status || '' : '', m.trend ? nice(m.trend.from.at) : '', '', '', vitalTrendText(m)]);
-    for (const t of ds.riskTrend) rows.push([t.title, trendWord[t.direction], t.current.display, t.current.band, nice(t.current.at), t.previous ? t.previous.display : '', t.previous ? t.previous.band : '', t.previous ? nice(t.previous.at) : '', t.change == null ? '' : t.change, t.pct == null ? '' : t.pct, t.text]);
-    if (!ds.riskTrend.length) rows.push(['Risk checks', 'No trend yet', '', '', '', '', '', '', '', '', 'No risk checks recorded yet.']);
+    for (const t of ds.risks) rows.push(t.none ? [t.title, 'No data', '', '', '', '', '', '', '', '', 'No assessments recorded yet.'] : [t.title, trendWord[t.direction], t.current.display, t.current.band, nice(t.current.at), t.previous ? t.previous.display : '', t.previous ? t.previous.band : '', t.previous ? nice(t.previous.at) : '', t.change == null ? '' : t.change, t.pct == null ? '' : t.pct, t.text]);
     sheets.push({ name: 'Risk trend', header: 0, widths: [34, 14, 14, 26, 14, 14, 26, 14, 9, 9, 70], rows });
   }
   return xlsx.build(sheets);
@@ -181,7 +226,10 @@ async function pdf(ds) {
       latest: m.latest ? { text: valueOf(m.metric, m.latest) + (m.unit ? ' ' + m.unit : ''), status: m.latest.status, level: m.latest.level, at: niceT(m.latest.at) } : null,
       trend: m.noData ? null : { word: m.trend ? trendWord[m.trend.direction] : 'Not enough data', direction: m.trend ? m.trend.direction : 'none', text: vitalTrendText(m) }
     })),
-    riskTrend: ds.riskTrend.map((t) => ({ ...t, word: trendWord[t.direction], at: nice(t.current.at), prevAt: t.previous ? nice(t.previous.at) : null }))
+    riskTrend: ds.risks.filter((t) => !t.none).map((t) => ({ ...t, word: trendWord[t.direction], at: nice(t.current.at), prevAt: t.previous ? nice(t.previous.at) : null })),
+    risks: ds.risks.map((t) => ({ title: t.title, none: t.none, kind: t.kind, axis: t.axis, direction: t.direction, word: t.none ? 'No data' : trendWord[t.direction],
+      current: t.current || null, currentAt: t.current ? nice(t.current.at) : null,
+      rows: (t.inPeriod || []).map((h) => ({ ms: h.ms, value: h.value, display: h.display, band: h.band, level: h.level, at: niceT(h.at) })) }))
   });
 }
 

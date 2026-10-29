@@ -36,6 +36,11 @@ ok(t.current.value === 4 && t.previous.value === 8 && t.assessments === 3 && t.d
 // repeated timestamps count once
 t = trends.riskTrends([R('gad7', 4, 'good', 'Minimal', day(1)), R('gad7', 9, 'ok', 'Mild', day(1)), R('gad7', 8, 'ok', 'Mild', day(5))], [], 0, desc)[0];
 ok(t.previous.value === 8 && t.assessments === 2, 'repeated timestamp counted once');
+// history for the chart: oldest first, real values, the test's own scale; text results become a list
+t = trends.riskTrends([R('gad7', 4, 'good', 'Minimal', day(1)), R('gad7', 8, 'ok', 'Mild', day(3)), R('gad7', 12, 'warn', 'Moderate', day(6))], [], 0, desc)[0];
+ok(t.history.map((h) => h.value).join() === '12,8,4' && t.history[0].ms < t.history[2].ms && t.kind === 'numeric' && t.axis[0] === 0 && t.axis[1] === 21, 'history oldest first with the GAD-7 scale');
+t = trends.riskTrends([R('balance4', 'Up to stage 2', 'warn', 'Fall risk', day(1)), R('balance4', 'All 4 stages', 'good', 'Normal', day(9))], [], 0, desc)[0];
+ok(t.kind === 'categorical' && t.history.length === 2 && t.history[0].value === null && t.direction === 'worsening', 'text results: categorical history, trend by category');
 // assessments before registration are ignored
 t = trends.riskTrends([R('gad7', 4, 'good', 'Minimal', day(1)), R('gad7', 15, 'bad', 'Severe', day(90))], [], Date.parse(day(30)), desc)[0];
 ok(t.direction === 'none', 'assessment before registration not used');
@@ -115,12 +120,19 @@ const base = process.argv[2];
     const g = await (await fam('people/P-DEMO05/details')).json();
     ok(g.status === 403 || g.ok === false, 'family cannot open someone else\'s details');
     const v0 = (await (await fam('people/P-DEMO01/details')).json()).meta.version;
-    r = await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Lakshmi Nair', fdName: 'Dr. Varma', alGeneral: ['Dust mites'] } } });
-    const saved = await r.json(); ok(saved.ok && saved.version === v0 + 1, 'family saves details');
-    ok((await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'x' } } })).status === 409, 'stale copy refused, no overwrite');
+    // families only read their details; the care team keeps them up to date
+    ok((await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Changed by family' } } })).status === 403, 'family cannot change details');
+    ok((await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, status: 'complete', data: {} } })).status === 403, 'family cannot change the status either');
+    r = await nurse('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Lakshmi Nair', fdName: 'Dr. Varma', alGeneral: ['Dust mites'] } } });
+    const saved = await r.json(); ok(saved.ok && saved.version === v0 + 1, 'caregiver saves details');
+    ok((await nurse('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'x' } } })).status === 409, 'stale copy refused, no overwrite');
     const back = await (await fam('people/P-DEMO01/details')).json();
-    ok(back.data.fdName === 'Dr. Varma' && back.data.alGeneral[0] === 'Dust mites', 'details reload');
+    ok(back.data.fdName === 'Dr. Varma' && back.data.alGeneral[0] === 'Dust mites' && back.data.name === 'Lakshmi Nair' && back.canEdit === false, 'family reads the saved details (read-only)');
     ok((await nurse('people/P-DEMO01/details')).status === 200, 'assigned caregiver can open details');
+    // risk checks in the download
+    r = await fam('people/P-DEMO01/export?period=6m&metrics=risk:phq9&parts=readings,risktrend&format=csv');
+    const rc = await r.text(); ok(r.status === 200 && /Depression check \(PHQ-9\)/.test(rc) && /Improving/.test(rc) && !/Heart disease/.test(rc), 'download with a risk check only');
+    ok((await fam('people/P-DEMO01/export?period=6m&metrics=risk:unknown&format=csv')).status === 400, 'unknown risk check: refused');
     const nest = await login('nest@demo.kareiq');
     ok((await nest('people/P-DEMO01/details')).status === 404, 'unassigned caregiver cannot open details');
     const list = await (await nurse('details')).json();
