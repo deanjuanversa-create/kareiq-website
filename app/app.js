@@ -60,6 +60,7 @@
   }
   function todayIST() { return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date()); }
   function nowHM() { return new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date()); }
+  function hm12(hm) { var a = String(hm || '').split(':'), h = Number(a[0]); if (!a[1]) return ''; return (h % 12 || 12) + (a[1] === '00' ? '' : ':' + a[1]) + (h < 12 ? ' am' : ' pm'); }
   function phoneNice(p) { return p ? p.replace(/^\+91(\d{5})(\d{5})$/, '+91 $1 $2') : ''; }
   // "WhatsApp us" opens the KareIQ WhatsApp community (the office's buttons to message a family still use the family's number)
   var WA_GROUP = 'https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM'; // KareIQ community
@@ -121,7 +122,20 @@
       download: '<path d="M12 4.5V15M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 15v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V15"/>',
       eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
       trash: '<path d="M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 14h9l1-14"/>',
-      arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>'
+      arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
+      bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15Z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
+      chart: '<path d="M4 20h16"/><path d="M7 16v-5M12 16V7M17 16v-8"/>',
+      rupee: '<path d="M7 5h10M7 9h10M9 5c4 0 5 4 0 7l7 7"/>',
+      lock: '<rect x="5" y="10.5" width="14" height="10" rx="2"/><path d="M8 10.5V8a4 4 0 0 1 8 0v2.5"/>',
+      sliders: '<path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/>',
+      funnel: '<path d="M4 5h16l-6 7.5V19l-4 1.5v-8Z"/>',
+      team: '<circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 19c.6-3.2 2.8-5 5.5-5s4.9 1.8 5.5 5M14 14.3c2.6-.4 4.8 1.2 5.5 4.7"/>',
+      route: '<circle cx="6" cy="18" r="2.2"/><circle cx="18" cy="6" r="2.2"/><path d="M8 18h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/>',
+      star: '<path d="m12 4 2.4 5 5.4.6-4 3.7 1.1 5.4L12 16l-4.9 2.7 1.1-5.4-4-3.7 5.4-.6Z"/>',
+      play: '<path d="M8 5.5v13l10-6.5Z"/>',
+      x: '<path d="M6 6l12 12M18 6 6 18"/>',
+      left: '<path d="m15 6-6 6 6 6"/>',
+      right: '<path d="m9 6 6 6-6 6"/>'
     }[name] || '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
   }
@@ -134,10 +148,11 @@
     if (!plan) return '';
     return '<span class="pill ' + e(plan.status) + '"><i></i>' + e(plan.statusName) + '</span>';
   }
-  function toast(msg) {
+  function toast(msg, kind) {
     var old = $('.toast'); if (old) old.remove();
-    var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
-    document.body.appendChild(t); setTimeout(function () { t.remove(); }, 3800);
+    var t = document.createElement('div'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.setAttribute('role', kind === 'bad' ? 'alert' : 'status'); t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 260); }, 3800);
   }
   function setBrand(id) { document.body.setAttribute('data-brand', id || 'kareiq'); }
 
@@ -194,8 +209,28 @@
 
   // where each role lands after signing in: families get a neutral welcome page (no health data opens
   // by itself), the office its health pages for a person, caregivers the people they look after
-  var HOME_PAGE = '#/health/vitals';
-  function homeOf(role) { return role === 'family' ? '#/welcome' : role === 'caregiver' ? '#/people' : HOME_PAGE; }
+  // nurses (caregiver logins) open on their visits; the office on its overview
+  var HOME_PAGE = '#/office/overview/customers';
+  function homeOf(role) { return role === 'family' ? '#/welcome' : role === 'caregiver' ? '#/nurse/visits' : HOME_PAGE; }
+
+  // ---------------------------------------------------------------- role interfaces (loaded only for that role)
+  // The nurse portal (app/nurse.js) and the office interface (app/office.js) are separate scripts. A family
+  // never downloads them; each one registers its menu and pages here when it loads.
+  var VER = ((document.currentScript && document.currentScript.src) || '').split('v=')[1] || '';
+  var MODS = {}, MOD_OF = { caregiver: 'nurse', admin: 'office' }, modLoads = {};
+  function loadModule(name) {
+    if (MODS[name]) return Promise.resolve(MODS[name]);
+    if (modLoads[name]) return modLoads[name];
+    modLoads[name] = new Promise(function (ok, fail) {
+      var sc = document.createElement('script');
+      sc.src = '/app/' + name + '.js' + (VER ? '?v=' + VER : '');
+      sc.onload = function () { MODS[name] ? ok(MODS[name]) : fail(new Error('module')); };
+      sc.onerror = function () { modLoads[name] = null; fail(new Error('module')); };
+      document.head.appendChild(sc);
+    });
+    return modLoads[name];
+  }
+  function modOf(role) { return MODS[MOD_OF[role]] || null; }
   // a page opened while signed out is remembered and opened after signing in
   var GATES = ['signin', 'start', 'link', 'forgot', 'join'];
   function rememberAfter(hash) {
@@ -242,9 +277,22 @@
       return go(r.parts[1] === 'requests' ? '#/services' : '#/', true);
     }
     if (top === '') { var after = takeAfter(); return go(after || homeOf(role), true); }
+    if (MOD_OF[role] && !modOf(role)) {
+      root.innerHTML = '<div class="boot"><img src="/img/kareiq-icon.png" alt="Loading"></div>';
+      return loadModule(MOD_OF[role]).then(render, showOffline);
+    }
+    var mod = modOf(role);
+    if (mod && mod.route(r, top)) return;
+    // nurses: the former caregiver pages now live in the nurse portal
+    if (role === 'caregiver') {
+      if (top === 'people') return go('#/nurse/customers', true);
+      if (top === 'records') return go('#/nurse/upload' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true);
+      if (top === 'clientinfo') return go('#/nurse/customer' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true);
+      if (top === 'assess' || top === 'package' || top === 'dashboard' || top === 'details') return go(homeOf(role), true);
+    }
     if (top === 'welcome' && role === 'family') return welcomeView(r);
     // former addresses: the dashboard was split into dedicated pages
-    if (top === 'dashboard' && role !== 'caregiver') return go(homeOf(role) + queryOf(r), true);
+    if (top === 'dashboard' && role !== 'caregiver') return go((role === 'admin' ? '#/health/vitals' : homeOf(role)) + queryOf(r), true);
     if (top === 'details' && role === 'family') return go('#/profile/personal' + queryOf(r), true);
     if (top === 'services' && role !== 'caregiver') return go('#/package' + queryOf(r, { book: '1' }), true);
     if (top === 'profile' && role === 'family') {
@@ -259,9 +307,9 @@
     if (top === 'account') return accountView();
     if (top === 'plans') return plansView(r);
     if (top === 'admin') { if (role !== 'admin') return go('#/', true); return adminView(r.parts[1] || 'today', r); }
-    if (top === 'people' && role !== 'family') return peopleView();
+    if (top === 'people' && role === 'admin') return go('#/office/customers', true);
     if (top === 'visit' && role !== 'family') return visitView(r);
-    if (top === 'assess' && role !== 'family') return assessView(r);
+    if (top === 'assess' && role === 'admin') return assessView(r);
     if (top === 'records') return recordsView(r);
     if (top === 'clientinfo' && role !== 'family') return r.q.p ? detailsView(r) : clientInfoView();
     if (top === 'package') return packageView(r);
@@ -432,12 +480,16 @@
   function shell(active, inner) {
     setBrand('kareiq');
     var u = S.me.user, role = u.role;
-    var items = MENUS[role] || MENUS.family;
+    var mod = modOf(role);
+    var items = (mod && mod.menu) || MENUS[role] || MENUS.family;
     var arrived = S.sbActive !== active; S.sbActive = active; // a new page: its menu item animates in
-    var withP = function (k) { return S.pid && PERSON_PAGES.indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
+    var pp = PERSON_PAGES.concat((mod && mod.personPages) || []);
+    var withP = function (k) { return S.pid && pp.indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
     var link = function (l) {
+      if (l[0].charAt(0) === '/') return '<a href="' + l[0] + '" target="_blank" rel="noopener">' + icon(l[2]) + '<span>' + e(l[1]) + '</span></a>';
+      var n = (S.counts || {})[l[0]] || (l[0] === 'admin' && S.cache.newCount) || 0;
       return '<a href="#/' + l[0] + withP(l[0]) + '"' + (l[0] === active ? ' aria-current="page"' + (arrived ? ' class="arrive"' : '') : '') + '>' + icon(l[2]) + '<span>' + e(l[1]) + '</span>' +
-        (l[0] === 'admin' && S.cache.newCount ? '<b class="count">' + S.cache.newCount + '</b>' : '') + '</a>';
+        (n ? '<b class="count">' + n + '</b>' : '') + '</a>';
     };
     // a section with sub-pages (Profile, Health details): opens on hover, click, keyboard or tap
     // A section is open when the page being viewed is inside it, or when it was opened (or closed)
@@ -453,7 +505,7 @@
     };
     var item = function (l) { return Array.isArray(l) ? link(l) : group(l); };
     var side = '<nav class="sb" id="sb" aria-label="Main"><div class="sb-in">' + items.map(item).join('') +
-      (role === 'admin' ? '<p class="sb-h">Office</p>' + OFFICE.map(link).join('') + '<a href="/admin/" target="_blank" rel="noopener">' + icon('globe') + '<span>Website text and prices</span></a>' : '') +
+      (role === 'admin' && !mod ? '<p class="sb-h">Office</p>' + OFFICE.map(link).join('') + '<a href="/admin/" target="_blank" rel="noopener">' + icon('globe') + '<span>Website text and prices</span></a>' : '') +
       '<div class="sb-foot">' +
         (role === 'family' ? '<a href="#/plans"' + (active === 'plans' ? ' aria-current="page"' : '') + '>' + icon('plus') + '<span>Add a plan or booking</span></a>' : '') +
         '<a href="' + waLink('Hello, I am ' + u.name + ', contacting you from My KareIQ.') + '" target="_blank" rel="noopener">' + icon('wa') + '<span>WhatsApp us</span></a>' +
@@ -461,9 +513,39 @@
         '<a href="#" data-act="signout">' + icon('out') + '<span>Sign out</span></a>' +
       '</div></div></nav>';
     var top = '<header class="tb"><button class="tb-menu" data-act="drawer" aria-controls="sb" aria-expanded="false" aria-label="Menu">' + icon('menu') + '</button>' +
-      '<a class="tb-logo" href="#/"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a><span class="sp"></span>' + meMenu() + '</header>';
-    root.innerHTML = '<div class="shell">' + top + side + '<div class="sb-scrim" data-act="drawer-close"></div><main class="mn" id="mn">' + inner + '</main></div>';
+      '<a class="tb-logo" href="#/"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>' +
+      (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<span class="sp"></span>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
+    root.innerHTML = '<div class="shell' + (mod ? ' role-' + MOD_OF[role] : '') + '">' + top + side + '<div class="sb-scrim" data-act="drawer-close"></div><main class="mn" id="mn">' + inner + '</main></div>';
+    if (role !== 'family') refreshBell();
   }
+
+  // ---------------------------------------------------------------- notifications (nurses and the office)
+  function bellHtml() {
+    var n = (S.notif && S.notif.unread) || 0;
+    return '<div class="bell"><button type="button" data-act="bell" aria-haspopup="true" aria-expanded="false" aria-label="Notifications' + (n ? ', ' + n + ' unread' : '') + '">' + icon('bell') +
+      '<b class="bdot"' + (n ? '' : ' hidden') + '>' + (n > 9 ? '9+' : n) + '</b></button><div class="bellp" hidden role="region" aria-label="Notifications"></div></div>';
+  }
+  function refreshBell(force) {
+    if (!S.me || (!force && S.notif && Date.now() - S.notif.at < 60000)) return;
+    api('GET', 'notifications').then(function (d) {
+      if (!d.ok) return;
+      S.notif = { at: Date.now(), unread: d.unread, rows: d.rows };
+      var b = $('.bell>button'); if (!b) return;
+      var dot = $('.bdot', b); dot.hidden = !d.unread; dot.textContent = d.unread > 9 ? '9+' : d.unread;
+      b.setAttribute('aria-label', 'Notifications' + (d.unread ? ', ' + d.unread + ' unread' : ''));
+      if (d.unread) { dot.classList.remove('pop'); void dot.offsetWidth; dot.classList.add('pop'); }
+      var p = $('.bellp'); if (p && !p.hidden) p.innerHTML = bellList();
+    });
+  }
+  function bellList() {
+    var rows = (S.notif && S.notif.rows) || [];
+    return '<div class="bellh"><b>Notifications</b>' + (S.notif && S.notif.unread ? '<button class="link small" data-act="bell-read">Mark all as read</button>' : '') + '</div>' +
+      (rows.length ? '<ul class="blist">' + rows.slice(0, 12).map(function (n) {
+        return '<li class="' + (n.readAt ? '' : 'unread') + '"><a href="' + e(n.link || '#/') + '" data-act="bell-go" data-id="' + e(n.id) + '"><b>' + e(n.title) + '</b><span>' + e(n.body || '') + '</span><small>' + e(ago(n.createdAt)) + '</small></a></li>';
+      }).join('') + '</ul>' : '<p class="muted small" style="padding:14px">Nothing new.</p>') +
+      (modOf(S.me.user.role) && modOf(S.me.user.role).notifPage ? '<a class="ball" href="' + modOf(S.me.user.role).notifPage + '">See all notifications</a>' : '');
+  }
+  setInterval(function () { if (S.me && S.me.user.role !== 'family' && !document.hidden) refreshBell(true); }, 90000);
   function meMenu() {
     var u = S.me.user;
     return '<div class="me"><button data-act="menu" aria-haspopup="true" aria-expanded="false" aria-label="Your account"><span class="av">' + e(initials(u.name)) + '</span><span class="nm">' + e(first(u.name)) + '</span>' + icon('down') + '</button>' +
@@ -1384,7 +1466,7 @@
       '<div class="cards3">' + d.additional.map(function (s) { return card(s, null); }).join('') + '</div>' : '';
     var names = { new: 'new', contacted: 'active', scheduled: 'active', closed: 'ended' };
     var list = d.bookings.length ? '<h3 class="sec2">Your bookings</h3><section class="panel"><ul class="rlist">' + d.bookings.map(function (b) {
-      return '<li><span><b>' + e(b.name) + '</b>' + (b.free ? ' <span class="freepill sm">Free</span>' : '') + '<br><span class="muted small">' + (b.date ? e(date(b.date)) + (b.time ? ', ' + e(b.time) : '') + ' · ' : '') + 'Ref ' + e(b.reference) + ', sent ' + e(ago(b.createdAt)) + '</span></span><span class="pill ' + (names[b.status] || 'new') + '">' + e(b.statusName) + '</span></li>';
+      return '<li><span><b>' + e(b.name) + '</b>' + (b.free ? ' <span class="freepill sm">Free</span>' : '') + '<br><span class="muted small">' + (b.date ? e(date(b.date)) + (b.time ? ', ' + e(b.time) : '') + ' · ' : '') + 'Ref ' + e(b.reference) + ', sent ' + e(ago(b.createdAt)) + '</span>' + (b.visit && b.visit.nurse ? '<br><span class="small">' + icon('user') + ' ' + e(b.visit.nurse) + (b.visit.start ? ', from ' + e(hm12(b.visit.start)) : '') + '</span>' : '') + '</span><span class="pill ' + (b.visit && b.visit.status === 'awaiting_assignment' ? 'pending' : names[b.status] || 'new') + '">' + e(b.statusName) + '</span></li>';
     }).join('') + '</ul></section>' : '';
     var ask = S.me.user.role !== 'caregiver' ? '<button class="btn sm ghost" data-act="ask" data-kind="question">' + icon('chat') + 'Ask the care team</button>' : '';
     return '<section class="booksec" id="book" aria-labelledby="h-book"><div class="sec-row"><h2 class="sec" id="h-book">Book services</h2>' + ask + '</div>' +
@@ -1561,9 +1643,9 @@
       (free ? '<div class="alert ok">This uses 1 of your ' + d.free.left + ' free sessions.</div>' : '') +
       '<p class="muted" style="margin-bottom:12px">For ' + e(d.person.name) + '. ' + e(s.text) + '</p>' +
       '<div class="row2">' + field('date', 'Preferred date', 'type="date" min="' + todayIST() + '" required') +
-      '<label class="field"><span>Time</span><select class="in" name="time"><option value="morning">Morning (8am to 12pm)</option><option value="afternoon">Afternoon (12pm to 4pm)</option><option value="evening">Evening (4pm to 8pm)</option></select></label></div>' +
+      '<label class="field"><span>Time</span><select class="in" name="time"><option value="morning">Morning (8am to 12pm)</option><option value="evening">Evening (2pm to 6pm)</option></select></label></div>' +
       '<label class="field"><span>Anything we should know? (optional)</span><textarea class="in" name="note" maxlength="1000"></textarea></label>' +
-      '<p class="muted small">Our team will call or WhatsApp you on ' + e(phoneNice(S.me.user.phone) || 'your number') + ' to confirm.</p></form>',
+      '<p class="muted small">' + (k === 'family-visit' ? 'Our team will call or WhatsApp you on ' + e(phoneNice(S.me.user.phone) || 'your number') + ' to confirm.' : 'A nurse is assigned automatically and you see who is coming here. Our team calls you on ' + e(phoneNice(S.me.user.phone) || 'your number') + ' if anything changes.') + '</p></form>',
       '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send booking</button>');
   }
 
@@ -1574,12 +1656,13 @@
       api('GET', 'people/' + encodeURIComponent(p.id) + '/invoices').then(function (d) {
         if (!d.ok) return pageError(d);
         var right = d.rows.length ? '<button class="btn sm ghost" data-act="print">' + icon('download') + 'Print or save as PDF</button>' : '';
-        fill(personBar(p, people, right) + (d.rows.length ? '<section class="panel tw invoices"><table class="stackable"><thead><tr><th>Number</th><th>Date</th><th>Description</th><th>Period</th><th>Amount</th><th>Status</th></tr></thead><tbody>' +
+        fill(personBar(p, people, right) + (d.rows.length ? '<section class="panel tw invoices"><table class="stackable"><thead><tr><th>Number</th><th>Date</th><th>Description</th><th>Period</th><th>Amount</th><th>Paid</th><th>Outstanding</th><th>Status</th></tr></thead><tbody>' +
           d.rows.map(function (x) {
             return '<tr><td data-l="Number"><b>' + e(x.number) + '</b></td><td data-l="Date">' + e(date(x.date)) + '</td><td data-l="Description">' + e(x.productName) + ': ' + e(x.description) + (x.gst ? '<br><span class="muted small">' + e(x.gst) + '</span>' : '') + '</td>' +
               '<td data-l="Period">' + (x.period ? e(date(x.period.from)) + ' to ' + e(date(x.period.to)) : '–') + '</td><td data-l="Amount"><b>' + (x.amountText ? e(x.amountText) : 'Confirmed by our team') + '</b></td>' +
+              '<td data-l="Paid">' + e(x.paidText || '–') + '</td><td data-l="Outstanding">' + (x.outstanding ? '<b>' + e(x.outstandingText) + '</b>' + (x.dueText ? '<br><span class="muted small">' + e(x.dueText) + '</span>' : '') : '–') + '</td>' +
               '<td data-l="Status"><span class="pill ' + e(x.status) + '">' + e(x.statusName) + '</span></td></tr>';
-          }).join('') + '</tbody>' + (d.totalText ? '<tfoot><tr><td colspan="4"><b>Total</b></td><td colspan="2"><b>' + e(d.totalText) + '</b></td></tr></tfoot>' : '') + '</table></section>' +
+          }).join('') + '</tbody>' + (d.totalText ? '<tfoot><tr><td colspan="4"><b>Total</b></td><td colspan="4"><b>' + e(d.totalText) + '</b></td></tr></tfoot>' : '') + '</table></section>' +
           '<p class="note">' + icon('shield') + '<span>Charges are worked out from your plan and the published prices. Your GST tax invoice comes from the KareIQ office; <a href="' + waLink('Hello, could you send me the invoice for ' + p.name + '?') + '" target="_blank" rel="noopener">ask us on WhatsApp</a> for a copy.</span></p>'
           : '<div class="empty"><b>No invoices yet</b>Invoices appear here once a plan is confirmed.</div>'));
       });
@@ -2193,7 +2276,7 @@
       return api('POST', 'people/' + encodeURIComponent(id) + '/visits', body).then(function (d) {
         if (!d.ok) return d;
         toast('Visit saved. The family can see it now.');
-        go(S.me.user.role === 'admin' ? '#/health/vitals?p=' + encodeURIComponent(id) : '#/people');
+        go(S.me.user.role === 'admin' ? '#/health/vitals?p=' + encodeURIComponent(id) : '#/nurse/visits');
       });
     },
     ask: function (f, v) {
@@ -2206,7 +2289,8 @@
     book: function (f, v) {
       return api('POST', 'people/' + encodeURIComponent(S.pid) + '/services', { service: f.getAttribute('data-k'), date: v.date, time: v.time, note: v.note }).then(function (d) {
         if (!d.ok) return d;
-        closeDialog(); toast('Booked (' + d.reference + ').' + (d.free ? ' This is a free session.' : '') + ' We will call you to confirm.'); render();
+        var who = d.visit && d.visit.assigned ? ' A nurse is assigned.' : d.visit ? ' We are finding a nurse and will confirm.' : ' We will call you to confirm.';
+        closeDialog(); toast('Booked (' + d.reference + ').' + (d.free ? ' This is a free session.' : '') + who); render();
       });
     },
     range: function (f, v) {
@@ -2315,11 +2399,21 @@
     var t = ev.target.closest('[data-act]');
     var menu = $('.menu:not([hidden])');
     if (menu && !(t && t.getAttribute('data-act') === 'menu') && !ev.target.closest('.menu')) { menu.hidden = true; var mb = $('.me>button'); if (mb) mb.setAttribute('aria-expanded', 'false'); }
+    var bpn = $('.bellp:not([hidden])');
+    if (bpn && !ev.target.closest('.bell')) { bpn.hidden = true; var bb = $('.bell>button'); if (bb) bb.setAttribute('aria-expanded', 'false'); }
     if (!t || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && t.type !== 'radio')) return;
     var act = t.getAttribute('data-act');
     var id = t.getAttribute('data-id');
     switch (act) {
       case 'reload': location.reload(); break;
+      case 'bell': {
+        var bp = t.nextElementSibling, opening = bp.hidden;
+        bp.hidden = !opening; t.setAttribute('aria-expanded', String(opening));
+        if (opening) { bp.innerHTML = bellList(); refreshBell(true); }
+        break;
+      }
+      case 'bell-read': api('POST', 'notifications/read', { all: true }).then(function () { refreshBell(true); if (MODS.nurse || MODS.office) { var rr = route(); if (/notifications/.test(rr.parts.join('/'))) render(); } }); break;
+      case 'bell-go': { api('POST', 'notifications/read', { ids: [id] }).then(function () { refreshBell(true); }); var bpp = $('.bellp'); if (bpp) bpp.hidden = true; break; }
       case 'peek': { var inp = t.previousElementSibling; var show = inp.type === 'password'; inp.type = show ? 'text' : 'password'; t.textContent = show ? 'Hide' : 'Show'; t.setAttribute('aria-label', show ? 'Hide password' : 'Show password'); break; }
       case 'menu': { var m = t.nextElementSibling; m.hidden = !m.hidden; t.setAttribute('aria-expanded', String(!m.hidden)); break; }
       case 'signout': ev.preventDefault(); api('POST', 'logout', {}).then(function () { S.me = null; S.csrf = ''; S.cache = {}; S.catalog = null; S.people = null; S.pid = null; try { localStorage.removeItem('kq.pid'); } catch (x) {} S.flash = { kind: 'ok', text: 'You are signed out.' }; go('#/signin', true); }); break;
@@ -2527,7 +2621,7 @@
       if (i > -1 && ev.key === 'ArrowUp') { ev.preventDefault(); (i ? links[i - 1] : btn).focus(); return; }
       if (ev.key === 'Escape' && (g.classList.contains('open') || g.classList.contains('peek'))) { ev.preventDefault(); sbgSet(g, false); btn.focus(); return; }
     }
-    if (ev.key === 'Escape') { var m = $('.menu:not([hidden])'); if (m) { m.hidden = true; } document.body.classList.remove('drawer-open'); }
+    if (ev.key === 'Escape') { var m = $('.menu:not([hidden])'); if (m) { m.hidden = true; } var bpe = $('.bellp:not([hidden])'); if (bpe) { bpe.hidden = true; $('.bell>button').focus(); } document.body.classList.remove('drawer-open'); }
   });
   // open or close a side menu section (remembered while the app is open)
   function sbgSet(g, open) {
@@ -2564,5 +2658,12 @@
     [].forEach.call(document.querySelectorAll('[data-pkcard]'), function (c) { c.classList.toggle('sel', c === card); });
   });
 
+  window.KQ = {
+    S: S, api: api, e: e, $: $, $$: $$, icon: icon, date: date, dt: dt, ago: ago, hm12: hm12, toast: toast, openDialog: openDialog, closeDialog: closeDialog,
+    shell: shell, go: go, route: route, render: render, loading: loading, pageError: pageError, FORMS: FORMS, todayIST: todayIST, first: first, initials: initials,
+    queryOf: queryOf, reducedMotion: reducedMotion, phoneNice: phoneNice, field: field, busy: busy, showErrors: showErrors, formData: formData, withPerson: withPerson,
+    personBar: personBar, fill: fill, loadPeople: loadPeople, rs: rs, BRANDS: BRANDS, waLink: waLink, refreshBell: refreshBell, ACTIONS: ACTIONS, METRICS: METRICS,
+    register: function (name, mod) { MODS[name] = mod; }
+  };
   render();
 })();

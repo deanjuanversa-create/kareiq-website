@@ -44,7 +44,8 @@ function validateBooking(body) {
   const pkg = clean(body.package, 40);
   const billing = clean(String(body.billing ?? ''), 4);
   const date = clean(body.date, 10);
-  const time = clean(body.time, 20);
+  let time = clean(body.time, 20);
+  if (time === 'afternoon') time = 'evening'; // pages opened before the slots changed
   const careFor = clean(body.careFor, 20);
   const notes = cleanMultiline(body.notes, 1000);
 

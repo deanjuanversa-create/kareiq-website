@@ -38,7 +38,7 @@
     if (view === 'overview') renderOverview();
     try { history.replaceState(null, '', '#' + view); } catch (e) { /* ignore */ }
   }
-  $$('.nav-btn').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
+  $$('.nav-btn[data-view]').forEach((b) => b.addEventListener('click', () => show(b.dataset.view)));
 
   // ============================== data ==============================
   async function loadRows() {
@@ -557,11 +557,12 @@
     document.querySelector('.main').prepend(b);
   }).catch(() => {});
 
+  // Bookings, enquiries and their overview moved to the office app (Lead management), where they
+  // have owners, statuses and history. This panel keeps the website text and prices.
   (async function start() {
-    try { await Promise.all([loadRows(), loadContent()]); }
-    catch (e) { toast('Could not load admin data. Check the server is running.'); }
-    const h = location.hash.slice(1);
-    show(['overview', 'bookings', 'enquiries', 'content'].includes(h) ? h : 'overview');
-    setInterval(() => loadRows().then(() => { if (state.view === 'overview') renderOverview(); else if (state.view !== 'content') renderList(); }).catch(() => {}), 60000);
+    try { await loadContent(); }
+    catch (e) { toast('Could not load the website content. Check the server is running.'); }
+    if (['overview', 'bookings', 'enquiries'].includes(location.hash.slice(1))) { location.replace('/app/#/office/leads/' + (location.hash === '#overview' ? 'overview' : 'list')); return; }
+    show('content');
   })();
 })();

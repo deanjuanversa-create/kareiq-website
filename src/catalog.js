@@ -33,10 +33,10 @@ const billingPlans = {
   '12': 'Annual (12 months)'
 };
 
+// visit slots (the nurse scheduler uses the same two): morning 8 AM to 12 PM, evening 2 PM to 6 PM
 const timeSlots = {
   'morning': 'Morning (8am to 12pm)',
-  'afternoon': 'Afternoon (12pm to 4pm)',
-  'evening': 'Evening (4pm to 8pm)'
+  'evening': 'Evening (2pm to 6pm)'
 };
 
 const careFor = {

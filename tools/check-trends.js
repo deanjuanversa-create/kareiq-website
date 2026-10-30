@@ -120,23 +120,27 @@ const base = process.argv[2];
     const g = await (await fam('people/P-DEMO05/details')).json();
     ok(g.status === 403 || g.ok === false, 'family cannot open someone else\'s details');
     const v0 = (await (await fam('people/P-DEMO01/details')).json()).meta.version;
-    // families only read their details; the care team keeps them up to date
+    // families only read their details; the office keeps them up to date (nurses see a restricted view)
+    const office = await login('admin@demo.kareiq');
     ok((await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Changed by family' } } })).status === 403, 'family cannot change details');
     ok((await fam('people/P-DEMO01/details', { method: 'POST', body: { version: v0, status: 'complete', data: {} } })).status === 403, 'family cannot change the status either');
-    r = await nurse('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Lakshmi Nair', fdName: 'Dr. Varma', alGeneral: ['Dust mites'] } } });
-    const saved = await r.json(); ok(saved.ok && saved.version === v0 + 1, 'caregiver saves details');
-    ok((await nurse('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'x' } } })).status === 409, 'stale copy refused, no overwrite');
+    ok((await nurse('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'By a nurse' } } })).status === 403, 'a nurse cannot change details');
+    r = await office('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'Lakshmi Nair', fdName: 'Dr. Varma', alGeneral: ['Dust mites'] } } });
+    const saved = await r.json(); ok(saved.ok && saved.version === v0 + 1, 'office saves details');
+    ok((await office('people/P-DEMO01/details', { method: 'POST', body: { version: v0, data: { name: 'x' } } })).status === 409, 'stale copy refused, no overwrite');
     const back = await (await fam('people/P-DEMO01/details')).json();
     ok(back.data.fdName === 'Dr. Varma' && back.data.alGeneral[0] === 'Dust mites' && back.data.name === 'Lakshmi Nair' && back.canEdit === false, 'family reads the saved details (read-only)');
-    ok((await nurse('people/P-DEMO01/details')).status === 200, 'assigned caregiver can open details');
+    ok((await nurse('people/P-DEMO01/details')).status === 403, 'a nurse cannot open the full details');
+    ok((await nurse('nurse/customers/P-DEMO01')).status === 200, 'an assigned nurse opens the restricted customer page');
     // risk checks in the download
     r = await fam('people/P-DEMO01/export?period=6m&metrics=risk:phq9&parts=readings,risktrend&format=csv');
     const rc = await r.text(); ok(r.status === 200 && /Depression check \(PHQ-9\)/.test(rc) && /Improving/.test(rc) && !/Heart disease/.test(rc), 'download with a risk check only');
     ok((await fam('people/P-DEMO01/export?period=6m&metrics=risk:unknown&format=csv')).status === 400, 'unknown risk check: refused');
     const nest = await login('nest@demo.kareiq');
-    ok((await nest('people/P-DEMO01/details')).status === 404, 'unassigned caregiver cannot open details');
-    const list = await (await nurse('details')).json();
-    ok(list.people.length === new Set(list.people.map((p) => p.id)).size && list.people.find((p) => p.id === 'P-DEMO01').status === 'draft', 'caregiver list: one entry per person');
+    ok([403, 404].includes((await nest('people/P-DEMO01/details')).status) && (await nest('nurse/customers/P-DEMO01')).status === 404, 'an unassigned nurse cannot open the customer');
+    const list = await (await office('details')).json();
+    ok(list.people.length === new Set(list.people.map((p) => p.id)).size && list.people.find((p) => p.id === 'P-DEMO01').status === 'draft', 'office list: one entry per person');
+    ok((await nurse('details')).status === 403, 'nurses do not get the details list');
     ok((await fam('details')).status === 403, 'family cannot open the caregiver list');
   }
   console.log(`check-trends: PASS ${pass} FAIL ${fail}${base ? '' : ' (rules only; pass a server address for the API checks)'}`);

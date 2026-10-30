@@ -7,7 +7,10 @@
   "scripts": {
     "start": "node server.js",
     "dev": "node --watch server.js",
-    "check:app": "node tools/check-app.js http://localhost:3000"
+    "check:app": "node tools/check-app.js http://localhost:3000",
+    "check:roles": "node tools/check-roles.js http://localhost:3000",
+    "check:scheduler": "node tools/check-scheduler.js",
+    "check:trends": "node tools/check-trends.js http://localhost:3000"
   },
   "engines": {
     "node": ">=18"

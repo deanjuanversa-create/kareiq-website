@@ -285,6 +285,8 @@ async function handleSubmit(req, res, kind) {
     ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
     : await store.add('enquiries', 'KQ', value);
   notify(kind, row);
+  // a booking with a preferred day becomes a first visit, given to an available nurse
+  if (isBooking && row.date && appApi && appApi.websiteBooking) appApi.websiteBooking(row).catch(() => {});
   console.log(`[${kind}] ${row.reference} ${row.name} ${row.phone} ${isBooking ? row.serviceName : row.interestName + (row.planName ? ' / ' + row.planName : '')}`);
   json(res, 201, { ok: true, reference: row.reference });
 }

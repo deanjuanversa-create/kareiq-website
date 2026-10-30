@@ -3,7 +3,7 @@
 //   MongoDB Atlas  one document per record (_id = id), filtered by the database
 //   Redis          one hash per collection, filtered here
 //   files          one JSON array per collection in /data, filtered here
-// Filters support plain equality, { $in: [...] } and { $ne: value }.
+// Filters support plain equality, { $in: [...] }, { $ne: value } and ranges ($gt, $gte, $lt, $lte).
 
 const db = require('./db');
 const { mutate } = require('./store');
@@ -15,7 +15,12 @@ function matches(doc, filter) {
     if (v && typeof v === 'object' && !Array.isArray(v)) {
       if ('$in' in v) return v.$in.includes(doc[k]);
       if ('$ne' in v) return doc[k] !== v.$ne;
-      if ('$lt' in v) return doc[k] < v.$lt;
+      const ops = ['$gt', '$gte', '$lt', '$lte'].filter((o) => o in v);
+      if (ops.length) {
+        const x = doc[k];
+        if (x === undefined || x === null) return false;
+        return ops.every((o) => (o === '$gt' ? x > v[o] : o === '$gte' ? x >= v[o] : o === '$lt' ? x < v[o] : x <= v[o]));
+      }
     }
     return doc[k] === v;
   });
@@ -44,15 +49,17 @@ async function all(col) {
 
 const NO_ID = { projection: { _id: 0 } };
 
-async function find(col, filter = {}, { sort, limit } = {}) {
+async function find(col, filter = {}, { sort, limit, skip } = {}) {
   if (db.mode === 'mongo') {
     let cur = (await db.col(col)).find(filter, NO_ID);
     if (sort) cur = cur.sort(sort);
+    if (skip) cur = cur.skip(skip);
     if (limit) cur = cur.limit(limit);
     return cur.toArray();
   }
   let rows = (await all(col)).filter((d) => matches(d, filter));
   rows = sortRows(rows, sort);
+  if (skip) rows = rows.slice(skip);
   return clone(limit ? rows.slice(0, limit) : rows);
 }
 
@@ -129,6 +136,16 @@ async function ensureIndexes() {
     await (await db.col('app_details_versions')).createIndex({ personId: 1, version: -1 });
     await (await db.col('app_orders')).createIndex({ personId: 1, createdAt: -1 });
     await (await db.col('app_orders')).createIndex({ status: 1 });
+    // a nurse can hold one visit per start time: the database refuses a second one (double-booking guard)
+    await (await db.col('app_schedule')).createIndex({ slotKey: 1 }, { unique: true, partialFilterExpression: { slotKey: { $type: 'string' } } });
+    await (await db.col('app_schedule')).createIndex({ sourceKey: 1 }, { unique: true, partialFilterExpression: { sourceKey: { $type: 'string' } } });
+    await (await db.col('app_schedule')).createIndex({ date: 1, slot: 1 });
+    await (await db.col('app_schedule')).createIndex({ nurseId: 1, date: 1 });
+    await (await db.col('app_notifications')).createIndex({ userId: 1, createdAt: -1 });
+    await (await db.col('app_contact_access')).createIndex({ at: -1 });
+    await (await db.col('app_contact_access')).createIndex({ nurseId: 1, personId: 1 });
+    await (await db.col('app_payments')).createIndex({ planId: 1 });
+    await (await db.col('app_payments')).createIndex({ receivedAt: -1 });
     await (await db.col('app_records')).createIndex({ dateStatus: 1 });
   } catch (e) { indexed = false; console.error('[app] index setup failed:', e.message); }
 }

@@ -44,8 +44,7 @@ Open `/admin`. You'll see the sign-in page; enter the `ADMIN_PASSWORD` from your
 - "That password is not right": the password must match the `ADMIN_PASSWORD=` line exactly. After editing `.env`, restart the server.
 - After 8 wrong tries from one device, sign-in pauses for 10 minutes.
 
-- **Overview**: charts of bookings and enquiries over time (7 / 30 / 90 days or all time), the booking pipeline (New, Contacted, Scheduled, Closed), and breakdowns by service, package, payment plan, city, who the care is for, and enquiry interest. Hover any chart for exact numbers, or use "Show table".
-- **Bookings / Enquiries**: call or WhatsApp in one tap, set the status, add internal notes, search, export to CSV.
+- **Enquiries and bookings** have moved to the office app (`/app`, Lead management), where each one has an owner, a status and a history. The link in the side menu goes there.
 - **Website content**: edit and publish, with no code changes needed:
   - Kare@Home pricing: price per month and billed amount for every payment plan, original price, "Launch offer" tag, which package is "Most popular", and each package's "What's included" list
   - savings % shown for each payment plan, the pricing notes, the Customised plan card
@@ -107,7 +106,7 @@ Top bar plus a side menu. Families and the office pick the person from "PATIENT 
 - **Package information**: dates, amount paid, packages, free sessions and what is monitored, and how often.
 - **Book services**: free physiotherapy or bystander sessions (4, 6 or 8 a year), add-on services, and your bookings.
 - **Invoices**: the charges worked out from each plan.
-- **Caregivers** get My people, Record a visit (vitals, smart-scale readings and the food, toilet, sleep, pain and medicine checks), Risk checks and Medical records. They do **not** see health history: only the family and the office do.
+- **Nurses** (caregiver logins) get the nurse portal instead; the **office** gets the office interface (both below).
 
 Where the numbers come from (the KareIQ sheet "Draft Data Collection by Caregivers"):
 - `src/app/vitals.js`: standard ranges and the visit checks.
@@ -239,3 +238,59 @@ Any host that runs Node.js works (Render, Railway, a VPS with PM2, Hostinger Nod
 These tools come with the `Dockerfile`. Run the Render service from the Dockerfile (Docker runtime) to switch automatic reading on. On a server without them, uploads still work, and their dates are read automatically as soon as the server has the tools (on the next start).
 
 **Buying a package** (Other packages > Buy now) creates an order with the price worked out on the server. There is no online payment gateway yet: the office sends a payment link, then records the payment (method, transaction number, full amount) under Requests > Orders awaiting payment. Only then does the package become active (it replaces an active package of the same kind). Orders can also be marked failed or cancelled.
+
+
+## Nurse portal, office interface and the nurse scheduler
+
+Each role has its own interface. Families keep the pages above. Nurse and office pages are separate scripts
+(`app/nurse.js`, `app/office.js`) that load only for that role; a family never downloads them.
+
+### Nurse portal (caregiver logins)
+- **My visits** (landing page): today, upcoming, completed and cancelled visits. Accept, Start visit, Record readings, Complete visit.
+- **Scheduler**: day, week and month views; filter upcoming, completed or cancelled.
+- **Assigned customers** and **Customer information**: only what a visit needs (ID, age, gender, blood group, languages, address,
+  emergency contacts, doctors, upcoming visits). Phone numbers show as `+91 XXXXX 12345` until **Access contact information**.
+- **Upload documents**: submit a report for an assigned customer. After submitting, the nurse gets a receipt only: no opening,
+  downloading, replacing or deleting.
+- Nurses do **not** see vitals history, risk scores, risk checks, medical records, invoices or packages. The server refuses those
+  requests (403/404) whatever the screen shows.
+
+### Contact access (masked numbers)
+The office picks the policy under **Contact access audit**:
+- `visit` (default): numbers open during the nurse's assigned visit (from an hour before the slot until 30 minutes after it),
+  or in an emergency with a written reason (open for 30 minutes; the office is notified).
+- `approval`: every request waits for the office to approve it (for 1 to 24 hours).
+- `emergency`: only in an emergency with a reason.
+Every request, allowed or not, is recorded (`app_contact_access`: event ID, nurse, employee ID, customer, contact type, time, visit,
+reason, approval, result). The numbers themselves are never written into the record, and nurses cannot change it.
+
+### Nurse scheduler
+- Two slots: **Morning 8 AM to 12 PM** and **Evening 2 PM to 6 PM** (websites and app). Older "afternoon" bookings count as evening.
+- Every Kare@Home or KareNest booking with a date becomes a visit (`app_schedule`) and is given a nurse automatically:
+  availability first (working day and slot, leave, holidays, brand, service, no overlap including travel time, per-slot limit),
+  then fairness (fewest visits that week, then that day, then the longest since their last visit).
+- Assignment runs inside a lock and re-checks before saving; with MongoDB, unique indexes on nurse+day+start and on the booking
+  stop double bookings even across two servers.
+- If nobody is free the visit is **Awaiting assignment**, the office is notified, and they assign it by hand.
+- Statuses: Awaiting assignment, Nurse assigned, Accepted, In progress, Completed, Cancelled (office only). Every change is in the visit history.
+- Leave added for a nurse moves their visits in that period to someone free (or back to the office).
+
+### Office interface (admin logins)
+Overview (customer and revenue analytics), Lead management (overview, enquiry database, assign to a member), Customer management
+(directory with customer IDs, filters and pages; consolidated profile, viewed as the office, never by signing in as the customer),
+Customer care (the existing vitals, risk trends, records, package, client information, risk checks and visit pages), Financials
+(invoices with PDF download, payment due, recording payments and refunds), Employees (overview, KYC and details with length of
+service), Nurse scheduler (visit board, nurses and hours, holidays), Contact access audit, and Settings (requests and orders,
+people and plans, logins, activity, website text and prices).
+
+Money: an invoice exists for every confirmed package; **collected** counts only recorded payments (verified orders, or payments
+the office records after checking the bank), minus refunds. Unpaid invoices never count as collected. An invoice is due 7 days after its date.
+
+### Checks
+```
+npm run check:scheduler                     # scheduler rules, no server needed
+APP_DEMO=true node server.js                # fresh data folder, then in another terminal:
+npm run check:roles                         # nurse, office and role walls
+npm run check:trends
+npm run check:app
+```

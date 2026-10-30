@@ -30,6 +30,11 @@ const care = require('./care');
 const packinfo = require('./packinfo');
 const orders = require('./orders');
 const reportreader = require('./reportreader');
+const schedulerMod = require('./scheduler');
+const staffMod = require('./staff');
+const financeMod = require('./finance');
+const nursingMod = require('./nursing');
+const officeMod = require('./office');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -53,6 +58,7 @@ function clean(v, max = 120) {
 const cleanEmail = (v) => clean(v, 120).toLowerCase();
 const validEmail = (v) => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(v);
 const todayIST = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+const dayIST = (offset) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(Date.now() + (offset || 0) * 86400000));
 function addMonths(isoDate, months) {
   const d = new Date(isoDate + 'T00:00:00Z');
   d.setUTCMonth(d.getUTCMonth() + Number(months));
@@ -168,6 +174,17 @@ function planView(p) {
 }
 
 // Throws 404 unless this user may see this person in this brand.
+// shared helpers for scheduling, employees and money (created once, used by every route)
+const shared = { docs, uid, now, todayIST: dayIST, store };
+shared.scheduler = schedulerMod.create(shared);
+shared.staff = staffMod.create(shared);
+shared.finance = financeMod.create(shared);
+// a nurse may see a customer they are linked to, or one they have an active visit with
+async function nurseVisit(userId, personId) {
+  const since = dayIST(-1);
+  return (await docs.find('app_schedule', { nurseId: userId, personId })).some((v) => schedulerMod.ACTIVE.includes(v.status) || (v.status === 'completed' && v.date >= since));
+}
+
 async function visiblePerson(user, personId, product) {
   if (typeof personId !== 'string' || personId.length > 40) throw notFound();
   const person = await docs.findOne('app_people', { id: personId });
@@ -176,6 +193,7 @@ async function visiblePerson(user, personId, product) {
   if (user.role === 'admin') return person;
   const kind = user.role === 'caregiver' ? 'caregiver' : 'family';
   const link = await docs.findOne('app_links', { userId: user.id, personId, kind });
+  if (!link && kind === 'caregiver' && person.active !== false && !product && await nurseVisit(user.id, personId)) { person.relation = null; return person; }
   if (!link || person.active === false) throw notFound();
   if (!product && kind === 'caregiver') {
     const plans = await docs.find('app_plans', { personId });
@@ -192,6 +210,7 @@ async function visiblePerson(user, personId, product) {
 async function canRecord(user, personId, product) {
   if (user.role === 'admin') return true;
   if (user.role !== 'caregiver') return false;
+  if (await nurseVisit(user.id, personId)) return true;
   const plan = bestPlan(await docs.find('app_plans', { personId }), product);
   return Boolean(plan && plan.status === 'active');
 }
@@ -295,7 +314,7 @@ const historyAllowed = (user) => user.role === 'admin' || user.role === 'family'
 async function careTeam(user, personId) {
   if (user.role === 'admin') return true;
   if (user.role !== 'caregiver') return false;
-  return Boolean(await docs.findOne('app_links', { userId: user.id, personId, kind: 'caregiver' }));
+  return Boolean(await docs.findOne('app_links', { userId: user.id, personId, kind: 'caregiver' })) || nurseVisit(user.id, personId);
 }
 
 // The brand a visit or booking belongs to: the person's own active plan first (KareNest before
@@ -320,7 +339,8 @@ async function peopleFor(user) {
   } else {
     const kind = user.role === 'caregiver' ? 'caregiver' : 'family';
     links = await linksOf(user.id, kind);
-    const ids = links.map((l) => l.personId);
+    let ids = links.map((l) => l.personId);
+    if (kind === 'caregiver') ids = [...new Set(ids.concat((await docs.find('app_schedule', { nurseId: user.id })).filter((v) => v.personId && schedulerMod.ACTIVE.includes(v.status)).map((v) => v.personId)))];
     people = ids.length ? (await docs.find('app_people', { id: { $in: ids } }, { sort: { name: 1 } })).filter((x) => x.active !== false) : [];
   }
   const plans = await plansOfPeople(people.map((x) => x.id));
@@ -328,7 +348,8 @@ async function peopleFor(user) {
   for (const x of people) {
     const mine = plans.filter((pl) => pl.personId === x.id);
     const open = mine.filter((pl) => pl.status !== 'ended');
-    if (user.role === 'caregiver' && !open.some((pl) => pl.status === 'active')) continue;
+    // linked customers show while their plan is active; customers reached through a visit always show
+    if (user.role === 'caregiver' && !open.some((pl) => pl.status === 'active') && links.some((l) => l.personId === x.id)) continue;
     if (user.role === 'admin' && !open.length) continue;
     const link = links.find((l) => l.personId === x.id);
     out.push({
@@ -525,24 +546,30 @@ async function servicesData(user, person) {
   const included = free ? ['bystander', 'physiotherapy'].map(item) : [];
   const additional = ['teleconsultation', 'spongebath', 'blood-collection', 'dressing', ...(free ? [] : ['bystander', 'physiotherapy']), ...(nest ? ['family-visit'] : [])].map((id) => ({ ...item(id), free: false }));
   const names = { new: 'Sent', contacted: 'We are on it', scheduled: 'Arranged', closed: 'Done' };
-  const list = bookings.slice(0, 20).map((b) => ({ reference: b.reference, service: b.service, name: (care.SERVICES[b.service] || {}).name || 'Service', free: Boolean(b.free), date: b.date || null, time: b.time ? catalog.timeSlots[b.time] : null, status: b.status || 'new', statusName: names[b.status] || 'Sent', createdAt: b.createdAt }));
+  // each booking shows where its visit is: waiting for a nurse, assigned (with the nurse's first name and time), done
+  const visits = bookings.length ? await docs.find('app_schedule', { personId: person.id }) : [];
+  const nurseNames = await namesFor(visits.map((v) => v.nurseId).filter(Boolean));
+  const vs = { awaiting_assignment: 'Finding a nurse', assigned: 'Nurse assigned', accepted: 'Nurse confirmed', in_progress: 'Visit in progress', completed: 'Done', cancelled: 'Cancelled' };
+  const list = bookings.slice(0, 20).map((b) => {
+    const v = visits.find((x) => x.sourceKey === 'service:' + b.id);
+    const slotName = b.time ? (catalog.timeSlots[b.time] || (schedulerMod.SLOTS[schedulerMod.LEGACY_SLOT[b.time]] || {}).label || null) : null;
+    return { reference: b.reference, service: b.service, name: (care.SERVICES[b.service] || {}).name || 'Service', free: Boolean(b.free), date: b.date || null, time: slotName, status: v ? (v.status === 'awaiting_assignment' ? 'new' : schedulerMod.ACTIVE.includes(v.status) ? 'scheduled' : 'closed') : b.status || 'new',
+      statusName: v ? vs[v.status] : names[b.status] || 'Sent', createdAt: b.createdAt,
+      visit: v ? { status: v.status, start: v.start, nurse: v.nurseId ? String(nurseNames[v.nurseId] || '').split(' ')[0] : null } : null };
+  });
   return { person: { id: person.id, name: person.name }, product: productOf(plans), free, discount, included, additional, last: list[0] || null, bookings: list, canBook: user.role !== 'caregiver' && plans.some((pl) => pl.status === 'active' || pl.status === 'paused') };
 }
 
 async function invoicesData(person) {
-  const plans = (await docs.find('app_plans', { personId: person.id }, { sort: { createdAt: -1 } })).filter((pl) => pl.status !== 'pending');
-  const rows = [];
-  for (const pl of plans) {
-    const charge = await care.chargeOf(pl);
-    rows.push({
-      number: 'KQ-' + (pl.startDate || pl.createdAt.slice(0, 10)).replace(/-/g, '') + '-' + pl.id.replace(/[^A-Za-z0-9]/g, '').slice(-5).toUpperCase(),
-      date: pl.startDate || pl.createdAt.slice(0, 10), plan: planName(pl.planId), productName: PRODUCTS[pl.product].name,
-      period: pl.startDate ? { from: pl.startDate, to: pl.endDate } : null, months: pl.months || null,
-      amount: charge.amount, amountText: charge.amount ? care.fmt(charge.amount) : null, description: charge.text, gst: charge.gst || null, status: pl.status, statusName: PLAN_STATUS[pl.status]
-    });
-  }
+  // the same invoices the office sees, with what has been paid (recorded, checked payments only)
+  const rows = (await shared.finance.invoices({ personId: person.id })).map((i) => ({
+    number: i.number, date: i.date, dueDate: i.dueDate, plan: i.packageName, productName: i.productName, period: i.period, months: i.months,
+    amount: i.amount || null, amountText: i.amount ? care.fmt(i.amount) : null, paidText: care.fmt(i.paid - i.refunded), outstandingText: care.fmt(i.outstanding), outstanding: i.outstanding,
+    description: i.description, gst: i.gst, status: i.status, statusName: { paid: 'Paid', partial: 'Part paid', unpaid: 'Unpaid', refunded: 'Refunded', quote: 'Price to be confirmed' }[i.status], overdueDays: i.overdueDays
+  }));
   const total = rows.reduce((s, r) => s + (r.amount || 0), 0);
-  return { person: { id: person.id, name: person.name }, rows, total, totalText: total ? care.fmt(total) : null };
+  const due = rows.reduce((s, r) => s + (r.outstanding || 0), 0);
+  return { person: { id: person.id, name: person.name }, rows, total, totalText: total ? care.fmt(total) : null, dueText: due ? care.fmt(due) : null };
 }
 
 // ---------- helpers for links in messages ----------
@@ -922,6 +949,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
 
     // ----- risk scores: forms for the care team, saving a result
     if (p === 'risk/forms' && req.method === 'GET') {
+      if (user.role !== 'admin') throw forbidden();
       const forms = risk.forms();
       let prefill = {};
       const pid = url.searchParams.get('person');
@@ -932,8 +960,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, forms, prefill });
     }
     if (parts[0] === 'people' && parts[2] === 'risks' && req.method === 'POST') {
+      if (user.role !== 'admin') throw forbidden(); // risk checks are done by the office
       const person = await visiblePerson(user, parts[1]);
-      if (!(await careTeam(user, person.id))) throw forbidden();
       const out = risk.evaluate(String(body.test || ''), body.inputs || {});
       if (out.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: out.errors });
       const at = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) && body.date <= todayIST() ? body.date + 'T12:00:00+05:30' : now();
@@ -972,7 +1000,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, ...firstvisit.definitions() });
     }
     if (p === 'details' && req.method === 'GET') {
-      if (user.role === 'family') throw forbidden();
+      // the office's Client information list; nurses use their restricted customer page instead
+      if (user.role !== 'admin') throw forbidden();
       const people = await peopleFor(user);
       const rows = people.length ? await docs.find('app_details', { personId: { $in: people.map((x) => x.id) } }) : [];
       const users = await namesFor(rows.map((r) => r.updatedBy));
@@ -984,8 +1013,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       });
     }
     if (parts[0] === 'people' && parts[2] === 'details' && parts.length === 3) {
+      if (user.role === 'caregiver') throw forbidden(); // nurses see only the restricted, masked view (nurse/customers/:id)
       const person = await visiblePerson(user, parts[1]);
-      if (user.role === 'caregiver' && !(await careTeam(user, person.id))) throw forbidden();
       const id = 'det-' + person.id;
       const row = await docs.findOne('app_details', { id });
       if (req.method === 'GET') {
@@ -1031,6 +1060,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
 
     // ----- medical records
     if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'GET') {
+      if (user.role === 'caregiver') throw forbidden(); // nurses upload documents but never browse them
       const person = await visiblePerson(user, parts[1]);
       let rows = await docs.find('app_records', { personId: person.id, removed: { $ne: true } }, { sort: { date: -1 } });
       if (!historyAllowed(user)) rows = rows.filter((r) => r.uploadedBy === user.id); // caregivers see only what they added
@@ -1062,6 +1092,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, dateStatus: now2.dateStatus, date: now2.date || null });
     }
     if (parts[0] === 'records' && parts[2] === 'remove' && req.method === 'POST') {
+      if (user.role === 'caregiver') throw forbidden();
       const r = await docs.findOne('app_records', { id: String(parts[1]) });
       if (!r || r.removed) throw notFound();
       await visiblePerson(user, r.personId);
@@ -1105,7 +1136,14 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         userId: user.id, personId: person.id, personName: person.name, kind: 'service', service: svc, free, date, time: slot
       });
       await audit(user.id, 'service.booked', person.id, { service: svc, free, reference: row.reference });
-      return json(res, 201, { ok: true, reference: row.reference, free });
+      let visit = null;
+      if (svc !== 'family-visit') {
+        const det = await docs.findOne('app_details', { id: 'det-' + person.id });
+        const r = await shared.scheduler.createVisit({ personId: person.id, customerName: person.name, product: sd.product, service: svc, serviceName: care.SERVICES[svc].name, date, slot: slot || 'morning',
+          location: svc === 'teleconsultation' ? 'Phone or video call' : (det && det.data && det.data.address) || (sd.product === 'karenest' ? 'KareNest' : ''), source: { type: 'service', id: row.id, reference: row.reference }, by: user.id, byRole: user.role, note });
+        visit = { status: r.visit.status, start: r.visit.start, assigned: r.ok };
+      }
+      return json(res, 201, { ok: true, reference: row.reference, free, visit });
     }
     if (parts[0] === 'people' && parts[2] === 'invoices' && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1]);
@@ -1283,6 +1321,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
 
   // ---------------------------------------------------------------- admin
   async function adminRoute(req, res, parts, url, admin, body) {
+    const officeDone = await officeApi.handle(req, res, parts, url, admin, body);
+    if (officeDone !== undefined) return officeDone;
     const p = parts.join('/');
     const product = PRODUCTS[url.searchParams.get('product')] ? url.searchParams.get('product') : null;
 
@@ -1354,6 +1394,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         const plan = { id: uid(), personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, activatedBy: admin.id, createdAt: now() };
         await docs.insert('app_plans', plan);
         await docs.update('app_orders', o.id, { status: 'paid', paidAt: now(), updatedAt: now(), planRowId: plan.id, payment: { mode: 'manual', method, ref, amount: received, verifiedBy: admin.id, verifiedAt: now() } });
+        await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: plan.id, personId: o.personId, orderId: o.id, invoiceNo: financeMod.invoiceNo(plan), amount: received, method, ref, receivedAt: now(), recordedBy: admin.id });
         await audit(admin.id, 'order.paid', o.personId, { reference: o.reference, method, amount: received });
         return json(res, 200, { ok: true, plan: planView(plan) });
       }
@@ -1700,6 +1741,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     // a serverless demo stops working once it has answered, so it reads before answering (briefly)
     if (process.env.APP_STATELESS === 'true') await Promise.race([job, new Promise((r) => setTimeout(r, 9000))]);
     const now2 = await docs.findOne('app_records', { id: row.id });
+    if (user.role === 'caregiver') return json(res, 201, { ok: true, receipt: { customerId: person.id, documentName: name, submittedAt: row.uploadedAt, status: 'Submitted' } });
     return json(res, 201, { ok: true, id: row.id, dateStatus: now2.dateStatus, date: now2.date || null });
   }
   async function readReportDate(id, buf, mime, category) {
@@ -1730,10 +1772,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     }, 15000).unref();
   }
   async function downloadRecord(req, res, id, user, url) {
+    if (user.role === 'caregiver') throw notFound(); // nurses never open or download documents, even their own uploads
     const r = await docs.findOne('app_records', { id: String(id) });
     if (!r || r.removed) throw notFound();
     await visiblePerson(user, r.personId);
-    if (!historyAllowed(user) && r.uploadedBy !== user.id) throw notFound();
+    if (!historyAllowed(user)) throw notFound();
     const f = await docs.findOne('app_files', { id: r.fileId });
     if (!f) throw notFound();
     const buf = Buffer.from(f.data, 'base64');
@@ -1784,7 +1827,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   const oauth = createOAuth({ json, isHttps, signIn, audit, uid, now });
 
   // ---------------------------------------------------------------- entry point
-  return async function handleAppApi(req, res, parts, url) {
+  // the nurse and office modules (src/app/nursing.js, src/app/office.js)
+  const modCtx = { ...shared, json, forbidden, notFound, bad, clean, audit, readRaw, sniff, namesFor, normalisePhone };
+  const nursingApi = nursingMod.create(modCtx);
+  modCtx.nursing = nursingApi;
+  const officeApi = officeMod.create(modCtx);
+
+  const handler = async function handleAppApi(req, res, parts, url) {
     await ensureReady();
     const p = parts.join('/');
     if (parts[0] === 'auth') return oauth(req, res, parts, url); // Google / Facebook sign-in
@@ -1822,6 +1871,16 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'POST') return await uploadRecord(req, res, parts[1], signed.user);
       if (parts[0] === 'records' && parts[2] === 'file' && req.method === 'GET') return await downloadRecord(req, res, parts[1], signed.user, url);
       if (parts[0] === 'people' && parts[2] === 'photo' && parts.length === 3) return await photoRoute(req, res, parts[1], signed.user);
+      // employee KYC documents are raw files too (office only)
+      if (parts[0] === 'admin' && parts[1] === 'employees' && parts[3] === 'kyc' && parts.length === 4 && req.method === 'POST') {
+        if (signed.user.role !== 'admin') throw forbidden();
+        return await officeApi.handle(req, res, parts.slice(1), url, signed.user, {});
+      }
+      if (parts[0] === 'nurse' || p === 'notifications' || p === 'notifications/read') {
+        const done = await nursingApi.handle(req, res, p, parts, url, signed.user, req.method === 'GET' ? {} : await readJson(req));
+        if (done !== undefined) return;
+        return json(res, 404, { ok: false, message: 'Not found.' });
+      }
       const handled = await signedInRoute(req, res, parts, url, signed.user, signed.session);
       if (handled === undefined && !res.headersSent) return json(res, 404, { ok: false, message: 'Not found.' });
     } catch (err) {
@@ -1830,6 +1889,16 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       throw err;
     }
   };
+  // a booking on the Kare@Home website with a preferred day becomes a first visit for a nurse
+  handler.websiteBooking = async (row) => {
+    try {
+      await ensureReady();
+      if (!row || !row.date || row.date < todayIST()) return null;
+      const r = await shared.scheduler.createVisit({ personId: row.personId || null, customerName: row.name || 'New customer', product: 'karehome', service: 'first-visit', serviceName: 'First visit (assessment)', date: row.date, slot: row.time === 'evening' ? 'evening' : 'morning', location: row.area || '', source: { type: 'booking', id: row.id, reference: row.reference }, bookedNote: 'Booked on the Kare@Home website' });
+      return r.visit;
+    } catch (e) { console.error('[app] could not schedule the website booking:', e.message); return null; }
+  };
+  return handler;
 }
 
 module.exports = { createAppApi, productsFor };

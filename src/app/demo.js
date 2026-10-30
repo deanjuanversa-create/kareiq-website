@@ -161,8 +161,104 @@ async function seed() {
     await addRecord(pid, 'rx', 'Prescription from Dr. Varma', 'prescription', 6, by);
   }
 
+  await seedOperations(ids, pdf, day0);
+
   await docs.insert('app_audit', { id: 'demo-seed', at: iso(), userId: null, action: 'demo.seed', personId: null, detail: null });
   console.log('[app] demo accounts created (password: demo-pass-123): admin@demo.kareiq, family@demo.kareiq (both), arjun@demo.kareiq (Kare@Home only), meena@demo.kareiq (KareNest, includes Kare@Home), rahul@demo.kareiq (being set up), nurse@demo.kareiq, nest@demo.kareiq');
+}
+
+// ---------------------------------------------------------------- the office and nurse side of the demo
+// Employee records, contact details (demo numbers only), visits booked through the real scheduler,
+// recorded payments, a few website enquiries and notifications. Demo accounts only.
+async function seedOperations(ids, pdf, day0) {
+  const crypto2 = require('crypto');
+  const uid = () => crypto2.randomUUID();
+  const iso = () => new Date().toISOString();
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date());
+  const addD = (n) => { const d = new Date(today + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+  const store = require('../store');
+
+  // employees: department, unit, joining date, KYC
+  const kycDoc = async (emp, kind, status, ago) => {
+    const buf = pdf('KYC ' + kind);
+    const fileId = 'demo-kf-' + emp + '-' + kind;
+    await docs.insert('app_files', { id: fileId, kind: 'kyc', employeeId: emp, mime: 'application/pdf', data: buf.toString('base64'), createdAt: day0(ago) });
+    return { id: 'demo-k-' + emp + '-' + kind, kind, name: kind.replace(/-/g, ' ') + '.pdf', fileId, mime: 'application/pdf', uploadedAt: day0(ago), status, verifiedAt: status === 'verified' ? day0(ago - 1) : null };
+  };
+  const all = ['id-proof', 'address-proof', 'nursing-registration', 'qualification'];
+  const staff = [
+    { userId: ids.admin, employeeId: 'EMP-DEMO01', department: 'Office', businessUnit: 'kareiq', location: 'Kochi', joinDate: '2023-06-12', docs: [['id-proof', 'verified'], ['address-proof', 'verified']], availability: null, leave: [] },
+    { userId: ids.nurse, employeeId: 'EMP-DEMO02', department: 'Nursing', businessUnit: 'karehome', location: 'Kochi', joinDate: '2024-02-05', docs: all.map((k) => [k, k === 'qualification' ? 'submitted' : 'verified']),
+      availability: { days: { mon: ['morning', 'evening'], tue: ['morning', 'evening'], wed: ['morning', 'evening'], thu: ['morning', 'evening'], fri: ['morning', 'evening'], sat: ['morning', 'evening'], sun: [] }, bufferMin: 30, maxPerSlot: null, services: null, brands: ['karehome'] }, leave: [{ id: 'demo-leave-1', from: addD(12), to: addD(13), reason: 'Family function' }] },
+    { userId: ids.nest, employeeId: 'EMP-DEMO03', department: 'Care', businessUnit: 'karenest', location: 'Thrissur', joinDate: '2025-01-20', docs: [['id-proof', 'verified'], ['address-proof', 'submitted']],
+      availability: { days: { mon: ['morning', 'evening'], tue: ['morning', 'evening'], wed: ['morning', 'evening'], thu: ['morning', 'evening'], fri: ['morning', 'evening'], sat: ['morning', 'evening'], sun: ['morning', 'evening'] }, bufferMin: 15, maxPerSlot: null, services: null, brands: ['karenest'] }, leave: [] }
+  ];
+  for (const s of staff) {
+    const docsList = [];
+    for (const [k, st] of s.docs) docsList.push(await kycDoc(s.employeeId, k, st, 300));
+    await docs.insert('app_staff', { id: 'demo-st-' + s.employeeId, userId: s.userId, employeeId: s.employeeId, department: s.department, businessUnit: s.businessUnit, location: s.location, joinDate: s.joinDate, status: 'active',
+      emergencyContact: { name: 'Family contact (demo)', relation: 'Spouse', phone: '+919800000099' }, availability: s.availability, leave: s.leave, kyc: { docs: docsList }, createdAt: iso() });
+  }
+
+  // contact details for two demo customers (made-up numbers), so the masked numbers can be tried
+  const det = (personId, data) => docs.insert('app_details', { id: 'det-' + personId, personId, data, version: 1, status: 'complete', updatedAt: iso(), updatedBy: ids.admin, updatedByRole: 'admin', createdAt: iso() });
+  await det('P-DEMO04', { name: 'Kamala Iyer', gender: 'Female', bloodGroup: 'B+', languages: 'Tamil, English', address: '12 Temple Road, Kochi (demo address)', phone1: '+919800012345', phone2: '+919800054321', email: 'kamala.demo@example.com',
+    ec1Name: 'Arjun Iyer', ec1Relation: 'Son', ec1Phone: '+919800000003', ec1Email: 'arjun.demo@example.com', fdName: 'Dr. Varma (demo)', fdAddress: 'Kochi', fdPhone: '+919800077777', sdName: 'Dr. Menon (demo)', sdHospital: 'City Hospital (demo)', sdPhone: '+919800088888', sdHospitalPhone: '+919800099999' });
+  await det('P-DEMO05', { name: 'Mohan Das', gender: 'Male', bloodGroup: 'O+', languages: 'Malayalam', address: 'KareNest, Thrissur', phone1: '+919800023456', ec1Name: 'Meena Das', ec1Relation: 'Daughter', ec1Phone: '+919800000004', fdName: 'Dr. Thomas (demo)', fdPhone: '+919800066666' });
+
+  // visits, assigned by the real scheduler (availability first, then fairness)
+  const scheduler = require('./scheduler').create({ docs, uid, now: iso, store });
+  // Kare@Home nurses do not work on Sundays: demo visits move to the next (or, in the past, previous) day
+  const workday = (offset, product) => (product === 'karehome' && new Date(addD(offset) + 'T12:00:00Z').getUTCDay() === 0 ? offset + (offset < 0 ? -1 : 1) : offset);
+  const book = async (personId, name, product, service, offset, slot, finish) => {
+    const r = await scheduler.createVisit({ personId, customerName: name, product, service, date: addD(workday(offset, product)), slot, location: product === 'karenest' ? 'KareNest' : 'Home', by: ids.admin, byRole: 'admin', bookedNote: 'Booked by the office (demo)' });
+    const v = r.visit;
+    if (r.ok && finish) {
+      const steps = finish === 'completed' ? ['accepted', 'in_progress', 'completed'] : finish === 'cancelled' ? ['cancelled'] : finish === 'in_progress' ? ['accepted', 'in_progress'] : [finish];
+      const history = v.history.concat(steps.map((s) => ({ at: iso(), by: s === 'cancelled' ? ids.admin : v.nurseId, byRole: s === 'cancelled' ? 'admin' : 'caregiver', action: s })));
+      await docs.update('app_schedule', v.id, { status: steps[steps.length - 1], history, ...(finish === 'cancelled' ? { slotKey: null } : {}) });
+    }
+    return v;
+  };
+  for (const n of [-9, -7, -5, -2]) await book('P-DEMO04', 'Kamala Iyer', 'karehome', n === -5 ? 'physiotherapy' : 'home-visit', n, 'morning', 'completed');
+  await book('P-DEMO01', 'Lakshmi Nair', 'karehome', 'home-visit', -3, 'evening', 'completed');
+  await book('P-DEMO04', 'Kamala Iyer', 'karehome', 'home-visit', 0, 'morning', 'accepted');
+  await book('P-DEMO01', 'Lakshmi Nair', 'karehome', 'physiotherapy', 0, 'evening', null);
+  await book('P-DEMO01', 'Lakshmi Nair', 'karehome', 'home-visit', 1, 'morning', null);
+  await book('P-DEMO04', 'Kamala Iyer', 'karehome', 'blood-collection', 2, 'morning', null);
+  await book('P-DEMO01', 'Lakshmi Nair', 'karehome', 'dressing', 4, 'evening', 'cancelled');
+  for (const n of [-6, -4, -1]) await book('P-DEMO05', 'Mohan Das', 'karenest', 'home-visit', n, 'morning', 'completed');
+  await book('P-DEMO05', 'Mohan Das', 'karenest', 'home-visit', 0, 'morning', 'in_progress');
+  await book('P-DEMO02', 'Gopal Nair', 'karenest', 'physiotherapy', 1, 'evening', null);
+  // the Kare@Home nurse is on leave then, so this one waits for the office
+  await book('P-DEMO01', 'Lakshmi Nair', 'karehome', 'physiotherapy', 12, 'morning', null);
+
+  // payments the office recorded after checking them (demo): paid, part paid, unpaid and overdue
+  const care = require('./care');
+  const pay = async (planId, share, method, ago) => {
+    const pl = await docs.findOne('app_plans', { id: planId });
+    const ch = await care.chargeOf(pl);
+    if (!ch.amount) return;
+    await docs.insert('app_payments', { id: 'demo-pay-' + planId, kind: 'payment', planId, personId: pl.personId, amount: Math.round(ch.amount * share), method, ref: 'DEMO-' + planId.slice(-6).toUpperCase(), receivedAt: day0(ago), recordedBy: ids.admin });
+  };
+  await pay('demo-p-P-DEMO01-karehome', 1, 'upi', 70);
+  await pay('demo-p-P-DEMO02-karenest', 0.5, 'bank', 110);
+  await pay('demo-p-P-DEMO05-karenest', 1, 'card', 55);
+
+  // website enquiries and bookings (demo names), so lead management has something to show
+  const leads = [
+    ['enquiries', 'KQ', { name: 'Sunil Kumar (demo)', phone: '+919800100001', email: 'sunil.demo@example.com', interest: 'karehome', interestName: 'Kare@Home', message: 'Looking for daily visits for my father.', source: 'kareiq', createdAt: day0(2) }],
+    ['enquiries', 'KQ', { name: 'Anita Joseph (demo)', phone: '+919800100002', interest: 'karenest', interestName: 'KareNest', package: 'kareplus', message: 'Can we visit KareNest this weekend?', source: 'karenest', createdAt: day0(6), leadStatus: 'contacted', assignedTo: ids.admin, assignedAt: day0(5) }],
+    ['bookings', 'KH', { name: 'Ravi Pillai (demo)', phone: '+919800100003', service: 'physiotherapy', serviceName: 'Physiotherapy', package: 'homeplus', date: addD(5), time: 'morning', page: 'kare-at-home', createdAt: day0(1) }],
+    ['enquiries', 'KQ', { name: 'Sunil Kumar (demo)', phone: '+919800100001', interest: 'karehome', interestName: 'Kare@Home', message: 'Following up on my enquiry.', source: 'karehome', createdAt: day0(1) }],
+    ['enquiries', 'KQ', { name: 'Fathima Rahman (demo)', phone: '+919800100004', interest: 'karenest', interestName: 'KareNest', source: 'karenest', createdAt: day0(40), leadStatus: 'converted' }],
+    ['enquiries', 'KQ', { name: 'George Mathew (demo)', phone: '+919800100005', interest: 'karehome', interestName: 'Kare@Home', source: 'kareiq', createdAt: day0(75), leadStatus: 'lost' }]
+  ];
+  for (const [col, prefix, rec] of leads) await store.add(col, prefix, rec);
+
+  // the demo's older notifications count as read; two fresh ones show on the bell
+  for (const n of await docs.find('app_notifications')) await docs.update('app_notifications', n.id, { readAt: iso() });
+  await scheduler.notify([ids.nurse], { kind: 'visit-assigned', title: 'Welcome to the nurse portal', body: 'Your visits, schedule and customers are here. Accept each new visit when it arrives.', link: '#/nurse/visits' });
 }
 
 module.exports = { seed, PASSWORD, USERS };
