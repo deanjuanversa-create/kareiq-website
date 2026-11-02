@@ -11,6 +11,7 @@
     ['nurse/schedule', 'Scheduler', 'cal'],
     ['nurse/customers', 'Assigned customers', 'people'],
     ['nurse/customer', 'Customer information', 'idcard'],
+    ['assess', 'Risk checks', 'gauge'],
     ['nurse/upload', 'Upload documents', 'upload'],
     ['nurse/notifications', 'Notifications', 'bell']
   ];
@@ -160,9 +161,9 @@
         (rows.length ? '<div class="ncards">' + rows.map(function (c) {
           return '<article class="ncard" data-find="' + e((c.name + ' ' + c.customerId).toLowerCase()) + '"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div></div>' +
             '<p class="nc-next">' + icon('clock') + (c.next ? '<span>Next visit: <b>' + e(rel(c.next.date)) + ', ' + e(c.next.start ? K.hm12(c.next.start) : SLOT[c.next.slot]) + '</b> · ' + e(c.next.serviceName) + '</span>' : '<span class="muted">No visit scheduled</span>') + '</p>' +
-            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
+            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess?p=' + e(c.id) + '">' + icon('gauge') + 'Risk check</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
         }).join('') + '</div><p class="empty" data-none hidden><b>No customer matches</b>Try another name or ID.</p>' : '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers, and new visits appear under My visits.</div>') +
-        '<p class="note">' + icon('shield') + '<span>For privacy, nurses do not see health history, medical records or risk scores. Phone numbers stay hidden until you need them for a visit or an emergency.</span></p></div>';
+        '<p class="note">' + icon('shield') + '<span>For privacy, nurses do not see health history, medical records or earlier risk scores; you enter new risk checks under Risk checks. Phone numbers stay hidden until you need them for a visit or an emergency.</span></p></div>';
     }, fail);
   }
 
@@ -381,7 +382,7 @@
   K.register('nurse', {
     label: 'Nurse portal',
     menu: MENU,
-    personPages: ['nurse/customer', 'nurse/upload'],
+    personPages: ['nurse/customer', 'nurse/upload', 'assess'],
     notifPage: '#/nurse/notifications',
     route: function (r, top) {
       if (top !== 'nurse') return false;

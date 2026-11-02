@@ -9,7 +9,7 @@
     { k: 'ov', label: 'Overview', icon: 'chart', sub: [['office/overview/customers', 'Customer analytics', 'people'], ['office/overview/revenue', 'Revenue analytics', 'rupee']] },
     { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/leads/assign', 'Assign to a member', 'team']] },
     { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/customer', 'Customer profile', 'idcard']] },
-    { k: 'care', label: 'Customer care', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip'], ['assess', 'Risk checks', 'gauge'], ['visit', 'Record a visit', 'plus']] },
+    { k: 'care', label: 'Customer care', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip']] },
     { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/finance/due', 'Payment due', 'clock']] },
     { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard']] },
     { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/scheduler/nurses', 'Nurses and hours', 'clock'], ['office/scheduler/holidays', 'Holidays', 'star']] },
@@ -321,7 +321,7 @@
         var d = x[0], inv = x[1];
         if (!d.ok) return fail(d);
         var c = d.customer, det = d.details || {}, pid = enc(p.id);
-        var quick = [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip'], ['assess', 'Risk checks', 'gauge'], ['visit', 'Record a visit', 'plus']]
+        var quick = [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip']]
           .map(function (q) { return '<a class="gotile sm" href="#/' + q[0] + '?p=' + pid + '"><span class="gt-i">' + icon(q[2]) + '</span><span class="gt-t"><b>' + q[1] + '</b></span>' + icon('arrow') + '</a>'; }).join('');
         var ro = function (l, v) { return '<div class="rof"><dt>' + e(l) + '</dt><dd>' + (v ? e(v) : '<span class="muted">Not given</span>') + '</dd></div>'; };
         var fam = d.links.filter(function (l) { return l.kind === 'family'; }), nur = d.links.filter(function (l) { return l.kind === 'caregiver'; });

@@ -298,13 +298,10 @@ button.node,a.node{border:0;padding:0;font:inherit;color:inherit;cursor:pointer;
 .n-iq b{font-family:var(--sans);font-weight:600;letter-spacing:-.01em}
 .node:focus-visible{outline:2.5px solid var(--teal);outline-offset:4px}
 
-.float-card{color:inherit;text-decoration:none;cursor:pointer;transition:box-shadow .4s var(--smooth),background .4s}
-.float-card:hover{background:#fff;box-shadow:0 26px 50px -22px rgba(19,48,74,.5)}
+/* hero care card is information only: not a link, no hover, never catches clicks meant for anything under it */
+.float-card{color:inherit;cursor:default;pointer-events:none;user-select:none;-webkit-user-select:none}
 .fc-text{display:block;min-width:200px;transition:opacity .35s,transform .35s var(--smooth)}
 .fc-text.swap{opacity:0;transform:translateY(6px)}
-.fc-go{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:var(--teal-tint);color:var(--teal);margin-left:4px;transition:transform .35s var(--smooth),background .3s,color .3s}
-.fc-go svg{width:14px;height:14px}
-.float-card:hover .fc-go{transform:translateX(3px);background:var(--teal);color:#fff}
 @media (max-width:860px){.fc-text{min-width:0}}
 
 .foot-bottom .legal{display:flex;gap:18px}
@@ -840,3 +837,60 @@ main>section.cta{padding:clamp(28px,3.5vw,48px) 0 clamp(28px,3.5vw,48px)}
   .cta .band{grid-template-columns:1fr}
   .cta .band-photo{min-height:0;aspect-ratio:16/9}
 }
+
+/* header links stay on one line; tighter spacing on small laptops */
+@media (max-width:1240px) and (min-width:1061px){.menu{gap:0}.menu a{padding-left:9px;padding-right:9px}.menu>li>a::after{left:9px;right:9px}}
+@media (max-width:1060px){.nav.open .drawer{max-height:calc(100dvh - 70px);overflow-y:auto;overscroll-behavior:contain}}
+.menu a{white-space:nowrap}
+
+/* =================== Ecosystem orbit (30 Oct): KareIQ stays in the centre; KareNest, Kare@Home and
+   KareWellness turn slowly around it on one ring, always upright. Hovering or focusing the diagram
+   pauses it so a brand is easy to click; reduced motion shows it still. =================== */
+.eco-orbit{aspect-ratio:auto;max-width:520px}
+.eco-stage{position:relative;width:100%;aspect-ratio:1;container-type:inline-size}
+.eco-orbit .eco-glow{inset:8%}
+.eco-orbit .orbit{position:absolute;inset:0;animation:orbitSpin 72s linear infinite}
+.eco-orbit .links{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.eco-orbit .links .ring,.eco-orbit .links .spoke{fill:none;stroke-width:.35;opacity:.75}
+.eco-orbit .links .flow{stroke-width:.45;stroke-dasharray:.8 1.8;animation:orbFlow 1.6s linear infinite;opacity:.6}
+.eco-orbit .links .comet{fill:none;stroke-width:1.1;stroke-linecap:round;stroke-dasharray:2.5 97.5;stroke-dashoffset:100;animation:comet 6s linear infinite}
+.eco-orbit .links .comet.c2{animation-delay:-3s}
+@keyframes orbFlow{to{stroke-dashoffset:-2.6}}
+@keyframes orbitSpin{to{transform:rotate(360deg)}}
+.eco-orbit .sat{position:absolute;width:25%;aspect-ratio:1;transform:translate(-50%,-50%)}
+.eco-orbit .s-well{left:50%;top:14%}
+.eco-orbit .s-home{left:81.18%;top:68%}
+.eco-orbit .s-nest{left:18.82%;top:68%}
+.eco-orbit .sat-in{width:100%;height:100%;animation:orbitSpin 72s linear infinite reverse}
+.eco-orbit .node{position:relative;left:auto;top:auto;width:100%;height:100%;transform:none;padding:6%}
+.eco-orbit .node:hover{transform:scale(1.06)}
+.eco-orbit .n-iq{position:absolute;left:50%;top:50%;width:27%;height:auto;aspect-ratio:1;transform:translate(-50%,-50%);z-index:2;padding:0}
+.eco-orbit .n-iq:hover{transform:translate(-50%,-50%) scale(1.05)}
+.eco-orbit .node b{font-size:clamp(10px,3.1cqw,17px)}
+.eco-orbit .node small{font-size:clamp(7.5px,1.85cqw,10px);line-height:1.2}
+.eco-orbit .n-well{--rb:linear-gradient(135deg,#11998e,#3b82c4 50%,#e4609e)}
+.eco-orbit .n-well .kw-mark{width:30%;height:auto}
+.eco-orbit .n-well b{background:linear-gradient(100deg,#0b7d74,#3b6fb0 55%,#c0508f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eco-orbit:hover .orbit,.eco-orbit:hover .sat-in,.eco-orbit:focus-within .orbit,.eco-orbit:focus-within .sat-in,.offscreen .eco-orbit .orbit,.offscreen .eco-orbit .sat-in{animation-play-state:paused}
+.eco-orbit .eco-cap{position:relative;bottom:auto;margin-top:6px}
+@media (max-width:640px){.eco-orbit{aspect-ratio:auto}.eco-orbit .node small{display:block}.eco-orbit .eco-cap{bottom:auto;margin-top:2px}}
+@media (max-width:420px){.eco-orbit .node small{display:none}}
+@media (prefers-reduced-motion:reduce){.eco-orbit .orbit,.eco-orbit .sat-in,.eco-orbit .links .flow,.eco-orbit .links .comet{animation:none}.eco-orbit .links .comet{display:none}}
+
+
+/* =================== Ecosystem cards (30 Oct): KareWellness beside Kare@Home and KareNest =================== */
+.card.well{background:linear-gradient(160deg,#f5f9fd,#f4f0fb 60%,#fcf2f7);--b:linear-gradient(140deg,#cfe3ef,#e4daf6 55%,#f5d6e6);--sh:rgba(59,130,196,.42);--acc:#3b6fb0}
+.card.well .brand h3{background:linear-gradient(90deg,#0b7d74,#3b6fb0 55%,#c0508f);-webkit-background-clip:text;background-clip:text;color:transparent}
+.card.well .brand .kw-mark{width:50px;height:50px;object-fit:contain}
+.card.well .chips li{color:#3b6fb0;background:#eef3fb;border-color:#dfe7f6}
+/* three cards side by side on wide screens (photo on top); one per row below that, as before */
+@media (min-width:1180px){
+  .cards.three{grid-template-columns:repeat(3,minmax(0,1fr));gap:22px}
+  .cards.three .card{grid-template-columns:1fr;gap:18px}
+  .cards.three .card-photo{order:-1;min-height:0;aspect-ratio:16/10}
+  .cards.three .card{grid-template-rows:auto 1fr;align-items:stretch}
+  .cards.three .card-body{padding:2px 6px 6px;justify-content:flex-start;align-self:stretch}
+  .cards.three .chips{flex-direction:row;flex-wrap:wrap}
+  .cards.three .brand h3.brand-logo img{height:52px}
+}
+@media (max-width:1179px){.cards.three{grid-template-columns:1fr}}

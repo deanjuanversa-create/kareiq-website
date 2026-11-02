@@ -1,13 +1,15 @@
-/* Where the three websites live. KareIQ is the parent; Kare@Home and KareNest are its brands.
+/* Where the websites live. KareIQ is the parent; Kare@Home, KareNest and KareWellness are its brands.
    When the domains are ready, change only these three lines, e.g.
      kareiq:   'https://kareiq.co.in/',
      karehome: 'https://karehome.co.in/',
      karenest: 'https://karenest.co.in/'
-   Every link marked data-site="kareiq|karehome|karenest" on any page follows these values. */
+   Every link marked data-site="kareiq|karehome|karenest|karewellness" on any page follows these values. */
 window.KARE_SITES = {
   kareiq:   /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/' : 'https://kareiq.co.in/',
   karehome: /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/kare-at-home' : 'https://karehome.co.in/',
-  karenest: 'https://karenest.co.in/'
+  karenest: 'https://karenest.co.in/',
+  // KareWellness is its own website (tools/karewellness/build.js); /karewellness when run locally
+  karewellness: /^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '/karewellness/' : 'https://karewellness.co.in/'
 };
 (function () {
   var S = window.KARE_SITES;
@@ -26,10 +28,11 @@ window.KARE_SITES = {
   });
 })();
 
-/* My KareIQ: the app where families, caregivers and the office team sign in (one sign-in for
-   Kare@Home and KareNest). It runs on the API server. If you give it its own address later
-   (e.g. https://app.karenest.co.in), change only this line. */
-window.KARE_APP = (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) ? '' : 'https://kareiq-api.onrender.com') + '/app/';
+/* The family dashboard (sign-in, choosing a plan) is not part of this website package.
+   Every "Sign in", package and "Book a Service" button sends visitors to this address, adding
+   #/signin?brand=... or #/plans?brand=...&plan=...&months=... so the dashboard can continue.
+   Change only this line to your dashboard's address, e.g. 'https://app.kareiq.co.in/'. */
+window.KARE_APP = '/app/';
 // Link to "create your account" for a booking reference, used by the booking success screens
 window.KareAppStart = function (ref, brand) { return window.KARE_APP + '#/start?ref=' + encodeURIComponent(ref || '') + (brand ? '&brand=' + brand : ''); };
 (function () {

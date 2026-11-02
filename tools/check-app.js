@@ -150,7 +150,7 @@ function client() {
   ok(nus.data.signedIn && nus.data.products.length === 0, 'new account has no plan yet');
   ok((await client().call('POST', '/api/app/signup', { name: 'X Y', phone: '9844455566', password: 'another-pass-1' })).data.errors.phone, 'same mobile number cannot sign up twice');
   const opts = await nu.call('GET', '/api/app/plans/options');
-  ok(opts.data.products.length === 2 && opts.data.products[0].plans.some((x) => x.price), 'plan choices with prices');
+  ok(opts.data.products.length === 2 && opts.data.products[0].plans.some((x) => x.priceText), 'plan choices with prices');
   const pr = await nu.call('POST', '/api/app/plans/request', { product: 'karenest', planId: 'kareplus', personName: 'Usha Raj', relation: 'Mother', note: 'From January' });
   ok(pr.status === 201, 'family chooses a KareNest plan in the app');
   const nus2 = await nu.refresh();

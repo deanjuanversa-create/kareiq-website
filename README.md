@@ -1,13 +1,20 @@
-# KareIQ + Kare@Home website
+# KareIQ websites and dashboard
 
-Two websites and one small backend in a single project:
+Four websites, the KareIQ dashboard and one small backend in a single project:
 
 | Page | Address |
 |---|---|
 | KareIQ (parent company) | `http://localhost:3000/` |
 | Kare@Home (home care) | `http://localhost:3000/kare-at-home` |
-| Admin: bookings and enquiries | `http://localhost:3000/admin` |
+| KareNest | `http://localhost:3000/karenest` |
+| KareWellness | `http://localhost:3000/karewellness` |
+| Dashboard: families, nurses and the office | `http://localhost:3000/app` |
+| Admin: website text and prices | `http://localhost:3000/admin` |
 | Privacy Policy / Terms | `/privacy`, `/terms` |
+
+> The four websites (KareIQ, Kare@Home, KareNest, KareWellness) hand visitors over to the
+> dashboard at `/app` (see "Connecting your dashboard"). Families, nurses and the office each
+> get their own interface there.
 
 ## Run it
 
@@ -30,7 +37,7 @@ Open http://localhost:3000 in your browser.
 ## What the backend does
 
 - **Kare@Home "Book a Service"** (header, hero, every service tile, every package button) opens a 2-step form. It is sent to `POST /api/bookings`, checked on the server, saved, and the visitor sees a reference like `KH-7F3K2Q`.
-- **KareIQ "Talk to Our Team" / "Get in Touch" / "Let's Talk" / KareNest** open the enquiry form, sent to `POST /api/enquiries` (reference like `KQ-DBFEWW`).
+- **KareIQ "Get in Touch" / "Let's Talk" / KareNest / KareWellness** open the enquiry form, sent to `POST /api/enquiries` (reference like `KQ-DBFEWW`).
 - **Admin page** (`/admin`, sign in with the `ADMIN_PASSWORD` from `.env`): see every booking and enquiry, call or WhatsApp the person in one tap, set status (New, Contacted, Scheduled, Closed), add internal notes, search, and export to CSV for Excel.
 - **Spam and abuse protection**: hidden honeypot field, 8 submissions per device per 10 minutes, 20 KB request limit, strict security headers.
 - **Storage**: `data/bookings.json` and `data/enquiries.json`. Back up the `data` folder.
@@ -44,7 +51,7 @@ Open `/admin`. You'll see the sign-in page; enter the `ADMIN_PASSWORD` from your
 - "That password is not right": the password must match the `ADMIN_PASSWORD=` line exactly. After editing `.env`, restart the server.
 - After 8 wrong tries from one device, sign-in pauses for 10 minutes.
 
-- **Enquiries and bookings** have moved to the office app (`/app`, Lead management), where each one has an owner, a status and a history. The link in the side menu goes there.
+- **Enquiries, bookings and Bystander requests** are handled in the dashboard (`/app`, Office ▸ Lead management), where each one has an owner, a status and a history. The link in the side menu goes there.
 - **Website content**: edit and publish, with no code changes needed:
   - Kare@Home pricing: price per month and billed amount for every payment plan, original price, "Launch offer" tag, which package is "Most popular", and each package's "What's included" list
   - savings % shown for each payment plan, the pricing notes, the Customised plan card
@@ -66,6 +73,48 @@ npm install                 # installs nodemailer (only needed for email)
 ```
 
 Then fill the `SMTP_*` and `NOTIFY_EMAIL` lines in `.env` and restart. For Gmail, create an App Password and use `smtp.gmail.com`, port `587`.
+
+## KareWellness, Bystander and the free day pass (30 Oct 2026)
+
+- **KareWellness is its own website** (`public/karewellness/`, served at `/karewellness` here, its own domain when deployed: `karewellness.co.in` is assumed in `js/sites.js`). Pages: home, **KareBalance** (`/karebalance`) and **KareMind** (`/karemind`) with every package, price, inclusion, exclusion and the terms. **Book a Service** opens your family dashboard (see Connecting your dashboard) with the chosen package. KareIQ links to it from Our Care Ecosystem; KareNest and Kare@Home show short introductions with **Know More** buttons.
+- **Bystander** (Half Day 4 h ₹799, Full Day 8 h ₹1,299, Round the Clock 24 h ₹2,499) is on **KareIQ** (`/bystander`) and **Kare@Home** (`/kare-at-home/bystander`) only, under Our Packages. **Book Now** opens a booking form on the page (no sign-in): option, date and start time, the customer's and the patient's details, location and full address, notes. Requests appear among the bookings in the admin page with a reference like `BY-7F3K2Q`.
+- **KareNest free day pass**: the "Come Experience KareNest. Your First Day Is Free!" section on the KareNest home page; **Book Your Free Day Pass** (and the header's Plan a Visit) opens the visit form.
+- Wording and prices for KareBalance, KareMind and Bystander live in **one file**: `tools/shared/wellness.js`. After changing it, rebuild:
+
+```bash
+node tools/karewellness/build.js   # the KareWellness website
+node tools/kareiq/build.js         # KareIQ /bystander (header and footer come from public/index.html)
+node tools/karenest/build.js
+node tools/karehome/build.js
+```
+
+- To deploy KareWellness on its own: `node tools/karewellness/build.js --standalone ../karewellness-only` (a ready Vercel project, like KareNest's). Add its domain to `ALLOWED_ORIGINS` on the server so its enquiry form can send.
+- Old addresses (`/karenest/karebalance…`, `/karenest/karemind…`, `/kare-at-home/karebalance`, `/karewellness#karebalance`) open the matching KareWellness page.
+
+## Connecting your dashboard
+
+Every **Sign in** link, every package button ("Choose HomeStart", "Enquire About KarePlus") and every
+KareWellness **Book a Service** button sends visitors to one address, set in one line of
+`public/js/sites.js` (and `tools/karenest/standalone/sites.js` for the separate KareNest site):
+
+```js
+window.KARE_APP = '/app/';   // change to your dashboard, e.g. 'https://app.kareiq.co.in/'
+```
+
+The websites add what the visitor chose to the end of that address, so your dashboard can continue:
+
+| Visitor clicks | Opens |
+|---|---|
+| Sign in (Kare@Home) | `KARE_APP#/signin?brand=karehome` (`karenest`, or no brand on KareIQ) |
+| A package, e.g. HomePlus on the 12-month plan | `KARE_APP#/plans?brand=karehome&plan=homeplus&months=12` |
+| A KareNest package | `KARE_APP#/plans?brand=karenest&plan=kareplus&months=3` |
+| KareWellness Book a Service | `KARE_APP#/plans?brand=karehome&plan=kb-plus` (KareBalance) or `brand=karenest&plan=km-base` (KareMind); `KARE_APP#/plans` from the header |
+| "Create your account" after a website booking | `KARE_APP#/start?ref=KH-7F3K2Q&brand=karehome` |
+
+Package ids are listed in `src/catalog.js` and `tools/shared/wellness.js`. Bookings, enquiries and
+Bystander requests are saved by this server and handled in the dashboard (Office ▸ Lead management).
+`KARE_APP` is `/app/`: the dashboard in this project. On the live sites, `vercel.json` and the
+standalone builders forward `/app` to the Render server, where the dashboard runs.
 
 ## The KareIQ app (My KareIQ, at `/app`)
 
@@ -124,10 +173,14 @@ The sign-in pages (KareNest `/sign-in` and the app) show "Continue with Google" 
 
 How it links accounts: a Google/Facebook login is matched to an existing account with the same (provider-verified) email; otherwise a new family account is created, as with "Create an account". Checks: `node tools/check-oauth.js` runs the whole flow against fake providers.
 
+
+
 ## The websites are built from small source files
 
 - **KareNest** (multi-page): `node tools/karenest/build.js` writes `public/karenest/*.html` from `tools/karenest/` (`layout.js` header/footer/widgets, `pages.js` page content, `data.js` packages and prices). Add `--standalone ../karenest-website` to also write the copy deployed to karenest.co.in. Styles and behaviour are in `public/karenest/site.css` and `app.js`.
-- **Kare@Home** (multi-page): `node tools/karehome/build.js` builds `/kare-at-home` (home with About Us, Our Services and Contact), `/kare-at-home/packages` and `/kare-at-home/karebalance` from `tools/karehome/source.html` (the Kare@Home content).
+- **Kare@Home** (multi-page): `node tools/karehome/build.js` builds `/kare-at-home` (home with About Us, Our Services and Contact), `/kare-at-home/packages`, `/kare-at-home/bystander` and `/kare-at-home/faq` from `tools/karehome/source.html` (the Kare@Home content).
+- **KareWellness**: `node tools/karewellness/build.js` (add `--standalone ../karewellness-website` for its own domain). **KareIQ Bystander and FAQ pages**: `node tools/kareiq/build.js`.
+- **FAQs**: the questions for KareIQ, Kare@Home and KareNest are in `tools/shared/faq.js`. Change them there, then run the three builders above.
 - Change content in those source files, rebuild, then deploy. Do not edit the generated `.html` files directly.
 
 ## Folder layout
@@ -142,14 +195,18 @@ kareiq-website/
 │   ├── validate.js      ← form checks (Indian mobile numbers, dates, consent…)
 │   ├── db.js            ← storage: data folder locally, Upstash Redis on Vercel
 │   ├── store.js         ← bookings and enquiries
-│   └── notify.js        ← optional email alerts
+│   ├── notify.js        ← optional email alerts
+│   ├── docs.js          ← dashboard storage (data folder locally, MongoDB live)
+│   └── app/             ← dashboard server: sign-in, permissions, plans, readings, scheduler,
+│                          nurse portal (nursing.js), office (office.js), finance, staff
+├── app/                 ← the dashboard pages: app.js (families), nurse.js, office.js (/app)
+├── ocr/                 ← reads report dates from uploaded medical reports (Docker on Render)
 ├── admin/               ← website editor (password protected)
-├── app/                 ← the KareIQ app: families, caregivers, office (/app)
-├── src/app/             ← app sign-in, permissions, plans, readings
 ├── public/              ← everything visitors see
 │   ├── index.html       ← KareIQ
 │   ├── kare-at-home.html← Kare@Home home page (+ kare-at-home/ for its other pages)
 │   ├── karenest/        ← KareNest pages (generated by tools/karenest/build.js)
+│   ├── karewellness/    ← KareWellness pages (generated by tools/karewellness/build.js)
 │   ├── privacy.html, terms.html, 404.html
 │   ├── css/  kareiq.css, karehome.css, page.css
 │   ├── js/   forms.js (shared), kareiq.js, karehome.js
@@ -252,7 +309,8 @@ Each role has its own interface. Families keep the pages above. Nurse and office
   emergency contacts, doctors, upcoming visits). Phone numbers show as `+91 XXXXX 12345` until **Access contact information**.
 - **Upload documents**: submit a report for an assigned customer. After submitting, the nurse gets a receipt only: no opening,
   downloading, replacing or deleting.
-- Nurses do **not** see vitals history, risk scores, risk checks, medical records, invoices or packages. The server refuses those
+- **Risk checks** and **Record a visit** (readings) are done by the nurse, for their assigned customers only. The office does neither.
+- Nurses do **not** see vitals history, earlier risk scores, medical records, invoices or packages. The server refuses those
   requests (403/404) whatever the screen shows.
 
 ### Contact access (masked numbers)
@@ -278,7 +336,7 @@ reason, approval, result). The numbers themselves are never written into the rec
 ### Office interface (admin logins)
 Overview (customer and revenue analytics), Lead management (overview, enquiry database, assign to a member), Customer management
 (directory with customer IDs, filters and pages; consolidated profile, viewed as the office, never by signing in as the customer),
-Customer care (the existing vitals, risk trends, records, package, client information, risk checks and visit pages), Financials
+Customer care (vitals, risk trends, records, package and client information; risk checks and visits are the nurses'), Financials
 (invoices with PDF download, payment due, recording payments and refunds), Employees (overview, KYC and details with length of
 service), Nurse scheduler (visit board, nurses and hours, holidays), Contact access audit, and Settings (requests and orders,
 people and plans, logins, activity, website text and prices).
@@ -294,3 +352,26 @@ npm run check:roles                         # nurse, office and role walls
 npm run check:trends
 npm run check:app
 ```
+
+### Bystander in the dashboard
+Families see **Bystander** under Other packages: Half Day (4 hours), Full Day (8 hours) and Round the Clock (24 hours) at the
+website prices, which come from `tools/shared/wellness.js`, plus long-term care agreed with the team. Buying one works like any
+fixed-price package: the office checks the payment, it shows under My package next to the main package, with an invoice. The
+office arranges the caregiver and timing. Bystander requests from the websites appear in Lead management. The prices make no GST
+claim, because the website doesn't say either way.
+
+### Risk trends (families)
+Laid out like Vitals: a summary card per risk check on the left (latest score in its category colour, band, date, trend), and on
+the right the period, Download trends, a button per check and the chosen check's history chart and facts.
+
+### KareWellness intro
+KareWellness has an intro like the other three sites (`public/karewellness/loader.css` and `loader.js`). It plays on a fresh
+visit or a reload, never between pages or with reduced motion, and can be skipped. The footer logo has a hover animation.
+
+### FAQ pages
+Each website has its FAQs on a page of its own (they used to be a section of the home page). The pages are **/faq** on KareIQ,
+**/kare-at-home/faq** and **/karenest/faq** here, and **/faq** on each site's own domain. Each is linked from the menu, the phone menu and
+the footer. The page has a search box, which filters the questions as you type, and topic links that stay in view beside the
+questions. `/faq#q-3` opens question 3. Old links to `#faq` on a home page open the FAQ page (`public/js/faq-page.js`, styles in
+`public/css/faq.css` and `public/karenest/site.css`). KareWellness has no FAQ content yet; add a `karewellness` entry to
+`tools/shared/faq.js` and a page in `tools/karewellness/build.js` when there is one.

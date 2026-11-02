@@ -38,27 +38,25 @@ const DEFAULTS = {
   },
   pricing: {
     annualNote: 'All our packages are designed for annual duration. Choose the payment plan that works best for you.',
-    gstNote: 'All prices are inclusive of all GST.',
-    savings: { 1: 0, 3: 5, 6: 7, 12: 10 },
+    gstNote: 'Inclusive of all',
+    savings: { 1: 0, 3: 0, 6: 0, 12: 0 }, // no discounts are shown (30 Oct 2026)
     packages: [
       {
-        key: 'homestart', name: 'HomeStart', mrp: 3499, offer: true, popular: false,
-        prices: { 1: [2599, 2599], 3: [2386, 7159], 6: [2333, 13999], 12: [2291, 27499] },
+        key: 'homestart', name: 'HomeStart', mrp: 4499, offer: true, popular: false,
+        prices: { 1: [4499, 4499], 3: [4139, 12419], 6: [4049, 24299], 12: [3958, 47499] },
         includes: [
           'Weekly home visit by a nurse',
           '4 free physiotherapy or bystander services per year',
-          '10% discount on all add-on services',
           'Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹1,000 per day',
           ...COMMON
         ]
       },
       {
-        key: 'homeplus', name: 'HomePlus', mrp: 6999, offer: true, popular: true,
-        prices: { 1: [4999, 4999], 3: [4586, 13759], 6: [4499, 26999], 12: [4408, 52899] },
+        key: 'homeplus', name: 'HomePlus', mrp: 6499, offer: true, popular: true,
+        prices: { 1: [6499, 6499], 3: [5979, 17939], 6: [5833, 34999], 12: [5719, 68629] },
         includes: [
           '3 home visits a week by a nurse',
           '6 free physiotherapy or bystander services per year',
-          '15% discount on all add-on services',
           'Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹2,000 per day',
           'Pause option available for up to 2 weeks per year',
           ...COMMON,
@@ -66,12 +64,11 @@ const DEFAULTS = {
         ]
       },
       {
-        key: 'homeelite', name: 'HomeElite', mrp: 12999, offer: true, popular: false,
-        prices: { 1: [9999, 9999], 3: [9183, 27549], 6: [8999, 53999], 12: [8816, 105799] },
+        key: 'homeelite', name: 'HomeElite', mrp: 11999, offer: true, popular: false,
+        prices: { 1: [11999, 11999], 3: [11039, 33119], 6: [10798, 64789], 12: [10558, 126699] },
         includes: [
           'Daily home visit by a nurse',
           '8 free physiotherapy or bystander services per year',
-          '20% discount on all add-on services',
           'Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹3,000 per day',
           'Pause option available for up to 4 weeks per year',
           ...COMMON,
@@ -88,13 +85,16 @@ const DEFAULTS = {
   // (KarePlus, KarePremium, Thrive) can be paid for 1, 3, 6 or 12 months with these savings.
   nest: {
     prices: Object.fromEntries(NEST.packages.map((p) => [p.id, p.price])),
-    savings: { 1: 0, 3: 5, 6: 7, 12: 10 }
+    savings: { 1: 0, 3: 0, 6: 0, 12: 0 } // no discounts on KareNest packages (30 Oct 2026)
   }
 };
 const NEST_IDS = NEST.packages.map((p) => p.id);
 
 const PLANS = ['1', '3', '6', '12'];
 const PACKAGE_KEYS = DEFAULTS.pricing.packages.map((p) => p.key);
+
+// billed totals (3, 6, 12 months) published until 2 Nov 2026
+const OLD_KH = { homestart: [7159, 13999, 27499], homeplus: [13759, 26999, 52899], homeelite: [27549, 53999, 105799] };
 
 let cache = null;
 
@@ -118,13 +118,25 @@ function fromSaved(saved) {
   const c = merge(DEFAULTS, saved);
   // prices are now shown inclusive of all GST: replace the old default note if it was never changed
   if (c.contact && c.contact.instagram === 'kareiq') c.contact.instagram = 'ikareiq'; // the KareIQ account is @ikareiq
-  if (c.pricing && /^All prices are exclusive of GST\.?$/i.test(c.pricing.gstNote || '')) c.pricing.gstNote = DEFAULTS.pricing.gstNote;
+  if (c.pricing && /^All prices are (ex|in)clusive of (all )?GST\.?$/i.test(c.pricing.gstNote || '')) c.pricing.gstNote = DEFAULTS.pricing.gstNote; // 30 Oct: "Inclusive of all"
+  // KareBalance prices approved on 30 Oct and 2 Nov 2026 replace the old published ones if they were never changed
+  const OLD_KB = { 'kb-base': [7999], 'kb-plus': [39999, 44999], 'kb-premium': [90000, 99000] };
+  if (c.nest && c.nest.prices) for (const id of Object.keys(OLD_KB)) if (OLD_KB[id].includes(Number(c.nest.prices[id]))) c.nest.prices[id] = DEFAULTS.nest.prices[id];
   // packages are matched by key so a saved copy can never drop or rename one
   c.pricing.packages = PACKAGE_KEYS.map((key) => {
     const def = DEFAULTS.pricing.packages.find((p) => p.key === key);
     const s = (saved.pricing && Array.isArray(saved.pricing.packages) && saved.pricing.packages.find((p) => p && p.key === key)) || {};
-    return merge(def, s);
+    const p = merge(def, s);
+    // Kare@Home prices approved on 2 Nov 2026 replace the old published ones if they were never changed
+    const old = OLD_KH[key], tot = (m) => p.prices && p.prices[m] && Number(p.prices[m][1]);
+    if (old && tot(3) === old[0] && tot(6) === old[1] && tot(12) === old[2]) { p.prices = clone(def.prices); p.mrp = def.mrp; }
+    return p;
   });
+  // 30 Oct 2026: no discounts on Kare@Home or KareNest packages: no payment-plan savings (KareNest
+  // monthly packages cost the monthly price for every month) and no add-on discount lines
+  c.pricing.savings = clone(DEFAULTS.pricing.savings);
+  c.nest.savings = clone(DEFAULTS.nest.savings);
+  c.pricing.packages.forEach((p) => { p.includes = (p.includes || []).filter((line) => !/discount on (all )?add-on/i.test(line)); });
   c.updatedAt = saved.updatedAt || null;
   return c;
 }

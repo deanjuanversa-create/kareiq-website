@@ -557,9 +557,9 @@
     document.querySelector('.main').prepend(b);
   }).catch(() => {});
 
-  // Bookings, enquiries and their overview moved to the office app (Lead management), where they
-  // have owners, statuses and history. This panel keeps the website text and prices.
   (async function start() {
+    // Bookings, enquiries and Bystander requests are handled in the office dashboard (Lead management),
+    // where they have owners, statuses and history. This panel keeps the website text and prices.
     try { await loadContent(); }
     catch (e) { toast('Could not load the website content. Check the server is running.'); }
     if (['overview', 'bookings', 'enquiries'].includes(location.hash.slice(1))) { location.replace('/app/#/office/leads/' + (location.hash === '#overview' ? 'overview' : 'list')); return; }

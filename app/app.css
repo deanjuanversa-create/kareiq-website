@@ -1431,3 +1431,45 @@ a.ocust:hover b{text-decoration:underline}
 @media (max-width:640px){.cal-week .wk{display:none}.cal-week .wk-agenda{display:grid}}
 .nch{font-size:1.1rem!important}
 .onm{font-size:1.05rem!important;font-family:var(--f-body)!important;font-weight:700!important;margin:0}
+
+/* ================================================================ Risk trends in the Vitals layout (2 Nov 2026)
+   Summary cards on the left (like the vitals cards), the chosen check's history on the right. */
+.rcard .vd b{font-weight:650}
+.rcard .vd b.good{color:var(--c-good)}.rcard .vd b.ok{color:#8a6a00}.rcard .vd b.warn{color:#a24f00}.rcard .vd b.bad{color:var(--c-bad)}
+.rcard .vr{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px}
+.rcard .vv{font-size:1.2rem}
+.rpick{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.rpick .rbtn{display:inline-flex;align-items:center;gap:8px;grid-template-columns:none;min-height:44px;padding:6px 12px 6px 8px;border:3px solid var(--rc);border-radius:10px;background:#fff;text-align:left;cursor:pointer;font:inherit;color:var(--ink)}
+.rpick .rbtn .rbi{width:30px;height:30px}
+.rpick .rbtn .rbi svg{width:16px;height:16px}
+.rpick .rbtn .rbt{display:grid;gap:0;padding-right:0}
+.rpick .rbtn .rbt b{font-size:.9rem;line-height:1.2}
+.rpick .rbtn .rbt small{font-size:.74rem;color:var(--muted)}
+.rpick .rbtn .tchip{grid-column:auto;margin:0;font-size:.74rem}
+.rpick .rbtn[aria-pressed="true"]{background:var(--rs);box-shadow:0 0 0 2px #fff,0 0 0 4px var(--rc);transform:translateY(-3px)}
+.rpick .rbtn[aria-pressed="true"]::after{display:none}
+.rblock .rsum{border:0;padding:0;background:none;margin-bottom:10px}
+.rblock .rsum .rg{display:block;font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.rblock .rsum h3{font-size:1.3rem;font-family:var(--slab)!important;font-weight:500!important;margin:2px 0 0}
+.rblock .avgbar b{font-size:1.25rem}
+.rblock .rtx{margin:12px 0 0;font-size:.92rem}
+.rblock .rmean{margin-top:8px}
+.rblock .rhist{background:#fff;padding:4px 12px;margin-top:10px}
+.rblock .alldata .rhist{margin-top:0}
+@media (max-width:560px){.rpick .rbtn .tchip{display:none}.rpick .rbtn{padding:5px 10px 5px 6px}}
+@media (prefers-reduced-motion:reduce){.rpick .rbtn[aria-pressed="true"]{transform:none}}
+.rpick .rbtn{width:auto;max-width:100%;border-radius:999px;padding:4px 12px 4px 5px;min-height:44px;box-shadow:none}
+.rpick .rbtn .rbi{width:30px;height:30px;border-radius:50%}
+.rpick .rbtn .tchip{padding:1px 7px 1px 5px}
+.rpick .rbtn .tchip svg{width:13px;height:13px}
+.rpick .rbtn:hover{transform:translateY(-2px);box-shadow:0 8px 16px -12px rgba(20,40,60,.6)}
+.rpick .rbtn[aria-pressed="true"]{box-shadow:0 0 0 2px #fff,0 0 0 4px var(--rc),0 12px 20px -12px rgba(20,40,60,.55)}
+.vfacts.rfacts{margin:0 0 4px}
+.vfacts.rfacts>div{display:block}
+.vfacts.rfacts dd{display:flex;flex-wrap:wrap;align-items:center;gap:2px 8px;font-size:inherit}
+.vfacts.rfacts dd .muted.small{width:100%}
+@media (max-width:560px){.rblock .avgbar{grid-template-columns:1fr;gap:4px}.rblock .avgbar .ast,.rblock .avgbar .aspan{justify-self:start}}
+@media (prefers-reduced-motion:reduce){.rpick .rbtn,.rpick .rbtn:hover,.rpick .rbtn[aria-pressed="true"],.rpick .rbtn:active{transform:none;transition:none}}
+
+/* Other packages: the Bystander section (2 Nov 2026) */
+.pkbrand.bystander .pkb-mark{background:#e9f4ee;color:#1f7a4d}

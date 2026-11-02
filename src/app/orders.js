@@ -21,6 +21,9 @@ function runFor(pk, months, startDate, addMonths) {
   const len = String(pk.length || '').toLowerCase();
   const m = len.match(/(\d+)\s*month/);
   if (m) return { months: Number(m[1]), endDate: addMonths(startDate, Number(m[1])) };
+  // Bystander visits (for 4, 8 or 24 hours): that day; round the clock runs into the next day
+  const h = len.match(/(\d+)\s*hour/);
+  if (h) { if (Number(h[1]) < 24) return { months: null, endDate: startDate }; const d = new Date(startDate + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 1); return { months: null, endDate: d.toISOString().slice(0, 10) }; }
   if (/day/.test(len)) return { months: null, endDate: startDate };
   if (/week/.test(len)) { const d = new Date(startDate + 'T12:00:00Z'); d.setUTCDate(d.getUTCDate() + 6); return { months: null, endDate: d.toISOString().slice(0, 10) }; }
   return { months: null, endDate: null }; // one-time packages have no end date

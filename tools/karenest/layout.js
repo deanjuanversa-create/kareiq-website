@@ -38,9 +38,11 @@ const ICONS = {
 const ico = (name, cls = 'ico', extra = '') => `<svg class="${cls}" viewBox="0 0 24 24" aria-hidden="true"${extra}>${ICONS[name]}</svg>`;
 const SPRITE = `<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>${Object.keys(ICONS).map((k) => `<symbol id="${k}" viewBox="0 0 24 24">${ICONS[k]}</symbol>`).join('')}</defs></svg>`;
 
-const VER = '20261029d';
+const VER = '20261102b';
 const SITE_HOST = 'https://karenest.co.in';
 const KAREIQ_URL = { embedded: '/', standalone: 'https://kareiq.co.in/' };
+// KareWellness (full KareBalance and KareMind programmes) is a website of its own
+const KAREWELLNESS_URL = { embedded: '/karewellness/', standalone: 'https://karewellness.co.in/' };
 
 // The main navigation. `x` parts are dropped between 1220px and 1500px so the full menu fits
 // on one line on laptops; links carry an aria-label with the full name.
@@ -50,6 +52,7 @@ const NAV = [
   { key: 'life', href: '/life', label: 'Life at KareNest', parts: [['Life'], [' at KareNest', 'x']] },
   { key: 'packages', label: 'Our Packages', parts: [['Our ', 'x'], ['Packages']], dropdown: true },
   { key: 'families', href: '/families', label: 'For Families', parts: [['For ', 'x'], ['Families']] },
+  { key: 'faq', href: '/faq', label: 'FAQs' },
   { key: 'contact', href: '/contact', label: 'Contact Us', parts: [['Contact'], [' Us', 'x']] }
 ];
 
@@ -59,6 +62,9 @@ function make(P, mode) {
   // ?v= so browsers fetch replaced photos straight away (photos are cached for a week)
   const img = (f) => `${P}/images/${f}?v=${VER}`;
   const kareiq = KAREIQ_URL[mode];
+  // a link to the KareWellness website ('' = home, 'karebalance', 'karemind'): href works on its own;
+  // data-site lets js/sites.js point it at the KareWellness domain
+  const well = (page = '') => `href="${KAREWELLNESS_URL[mode]}${page}" data-site="karewellness"${page ? ` data-path="${page}"` : ''}`;
 
   function head(pg) {
     const canonical = mode === 'standalone' ? SITE_HOST + (pg.path === '/' ? '/' : pg.path) : '';
@@ -115,16 +121,14 @@ ${pg.kb ? `<link rel="stylesheet" href="${P}/karebalance.css?v=${VER}">\n` : ''}
   function packagesMenu(pg) {
     return `<div class="dd" id="dd-packages">
         <ul>
-          <li><a href="${u('/packages')}"${subCurrent(pg, 'packages')}>All packages<small>Compare every option and price</small></a></li>
-          <li class="sep" role="presentation"></li>
           <li><a href="${u('/live-with-us')}"${subCurrent(pg, 'live')}>Live With Us<small>KarePlus · KarePremium</small></a></li>
           <li><a href="${u('/visit-and-participate')}"${subCurrent(pg, 'visit')}>Visit &amp; Participate<small>Bloom · Flourish · Thrive</small></a></li>
           <li class="has-dd2">
-            <div class="dd-row"><a href="${u('/wellness')}"${subCurrent(pg, 'wellness')}>Wellness<small>KareBalance · KareMind</small></a><button class="dd2-btn" type="button" aria-expanded="false" aria-controls="dd-wellness" aria-label="Show wellness packages">${ico('right', '')}</button></div>
+            <div class="dd-row"><a ${well()}>Wellness<small>KareBalance · KareMind</small></a><button class="dd2-btn" type="button" aria-expanded="false" aria-controls="dd-wellness" aria-label="Show wellness packages">${ico('right', '')}</button></div>
             <div class="dd2" id="dd-wellness">
               <ul>
-                <li><a href="${u('/karebalance')}"${subCurrent(pg, 'karebalance')}>KareBalance<small>Fall prevention &amp; mobility</small></a></li>
-                <li><a href="${u('/karemind')}"${subCurrent(pg, 'karemind')}>KareMind<small>Mental wellness program</small></a></li>
+                <li><a ${well('karebalance')}>KareBalance<small>Fall prevention &amp; mobility</small></a></li>
+                <li><a ${well('karemind')}>KareMind<small>Mental wellness program</small></a></li>
               </ul>
             </div>
           </li>
@@ -144,7 +148,7 @@ ${pg.kb ? `<link rel="stylesheet" href="${P}/karebalance.css?v=${VER}">\n` : ''}
     const d = (key, href, label) => `<a href="${href}"${current(pg, key)}>${label}</a>`;
     const ds = (key, href, label) => `<a href="${href}"${subCurrent(pg, key)}>${label}</a>`;
     const pkgOpen = pg.nav === 'packages';
-    const wellOpen = ['wellness', 'karebalance', 'karemind'].includes(pg.sub);
+    const wellOpen = pg.sub === 'wellness';
     return `<a class="skip" href="#main">Skip to main content</a>
 ${SPRITE}
 <div class="progress" id="progress" aria-hidden="true"></div>
@@ -180,17 +184,17 @@ ${SPRITE}
   ${d('life', u('/life'), 'Life at KareNest')}
   <button class="acc-btn" type="button" aria-expanded="${pkgOpen}" aria-controls="m-packages">Our Packages${ico('chev', '')}</button>
   <div class="acc-panel" id="m-packages"${pkgOpen ? '' : ' hidden'}>
-    ${ds('packages', u('/packages'), 'All packages')}
     ${ds('live', u('/live-with-us'), 'Live With Us')}
     ${ds('visit', u('/visit-and-participate'), 'Visit &amp; Participate')}
     <button class="acc-btn" type="button" aria-expanded="${wellOpen}" aria-controls="m-wellness">Wellness${ico('chev', '')}</button>
     <div class="acc-panel" id="m-wellness"${wellOpen ? '' : ' hidden'}>
-      ${ds('wellness', u('/wellness'), 'Wellness overview')}
-      ${ds('karebalance', u('/karebalance'), 'KareBalance')}
-      ${ds('karemind', u('/karemind'), 'KareMind')}
+      <a ${well()}>KareWellness overview</a>
+      <a ${well('karebalance')}>KareBalance</a>
+      <a ${well('karemind')}>KareMind</a>
     </div>
   </div>
   ${d('families', u('/families'), 'For Families')}
+  ${d('faq', u('/faq'), 'FAQs')}
   ${d('contact', u('/contact'), 'Contact Us')}
   ${d('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}
   <div class="row"><a class="btn btn-primary" href="${WA_GROUP}" target="_blank" rel="noopener">${ico('ppl')}Join Our Community</a><a class="btn btn-ghost" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Plan a Visit</a></div>
@@ -209,8 +213,8 @@ ${SPRITE}
         <p class="tag">A community where ageing is embraced with health, dignity and happiness.</p>
         <div class="socials"><span class="socials-h">Follow us</span><div class="socials-row"><a class="soc wa" href="${WA_GROUP}" target="_blank" rel="noopener" aria-label="Join the KareNest WhatsApp community (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg></a><a class="soc ig" href="https://www.instagram.com/karenestbykareiq/" target="_blank" rel="noopener" aria-label="KareNest on Instagram (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="5" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="12" cy="12" r="4.1" fill="none" stroke="currentColor" stroke-width="1.9"/><circle cx="17.4" cy="6.6" r="1.25" fill="currentColor"/></svg></a><a class="soc fb" href="https://www.facebook.com/profile.php?id=61590756755250" target="_blank" rel="noopener" aria-label="KareNest on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M13.6 21v-7.6h2.6l.4-3h-3V8.5c0-.9.3-1.5 1.5-1.5h1.6V4.3c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H7.9v3h2.6V21h3.1Z"/></svg></a><a class="soc li" href="https://www.linkedin.com/company/109885415/" target="_blank" rel="noopener" aria-label="KareNest on LinkedIn (opens in a new tab)"><svg viewBox="0 0 24 24" aria-hidden="true" width="20" height="20"><path fill="currentColor" d="M6.9 8.9H3.8V20h3.1V8.9ZM5.35 4a1.8 1.8 0 1 0 0 3.6 1.8 1.8 0 0 0 0-3.6ZM20.2 13.6c0-3-1.6-4.9-4.2-4.9-1.5 0-2.5.8-2.9 1.6V8.9h-3V20h3.1v-5.8c0-1.5.6-2.6 2-2.6 1.3 0 1.9.9 1.9 2.6V20h3.1v-6.4Z"/></svg></a></div></div>
       </div>
-      <div><h2 class="h5">Explore</h2><ul>${f('about', u('/about'), 'About KareNest')}${f('life', u('/life'), 'Life at KareNest')}${f('activities', u('/activities'), 'Activities &amp; Wellness')}${f('families', u('/families'), 'For Families')}</ul></div>
-      <div><h2 class="h5">Packages</h2><ul>${f('packages', u('/packages'), 'Our Packages', 1)}${f('live', u('/live-with-us'), 'Live With Us', 1)}${f('visit', u('/visit-and-participate'), 'Visit &amp; Participate', 1)}${f('wellness', u('/wellness'), 'Wellness', 1)}${f('karebalance', u('/karebalance'), 'KareBalance', 1)}${f('karemind', u('/karemind'), 'KareMind', 1)}</ul></div>
+      <div><h2 class="h5">Explore</h2><ul>${f('about', u('/about'), 'About KareNest')}${f('life', u('/life'), 'Life at KareNest')}${f('activities', u('/activities'), 'Activities &amp; Wellness')}${f('families', u('/families'), 'For Families')}${f('faq', u('/faq'), 'FAQs')}</ul></div>
+      <div><h2 class="h5">Packages</h2><ul>${f('packages', u('/packages'), 'Our Packages', 1)}${f('live', u('/live-with-us'), 'Live With Us', 1)}${f('visit', u('/visit-and-participate'), 'Visit &amp; Participate', 1)}${f('wellness', u('/wellness'), 'Wellness', 1)}<li><a ${well('karebalance')}>KareBalance</a></li><li><a ${well('karemind')}>KareMind</a></li></ul></div>
       <div><h2 class="h5">Get involved</h2><ul><li><a href="${WA_GROUP}" target="_blank" rel="noopener">Join Our Community</a></li><li><a href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a></li>${f('contact', u('/contact'), 'Contact Us')}${f('signin', u('/sign-in'), 'Sign In').replace('<a ', '<a data-auth ')}</ul></div>
       <div><h2 class="h5">Visit us</h2><div class="contact"><span>Kochi, Kerala</span><a href="mailto:hello@karenest.in">hello@karenest.in</a><a href="${WA_GROUP}" target="_blank" rel="noopener">WhatsApp community</a><span>Mon to Sat · 9:30 AM – 6:00 PM</span></div></div>
     </div>
@@ -277,8 +281,8 @@ ${SPRITE}
 <dialog id="dlg" aria-labelledby="dlgTitle">
   <img loading="lazy" decoding="async" class="dlg-mascot" src="${img('head.webp')}" alt="" width="90" height="90" style="border-radius:50%;background:#fff;border:4px solid #fff;box-shadow:var(--shadow-sm)">
   <div id="dlgForm">
-    <div class="dlg-head"><div><h2 class="h3" id="dlgTitle">Plan a day visit</h2><p id="dlgSub">Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and our team will call to confirm.</p></div><button class="x" type="button" id="dlgX" aria-label="Close">×</button></div>
-    <form class="visit cform" id="visitForm" novalidate data-enquiry data-interest="karenest-visit" data-what="day visit">
+    <div class="dlg-head"><div><h2 class="h3" id="dlgTitle">Book your free day pass</h2><p id="dlgSub">Your first visit is complimentary. Spend a day with us, Monday to Saturday, 9:30 AM to 6:00 PM. Tell us when suits you and our team will call to confirm.</p></div><button class="x" type="button" id="dlgX" aria-label="Close">×</button></div>
+    <form class="visit cform" id="visitForm" novalidate data-enquiry data-interest="karenest-visit" data-what="free day pass">
       <p class="dlg-note">Looking at a visitor pass, living with us or a wellness programme? <a href="${u('/packages')}">See our packages</a> or <a href="${u('/contact')}#enquiry">send us an enquiry</a>.</p>
       <div class="field"><label for="fName">Your name</label><input id="fName" name="name" autocomplete="name" placeholder="e.g. Meera Nair" required aria-describedby="fNameErr"><span class="err" id="fNameErr" data-err="name"></span></div>
       <div class="row2">
@@ -333,13 +337,13 @@ ${footer(pg)}
 ${pg.lightbox ? LIGHTBOX + '\n' : ''}${WIDGETS}
 
 <script src="${sitesSrc}"></script>
-<script src="${P}/app.js?v=${VER}"></script>
+<script src="${P}/app.js?v=${VER}"></script>${pg.faq ? `\n<script src="${P}/faq-page.js?v=${VER}" defer></script>` : ''}
 </body>
 </html>
 `;
   }
 
-  return { u, home, img, ico, esc, page, kareiq };
+  return { u, home, img, ico, esc, page, kareiq, well, wellUrl: KAREWELLNESS_URL[mode] };
 }
 
 module.exports = { make, esc, ico, ICONS, VER, WA_GROUP };

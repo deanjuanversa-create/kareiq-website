@@ -1,14 +1,15 @@
 // KareNest packages: the single source for every package card, table and detail page.
 // Prices and wording come from the approved documents ("Karenest community.docx" for
-// resident living and visitor passes, "KareMind.docx" for KareMind) and, for KareBalance,
-// from the programme already published on the website. Change prices here, then rebuild:
+// resident living and visitor passes). KareBalance and KareMind live in tools/shared/wellness.js
+// (shown in full on the KareIQ KareWellness page; KareNest shows short introductions). Change prices here, then rebuild:
 //   node tools/karenest/build.js
 // The server keeps its own list of the same plan ids in src/catalog.js (KARENEST_PLANS)
 // so that an enquiry can only name a real package.
 
-const GST_LIVE = 'Inclusive of all GST and applicable service charges.';
-const GST_VISIT = 'All visitor prices are inclusive of all GST. Pass usage is subject to operating hours, scheduled activities, availability and capacity limits.';
-const KB_FINE = 'Note: Final pricing may vary based on assessment complexity, session frequency, home-visit requirements and service location. Clinical suitability should be established before beginning supervised training. KareBalance is a fall risk reduction and mobility support programme and does not guarantee the prevention of falls.';
+const GST_LIVE = 'Inclusive of all'; // 30 Oct 2026: pricing notes read "Inclusive of all"
+const GST_VISIT = 'Inclusive of all. Pass usage is subject to operating hours, scheduled activities, availability and capacity limits.';
+const W = require('../shared/wellness');
+const KB_FINE = 'Note: ' + W.KB_FINE;
 
 const NOT_INCLUDED = [
   'Hospitalization and inpatient hospital expenses',
@@ -98,104 +99,8 @@ const packages = [
     desc: 'For seniors who want to make KareNest part of their regular routine, with ongoing opportunities for wellness, activity and friendship.',
     cta: 'Choose Thrive'
   },
-  // ---------- KareBalance (from the existing website programme) ----------
-  {
-    id: 'kb-base', group: 'karebalance', slug: 'base', name: 'KareBalance Base', type: 'Assessment & Report',
-    tagline: 'Assessment & Report', price: 7999, unit: '', unitText: 'One-time fee', color: 'teal',
-    listTitle: "What's included",
-    includes: [
-      'Comprehensive fall risk assessment',
-      'Balance, strength and mobility testing',
-      'Review of fall history and relevant risk factors',
-      'Home safety recommendations',
-      'Personalised assessment report with next steps'
-    ],
-    best: 'Understanding individual fall risks and prevention needs.',
-    cta: 'Book Base'
-  },
-  {
-    id: 'kb-plus', group: 'karebalance', slug: 'plus', name: 'KareBalance Plus', type: 'Structured Training & Prevention',
-    tagline: 'Structured Training & Prevention', price: 39999, unit: '', unitText: '24 supervised training sessions', color: 'rose',
-    listTitle: "What's included",
-    includes: [
-      'Initial fall risk assessment',
-      '24 supervised training sessions',
-      'Progressive balance and strength exercises',
-      'Walking, turning and sit-to-stand practice',
-      'Home safety review',
-      'Progress monitoring and family report'
-    ],
-    best: 'Older adults with balance difficulties, reduced strength or a history of falls.',
-    cta: 'Book Plus'
-  },
-  {
-    id: 'kb-premium', group: 'karebalance', slug: 'premium', name: 'KareBalance Premium', type: 'Comprehensive Six-Month Support',
-    tagline: 'Comprehensive Six-Month Support', price: 90000, unit: '', unitText: 'Six-month programme', color: 'violet',
-    listTitle: "What's included",
-    includes: [
-      'Comprehensive initial assessment',
-      'Weekly supervised balance and strength training',
-      'Quarterly reassessments',
-      'Home visits and safety recommendations',
-      'Family coaching and caregiver guidance',
-      'Ongoing progress tracking and personalised programme adjustments'
-    ],
-    best: 'Older adults needing continued support to maintain mobility, confidence and independence.',
-    cta: 'Book Premium'
-  },
-  // ---------- KareMind (KareMind.docx) ----------
-  {
-    id: 'km-base', group: 'karemind', slug: 'base', name: 'KareMind Base', type: 'Mental Wellness Assessment',
-    tagline: 'Mental Wellness Assessment', price: 8999, unit: '', unitText: 'One-time package', color: 'teal',
-    flag: 'Recommended starting program',
-    desc: 'For people who want to understand their emotional wellbeing and identify practical next steps.',
-    listTitle: "What's included",
-    includes: [
-      'Structured mental wellness and lifestyle assessment.',
-      'Discussion of stress, mood, sleep, social connection and daily functioning.',
-      'Appropriate validated screening questionnaires, administered by trained professionals.',
-      'One qualified professional consultation.',
-      'Personalised wellbeing recommendations and written action plan.',
-      'Referral recommendations if further psychological or psychiatric evaluation is indicated.'
-    ],
-    best: 'An initial assessment and a clear plan for improving wellbeing.',
-    cta: 'Enquire About KareMind Base'
-  },
-  {
-    id: 'km-plus', group: 'karemind', slug: 'plus', name: 'KareMind Plus', type: 'Guided Emotional Wellbeing',
-    tagline: 'Guided Emotional Wellbeing', price: 44999, unit: '', unitText: '3 months', color: 'violet',
-    desc: 'Structured support to build healthier coping strategies, manage everyday stress and improve emotional wellbeing.',
-    listTitle: "What's included",
-    includes: [
-      'Everything included in KareMind Base.',
-      'Six individual counselling or wellbeing sessions, delivered by appropriately qualified professionals according to assessed needs.',
-      'Personalised stress-management and coping plan.',
-      'Guidance on sleep routines, relaxation and healthy daily habits.',
-      'Support for social connection and adjustment to life changes.',
-      'Progress reviews and an end-of-program reassessment.',
-      'Referral to a clinical psychologist or psychiatrist when indicated.'
-    ],
-    best: 'People who would benefit from regular professional support and guided habit changes.',
-    cta: 'Enquire About KareMind Plus'
-  },
-  {
-    id: 'km-premium', group: 'karemind', slug: 'premium', name: 'KareMind Premium', type: 'Comprehensive Wellbeing Support',
-    tagline: 'Comprehensive Wellbeing Support', price: 79999, unit: '', unitText: '6 months', color: 'rose',
-    desc: 'Longer-term support for participants who need a more sustained and coordinated approach to emotional wellbeing.',
-    listTitle: "What's included",
-    includes: [
-      'Everything included in KareMind Plus.',
-      'Twelve individual counselling or wellbeing sessions in total.',
-      'Personalised wellbeing goals and periodic plan adjustments.',
-      'Structured support for coping skills, resilience and healthy routines.',
-      'Up to two planned reviews with an appropriately qualified clinician, subject to the agreed service scope and individual needs.',
-      'Family education session, with participant consent and where appropriate.',
-      'Six-month progress report and continuing-care recommendations.',
-      'Coordinated referrals for further psychological or psychiatric care when needed.'
-    ],
-    best: 'People seeking sustained support, continuity and a longer-term wellbeing plan.',
-    cta: 'Enquire About KareMind Premium'
-  }
+  // ---------- KareBalance and KareMind: tools/shared/wellness.js (shown in full on KareWellness) ----------
+  ...W.packages
 ];
 
 const liveCompare = {
@@ -210,25 +115,11 @@ const liveCompare = {
     ['Evening tea and snacks', 'Included', 'Included'],
     ['Personalized diet plan', 'Included', 'Included'],
     ['Community membership', 'Complimentary', 'Complimentary'],
-    ['GST and applicable service charges', 'Included', 'Included']
+    ['Inclusive of all', 'Yes', 'Yes']
   ]
 };
 
-const mindCompare = {
-  title: 'Package comparison',
-  cols: ['Base', 'Plus', 'Premium'],
-  ids: ['km-base', 'km-plus', 'km-premium'],
-  rows: [
-    ['Duration', 'One-time', '3 months', '6 months'],
-    ['Price', '₹8,999', '₹44,999', '₹79,999'],
-    ['Initial assessment', 'Yes', 'Yes', 'Yes'],
-    ['Individual sessions', '1 initial consultation', '6 sessions', '12 sessions'],
-    ['Personalised wellbeing plan', 'Yes', 'Yes', 'Ongoing updates'],
-    ['Progress reassessment', 'Initial', 'End of program', 'Periodic + final'],
-    ['Family education', '—', 'As appropriate', '1 session'],
-    ['Referral coordination', 'If indicated', 'If indicated', 'If indicated']
-  ]
-};
+const mindCompare = { ...W.mindCompare, ids: ['km-base', 'km-plus', 'km-premium'] };
 
 const passIncludes = [
   ['Community access', 'Designated facilities and common areas', 'home'],
@@ -244,4 +135,4 @@ const byGroup = (g) => packages.filter((p) => p.group === g);
 const pathOf = (p) => groups[p.group].path + '/' + p.slug;
 const unitLabel = (p) => (p.unit ? '/ ' + p.unit : p.unitText || '');
 
-module.exports = { GST_LIVE, GST_VISIT, KB_FINE, NOT_INCLUDED, groups, packages, liveCompare, mindCompare, passIncludes, rupees, byGroup, pathOf, unitLabel };
+module.exports = { W, GST_LIVE, GST_VISIT, KB_FINE, NOT_INCLUDED, groups, packages, liveCompare, mindCompare, passIncludes, rupees, byGroup, pathOf, unitLabel };

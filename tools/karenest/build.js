@@ -10,10 +10,11 @@ const fs = require('fs');
 const path = require('path');
 const { make } = require('./layout');
 const buildPages = require('./pages');
+const { FAQ, faqPageBody, esc } = require('../shared/faq');
 
 const ROOT = path.join(__dirname, '..', '..');
 const EMBED_DIR = path.join(ROOT, 'public', 'karenest');
-const ASSETS = ['site.css', 'karebalance.css', 'loader.css', 'loader.js', 'app.js'];
+const ASSETS = ['site.css', 'karebalance.css', 'loader.css', 'loader.js', 'app.js', 'faq-page.js'];
 
 function fileFor(p) { return p === '/' ? 'index.html' : p.replace(/^\//, '') + '.html'; }
 
@@ -42,11 +43,41 @@ function pick(html, attr) {
 }
 const setId = (sec, id) => sec.replace(/^<section[^>]*>/, (tag) => tag.replace(/ id="[^"]*"/, '').replace('<section', `<section id="${id}"`));
 
+// Frequently Asked Questions: a page of their own, /faq (on the home page until 2 Nov 2026), with
+// the existing .faq accordion, a search box and topic links (faq-page.js)
+function faqPage(L) {
+  const F = FAQ.karenest, q = F.outro;
+  return {
+    key: 'faq', path: '/faq', nav: 'faq', faq: true,
+    title: 'Frequently Asked Questions',
+    description: 'Answers to common questions about KareNest: residential living, day visits and community activities, health and well-being, packages and how to join.',
+    body: () => `<section class="phero solo faq-hero">
+  <div class="wrap phero-in">
+    <div class="phero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="${L.home}">Home</a></li><li aria-current="page">FAQs</li></ol></nav>
+      <div class="eyebrow">Frequently Asked Questions</div>
+      <h1>${esc(F.subtitle).replace(/KareNest$/, '<span class="accent">KareNest</span>')}</h1>
+      ${F.intro.map((p) => `<p class="lede">${esc(p)}</p>`).join('')}
+    </div>
+  </div>
+</section>
+
+<section class="sec faq-sec faq-page" id="faq">
+  <div class="wrap">
+    ${faqPageBody('karenest', L.u('/contact') + '#enquiry')}
+    <div class="faq-outro rv"><h2>${esc(q[0].t)}</h2>${q.slice(1, -1).map((p) => `<p>${esc(p.t)}</p>`).join('')}<p><b>${esc(q[q.length - 1].t)}</b></p>
+      <div class="hero-actions"><a class="btn btn-primary" href="${L.u('/contact')}?type=karenest-visit#enquiry" data-open="visit">Plan a Visit</a><a class="btn btn-ghost" href="${L.u('/contact')}#enquiry">Send us a question</a></div></div>
+  </div>
+</section>`
+  };
+}
+
 function composeHome(pages) {
   const body = (k) => pages.find((x) => x.key === k).body();
   const home = body('home'), about = body('about'), life = body('life'), acts = body('activities'), comm = body('community'), contact = body('contact');
   const parts = [
-    home.slice(0, home.indexOf('<section class="sec" id="experience"')),            // hero
+    home.slice(0, home.indexOf('<section class="sec freeday"')),                     // hero (stops before the free-day section, which is added once below)
+    pick(home, 'id="plan-a-visit"'),                                                   // free first day
     pick(home, 'id="experience"'),
     setId(pick(about, 'id="focus"'), 'about').replace('id="focus-title"', 'id="about-title"').replace('aria-labelledby="focus-title"', 'aria-labelledby="about-title"'),
     setId(pick(life, 'id="day"'), 'life'),
@@ -82,6 +113,7 @@ function build(outDir, prefix, mode) {
   const home = pages.find((x) => x.key === 'home');
   home.body = () => homeBody;
   home.lightbox = true;
+  pages.push(faqPage(L));
   pages.push(notFoundPage(L));
   const seen = new Set();
   for (const pg of pages) {
@@ -94,6 +126,9 @@ function build(outDir, prefix, mode) {
     fs.writeFileSync(dest, html);
   }
   for (const k of Object.keys(ON_HOME)) fs.rmSync(path.join(outDir, k + '.html'), { force: true });
+  // KareBalance and KareMind are shown in full on the KareWellness website; their old pages go
+  for (const k of ['karebalance', 'karemind']) { fs.rmSync(path.join(outDir, k + '.html'), { force: true }); fs.rmSync(path.join(outDir, k), { recursive: true, force: true }); }
+  fs.rmSync(path.join(outDir, 'bystander.html'), { force: true }); // Bystander is a KareIQ and Kare@Home service
   return pages;
 }
 
@@ -105,6 +140,8 @@ function copyDir(src, dest) {
   }
 }
 
+// the FAQ page script is shared with KareIQ and Kare@Home (public/js/faq-page.js)
+fs.copyFileSync(path.join(ROOT, 'public', 'js', 'faq-page.js'), path.join(EMBED_DIR, 'faq-page.js'));
 const pages = build(EMBED_DIR, '/karenest', 'embedded');
 console.log(`KareNest: ${pages.length} pages written to public/karenest/`);
 

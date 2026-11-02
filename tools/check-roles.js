@@ -36,10 +36,15 @@ const overlaps = (vs) => vs.some((a) => vs.some((b) => a.id !== b.id && a.nurseI
     ok((await nurse('GET', p)).status === 403 && (await fam('GET', p)).status === 403, 'office only: ' + p);
   }
   ok((await fam('GET', 'nurse/customers')).status === 403 && (await office('GET', 'nurse/visits')).status === 403, 'nurse routes are for nurses only');
-  for (const p of ['people/P-DEMO04/records', 'people/P-DEMO04/details', 'risk/forms?person=P-DEMO04', 'people/P-DEMO04/dashboard', 'details']) {
+  for (const p of ['people/P-DEMO04/records', 'people/P-DEMO04/details', 'people/P-DEMO04/dashboard', 'details']) {
     ok((await nurse('GET', p)).status === 403, 'nurse cannot read ' + p);
   }
-  ok((await nurse('POST', 'people/P-DEMO04/risks', { test: 'tug', inputs: { seconds: 10 } })).status === 403, 'nurse cannot save risk checks');
+  // risk checks: entered by the customer's nurse; not by other nurses, the office or families
+  ok((await nurse('GET', 'risk/forms?person=P-DEMO04')).status === 200, 'nurse opens the risk check forms for an assigned customer');
+  ok((await nurse('POST', 'people/P-DEMO04/risks', { test: 'tug', inputs: { seconds: 10 } })).status === 201, 'nurse saves a risk check');
+  ok([403, 404].includes((await nest('POST', 'people/P-DEMO04/risks', { test: 'tug', inputs: { seconds: 10 } })).status), 'another nurse cannot save one for this customer');
+  ok((await office('GET', 'risk/forms?person=P-DEMO04')).status === 403 && (await office('POST', 'people/P-DEMO04/risks', { test: 'tug', inputs: { seconds: 10 } })).status === 403, 'the office no longer does risk checks');
+  ok((await fam('POST', 'people/P-DEMO01/risks', { test: 'tug', inputs: { seconds: 10 } })).status === 403, 'families cannot save risk checks');
   ok((await nurse('GET', 'records/demo-d-P-DEMO01-ecg/file')).status === 404, 'nurse cannot open a medical record file');
 
   // ---------------------------------------------------------------- restricted customer information, masked

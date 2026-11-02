@@ -1,5 +1,5 @@
-# Render Blueprint for the KareIQ API (bookings, enquiries, admin panel) and the KareIQ app (/app).
-# The three websites stay on Vercel and forward /api/* and /admin* here.
+# Render Blueprint for the KareIQ API (bookings, enquiries, admin panel) and the KareIQ dashboard (/app).
+# The websites stay on Vercel and forward /api/* and /admin* here.
 services:
   - type: web
     name: kareiq-api
@@ -19,16 +19,16 @@ services:
         value: kareiq
       - key: ADMIN_PASSWORD    # choose the admin panel password when Render asks
         sync: false
-      - key: ADMIN_EMAIL       # the first office login for the KareIQ app (/app); its password is ADMIN_PASSWORD
-        value: admin@karenest.co.in
       - key: SESSION_SECRET
         generateValue: true
       - key: TRUST_PROXY
         value: "true"
       - key: SITE_URL          # visitors who open the Render address are sent here
         value: https://karenest.co.in
+      - key: ADMIN_EMAIL       # the first office login for the dashboard (/app); its password is ADMIN_PASSWORD
+        value: admin@karenest.co.in
       - key: ALLOWED_ORIGINS   # websites allowed to send forms and sign in here
-        value: https://kareiq.co.in,https://www.kareiq.co.in,https://kareiq.vercel.app,https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in,https://karehome.co.in,https://www.karehome.co.in
+        value: https://kareiq.co.in,https://www.kareiq.co.in,https://kareiq.vercel.app,https://kareiq-website-full.vercel.app,https://karenest.co.in,https://www.karenest.co.in,https://karehome.co.in,https://www.karehome.co.in,https://karewellness.co.in,https://www.karewellness.co.in
       - key: OAUTH_REDIRECT_BASE # public address of this server, used for Google/Facebook sign-in callbacks
         value: https://kareiq-api.onrender.com
       # Google / Facebook sign-in: add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID and

@@ -13,11 +13,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
-<link rel="stylesheet" href="/css/auth-popup.css?v=20261029f">
-<link rel="stylesheet" href="/css/karehome-loader.css?v=20261029f">
-<script src="/js/karehome-loader.js?v=20261029f"></script>
-<link rel="stylesheet" href="/css/karehome.css?v=20261029f">
-<script src="/js/api.js?v=20261029f"></script>
+<link rel="stylesheet" href="/css/auth-popup.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome-loader.css?v=20261102b">
+<script src="/js/karehome-loader.js?v=20261102b"></script>
+<link rel="stylesheet" href="/css/pkg-menu.css?v=20261102b">
+<link rel="stylesheet" href="/css/bystander.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome.css?v=20261102b">
+<link rel="stylesheet" href="/css/faq.css?v=20261102b">
+<script src="/js/api.js?v=20261102b"></script>
 </head>
 <body data-page="packages">
 <div class="kh-loader" id="khLoader" role="status" aria-label="Loading Kare@Home">
@@ -89,13 +92,32 @@
       <li><a href="/kare-at-home">Home</a></li>
       <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
       <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-      <li><a href="/kare-at-home/packages" aria-current="page" class="active">Care Packages</a></li>
-      <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
+      <li class="has-dd"><button class="dd-btn active" type="button" aria-expanded="false" aria-controls="dd-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="dd" id="dd-packages">
+          <ul>
+            <li><a href="/kare-at-home/packages" aria-current="page">Care Packages<small>HomeStart · HomePlus · HomeElite</small></a></li>
+            <li class="sep" role="presentation"></li>
+            <li><a href="/kare-at-home/bystander">Bystander<small>Caregiving support · 4, 8 or 24 hours</small></a></li>
+            <li class="has-dd2">
+              <div class="dd-row"><a href="/karewellness/" data-site="karewellness">Wellness<small>KareBalance · KareMind</small></a><button class="dd2-btn" type="button" aria-expanded="false" aria-controls="dd-wellness" aria-label="Show wellness programmes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div>
+              <div class="dd2" id="dd-wellness">
+                <ul>
+                  <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance<small>Fall prevention &amp; mobility</small></a></li>
+                  <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind<small>Mental wellness program</small></a></li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li><a href="/kare-at-home/faq">FAQs</a></li>
       <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
     </ul>
     </nav>
+    <div class="nav-end">
     <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
     <a class="app-in" href="/app/#/signin?brand=karehome" data-app="karehome" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
+    </div>
     <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
   </div>
   <nav class="drawer" id="drawer" aria-label="Menu">
@@ -104,8 +126,20 @@
         <li><a href="/kare-at-home">Home</a></li>
         <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
         <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-        <li><a href="/kare-at-home/packages" aria-current="page" class="active">Care Packages</a></li>
-        <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
+        <li><button class="acc-btn" type="button" aria-expanded="true" aria-controls="m-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <ul class="acc-panel" id="m-packages">
+            <li><a href="/kare-at-home/packages" aria-current="page">Care Packages</a></li>
+            <li><a href="/kare-at-home/bystander">Bystander</a></li>
+            <li><button class="acc-btn" type="button" aria-expanded="false" aria-controls="m-wellness">Wellness<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+              <ul class="acc-panel" id="m-wellness" hidden>
+                <li><a href="/karewellness/" data-site="karewellness">KareWellness overview</a></li>
+                <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance</a></li>
+                <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><a href="/kare-at-home/faq">FAQs</a></li>
         <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
         <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
         <li class="back-kiq-li"><a href="/" data-site="kareiq">← Back to KareIQ</a></li>
@@ -126,43 +160,43 @@
         <p class="sec-sub dark">Preventive care packages to meet your loved one's day-to-day health needs.</p>
         <p class="pk-note"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M12 11v5M12 8v.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg><span data-c="pricing.annualNote">All our packages are designed for annual duration. Choose the payment plan that works best for you.</span></p>
         <div class="billing" role="radiogroup" aria-label="Payment plan">
-          <button type="button" role="radio" aria-checked="true" class="on" data-months="1">1 month</button>
-          <button type="button" role="radio" aria-checked="false" data-months="3">3 months</button>
-          <button type="button" role="radio" aria-checked="false" data-months="6">6 months</button>
-          <button type="button" role="radio" aria-checked="false" data-months="12">12 months</button>
+          <button type="button" role="radio" aria-checked="true" class="on" data-months="1">Monthly</button>
+          <button type="button" role="radio" aria-checked="false" data-months="3">Quarterly</button>
+          <button type="button" role="radio" aria-checked="false" data-months="6">Semi-Annual</button>
+          <button type="button" role="radio" aria-checked="false" data-months="12">Annual</button>
           <i class="pill" aria-hidden="true"></i>
         </div>
-        <p class="save" id="saveMsg" aria-live="polite">Pay monthly, or save up to 10% with a longer payment plan.</p>
+        <p class="save" id="saveMsg" aria-live="polite">Choose the payment plan that suits you.</p>
       </div>
       <div class="pk-grid">
         <article class="pk rv" style="--d:.05s" data-plan="homestart">
-          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-house"/></svg></span><h3>HomeStart</h3><span class="offer">Launch offer</span></header>
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-house"/></svg></span><h3>HomeStart</h3></header>
           <div class="price-block">
-            <p class="price"><s class="mrp">₹3,499</s><span class="cur">₹</span><span class="num" data-price>2,599</span><span class="per">/ month</span></p>
-            <p class="billed" data-billed>₹2,599 billed monthly</p><p class="gst-inc">Inclusive of all GST</p>
+            <p class="price"><span class="cur">₹</span><span class="num" data-price>4,499</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹4,499 billed monthly</p><p class="gst-inc">Inclusive of all</p>
           </div>
           <p class="inc-title">Includes</p>
-          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Weekly home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>4 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>10% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹1,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li></ul>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Weekly home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>4 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹1,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li></ul>
           <button class="btn btn-outline" data-auth data-plan="homestart" aria-label="Choose HomeStart">Choose HomeStart <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
         <article class="pk popular rv" style="--d:.12s" data-plan="homeplus">
-          <span class="badge">Most Popular</span><header><span class="ic sm"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><h3>HomePlus</h3><span class="offer">Launch offer</span></header>
+          <span class="badge">Most Popular</span><header><span class="ic sm"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><h3>HomePlus</h3></header>
           <div class="price-block">
-            <p class="price"><s class="mrp">₹6,999</s><span class="cur">₹</span><span class="num" data-price>4,999</span><span class="per">/ month</span></p>
-            <p class="billed" data-billed>₹4,999 billed monthly</p><p class="gst-inc">Inclusive of all GST</p>
+            <p class="price"><span class="cur">₹</span><span class="num" data-price>6,499</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹6,499 billed monthly</p><p class="gst-inc">Inclusive of all</p>
           </div>
           <p class="inc-title">Includes</p>
-          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>3 home visits a week by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>6 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>15% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹2,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 2 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomeStart package</span></li></ul>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>3 home visits a week by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>6 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹2,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 2 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomeStart package</span></li></ul>
           <button class="btn btn-grad" data-auth data-plan="homeplus" aria-label="Choose HomePlus">Choose HomePlus <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
         <article class="pk rv" style="--d:.19s" data-plan="homeelite">
-          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-building"/></svg></span><h3>HomeElite</h3><span class="offer">Launch offer</span></header>
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-building"/></svg></span><h3>HomeElite</h3></header>
           <div class="price-block">
-            <p class="price"><s class="mrp">₹12,999</s><span class="cur">₹</span><span class="num" data-price>9,999</span><span class="per">/ month</span></p>
-            <p class="billed" data-billed>₹9,999 billed monthly</p><p class="gst-inc">Inclusive of all GST</p>
+            <p class="price"><span class="cur">₹</span><span class="num" data-price>11,999</span><span class="per">/ month</span></p>
+            <p class="billed" data-billed>₹11,999 billed monthly</p><p class="gst-inc">Inclusive of all</p>
           </div>
           <p class="inc-title">Includes</p>
-          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Daily home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>8 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>20% discount on all add-on services</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹3,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 4 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomePlus package</span></li></ul>
+          <ul class="inc"><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Daily home visit by a nurse</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>8 free physiotherapy or bystander services per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Hospitalisation insurance coverage for up to 180 days each year, with a benefit of ₹3,000 per day</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Pause option available for up to 4 weeks per year</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Access to medical health records and prescriptions</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>AI-driven insights to prevent health issues</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Ongoing monitoring of vitals: BP, blood sugar etc.</span></li><li><svg class="chk" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M3 8.5l3.2 3.2L13 4.8" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg><span>All other benefits included in the HomePlus package</span></li></ul>
           <button class="btn btn-outline" data-auth data-plan="homeelite" aria-label="Choose HomeElite">Choose HomeElite <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
         <article class="pk custom rv" style="--d:.26s" data-plan="customized">
@@ -174,7 +208,7 @@
           <button class="btn btn-outline" data-auth data-plan="customized" aria-label="Get a quick estimate for a customised plan">Get a quick estimate <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
       </div>
-      <p class="gst" data-c="pricing.gstNote">All prices are inclusive of all GST.</p>
+      <p class="gst" data-c="pricing.gstNote">Inclusive of all</p>
     </div>
   </section>
 </main>
@@ -208,7 +242,7 @@
   <div class="foot-base">
     <div class="wrap base-in">
       <span>© <span id="year">2026</span> KareIQ. All rights reserved.</span>
-      <nav aria-label="Legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
+      <nav aria-label="Help and legal"><a href="/kare-at-home/faq">FAQs</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
     </div>
   </div>
 </footer>
@@ -252,14 +286,14 @@
             <label for="b-package">Care package</label>
             <select id="b-package" name="package" required>
               <option value="undecided">Not decided yet</option>
-              <option value="homestart">HomeStart · from ₹2,291 / month</option>
-              <option value="homeplus">HomePlus · from ₹4,408 / month</option>
-              <option value="homeelite">HomeElite · from ₹8,816 / month</option>
+              <option value="homestart">HomeStart · from ₹3,958 / month</option>
+              <option value="homeplus">HomePlus · from ₹5,719 / month</option>
+              <option value="homeelite">HomeElite · from ₹10,558 / month</option>
               <option value="customized">Customised plan · get an estimate</option>
               <optgroup label="KareBalance">
-                <option value="kb-base">KareBalance Base · ₹7,999 one-time</option>
-                <option value="kb-plus">KareBalance Plus · ₹39,999 (24 sessions)</option>
-                <option value="kb-premium">KareBalance Premium · ₹90,000 (6 months)</option>
+                <option value="kb-base">KareBalance Base · ₹8,999 · One-time fee</option>
+                <option value="kb-plus">KareBalance Plus · ₹49,999 · 24 supervised training sessions</option>
+                <option value="kb-premium">KareBalance Premium · ₹84,999 · Six-month programme</option>
               </optgroup>
             </select>
             <span class="err"></span>
@@ -268,9 +302,9 @@
             <label for="b-billing">Payment plan</label>
             <select id="b-billing" name="billing">
               <option value="1">Monthly (1 month)</option>
-              <option value="3">Quarterly (3 months) · save 5%</option>
-              <option value="6">Half-yearly (6 months) · save 7%</option>
-              <option value="12">Annual (12 months) · save 10%</option>
+              <option value="3">Quarterly (3 months)</option>
+              <option value="6">Semi-annual (6 months)</option>
+              <option value="12">Annual (12 months)</option>
             </select>
             <span class="err"></span>
           </div>
@@ -361,10 +395,11 @@
 </div>
 
 
-<script src="/js/forms.js?v=20261029f" defer></script>
-<script src="/js/sites.js?v=20261029f" defer></script>
-<script src="/js/content.js?v=20261029f" defer></script>
-<script src="/js/karehome.js?v=20261029f" defer></script>
-<script src="/js/auth-popup.js?v=20261029f" data-brand="karehome" defer></script>
+<script src="/js/forms.js?v=20261102b" defer></script>
+<script src="/js/sites.js?v=20261102b" defer></script>
+<script src="/js/content.js?v=20261102b" defer></script>
+<script src="/js/karehome.js?v=20261102b" defer></script>
+<script src="/js/pkg-menu.js?v=20261102b" defer></script>
+<script src="/js/auth-popup.js?v=20261102b" data-brand="karehome" defer></script>
 </body>
 </html>

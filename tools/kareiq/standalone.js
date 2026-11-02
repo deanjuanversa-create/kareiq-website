@@ -2,7 +2,8 @@
 /* Writes the KareIQ website on its own, ready to deploy as a separate Vercel project
    (the domain bought for KareIQ points at that project).
      node tools/kareiq/standalone.js ../kareiq-only
-   - Copies only the KareIQ pages and the files they use from public/.
+   - Copies only the KareIQ pages (home, Bystander, FAQs, legal) and the files they use.
+     Run node tools/kareiq/build.js first if tools/shared/wellness.js or the home page header changed.
    - Kare@Home links go to KAREHOME below; KareNest links go to KARENEST.
    - /kare-at-home and /karenest typed on the KareIQ domain redirect there too.
    Kare@Home has its own domain (tools/karehome/standalone.js builds that site). */
@@ -11,6 +12,7 @@ const path = require('path');
 
 const KAREHOME = 'https://karehome.co.in';
 const KARENEST = 'https://karenest.co.in/';
+const KAREWELLNESS = 'https://karewellness.co.in/';
 const API = 'https://kareiq-api.onrender.com';
 
 const out = process.argv[2];
@@ -20,11 +22,11 @@ const PUB = path.join(ROOT, 'public');
 const OUT = path.resolve(out);
 
 const FILES = [
-  'index.html', 'privacy.html', 'terms.html', '404.html',
-  'css/kareiq.css', 'css/loader.css', 'css/auth-popup.css', 'css/page.css',
-  'js/api.js', 'js/content.js', 'js/loader.js', 'js/kareiq.js', 'js/forms.js', 'js/auth-popup.js'
+  'index.html', 'bystander.html', 'faq.html', 'privacy.html', 'terms.html', '404.html',
+  'css/kareiq.css', 'css/faq.css', 'css/kareiq-pages.css', 'css/bystander.css', 'css/loader.css', 'css/auth-popup.css', 'css/page.css',
+  'js/api.js', 'js/content.js', 'js/loader.js', 'js/kareiq.js', 'js/bystander.js', 'js/forms.js', 'js/auth-popup.js', 'js/faq-page.js'
 ];
-const IMAGES = (f) => !/^(karehome-(hero|why|logo-white)|favicon-karehome)\./.test(f);
+const IMAGES = (f) => !/^(karehome-(why|logo-white)|favicon-karehome)\./.test(f); // karehome-hero: Bystander page
 
 fs.rmSync(OUT, { recursive: true, force: true });
 const copy = (rel) => { const to = path.join(OUT, rel); fs.mkdirSync(path.dirname(to), { recursive: true }); fs.copyFileSync(path.join(PUB, rel), to); };
@@ -59,6 +61,8 @@ vj.redirects = [
   { source: '/kare-at-home/:path*', destination: KAREHOME + '/:path*', permanent: false },
   { source: '/karenest', destination: KARENEST, permanent: false },
   { source: '/karenest/:path*', destination: KARENEST + ':path*', permanent: false },
+  { source: '/karewellness', destination: KAREWELLNESS, permanent: false },
+  { source: '/karewellness/:path*', destination: KAREWELLNESS + ':path*', permanent: false },
   { source: '/app', destination: API + '/app/', permanent: false },
   { source: '/app/:path*', destination: API + '/app/:path*', permanent: false },
   { source: '/admin', destination: API + '/admin/', permanent: false },

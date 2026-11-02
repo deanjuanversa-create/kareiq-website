@@ -13,11 +13,14 @@ const content = require('../content');
 const NEST = require('../../tools/karenest/data');
 
 const MONTHS = ['1', '3', '6', '12'];
+const KAREHOME_MONTHS = ['1', '3', '6', '12'];
+// the payment plans a package offers
+const monthsOf = (pkg) => MONTHS.filter((m) => pkg && pkg.prices && pkg.prices[m]);
 const GST = 'Inclusive of all GST.';
 const withGst = (notes) => (notes.some((n) => /GST/i.test(n)) ? notes : [...notes, GST]);
 const PERIOD = { 1: 'Monthly', 3: 'Quarterly', 6: 'Half-yearly', 12: 'Yearly' };
 const GROUP_OF = { live: 'Community living', visit: 'KareNest passes', karebalance: 'Focused care package', karemind: 'Focused care package' };
-const GROUP_ORDER = ['Preventive package', 'Focused care package', 'Community living', 'KareNest passes'];
+const GROUP_ORDER = ['Preventive package', 'Focused care package', 'Bystander', 'Community living', 'KareNest passes'];
 
 const DIABETIC = {
   id: 'diabetic', product: 'karehome', group: 'Focused care package', name: 'Diabetic Care', type: 'Focused care',
@@ -34,7 +37,8 @@ async function all() {
     out.push({
       id: p.key, product: 'karehome', group: 'Preventive package', name: p.name, type: 'Kare@Home', tagline: 'Preventive care at home',
       listTitle: 'Includes', includes: p.includes, mrp: p.mrp, model: 'tiers',
-      prices: Object.fromEntries(MONTHS.map((m) => [m, { perMonth: p.prices[m][0], total: p.prices[m][1], saving: c.pricing.savings[m] || 0 }])),
+      // Kare@Home is paid for 3, 6 or 12 months (no 1-month plan since 30 Oct 2026)
+      prices: Object.fromEntries(KAREHOME_MONTHS.map((m) => [m, { perMonth: p.prices[m][0], total: p.prices[m][1], saving: c.pricing.savings[m] || 0 }])),
       notes: withGst([c.pricing.annualNote, c.pricing.gstNote].filter(Boolean))
     });
   }
@@ -62,6 +66,18 @@ async function all() {
     }
     out.push(item);
   }
+  // Bystander caregiving support (Kare@Home): Half Day, Full Day, Round the Clock, priced per visit,
+  // and long-term care agreed with the team. Wording and prices come from tools/shared/wellness.js.
+  const BY = require('../../tools/shared/wellness').bystander;
+  for (const o of BY.options) {
+    out.push({
+      id: o.id, product: 'karehome', group: 'Bystander', name: 'Bystander ' + o.name, type: 'Caregiving support', tagline: `${o.name}: ${o.label} of caregiving support`,
+      listTitle: "What's included", includes: [`A trained caregiver stays with your loved one for ${o.label}`, 'Support with everyday needs and comfort', 'Our team calls to confirm the caregiver and the timing'],
+      desc: BY.intro, best: null, model: 'fixed', price: o.price, length: 'for ' + o.label, notes: [], noGst: true // the website does not say whether GST is included
+    });
+  }
+  out.push({ id: 'by-long', product: 'karehome', group: 'Bystander', name: 'Bystander long-term', type: 'Caregiving support', tagline: 'Long-term caregiving support',
+    listTitle: '', includes: [BY.longTerm], desc: BY.intro, model: 'quote', notes: ['Our team agrees the length, the hours and the price with you.'], noGst: true });
   return out;
 }
 
@@ -72,7 +88,8 @@ function priceOf(pkg, months) {
   if (!pkg) return { amount: null, text: 'Plan to be confirmed' };
   const note = pkg.notes.find((n) => /GST/i.test(n)) || null;
   if (pkg.model === 'tiers' || pkg.model === 'monthly') {
-    const m = MONTHS.includes(String(months)) ? String(months) : (pkg.model === 'tiers' ? '12' : '1');
+    const ms = monthsOf(pkg);
+    const m = ms.includes(String(months)) ? String(months) : (pkg.model === 'tiers' ? '12' : ms[0]);
     const pr = pkg.prices[m];
     return { amount: pr.total, perMonth: pr.perMonth, months: Number(m), saving: pr.saving, text: `${pkg.name}, ${PERIOD[m].toLowerCase()} (${m === '1' ? '1 month' : m + ' months'})`, gst: note };
   }
@@ -82,4 +99,4 @@ function priceOf(pkg, months) {
 
 const durationOf = (pkg) => pkg && (pkg.model === 'tiers' || pkg.model === 'monthly');
 
-module.exports = { all, byId, priceOf, durationOf, MONTHS, PERIOD, GROUP_ORDER };
+module.exports = { all, byId, priceOf, durationOf, monthsOf, MONTHS, PERIOD, GROUP_ORDER };

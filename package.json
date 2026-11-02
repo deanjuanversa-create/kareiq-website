@@ -2,7 +2,7 @@
   "name": "kareiq-website",
   "version": "1.0.0",
   "private": true,
-  "description": "KareIQ, Kare@Home and KareNest websites with the booking and enquiry API (runs on Render with MongoDB Atlas)",
+  "description": "KareIQ, Kare@Home, KareNest and KareWellness websites, the booking and enquiry API, and the KareIQ dashboard for families, nurses and the office",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

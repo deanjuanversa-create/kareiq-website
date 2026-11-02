@@ -13,11 +13,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
-<link rel="stylesheet" href="/css/auth-popup.css?v=20261029f">
-<link rel="stylesheet" href="/css/karehome-loader.css?v=20261029f">
-<script src="/js/karehome-loader.js?v=20261029f"></script>
-<link rel="stylesheet" href="/css/karehome.css?v=20261029f">
-<script src="/js/api.js?v=20261029f"></script>
+<link rel="stylesheet" href="/css/auth-popup.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome-loader.css?v=20261102b">
+<script src="/js/karehome-loader.js?v=20261102b"></script>
+<link rel="stylesheet" href="/css/pkg-menu.css?v=20261102b">
+<link rel="stylesheet" href="/css/bystander.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome.css?v=20261102b">
+<link rel="stylesheet" href="/css/faq.css?v=20261102b">
+<script src="/js/api.js?v=20261102b"></script>
 </head>
 <body data-page="home">
 <div class="kh-loader" id="khLoader" role="status" aria-label="Loading Kare@Home">
@@ -89,13 +92,32 @@
       <li><a href="/kare-at-home" aria-current="page" class="active">Home</a></li>
       <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
       <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-      <li><a href="/kare-at-home/packages">Care Packages</a></li>
-      <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
+      <li class="has-dd"><button class="dd-btn" type="button" aria-expanded="false" aria-controls="dd-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="dd" id="dd-packages">
+          <ul>
+            <li><a href="/kare-at-home/packages">Care Packages<small>HomeStart · HomePlus · HomeElite</small></a></li>
+            <li class="sep" role="presentation"></li>
+            <li><a href="/kare-at-home/bystander">Bystander<small>Caregiving support · 4, 8 or 24 hours</small></a></li>
+            <li class="has-dd2">
+              <div class="dd-row"><a href="/karewellness/" data-site="karewellness">Wellness<small>KareBalance · KareMind</small></a><button class="dd2-btn" type="button" aria-expanded="false" aria-controls="dd-wellness" aria-label="Show wellness programmes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div>
+              <div class="dd2" id="dd-wellness">
+                <ul>
+                  <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance<small>Fall prevention &amp; mobility</small></a></li>
+                  <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind<small>Mental wellness program</small></a></li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li><a href="/kare-at-home/faq">FAQs</a></li>
       <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
     </ul>
     </nav>
+    <div class="nav-end">
     <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
     <a class="app-in" href="/app/#/signin?brand=karehome" data-app="karehome" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
+    </div>
     <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
   </div>
   <nav class="drawer" id="drawer" aria-label="Menu">
@@ -104,8 +126,20 @@
         <li><a href="/kare-at-home" aria-current="page" class="active">Home</a></li>
         <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
         <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-        <li><a href="/kare-at-home/packages">Care Packages</a></li>
-        <li><a href="/kare-at-home/karebalance">KareBalance</a></li>
+        <li><button class="acc-btn" type="button" aria-expanded="false" aria-controls="m-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <ul class="acc-panel" id="m-packages" hidden>
+            <li><a href="/kare-at-home/packages">Care Packages</a></li>
+            <li><a href="/kare-at-home/bystander">Bystander</a></li>
+            <li><button class="acc-btn" type="button" aria-expanded="false" aria-controls="m-wellness">Wellness<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+              <ul class="acc-panel" id="m-wellness" hidden>
+                <li><a href="/karewellness/" data-site="karewellness">KareWellness overview</a></li>
+                <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance</a></li>
+                <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><a href="/kare-at-home/faq">FAQs</a></li>
         <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
         <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
         <li class="back-kiq-li"><a href="/" data-site="kareiq">← Back to KareIQ</a></li>
@@ -116,27 +150,30 @@
 </header>
 
 <main id="main" tabindex="-1">
-  <section class="hero" id="about">
+  <section class="hero hero-v2" id="about">
     <div class="hero-photo">
       <img id="heroImg" src="/img/karehome-hero.jpg" alt="A Kare@Home caregiver in a pink KareIQ uniform holding the hands of a smiling elderly woman at home" width="1168" height="850" fetchpriority="high">
       <p class="note note-hero" aria-hidden="true"><span>Because<br>their well-being<br>matters —<br>every day.</span>
         <svg class="note-heart" viewBox="0 0 40 34" width="28" height="28"><path d="M20 31S3 21 3 11a8 8 0 0 1 17-3 8 8 0 0 1 17 3c0 10-17 20-17 20Z"/></svg>
       </p>
     </div>
+    <svg class="pulse-line" viewBox="0 0 220 120" aria-hidden="true"><path d="M2 70h46l12-22 16 46 16-60 14 36h30"/><path class="ph" d="M168 52s-18-10.5-18-23a10 10 0 0 1 18-6 10 10 0 0 1 18 6c0 12.5-18 23-18 23Z"/></svg>
+    <div class="glass g1" aria-hidden="true"><span class="gi"><svg width="24" height="24"><use href="#i-heart"/></svg></span><div><b>Care visit complete</b><span>Vitals shared with the family</span></div></div>
+    <div class="glass g2" aria-hidden="true"><span class="gi"><svg width="24" height="24"><use href="#i-calendar"/></svg></span><div><b>Next visit booked</b><span>Preventive check-up at home</span></div></div>
     <div class="wrap hero-in">
       <div class="hero-copy">
-        <img class="hero-logo load" style="--d:.05s" src="/img/karehome-logo.png" alt="Kare@Home: Preventive Care. At Your Doorstep." width="1407" height="395">
-        <div class="brand-by load" style="--d:.25s">
-          <i class="line"></i><span>A brand by</span><b class="sep"></b>
-          <a href="/" data-site="kareiq" aria-label="KareIQ"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
-          <i class="line"></i>
-        </div>
-        <h1 class="load" style="--d:.4s"><span data-c="karehome.heroLine1">Compassionate care.</span><span data-c="karehome.heroLine2">Right where you are.</span></h1>
-        <p class="lead load" style="--d:.55s" data-c="karehome.heroLead">Kare@Home brings trusted, preventive healthcare and everyday support to your doorstep, helping seniors live healthier, safer and more independently, from the comfort of home.</p>
-        <div class="hero-ctas load" style="--d:.7s">
+        <p class="hero-eyebrow load" style="--d:.05s">Kare@Home <i aria-hidden="true"></i> Preventive care at your doorstep</p>
+        <h1><span class="ln"><span data-c="karehome.heroLine1">Compassionate care.</span></span><span class="ln"><span data-c="karehome.heroLine2">Right where you are.</span></span></h1>
+        <p class="lead load" style="--d:.45s" data-c="karehome.heroLead">Kare@Home brings trusted, preventive healthcare and everyday support to your doorstep, helping seniors live healthier, safer and more independently, from the comfort of home.</p>
+        <div class="hero-ctas load" style="--d:.6s">
           <button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
           <a href="/kare-at-home#services" class="btn btn-line">Learn More</a>
         </div>
+        <ul class="hero-trust load" style="--d:.75s">
+          <li><svg aria-hidden="true" width="24" height="24"><use href="#i-nurse"/></svg>Trained caregivers</li>
+          <li><svg aria-hidden="true" width="24" height="24"><use href="#i-monitor"/></svg>BP, sugar &amp; vitals checked</li>
+          <li><svg aria-hidden="true" width="24" height="24"><use href="#i-family"/></svg>Family kept updated</li>
+        </ul>
       </div>
     </div>
   </section>
@@ -209,7 +246,21 @@
       </div>
       <ul class="kh-cards two">
         <li class="rv" style="--d:.1s"><a class="kh-card" href="/kare-at-home/packages"><span class="ic"><svg width="24" height="24"><use href="#i-house-plus"/></svg></span><b>Care Packages</b><small>Preventive care packages to meet your loved one's day-to-day health needs.</small><span class="go">See packages and prices <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
-        <li class="rv" style="--d:.15s"><a class="kh-card" href="/kare-at-home/karebalance"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><b>KareBalance</b><small>Better Balance. Stronger Steps. Fewer Falls.</small><span class="go">About KareBalance <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
+        <li class="rv" style="--d:.15s"><a class="kh-card" href="/kare-at-home/bystander"><span class="ic"><svg width="24" height="24"><use href="#i-companion"/></svg></span><b>Bystander</b><small>Caregiving Support: a caregiver by your loved one's side for 4, 8 or 24 hours, from ₹799.</small><span class="go">Durations and prices <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></span></a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="kh-well" id="wellness" aria-labelledby="well-title">
+    <div class="wrap">
+      <div class="sec-intro rv">
+        <h2 class="sec-title" id="well-title">Wellness Programmes</h2>
+        <p class="sec-sub dark">For balance, mobility and mental wellbeing.</p>
+        <p class="sec-text">Two structured programmes from KareWellness, the wellness home of the KareIQ family. Full programme details, packages and prices are on KareWellness.</p>
+      </div>
+      <ul class="kh-cards two kh-well-cards">
+        <li class="rv" style="--d:0.10s"><article class="kh-card kh-wcard karebalance"><span class="ic"><svg width="24" height="24"><use href="#i-physio"/></svg></span><span class="kick">Fall prevention & mobility</span><b>KareBalance</b><small>Fall prevention, better mobility and everyday physical wellness. A personalised programme of assessment and supervised balance and strength training that helps older adults stay steady, active and independent.</small><a class="btn btn-grad" href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance" aria-label="Know more about KareBalance on KareWellness">Know More <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></a></article></li>
+        <li class="rv" style="--d:0.15s"><article class="kh-card kh-wcard karemind"><span class="ic"><svg width="24" height="24"><use href="#i-person-heart"/></svg></span><span class="kick">Mental wellbeing</span><b>KareMind</b><small>Mental wellness and cognitive wellbeing. A structured, personal program for emotional balance, stress, healthy sleep, resilience and staying socially connected, with one-to-one support from qualified professionals.</small><a class="btn btn-grad" href="/karewellness/karemind" data-site="karewellness" data-path="karemind" aria-label="Know more about KareMind on KareWellness">Know More <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></a></article></li>
       </ul>
     </div>
   </section>
@@ -221,11 +272,9 @@
         <p class="sec-sub dark">Book a Service | Enquire Now</p>
         <p class="sec-text">Call or WhatsApp us with your requirements, or send a booking request and a care coordinator will call you to confirm.</p>
       </div>
-      <ul class="kh-ways">
+      <ul class="kh-ways two">
         <li class="rv" style="--d:.05s"><span class="ic"><svg width="24" height="24"><use href="#i-phone"/></svg></span><b>Call us</b><a class="big" href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a></li>
         <li class="rv" style="--d:.1s"><span class="ic"><svg width="24" height="24"><use href="#i-hand-heart"/></svg></span><b>WhatsApp</b><a class="big" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Message us on WhatsApp</a></li>
-        <li class="rv" style="--d:.15s"><span class="ic"><svg width="24" height="24"><use href="#i-assess"/></svg></span><b>Book a home visit</b><button class="btn btn-grad" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button></li>
-        <li class="rv" style="--d:.2s"><span class="ic"><svg width="24" height="24"><use href="#i-family"/></svg></span><b>Families and caregivers</b><a class="btn btn-line" href="/app/#/signin?brand=karehome" data-app="karehome">Sign in to My KareIQ</a></li>
       </ul>
       <p class="kh-follow"><a href="https://www.instagram.com/kare_homebykareiq/" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24"><use href="#i-camera"/></svg>Follow us @kare_homebykareiq</a><a href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener"><svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg>Join our WhatsApp community</a></p>
     </div>
@@ -261,7 +310,7 @@
   <div class="foot-base">
     <div class="wrap base-in">
       <span>© <span id="year">2026</span> KareIQ. All rights reserved.</span>
-      <nav aria-label="Legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
+      <nav aria-label="Help and legal"><a href="/kare-at-home/faq">FAQs</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
     </div>
   </div>
 </footer>
@@ -305,14 +354,14 @@
             <label for="b-package">Care package</label>
             <select id="b-package" name="package" required>
               <option value="undecided">Not decided yet</option>
-              <option value="homestart">HomeStart · from ₹2,291 / month</option>
-              <option value="homeplus">HomePlus · from ₹4,408 / month</option>
-              <option value="homeelite">HomeElite · from ₹8,816 / month</option>
+              <option value="homestart">HomeStart · from ₹3,958 / month</option>
+              <option value="homeplus">HomePlus · from ₹5,719 / month</option>
+              <option value="homeelite">HomeElite · from ₹10,558 / month</option>
               <option value="customized">Customised plan · get an estimate</option>
               <optgroup label="KareBalance">
-                <option value="kb-base">KareBalance Base · ₹7,999 one-time</option>
-                <option value="kb-plus">KareBalance Plus · ₹39,999 (24 sessions)</option>
-                <option value="kb-premium">KareBalance Premium · ₹90,000 (6 months)</option>
+                <option value="kb-base">KareBalance Base · ₹8,999 · One-time fee</option>
+                <option value="kb-plus">KareBalance Plus · ₹49,999 · 24 supervised training sessions</option>
+                <option value="kb-premium">KareBalance Premium · ₹84,999 · Six-month programme</option>
               </optgroup>
             </select>
             <span class="err"></span>
@@ -321,9 +370,9 @@
             <label for="b-billing">Payment plan</label>
             <select id="b-billing" name="billing">
               <option value="1">Monthly (1 month)</option>
-              <option value="3">Quarterly (3 months) · save 5%</option>
-              <option value="6">Half-yearly (6 months) · save 7%</option>
-              <option value="12">Annual (12 months) · save 10%</option>
+              <option value="3">Quarterly (3 months)</option>
+              <option value="6">Semi-annual (6 months)</option>
+              <option value="12">Annual (12 months)</option>
             </select>
             <span class="err"></span>
           </div>
@@ -414,10 +463,11 @@
 </div>
 
 
-<script src="/js/forms.js?v=20261029f" defer></script>
-<script src="/js/sites.js?v=20261029f" defer></script>
-<script src="/js/content.js?v=20261029f" defer></script>
-<script src="/js/karehome.js?v=20261029f" defer></script>
-<script src="/js/auth-popup.js?v=20261029f" data-brand="karehome" defer></script>
+<script src="/js/forms.js?v=20261102b" defer></script>
+<script src="/js/sites.js?v=20261102b" defer></script>
+<script src="/js/content.js?v=20261102b" defer></script>
+<script src="/js/karehome.js?v=20261102b" defer></script>
+<script src="/js/pkg-menu.js?v=20261102b" defer></script>
+<script src="/js/auth-popup.js?v=20261102b" data-brand="karehome" defer></script>
 </body>
 </html>

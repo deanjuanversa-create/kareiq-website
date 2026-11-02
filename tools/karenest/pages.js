@@ -7,6 +7,8 @@ const D = require('./data');
 module.exports = function pages(L) {
   const { u, img, ico, esc } = L;
   const G = D.groups;
+  // KareBalance and KareMind have no pages of their own here any more: see KareWellness
+  const WELL_GROUPS = ['karebalance', 'karemind'];
 
   // ---------- small building blocks ----------
   const arrow = ico('arr', 'ico arr');
@@ -14,7 +16,6 @@ module.exports = function pages(L) {
     i === items.length - 1 ? `<li aria-current="page">${label}</li>` : `<li><a href="${href}">${label}</a></li>`).join('')}</ol></nav>`;
   const HOME = ['Home', L.home];
   const PKGS = ['Our Packages', u('/packages')];
-  const WELL = ['Wellness', u('/wellness')];
 
   function hero({ crumbs: cr, eyebrow, h1, lede, actions = '', image, alt, caption, solo, extra = '' }) {
     return `<section class="phero${solo ? ' solo' : ''}">
@@ -35,10 +36,10 @@ module.exports = function pages(L) {
   const visitBtn = (cls = 'btn btn-ghost mag', label = 'Plan a Visit') => `<a class="${cls}" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}${label}</a>`;
   const detailHref = (p) => u(D.pathOf(p));
   const badgeOf = (p) => (p.type === p.tagline ? G[p.group].name : p.type);
-  // monthly packages can be paid monthly, quarterly, half-yearly or yearly (savings set in the admin page)
+  // monthly packages can be paid monthly, quarterly, half-yearly or yearly (no discounts: the monthly price every month)
   const DUR = [['1', 'Monthly'], ['3', 'Quarterly (3 months)'], ['6', 'Half-yearly (6 months)'], ['12', 'Yearly (12 months)']];
-  // every package says its price includes GST (resident notes already say so)
-  const gstHtml = (p) => (/GST/i.test(p.note || '') ? '' : '<p class="pkg-gst">Inclusive of all GST</p>');
+  // every package says its price is inclusive of all (resident notes already say so)
+  const gstHtml = (p) => (/^Inclusive of all/i.test(p.note || '') ? '' : '<p class="pkg-gst">Inclusive of all</p>');
   const priceHtml = (p) => p.unit === 'month'
     ? `<div class="pkg-price" data-pp="${p.id}" data-base="${p.price}"><b>${D.rupees(p.price)}</b><span>/ month</span></div>
   <label class="pkg-dur"><span>Payment plan</span><select data-dur="${p.id}" aria-label="Payment plan for ${esc(p.name)}">${DUR.map((d) => `<option value="${d[0]}" data-label="${d[1]}">${d[1]}</option>`).join('')}</select></label>
@@ -136,9 +137,9 @@ module.exports = function pages(L) {
 </section>`;
   }
 
-  const lcard = ({ href, image, alt, kick, title, text, link = 'Learn More', site, ext }) => `<article class="lcard rv">
+  const lcard = ({ href, image, alt, kick, title, text, link = 'Learn More', site, path, ext }) => `<article class="lcard rv">
   ${image ? `<div class="lcard-img"><img loading="lazy" decoding="async" src="${img(image)}" alt="${esc(alt)}" width="800" height="500"></div>` : ''}
-  <div class="lcard-body">${kick ? `<span class="kick">${kick}</span>` : ''}<h3>${title}</h3><p>${text}</p><a class="link-arrow" href="${href}"${site ? ` data-site="${site}"` : ''}${ext ? ' target="_blank" rel="noopener"' : ''}>${link}<span class="sr-only">: ${title.replace(/<[^>]+>/g, '')}</span>${ico('arr')}</a></div>
+  <div class="lcard-body">${kick ? `<span class="kick">${kick}</span>` : ''}<h3>${title}</h3><p>${text}</p><a class="link-arrow" href="${href}"${site ? ` data-site="${site}"` : ''}${path ? ` data-path="${path}"` : ''}${ext ? ' target="_blank" rel="noopener"' : ''}>${link}<span class="sr-only">: ${title.replace(/<[^>]+>/g, '')}</span>${ico('arr')}</a></div>
 </article>`;
 
   // ---------- reused sections ----------
@@ -187,26 +188,26 @@ module.exports = function pages(L) {
       <a class="tile rv" href="https://chat.whatsapp.com/KHxzSbsxqmk4WT374pK9Su" target="_blank" rel="noopener" style="--d:.24s"><img loading="lazy" decoding="async" src="${img('c4.webp')}" alt="Friends laughing together on a garden bench" width="600" height="500"><span class="cap"><b>Be Part of Something Meaningful</b><span class="go">${ico('arr')}</span></span></a>
     </div>`;
 
-  const kbIcons = {
-    'kb-base': '<circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/>',
-    'kb-plus': '<path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/>',
-    'kb-premium': '<path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/>'
-  };
-  const kbCheck = '<svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg>';
-  const kbPlan = (p, i) => `<article class="kb-plan ${['', 'c2', 'c3'][i]}" data-pkg="${p.id}" aria-labelledby="pk-${p.id}">
-          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true">${kbIcons[p.id]}</svg></span><div><h3 class="h4x" id="pk-${p.id}"><a href="${detailHref(p)}">${esc(p.name)}</a></h3><p class="kb-plan-sub">${esc(p.tagline)}</p></div></div>
-          <p class="kb-price" data-pp="${p.id}" data-base="${p.price}">${D.rupees(p.price)}</p><p class="kb-unit">${esc(p.unitText)}</p><p class="pkg-gst">Inclusive of all GST</p>
-          <hr>
-          <p class="kb-inc-h">What's included</p>
-          <ul class="kb-inc">${p.includes.map((t) => `<li>${kbCheck}<span>${esc(t)}</span></li>`).join('')}</ul>
-          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> ${esc(p.best)}</p></div>
-          <a class="btn btn-primary kb-choose" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}</a>
-          <a class="kb-link kb-more" href="${detailHref(p)}">View details<span class="sr-only"> of ${esc(p.name)}</span> <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
-        </article>`;
 
   // ===================================================================== pages
   const list_ = [];
   const add = (pg) => list_.push(pg);
+
+  // ---------- KareBalance and KareMind: short introductions here; the full programmes, packages and
+  // prices are on the KareWellness website (L.well('karebalance') opens that programme's page) ----------
+  const WI = [
+    { g: D.W.karebalance, img: 'a4.webp', alt: 'KareNest members out for a group walk in the garden', hash: 'karebalance', enq: 'karenest-karebalance', enqLabel: 'Book a Consultation' },
+    { g: D.W.karemind, img: 'c1.webp', alt: 'Friends chatting together around a garden table', hash: 'karemind', enq: 'karenest-karemind', enqLabel: 'Enquire' }
+  ];
+  const wellIntros = (level = 3) => `<div class="well-grid">${WI.map((w, i) => `<article class="well rv"${i ? ' style="--d:.1s"' : ''}>
+        <div class="well-img"><img loading="lazy" decoding="async" src="${img(w.img)}" alt="${w.alt}" width="800" height="450"></div>
+        <div class="well-body">
+          <span class="eyebrow">${esc(w.g.kicker)}</span>
+          <h${level} class="h2x">${esc(w.g.name)}</h${level}>
+          <p>${esc(w.g.brief)}</p>
+          <div class="row"><a class="btn btn-primary" ${L.well(w.hash)} aria-label="Know more about ${esc(w.g.name)} on KareWellness">Know More${arrow}</a><a class="btn btn-ghost" href="${u('/contact')}?type=${w.enq}#enquiry">${w.enqLabel}</a></div>
+        </div>
+      </article>`).join('\n      ')}</div>`;
 
   // ---------------- Home ----------------
   add({
@@ -240,6 +241,33 @@ module.exports = function pages(L) {
     </div>
   </div>
   <a class="scroll-cue" href="#experience" aria-label="Scroll to the next section"></a>
+</section>
+
+<section class="sec freeday" id="plan-a-visit" aria-labelledby="fd-title">
+  <div class="wrap fd-in">
+    <div class="fd-copy rv">
+      <span class="fd-badge">${ico('star')}Your first day is on us</span>
+      <h2 class="h2" id="fd-title">Come Experience KareNest. <span class="accent">Your First Day Is Free!</span></h2>
+      <p class="fd-lead">A little time here could open the door to a happier, healthier and more connected life.</p>
+      <p>At KareNest, we believe the best way to understand our community is to experience it yourself. That's why we invite prospective residents and their families to enjoy a <b>complimentary day pass</b>, with your first day at our community completely on us, before making any decision.</p>
+      <p>Spend time in our welcoming environment, meet our community members, explore our activities and discover the experiences and services designed to make every day more meaningful.</p>
+      <p class="fd-close">No pressure. No commitment. Just a day to experience the KareNest difference.</p>
+      <div class="fd-cta">
+        <a class="btn btn-primary mag" href="${u('/contact')}?type=karenest-visit#enquiry" data-open="visit">${ico('cal')}Book Your Free Day Pass${arrow}</a>
+        <p>Your first visit is complimentary. Come explore at your own pace.</p>
+      </div>
+    </div>
+    <div class="fd-side">
+      <div class="fd-photo rv-img"><img loading="lazy" decoding="async" src="${img('a6.webp')}" alt="Friends sharing tea and conversation in the KareNest garden" width="800" height="420"><span class="fd-stamp"><b>Free</b>first day</span></div>
+      <h3 class="fd-h rv">What can you experience during your free day?</h3>
+      <ul class="fd-list">
+        <li class="rv" style="--c:var(--teal);--b:var(--g-soft)"><span class="fi">${ico('ppl')}</span><div><b>Connect with a Welcoming Community</b><span>Meet new people, enjoy conversations and discover the joy of spending time with others.</span></div></li>
+        <li class="rv" style="--d:.06s;--c:var(--violet);--b:var(--v-soft)"><span class="fi">${ico('cal')}</span><div><b>Explore Activities and Experiences</b><span>Discover opportunities to stay engaged, learn something new and enjoy meaningful moments.</span></div></li>
+        <li class="rv" style="--d:.12s;--c:var(--rose);--b:var(--r-soft)"><span class="fi">${ico('heart')}</span><div><b>Discover Wellness Options</b><span>Learn about wellness programmes and services designed to support healthier ageing.</span></div></li>
+        <li class="rv" style="--d:.18s;--c:var(--teal-d);--b:var(--g-soft)"><span class="fi">${ico('home')}</span><div><b>Explore the Options That Suit You</b><span>Learn more about day visits, community participation and resident living options for yourself or your loved ones.</span></div></li>
+      </ul>
+    </div>
+  </div>
 </section>
 
 <section class="sec" id="experience" aria-labelledby="exp-title">
@@ -277,7 +305,7 @@ ${FOCUS.replace('</section>', `  <div class="wrap" style="padding-bottom:40px"><
     <div class="lcards">
       ${lcard({ href: u('/live-with-us'), image: 'exp1.webp', alt: 'A resident couple walking in the KareNest garden', kick: `From ${D.rupees(55000)} / month`, title: 'Live With Us', text: 'KarePlus shared living or a KarePremium private room, with meals, a diet plan and a Kare@Home check-up plan included.', link: 'See resident packages' })}
       ${lcard({ href: u('/visit-and-participate'), image: 'exp2.webp', alt: 'Visitors in a guided exercise session', kick: `From ${D.rupees(1499)} / day`, title: 'Visit &amp; Participate', text: 'Bloom for a day, Flourish for a week or Thrive for a month: activities, meals and friendship, all-inclusive.', link: 'See visitor passes' })}
-      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: `From ${D.rupees(7999)}`, title: 'Wellness', text: 'KareBalance for steadier steps and fewer falls, and KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
+      ${lcard({ href: u('/wellness'), image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: 'KareBalance · KareMind', title: 'Wellness', text: 'KareBalance for steadier steps and fewer falls, and KareMind for emotional wellbeing.', link: 'See wellness programmes' })}
     </div>
   </div>
 </section>
@@ -481,8 +509,8 @@ ${FOCUS}
   <div class="wrap">
     <div class="sec-head rv"><div class="eyebrow">Wellness programmes</div><h2 class="h2" id="wp-title" style="margin-top:12px">Personal programmes, with professionals</h2><p class="sub">Alongside everyday activities, two structured programmes look after balance, mobility and mental wellbeing.</p></div>
     <div class="lcards">
-      ${lcard({ href: u('/karebalance'), image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: 'From ' + D.rupees(7999), title: 'KareBalance', text: 'Better Balance. Stronger Steps. Fewer Falls. A personalised fall prevention and mobility programme.', link: 'Explore KareBalance' })}
-      ${lcard({ href: u('/karemind'), image: 'c1.webp', alt: 'Friends chatting at a garden table', kick: 'From ' + D.rupees(8999), title: 'KareMind', text: 'Nurture Your Mind. Enhance Your Wellbeing. A structured mental wellness program, personal and compassionate.', link: 'Explore KareMind' })}
+      ${lcard({ href: L.wellUrl + 'karebalance', site: 'karewellness', path: 'karebalance', image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn', kick: 'Fall prevention &amp; mobility', title: 'KareBalance', text: 'Better Balance. Stronger Steps. Fewer Falls. A personalised fall prevention and mobility programme.', link: 'Know More' })}
+      ${lcard({ href: L.wellUrl + 'karemind', site: 'karewellness', path: 'karemind', image: 'c1.webp', alt: 'Friends chatting at a garden table', kick: 'Mental wellbeing', title: 'KareMind', text: 'Nurture Your Mind. Enhance Your Wellbeing. A structured mental wellness program, personal and compassionate.', link: 'Know More' })}
       ${lcard({ href: u('/visit-and-participate'), image: 'a5.webp', alt: 'A group discussion in the garden', kick: 'Included in every visitor pass', title: 'Yoga, training &amp; social activities', text: 'Scheduled yoga classes and monitored activities, access to included training programmes, and recreation with friends.', link: 'See what passes include' })}
     </div>
   </div>
@@ -490,10 +518,10 @@ ${FOCUS}
   });
 
   // ---------------- Our Packages ----------------
-  const allPlanIds = D.packages.map((p) => p.id);
+  const allPlanIds = D.packages.filter((p) => !WELL_GROUPS.includes(p.group)).map((p) => p.id);
   add({
     key: 'packages', path: '/packages', nav: 'packages', sub: 'packages',
-    title: 'Our Packages', description: 'All KareNest packages and prices: KarePlus and KarePremium resident living, Bloom, Flourish and Thrive visitor passes, and KareBalance and KareMind wellness programmes.',
+    title: 'Our Packages', description: 'All KareNest packages and prices: KarePlus and KarePremium resident living, Bloom, Flourish and Thrive visitor passes, and the KareBalance and KareMind wellness programmes.',
     body: () => `${hero({
       crumbs: [HOME, ['Our Packages']], eyebrow: 'Our Packages', solo: true,
       h1: 'Find the package that <span class="accent">fits your life</span>',
@@ -512,11 +540,8 @@ ${FOCUS}
       <div class="pkgs">${D.byGroup('visit').map((p) => pkgCard(p, { compact: true })).join('')}</div>
     </section>
     <section class="pgroup rv" id="wellness" aria-labelledby="g-well">
-      <div class="pgroup-head"><div><div class="eyebrow">Wellness</div><h2 id="g-well" style="margin-top:8px">Wellness programmes</h2><p>Structured programmes for balance and mobility, and for emotional wellbeing.</p></div><a class="link-arrow" href="${u('/wellness')}">About our wellness programmes${ico('arr')}</a></div>
-      <h3 class="psub"><a href="${u('/karebalance')}">KareBalance · Fall prevention &amp; mobility</a></h3>
-      <div class="pkgs">${D.byGroup('karebalance').map((p) => pkgCard(p, { compact: true, level: 4 })).join('')}</div>
-      <h3 class="psub"><a href="${u('/karemind')}">KareMind · Mental wellness</a></h3>
-      <div class="pkgs">${D.byGroup('karemind').map((p) => pkgCard(p, { compact: true, level: 4 })).join('')}</div>
+      <div class="pgroup-head"><div><div class="eyebrow">Wellness</div><h2 id="g-well" style="margin-top:8px">Wellness programmes</h2><p>Structured programmes for balance and mobility, and for emotional wellbeing. Full programme details, packages and prices are on KareWellness.</p></div><a class="link-arrow" ${L.well()}>Visit KareWellness${ico('arr')}</a></div>
+      ${wellIntros(3)}
     </section>
   </div>
 </section>
@@ -527,7 +552,7 @@ ${enquiry({ title: 'Not sure which package is right?', lede: 'Tell us a little a
   // ---------------- Live With Us ----------------
   add({
     key: 'live', path: '/live-with-us', nav: 'packages', sub: 'live',
-    title: 'Live With Us: KarePlus and KarePremium', description: 'Resident living at KareNest: KarePlus shared living at ₹55,000 a month and KarePremium private rooms at ₹99,000 a month, inclusive of all GST.',
+    title: 'Live With Us: KarePlus and KarePremium', description: 'Resident living at KareNest: KarePlus shared living at ₹55,000 a month and KarePremium private rooms at ₹99,000 a month, inclusive of all.',
     body: () => `${hero({
       crumbs: [HOME, PKGS, ['Live With Us']], eyebrow: 'Live With Us · Resident living',
       h1: 'A home with <span class="accent">care</span> and <span class="violet">community</span> around you',
@@ -587,36 +612,15 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
     body: () => `${hero({
       crumbs: [HOME, PKGS, ['Wellness']], eyebrow: 'Wellness',
       h1: 'Look after your <span class="accent">body</span> and your <span class="violet">mind</span>',
-      lede: 'Wellness & fitness, preventive care, nutrition and mental wellbeing sit at the heart of KareNest. Our structured programmes give you personal support from qualified professionals.',
-      actions: `<a class="btn btn-primary mag" href="${u('/karebalance')}">KareBalance${arrow}</a><a class="btn btn-ghost mag" href="${u('/karemind')}">KareMind${arrow}</a>`,
+      lede: 'Wellness & fitness, preventive care, nutrition and mental wellbeing sit at the heart of KareNest. Our structured programmes give you personal support from qualified professionals. Full details are on KareWellness, the wellness website of the KareIQ family.',
+      actions: `<a class="btn btn-primary mag" ${L.well('karebalance')}>KareBalance${arrow}</a><a class="btn btn-ghost mag" ${L.well('karemind')}>KareMind${arrow}</a>`,
       image: 'yoga.webp', alt: 'A member holding a yoga balance pose on the lawn'
     })}
 
 <section class="sec" style="padding-top:30px" aria-labelledby="well-t">
   <div class="wrap">
     <div class="sec-head rv"><h2 class="h2" id="well-t">Our wellness programmes</h2></div>
-    <div class="well-grid">
-      <article class="well rv">
-        <div class="well-img"><img loading="lazy" decoding="async" src="${img('a4.webp')}" alt="KareNest members out for a group walk in the garden" width="800" height="450"></div>
-        <div class="well-body">
-          <span class="eyebrow">Fall prevention &amp; mobility</span>
-          <h3 class="h2x"><a href="${u('/karebalance')}">KareBalance</a></h3>
-          <p>${esc(G.karebalance.short)}</p>
-          <div class="tiers">${D.byGroup('karebalance').map((p) => `<span>${esc(p.name.replace('KareBalance ', ''))} · <span data-ppt="${p.id}">${D.rupees(p.price)}</span></span>`).join('')}</div>
-          <div class="row"><a class="btn btn-primary" href="${u('/karebalance')}">Explore KareBalance${arrow}</a><a class="btn btn-ghost" href="${u('/karebalance')}#enquire">Book a Consultation</a></div>
-        </div>
-      </article>
-      <article class="well rv" style="--d:.1s">
-        <div class="well-img"><img loading="lazy" decoding="async" src="${img('c1.webp')}" alt="Friends chatting together around a garden table" width="800" height="450"></div>
-        <div class="well-body">
-          <span class="eyebrow">Mental wellbeing</span>
-          <h3 class="h2x"><a href="${u('/karemind')}">KareMind</a></h3>
-          <p>Nurture Your Mind. Enhance Your Wellbeing. ${esc(G.karemind.short)}</p>
-          <div class="tiers">${D.byGroup('karemind').map((p) => `<span>${esc(p.name.replace('KareMind ', ''))} · <span data-ppt="${p.id}">${D.rupees(p.price)}</span></span>`).join('')}</div>
-          <div class="row"><a class="btn btn-primary" href="${u('/karemind')}">Explore KareMind${arrow}</a><a class="btn btn-ghost" href="${u('/karemind')}#enquire">Enquire</a></div>
-        </div>
-      </article>
-    </div>
+    ${wellIntros(3)}
   </div>
 </section>
 
@@ -632,121 +636,12 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
 </section>`
   });
 
-  // ---------------- KareBalance ----------------
-  const kb = D.byGroup('karebalance');
-  add({
-    key: 'karebalance', path: '/karebalance', nav: 'packages', sub: 'karebalance', kb: true,
-    title: 'KareBalance: fall prevention & mobility', description: 'KareBalance is a personalised fall prevention and mobility programme for older adults. Base ₹7,999, Plus ₹39,999, Premium ₹90,000.',
-    body: () => `<section class="kb" id="karebalance" aria-labelledby="kb-title">
-    <div class="wrap">
-      ${crumbs([HOME, PKGS, WELL, ['KareBalance']])}
-      <div class="kb-intro">
-        <div class="kb-copy rv">
-          <span class="kb-eyebrow">KareBalance</span>
-          <h1 class="kb-title" id="kb-title"><span>Better Balance.</span><span>Stronger Steps.</span><span>Fewer Falls.</span></h1>
-          <p class="kb-lead">A personalised fall prevention and mobility programme that helps older adults stay steady, active, and independent.</p>
-          <div class="kb-ctas">
-            <a class="btn btn-primary mag" href="#enquire" data-enquire="">${ico('cal')}Book a Consultation</a>
-            <a class="kb-link" href="#kb-plans">See programmes &amp; pricing <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
-          </div>
-        </div>
-        <figure class="kb-photo rv-img">
-          <img src="${img('yoga.webp')}" alt="A KareNest member holding a yoga balance pose on the lawn" width="900" height="640" fetchpriority="high">
-          <figcaption class="kb-note">Stay active.<br>Stay independent.</figcaption>
-        </figure>
-      </div>
-
-      <div class="rv">
-        <h2 class="kb-h">How KareBalance Helps</h2>
-        <ul class="kb-helps">
-          <li class="kb-help" style="--c:var(--kb-c1)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><h3 class="h4x">Improve Balance &amp; Stability</h3><p>Build better control while standing, turning and walking.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c2)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><h3 class="h4x">Build Strength</h3><p>Strengthen leg and core muscles for everyday activities.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c1d)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4" r="2"/><path d="M11 21l2.2-6.2-2.6-3 1.1-4.8 3 2.9 3 1.1M10.6 11.8 7.4 14M13.2 14.8 15.6 21"/></svg></span><h3 class="h4x">Move with Confidence</h3><p>Practise walking, stair climbing and sit-to-stand transitions.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c3)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.9-3.4 8.1-8 9-4.6-.9-8-4.1-8-9V6l8-3Z"/><path d="M8.6 12.6 12 9.6l3.4 3V16H8.6v-3.4Z"/></svg></span><h3 class="h4x">Identify Fall Risks</h3><p>Assess personal risk factors, medication-related concerns and home safety hazards.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c5)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><path d="M2.8 20c.5-3.6 2.9-5.6 5.7-5.6s5.2 2 5.7 5.6"/><circle cx="17" cy="9.2" r="2.4"/><path d="M15.6 14.7c2.7.1 4.6 1.9 5.4 5"/></svg></span><h3 class="h4x">Stay Independent</h3><p>Develop safer movement habits and confidence in daily life.</p></li>
-        </ul>
-      </div>
-
-      <div class="kb-for rv">
-        <div class="kb-for-media"><img src="${img('a4.webp')}" alt="KareNest members out for a group walk in the garden" loading="lazy" decoding="async" width="700" height="520"></div>
-        <div class="kb-for-body">
-          <h2 class="kb-h">Who Is KareBalance For?</h2>
-          <p class="kb-for-lead">KareBalance is designed for older adults who:</p>
-          <ul class="kb-checks">
-            ${['Have experienced a fall or near-fall.', 'Fear falling and have started avoiding everyday activities.', 'Feel unsteady while walking, turning or climbing stairs.', 'Are recovering mobility after an illness, hospitalisation or a period of inactivity.', 'Have reduced leg strength, balance or mobility.', 'Want to maintain their balance, strength and independence as they age.'].map((t) => `<li>${kbCheck}<span>${t}</span></li>`).join('\n            ')}
-          </ul>
-        </div>
-      </div>
-
-      <div id="kb-plans" class="rv">
-        <h2 class="kb-h">Our Programmes &amp; Pricing</h2>
-        <p class="kb-sub">Choose the right level of support for your needs and goals.</p>
-      </div>
-      <div class="kb-plans rv">
-        ${kb.map(kbPlan).join('\n        ')}
-      </div>
-
-      <div class="kb-band rv">
-        <span class="kb-band-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><path d="M2.5 20v-2.5A4.5 4.5 0 0 1 7 13a4.5 4.5 0 0 1 4.5 4.5M12.5 17.5A4.5 4.5 0 0 1 17 13a4.5 4.5 0 0 1 4.5 4.5V20"/><path d="M12 6.6c-.6-1.3-2.6-1.2-2.6.4 0 1.4 2.6 3 2.6 3s2.6-1.6 2.6-3c0-1.6-2-1.7-2.6-.4Z"/></svg></span>
-        <div>
-          <h2 class="h3x">Not sure which programme is right for your loved one?</h2>
-          <p>Our team can help identify the most appropriate level of support based on mobility, fall history and individual goals.</p>
-        </div>
-        <a class="btn btn-primary mag" href="#enquire" data-enquire="">Talk to Our Team${arrow}</a>
-      </div>
-      <p class="kb-fine">${esc(D.KB_FINE)}</p>
-    </div>
-  </section>
-
-${enquiry({ title: 'Book a KareBalance consultation', lede: 'Choose a programme, or let us help you pick one. Our team will call you to arrange the assessment.', interest: 'karenest-karebalance', plans: kb.map((p) => p.id), what: 'KareBalance', planLabel: 'Programme', points: ['Comprehensive fall risk assessment to start', 'Supervised balance and strength training', 'Home safety recommendations and family reports'] })}`
-  });
-
-  // ---------------- KareMind ----------------
-  const km = D.byGroup('karemind');
-  add({
-    key: 'karemind', path: '/karemind', nav: 'packages', sub: 'karemind',
-    title: 'KareMind: mental wellness program', description: 'KareMind is a structured mental wellness program for emotional wellbeing, stress management, sleep and social connection. Base ₹8,999, Plus ₹44,999, Premium ₹79,999.',
-    body: () => `${hero({
-      crumbs: [HOME, PKGS, WELL, ['KareMind']], eyebrow: 'KareMind · Mental wellbeing',
-      h1: 'Nurture Your Mind. <span class="violet">Enhance Your Wellbeing.</span>',
-      lede: "Mental wellbeing is an essential part of healthy ageing. At KareMind, we believe that everyone deserves the opportunity to feel emotionally balanced, stay socially connected, and navigate life's challenges with confidence and dignity.",
-      actions: `<a class="btn btn-primary mag" href="#programs">See the programs${arrow}</a><a class="btn btn-ghost mag" href="#enquire" data-enquire="">Enquire${arrow}</a>`,
-      image: 'c1.webp', alt: 'Friends chatting together around a garden table'
-    })}
-
-<section class="sec" style="padding-top:30px" aria-labelledby="km-about">
-  <div class="wrap km-intro">
-    <div class="rv">
-      <h2 class="h2" id="km-about">A structured, personal program</h2>
-      <p style="margin-top:16px">KareMind is a structured mental wellness program designed to support emotional wellbeing, stress management, healthy sleep habits, resilience, and meaningful social connections. Through personalised assessments, one-to-one support from qualified professionals, and practical strategies for everyday life, the program helps individuals better understand their emotional needs and build healthier routines.</p>
-      <p>Whether you are experiencing everyday stress, adjusting to life changes, feeling socially disconnected, or simply looking to prioritise your mental wellbeing, KareMind offers support tailored to your individual needs.</p>
-    </div>
-    <div class="km-quote rv" style="--d:.1s">
-      <b>Our approach is personal, compassionate, and focused on you.</b>
-      <p>With ongoing guidance, progress reviews, and referrals to appropriate mental health professionals when needed, KareMind helps you take meaningful steps towards a healthier, more balanced life.</p>
-    </div>
-  </div>
-</section>
-
-<section class="sec sec-tint" id="programs" aria-labelledby="km-p">
-  <div class="wrap">
-    <div class="sec-head rv"><h2 class="h2" id="km-p">KareMind programs</h2><p class="sub">Start with an assessment, or choose ongoing support for three or six months.</p></div>
-    <div class="pkgs">${km.map((p) => pkgCard(p)).join('')}</div>
-    ${compare(D.mindCompare, { minw: 560 })}
-    <p class="tagline"><span>KareMind</span> — Because your mental wellbeing matters at every stage of life.</p>
-  </div>
-</section>
-
-${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with a conversation. Our team will call you back in confidence.', interest: 'karenest-karemind', plans: km.map((p) => p.id), selected: '', what: 'KareMind', planLabel: 'Program', notSure: 'Not sure yet, help me choose', nestu: 'KareMind Base is the recommended starting program: an assessment and a clear plan.', points: ['Personalised assessment and written action plan', 'One-to-one sessions with qualified professionals', 'Referrals to appropriate mental health professionals when needed'] })}`
-  });
-
   // ---------------- package detail pages ----------------
   for (const p of D.packages) {
+    if (WELL_GROUPS.includes(p.group)) continue; // shown in full on KareWellness
     const g = G[p.group];
     const siblings = D.byGroup(p.group).filter((x) => x.id !== p.id);
-    const crumbsFor = p.group === 'karebalance' || p.group === 'karemind'
-      ? [HOME, PKGS, WELL, [g.name, u(g.path)], [esc(p.name)]]
-      : [HOME, PKGS, [esc(g.name), u(g.path)], [esc(p.name)]];
+    const crumbsFor = [HOME, PKGS, [esc(g.name), u(g.path)], [esc(p.name)]];
     const sub = p.group;
     let main = '';
     if (p.group === 'live') {
@@ -757,13 +652,6 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
       main = `<h2>About this pass</h2><p style="margin-top:12px;color:var(--ink-2)">${esc(p.desc)}</p>
       <h2 style="margin-top:34px">What's included in every visitor pass?</h2><div style="margin-top:18px">${feats(D.passIncludes)}</div>
       <p class="foot-note">${esc(D.GST_VISIT)}</p>`;
-    } else if (p.group === 'karebalance') {
-      main = `<h2>${esc(p.listTitle)}</h2>${list(p.includes)}<p class="pkg-best"><b>Best for:</b> ${esc(p.best)}</p>
-      <div class="note-box">${esc(D.KB_FINE)}</div>
-      <p style="margin-top:22px"><a class="link-arrow" href="${u('/karebalance')}?pkg=${p.id}#kb-plans">Compare all KareBalance programmes${ico('arr')}</a></p>`;
-    } else {
-      main = `<p style="color:var(--ink-2);font-size:1.05rem">${esc(p.desc)}</p><h2 style="margin-top:26px">${esc(p.listTitle)}</h2>${list(p.includes)}<p class="pkg-best"><b>Best for:</b> ${esc(p.best)}</p>
-      ${compare(D.mindCompare, { id: 'compare', level: 3, minw: 560, selected: p.id })}`;
     }
     const side = `<aside class="pd-side" aria-label="${esc(p.name)} summary">
       <div class="pd-card c-${p.color}">
@@ -783,7 +671,7 @@ ${enquiry({ title: 'Ask about KareMind', lede: 'Choose a program, or start with 
       body: () => `${hero({
         crumbs: crumbsFor, eyebrow: `${esc(g.name)} · ${esc(badgeOf(p))}`, solo: true,
         h1: `${esc(p.name)}`, lede: esc(p.tagline + (p.desc && p.group !== 'karemind' && p.group !== 'visit' ? '' : '')),
-        extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}${/GST/i.test(p.note || '') ? '' : ' · Inclusive of all GST'}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
+        extra: `<div class="price-chip"><b data-ppt="${p.id}">${D.rupees(p.price)}</b><span>${esc(D.unitLabel(p))}${p.note ? ' · ' + esc(p.note.replace(/\.$/, '')) : ''}${/^Inclusive of all/i.test(p.note || '') ? '' : ' · Inclusive of all'}</span></div>${p.flag ? `<p style="margin-top:12px"><span class="pkg-flag" style="background:var(--teal)">${esc(p.flag)}</span></p>` : ''}`,
         actions: `<a class="btn btn-primary mag" href="${u('/sign-in')}?plan=${p.id}" data-auth data-plan="${p.id}">${esc(p.cta)}${arrow}</a><a class="btn btn-ghost mag" href="${u(g.path)}?pkg=${p.id}${{ live: '#compare', karemind: '#compare', karebalance: '#kb-plans', visit: '#passes' }[p.group] || ''}">Compare ${esc(g.name)}${arrow}</a>`
       })}
 <section class="sec" style="padding-top:34px" aria-label="${esc(p.name)} details">

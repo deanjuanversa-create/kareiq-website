@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bystander caregiving support | KareIQ</title>
+<meta name="description" content="Bystander — Caregiving Support: Half Day (4 hours) ₹799, Full Day (8 hours) ₹1,299, Round the Clock (24 hours) ₹2,499. Long-term services can be discussed and customised on a case-by-case basis.">
+<meta property="og:title" content="Bystander caregiving support | KareIQ">
+<meta property="og:description" content="Bystander — Caregiving Support: Half Day (4 hours) ₹799, Full Day (8 hours) ₹1,299, Round the Clock (24 hours) ₹2,499. Long-term services can be discussed and customised on a case-by-case basis.">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&display=swap">
+<meta name="theme-color" content="#11998e">
+<link rel="icon" type="image/png" href="/img/favicon-kareiq.png">
+<link rel="stylesheet" href="/css/auth-popup.css?v=20261027c">
+<link rel="stylesheet" href="/css/kareiq.css?v=20261102a">
+<link rel="stylesheet" href="/css/kareiq-pages.css?v=20261102b">
+<link rel="stylesheet" href="/css/bystander.css?v=20261102b">
+<script src="/js/api.js?v=20261024a"></script>
+</head>
+<body data-kareiq data-source="kareiq-bystander">
+<!-- written by tools/kareiq/build.js from tools/shared/wellness.js; edit those, not this file -->
+<!-- shared SVG symbols -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g-brand" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#11998e"/><stop offset=".55" stop-color="#7c5cc4"/><stop offset="1" stop-color="#e4609e"/></linearGradient>
+    <linearGradient id="g-teal" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#11998e"/><stop offset="1" stop-color="#2a7fb8"/></linearGradient>
+    <linearGradient id="g-nest" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#11998e"/><stop offset=".5" stop-color="#7c5cc4"/><stop offset="1" stop-color="#e4609e"/></linearGradient>
+  </defs>
+  <symbol id="logo" viewBox="0 0 48 48">
+    <rect x="3" y="3" width="42" height="42" rx="11" fill="none" stroke="url(#g-brand)" stroke-width="3.2"/>
+    <rect x="11" y="11" width="26" height="26" rx="6" fill="none" stroke="url(#g-brand)" stroke-width="3"/>
+    <path d="M18 18v12h12" fill="none" stroke="url(#g-brand)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="house" viewBox="0 0 52 52">
+    <path d="M6 24 26 6l20 18" fill="none" stroke="url(#g-teal)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M11 20v24a2 2 0 0 0 2 2h26a2 2 0 0 0 2-2V20" fill="none" stroke="url(#g-teal)" stroke-width="3" stroke-linecap="round"/>
+    <path d="M26 39s-9-5.6-9-11.4A4.8 4.8 0 0 1 26 25a4.8 4.8 0 0 1 9 2.6C35 33.4 26 39 26 39Z" fill="none" stroke="url(#g-teal)" stroke-width="2.8" stroke-linejoin="round"/>
+  </symbol>
+  <symbol id="lotus" viewBox="0 0 52 52">
+    <path d="M26 44c-8-4-12-11-12-18 4 0 8 2 12 6 4-4 8-6 12-6 0 7-4 14-12 18Z" fill="none" stroke="url(#g-nest)" stroke-width="2.6" stroke-linejoin="round"/>
+    <path d="M26 32c-3-4-4-9-4-13 2 1 3 2 4 3 1-1 2-2 4-3 0 4-1 9-4 13Z" fill="none" stroke="url(#g-nest)" stroke-width="2.4" stroke-linejoin="round"/>
+    <path d="M14 26c-4-1-7-3-9-6 4-1 8 0 11 2M38 26c4-1 7-3 9-6-4-1-8 0-11 2" fill="none" stroke="url(#g-nest)" stroke-width="2.4" stroke-linecap="round"/>
+    <circle cx="19" cy="12" r="3" fill="none" stroke="#e4609e" stroke-width="2.2"/><circle cx="33" cy="12" r="3" fill="none" stroke="#11998e" stroke-width="2.2"/>
+    <circle cx="26" cy="8" r="3" fill="none" stroke="#7c5cc4" stroke-width="2.2"/>
+  </symbol>
+  <symbol id="arrow" viewBox="0 0 16 16"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="leaf" viewBox="0 0 160 200">
+    <path d="M30 196C40 140 30 90 10 50 50 70 70 120 60 190Z" fill="#cfe7e1" opacity=".9"/>
+    <path d="M50 196c20-50 50-80 100-100-10 50-50 90-100 100Z" fill="#bfe0d8" opacity=".85"/>
+    <path d="M40 196c0-60 20-110 60-150 10 60-10 120-60 150Z" fill="#e3f1ee"/>
+    <path d="M40 196C60 140 80 90 100 46M48 196C80 150 110 120 150 96M30 196C34 140 26 90 10 50" fill="none" stroke="#9fcfc4" stroke-width="1.2"/>
+  </symbol>
+  <symbol id="leaf-pink" viewBox="0 0 160 200">
+    <path d="M40 196c0-60 20-110 60-150 10 60-10 120-60 150Z" fill="#e8f2ef"/>
+    <path d="M50 196c20-50 50-80 100-100-10 50-50 90-100 100Z" fill="#f6dbe8" opacity=".9"/>
+    <path d="M30 196C40 140 30 90 10 50 50 70 70 120 60 190Z" fill="#d6ebe5"/>
+    <path d="M40 196C60 140 80 90 100 46M48 196C80 150 110 120 150 96" fill="none" stroke="#c5ddd6" stroke-width="1.2"/>
+  </symbol>
+</svg>
+
+<div class="progress" id="progress"></div>
+
+<header class="nav" id="nav">
+  <div class="wrap">
+    <div class="nav-in">
+      <a href="/" class="logo" aria-label="KareIQ home"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
+      <ul class="menu" id="menu">
+        <li><a href="/#top">Home</a></li>
+        <li><a href="/#about">About KareIQ</a></li>
+        <li><a href="/#ecosystem">Our Care Ecosystem</a></li>
+        <li><a href="/#team">Our Team</a></li>
+        <li><a href="/faq">FAQs</a></li>
+        <li><a href="/#contact">Contact</a></li>
+      </ul>
+      <div class="nav-end">
+      <a class="app-in" href="/app/#/signin?brand=kareiq" data-app="kareiq" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
+      <a class="btn btn-grad" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" aria-label="Join Our Community on WhatsApp (opens in a new tab)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" width="24" height="24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.6-3.6 3.2-5.5 6.5-5.5s5.9 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M17 14.5c2.5 0 4.2 1.5 4.6 4"/></svg>
+        Join Our Community
+      </a>
+      </div>
+      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false"><span></span></button>
+    </div>
+    <nav class="drawer" aria-label="Mobile">
+      <ul>
+        <li><a href="/#top">Home</a></li>
+        <li><a href="/#about">About KareIQ</a></li>
+        <li><a href="/#ecosystem">Our Care Ecosystem</a></li>
+        <li><a href="/#team">Our Team</a></li>
+        <li><a href="/faq">FAQs</a></li>
+        <li><a href="/#contact">Contact</a></li>
+        <li><a href="/app/#/signin" data-app="kareiq">Sign in (families and caregivers)</a></li>
+      </ul>
+      <a class="btn btn-grad" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Join Our Community <svg viewBox="0 0 16 16" width="16" height="16"><use href="/#arrow"/></svg></a>
+    </nav>
+  </div>
+</header>
+
+<main id="top" class="pg-main">
+  <section class="pg-hero" aria-labelledby="by-title">
+    <span class="pg-orb o1" aria-hidden="true"></span><span class="pg-orb o2" aria-hidden="true"></span>
+    <div class="wrap pg-hero-in">
+      <div>
+        <ol class="pg-breadcrumb load" aria-label="Breadcrumb"><li><a href="/">KareIQ</a></li><li aria-current="page">Bystander</li></ol>
+        <div class="eyebrow load" style="animation-delay:.1s">Caregiving Support</div>
+        <h1 class="load" id="by-title" style="animation-delay:.2s">Bystander. <em>Someone by their side.</em></h1>
+        <p class="pg-lead load" style="animation-delay:.35s">When your loved one needs someone by their side, a Bystander from the KareIQ family stays with them and supports their everyday needs and comfort, so that the family can work, rest or travel with peace of mind. Choose the length of support that suits the day.</p>
+        <div class="pg-ctas load" style="animation-delay:.5s">
+          <a class="btn btn-grad" href="#durations">See durations &amp; prices <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></a>
+          <button class="btn btn-ghost" type="button" data-bystander="">Book Now</button>
+        </div>
+      </div>
+      <div class="pg-hero-art load" style="animation-delay:.3s">
+        <div class="pg-hero-photo"><img src="/img/karehome-hero.jpg" alt="A KareIQ caregiver holding the hands of a smiling elderly woman at home" width="1168" height="850" fetchpriority="high" style="object-position:62% 40%"></div>
+        <div class="pg-chip c1"><span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span><span><b>4, 8 or 24 hours</b>Choose what the day needs</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="pg-sec" id="durations" aria-labelledby="dur-t">
+    <div class="wrap">
+      <div class="pg-head center">
+        <div class="eyebrow rv">Bystander — Caregiving Support</div>
+        <h2 class="rv" id="dur-t" style="--d:.05s">Choose the <em>length of support</em></h2>
+        <p class="rv" style="--d:.1s">A trained caregiver to stay with your loved one for half a day, a full day or round the clock.</p>
+      </div>
+      <div class="by-cards">
+        <article class="plan by-card rv" style="--d:0.00s">
+          <div class="hours"><i>4h</i><span><b>Half Day</b>4 hours</span></div>
+          <div class="price"><b>₹799</b><span>for 4 hours</span></div>
+          <button class="btn btn-grad" type="button" data-bystander="by-half" style="margin-top:24px">Book Half Day <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+        </article>
+        <article class="plan by-card rv" style="--d:0.08s">
+          <div class="hours"><i>8h</i><span><b>Full Day</b>8 hours</span></div>
+          <div class="price"><b>₹1,299</b><span>for 8 hours</span></div>
+          <button class="btn btn-grad" type="button" data-bystander="by-full" style="margin-top:24px">Book Full Day <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+        </article>
+        <article class="plan by-card rv" style="--d:0.16s">
+          <div class="hours"><i>24h</i><span><b>Round the Clock</b>24 hours</span></div>
+          <div class="price"><b>₹2,499</b><span>for 24 hours</span></div>
+          <button class="btn btn-grad" type="button" data-bystander="by-24" style="margin-top:24px">Book Round the Clock <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+        </article>
+      </div>
+      <div class="by-long rv">
+        <span class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg></span>
+        <div><b>Need support for longer?</b><p>Long-term services can be discussed and customised on a case-by-case basis.</p></div>
+        <button class="btn btn-grad" type="button" data-bystander="by-long">Discuss long-term care <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pg-sec tint" aria-labelledby="by-where">
+    <div class="wrap">
+      <div class="pg-head center">
+        <div class="eyebrow rv">Across the KareIQ family</div>
+        <h2 class="rv" id="by-where" style="--d:.05s">Also bookable through <em>Kare@Home</em></h2>
+        <p class="rv" style="--d:.1s">The same durations and prices apply on the Kare@Home website, alongside its preventive care at home.</p>
+      </div>
+      <div class="cont" style="grid-template-columns:minmax(0,1fr);max-width:620px;margin-inline:auto">
+        <a class="rv" href="/kare-at-home/bystander" data-site="karehome" data-path="/bystander"><img src="/img/karehome-logo.png" alt="" width="1407" height="395"><span><b>Bystander at Kare@Home</b><small>Book a Bystander for care at home.</small></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="foot">
+      <a href="/" class="logo" aria-label="KareIQ home"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>
+      <div class="foot-about"><p>Care that connects. Technology that empowers. A better way to age.</p><p class="foot-contact"><a href="tel:+918129345178" data-c="contact.phoneDisplay">+91 81293 45178</a><a href="mailto:support@kareiq.co.in">support@kareiq.co.in</a><a class="foot-wa" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">WhatsApp us</a></p><div class="foot-social" aria-label="KareIQ on social media"><a class="fs ig" href="https://www.instagram.com/ikareiq/" data-ig target="_blank" rel="noopener" aria-label="KareIQ on Instagram (opens in a new tab)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><rect x="3.5" y="3.5" width="17" height="17" rx="5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="17.3" cy="6.7" r="1.1" fill="currentColor"/></svg></a><a class="fs li" href="https://www.linkedin.com/company/108067432" target="_blank" rel="noopener" aria-label="KareIQ on LinkedIn (opens in a new tab)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M6.5 9.5h-3v11h3v-11ZM5 4.5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5ZM20.5 14c0-3-1.6-4.7-4-4.7-1.5 0-2.4.8-2.8 1.5V9.5h-3v11h3v-6c0-1.5.8-2.5 2.1-2.5 1.2 0 1.7.9 1.7 2.5v6h3V14Z"/></svg></a><a class="fs fb" href="https://www.facebook.com/profile.php?id=61578358940397" target="_blank" rel="noopener" aria-label="KareIQ on Facebook (opens in a new tab)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" d="M13.5 21v-7.5h2.6l.4-3h-3V8.6c0-.9.3-1.5 1.6-1.5h1.6V4.4c-.3 0-1.2-.1-2.3-.1-2.3 0-3.9 1.4-3.9 4v2.2H8v3h2.6V21h2.9Z"/></svg></a><a class="fs wa" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" aria-label="Join the KareIQ WhatsApp community (opens in a new tab)"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" d="M4.5 19.5 5.6 16A8 8 0 1 1 8.4 18.6l-3.9.9Z"/><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M9.2 8.6c.2 2.8 3.4 6 6.2 6.2l1-1.4-1.9-1-.9.8c-1-.4-2.4-1.8-2.8-2.8l.8-.9-1-1.9-1.4 1Z"/></svg></a></div></div>
+      <nav class="foot-links" aria-label="Footer"><a href="/#our-values">Our Values</a><a href="/#about">About KareIQ</a><a href="/kare-at-home" data-site="karehome">Kare@Home</a><a href="/karenest" data-site="karenest">KareNest</a><a href="/karewellness/" data-site="karewellness">KareWellness</a><a href="/bystander">Bystander</a><a href="/faq">FAQs</a><a href="/#team">Our Team</a><a href="/#contact">Contact</a></nav>
+    </div>
+    <div class="foot-bottom"><span>© <span id="year">2026</span> KareIQ. All rights reserved.</span><span class="legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></span><span class="bars"><i></i><i></i></span></div>
+  </div>
+</footer>
+
+<a class="wa-float" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener" aria-label="Chat with KareIQ on WhatsApp"><svg class="wa-ico" viewBox="0 0 24 24" aria-hidden="true" width="22" height="22"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2Zm0 18.15h-.01a8.23 8.23 0 0 1-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.25-8.24a8.24 8.24 0 0 1 8.24 8.25c0 4.54-3.7 8.23-8.23 8.23Zm4.52-6.16c-.25-.12-1.46-.72-1.69-.8-.23-.08-.39-.12-.56.12-.16.25-.64.8-.78.97-.14.16-.29.18-.54.06-.25-.12-1.04-.38-1.99-1.22-.73-.66-1.23-1.46-1.37-1.71-.14-.25-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.42h-.48c-.16 0-.43.06-.66.31-.23.25-.86.85-.86 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.46-.6 1.67-1.18.21-.58.21-1.07.14-1.18-.06-.1-.22-.16-.47-.28Z"/></svg><span>Chat with us</span></a>
+<button class="totop" id="totop" aria-label="Back to top"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M12 19V5M6 11l6-6 6 6"/></svg></button>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="mTitle" hidden>
+  <div class="sheet">
+    <button class="x" id="mClose" aria-label="Close">×</button>
+    <div id="formView">
+      <h3 id="mTitle">Talk to our care team</h3>
+      <p>Tell us a little about your loved one. A care advisor will call you back within one working day.</p>
+      <form id="form" novalidate>
+        <div class="form-alert" role="alert" hidden></div>
+        <div class="field"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" placeholder="e.g. Priya Raman" required><span class="err"></span></div>
+        <div class="row2">
+          <div class="field"><label for="f-phone">Mobile number</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required><span class="err"></span></div>
+          <div class="field"><label for="f-email">Email <span class="opt">(optional)</span></label><input id="f-email" name="email" type="email" autocomplete="email" placeholder="you@example.com"><span class="err"></span></div>
+        </div>
+        <div class="field"><label for="f-interest">I'm interested in</label>
+          <select id="f-interest" name="interest">
+            <option value="karehome">Kare@home: care at home</option>
+            <option value="karenest">KareNest: community living</option>
+            <option value="bystander">Bystander: caregiving support</option>
+            <option value="karebalance">KareWellness: KareBalance</option>
+            <option value="karemind">KareWellness: KareMind</option>
+            <option value="partnership">Partnership or careers</option>
+            <option value="general" selected>Not sure yet, guide me</option>
+          </select><span class="err"></span></div>
+        <div class="field"><label for="f-msg">Anything we should know? <span class="opt">(optional)</span></label><textarea id="f-msg" name="message" rows="3" maxlength="1000" placeholder="Age, health needs, city…"></textarea></div>
+        <input type="hidden" name="plan" value="">
+        <div class="hp" aria-hidden="true"><label for="f-website">Leave this empty</label><input id="f-website" name="website" tabindex="-1" autocomplete="off"></div>
+        <div class="field check"><label><input type="checkbox" name="consent" id="f-consent"> <span>I agree to be contacted by KareIQ about this request. See our <a href="/privacy" target="_blank">Privacy Policy</a>.</span></label><span class="err"></span></div>
+        <button class="btn btn-grad" id="fSubmit" type="submit">Request a call back <svg viewBox="0 0 16 16" width="16" height="16"><use href="#arrow"/></svg></button>
+      </form>
+    </div>
+    <div class="done" id="doneView" hidden>
+      <div class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" width="24" height="24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h3>Thank you, <span id="doneName"></span></h3>
+      <p class="done-p">We've received your request. A care advisor will call you within one working day.</p>
+      <div class="ref">Your reference <b id="doneRef"></b></div>
+      <div><button class="btn btn-ghost" id="doneClose">Close</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ BYSTANDER BOOKING (written by tools/shared/bystander-form.js) ============ -->
+<dialog class="bf" id="bystanderForm" aria-labelledby="bfTitle" data-page="kareiq">
+  <div class="bf-sheet">
+    <button class="bf-x" type="button" data-bf-close aria-label="Close">×</button>
+    <div class="bf-view" data-bf-view="form">
+      <p class="bf-eyebrow">Bystander — Caregiving Support</p>
+      <h2 id="bfTitle">Book a Bystander</h2>
+      <p class="bf-sub">No sign-in needed. Tell us what you need and our team will call to confirm the caregiver and timing.</p>
+      <form id="bfForm" novalidate>
+        <div class="bf-alert" role="alert" hidden></div>
+        <fieldset class="bf-set">
+          <legend>1. Choose the support</legend>
+          <div class="bf-opts" role="radiogroup" aria-describedby="bf-package-err">
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-half" data-name="Half Day" data-label="4 hours" data-price="799"><span><b>Half Day</b><small>4 hours · ₹799</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-full" data-name="Full Day" data-label="8 hours" data-price="1299"><span><b>Full Day</b><small>8 hours · ₹1,299</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-24" data-name="Round the Clock" data-label="24 hours" data-price="2499"><span><b>Round the Clock</b><small>24 hours · ₹2,499</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-long" data-name="Long-term" data-label="to be discussed" data-price="0"><span><b>Long-term</b><small>Discussed case by case</small></span></label>
+          </div>
+          <span class="bf-err" id="bf-package-err"></span>
+          <p class="bf-note">Long-term services can be discussed and customised on a case-by-case basis.</p>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-date">Date needed</label><input id="bf-date" name="date" type="date" required aria-describedby="bf-date-err"><span class="bf-err" id="bf-date-err"></span></div>
+            <div class="bf-field"><label for="bf-startTime">Start time</label><input id="bf-startTime" name="startTime" type="time" required step="900" aria-describedby="bf-startTime-err"><span class="bf-err" id="bf-startTime-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>2. Your details</legend>
+          <div class="bf-field"><label for="bf-name">Your name</label><input id="bf-name" name="name" autocomplete="name" placeholder="e.g. Priya Raman" required aria-describedby="bf-name-err"><span class="bf-err" id="bf-name-err"></span></div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-phone">Mobile number</label><input id="bf-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required aria-describedby="bf-phone-err"><span class="bf-err" id="bf-phone-err"></span></div>
+            <div class="bf-field"><label for="bf-altPhone">Another contact number <span class="bf-opt">(optional)</span></label><input id="bf-altPhone" name="altPhone" type="tel" inputmode="tel" placeholder="Family member or patient" aria-describedby="bf-altPhone-err"><span class="bf-err" id="bf-altPhone-err"></span></div>
+          </div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-email">Email <span class="bf-opt">(optional)</span></label><input id="bf-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="bf-email-err"><span class="bf-err" id="bf-email-err"></span></div>
+            <div class="bf-field"><label for="bf-careFor">The Bystander is for</label><select id="bf-careFor" name="careFor" aria-describedby="bf-careFor-err" required><option value="">Choose</option><option value="parent">My parent</option><option value="grandparent">My grandparent</option><option value="spouse">My spouse</option><option value="self">Myself</option><option value="other">Someone else</option></select><span class="bf-err" id="bf-careFor-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>3. Patient details</legend>
+          <div class="bf-row bf-row-3">
+            <div class="bf-field bf-wide"><label for="bf-patientName">Patient's name</label><input id="bf-patientName" name="patientName" placeholder="e.g. Lakshmi Nair" required aria-describedby="bf-patientName-err"><span class="bf-err" id="bf-patientName-err"></span></div>
+            <div class="bf-field"><label for="bf-patientAge">Age</label><input id="bf-patientAge" name="patientAge" type="number" inputmode="numeric" min="1" max="120" placeholder="72" required aria-describedby="bf-patientAge-err"><span class="bf-err" id="bf-patientAge-err"></span></div>
+          </div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-patientGender">Gender <span class="bf-opt">(optional)</span></label><select id="bf-patientGender" name="patientGender" aria-describedby="bf-patientGender-err"><option value="">Choose</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="none">Prefer not to say</option></select><span class="bf-err" id="bf-patientGender-err"></span></div>
+            <div class="bf-field"><label for="bf-mobility">Moving around</label><select id="bf-mobility" name="mobility" aria-describedby="bf-mobility-err" required><option value="">Choose</option><option value="independent">Walks independently</option><option value="assisted">Needs help to walk</option><option value="wheelchair">Uses a wheelchair</option><option value="bedbound">Mostly in bed</option></select><span class="bf-err" id="bf-mobility-err"></span></div>
+          </div>
+          <div class="bf-field"><label for="bf-needs">Health conditions and care needs <span class="bf-opt">(optional)</span></label><textarea id="bf-needs" name="needs" rows="2" maxlength="600" placeholder="e.g. diabetic, recovering from knee surgery, needs help with meals and medicines" aria-describedby="bf-needs-err"></textarea><span class="bf-err" id="bf-needs-err"></span></div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>4. Where the service is needed</legend>
+          <div class="bf-field"><label for="bf-location">Location</label><select id="bf-location" name="location" aria-describedby="bf-location-err" required><option value="">Choose</option><option value="home">At home</option><option value="hospital">In hospital</option><option value="other">Somewhere else</option></select><span class="bf-err" id="bf-location-err"></span></div>
+          <div class="bf-field"><label for="bf-address">Full address</label><textarea id="bf-address" name="address" rows="2" maxlength="300" autocomplete="street-address" placeholder="House or flat number, street, landmark. For a hospital: hospital name, ward and room" required aria-describedby="bf-address-err"></textarea><span class="bf-err" id="bf-address-err"></span></div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-area">Area / city</label><input id="bf-area" name="area" autocomplete="address-level2" placeholder="e.g. Kakkanad, Kochi" required aria-describedby="bf-area-err"><span class="bf-err" id="bf-area-err"></span></div>
+            <div class="bf-field"><label for="bf-pincode">PIN code</label><input id="bf-pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" placeholder="682030" required aria-describedby="bf-pincode-err"><span class="bf-err" id="bf-pincode-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>5. Anything else</legend>
+          <div class="bf-field"><label for="bf-notes">Notes or special requirements <span class="bf-opt">(optional)</span></label><textarea id="bf-notes" name="notes" rows="3" maxlength="1000" placeholder="Language preference, preferred caregiver (male or female), pets at home, parking…"></textarea><span class="bf-err" id="bf-notes-err"></span></div>
+        </fieldset>
+
+        <div class="bf-hp" aria-hidden="true"><label for="bf-website">Leave this empty</label><input id="bf-website" name="website" tabindex="-1" autocomplete="off"></div>
+        <label class="bf-check"><input type="checkbox" name="consent" id="bf-consent" aria-describedby="bf-consent-err"><span>I agree to be contacted by KareIQ about this booking. See our <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <span class="bf-err" id="bf-consent-err"></span>
+        <div class="bf-foot">
+          <p class="bf-total" aria-live="polite" data-bf-total>Choose an option to see the price.</p>
+          <button class="bf-go" type="submit">Request booking <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </form>
+    </div>
+    <div class="bf-view bf-done" data-bf-view="done" hidden tabindex="-1">
+      <div class="bf-tick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2>Booking request received</h2>
+      <p>Thank you, <b data-bf-name></b>. Our team will call you on <b data-bf-phone></b> to confirm the caregiver and timing.</p>
+      <dl class="bf-summary" data-bf-summary></dl>
+      <p class="bf-ref">Your reference <b data-bf-ref></b></p>
+      <button class="bf-go bf-again" type="button" data-bf-close>Done</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="/js/forms.js?v=20261028a" defer></script>
+<script src="/js/sites.js?v=20261028g" defer></script>
+<script src="/js/content.js?v=20261028b" defer></script>
+<script src="/js/kareiq.js?v=20261102b" defer></script>
+<script src="/js/auth-popup.js?v=20261029a" data-brand="kareiq" defer></script>
+<script src="/js/bystander.js?v=20261102b" defer></script>
+</body>
+</html>

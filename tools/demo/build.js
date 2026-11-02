@@ -33,6 +33,9 @@ fs.mkdirSync(OUT, { recursive: true });
 // the server reads the KareNest package list (names, wording, prices) from here
 fs.mkdirSync(path.join(OUT, 'tools/karenest'), { recursive: true });
 fs.copyFileSync(path.join(ROOT, 'tools/karenest/data.js'), path.join(OUT, 'tools/karenest/data.js'));
+// the server also reads the KareBalance, KareMind and Bystander prices from tools/shared
+fs.mkdirSync(path.join(OUT, 'tools/shared'), { recursive: true });
+for (const f of fs.readdirSync(path.join(ROOT, 'tools/shared'))) fs.copyFileSync(path.join(ROOT, 'tools/shared', f), path.join(OUT, 'tools/shared', f));
 const edit = (rel, fn) => {
   const f = path.join(OUT, rel), before = fs.readFileSync(f, 'utf8'), after = fn(before);
   if (after === before) throw new Error('Nothing changed in ' + rel + ' (the file was probably edited; update tools/demo/build.js)');
@@ -42,9 +45,9 @@ const edit = (rel, fn) => {
 // ---------------------------------------------------------------- everything on this one site
 edit('public/js/api.js', (s) => s.replace(/window\.KARE_API = [^;]+;/, "window.KARE_API = ''; // demo: this site's own API"));
 edit('public/js/sites.js', (s) => s
-  .replace(/window\.KARE_SITES = \{[^}]*\}/, "window.KARE_SITES = {\n  kareiq:   '/',\n  karehome: '/kare-at-home',\n  karenest: '/karenest'\n}")
+  .replace(/window\.KARE_SITES = \{[^}]*\}/, "window.KARE_SITES = {\n  kareiq:   '/',\n  karehome: '/kare-at-home',\n  karenest: '/karenest',\n  karewellness: '/karewellness/'\n}")
   .replace(/window\.KARE_APP = [^;]+;/, "window.KARE_APP = '/app/';"));
-edit('app/app.js', (s) => s.replace(/var SITES = \{[^}]*\};/, "var SITES = { kareiq: '/', karehome: '/kare-at-home', karenest: '/karenest' };"));
+edit('app/app.js', (s) => s.replace(/var SITES = \{[^}]*\};/, "var SITES = { kareiq: '/', karehome: '/kare-at-home', karenest: '/karenest', karewellness: '/karewellness/' };"));
 // the server turns on the demo logins for this copy
 edit('api/index.js', (s) => s.replace("const { handler }", [
   "process.env.APP_DEMO = process.env.APP_DEMO || 'true';",

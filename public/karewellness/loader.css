@@ -1,0 +1,41 @@
+/* KareWellness intro: two arcs (KareBalance teal-blue and KareMind violet-pink) draw around a ring and
+   meet, the KareWellness emblem blooms in the middle, the name rises letter by letter, then the whole
+   screen lifts away on a soft wave. Plays on a fresh visit or a reload only. */
+.kw-loader{position:fixed;inset:0;z-index:200;display:none;place-items:center;
+  background:linear-gradient(165deg,#EEF8F7 0%,#FFFFFF 46%,#F6F0FC 100%);color:#16304a;will-change:transform}
+html.kw-intro .kw-loader{display:grid}
+html.kw-intro,html.kw-intro body{overflow:hidden}
+/* the page waits for the intro */
+html.kw-intro .hero,html.kw-intro .hero *,html.kw-intro .pg-hero,html.kw-intro .pg-hero *{animation-play-state:paused!important}
+
+.kw-loader::before{content:"";position:absolute;width:72vmax;height:72vmax;left:50%;top:46%;translate:-50% -50%;border-radius:50%;
+  background:radial-gradient(circle,rgba(17,153,142,.14) 0%,rgba(124,92,196,.09) 38%,rgba(228,96,158,.05) 52%,transparent 68%);pointer-events:none}
+.kw-wave{position:absolute;left:0;right:0;top:100%;height:90px;display:block;pointer-events:none}
+.kw-wave path{fill:#F6F0FC}
+
+.kw-stage{position:relative;display:flex;flex-direction:column;align-items:center;gap:22px;text-align:center;padding:0 24px}
+.kw-emblem{position:relative;width:clamp(150px,34vw,200px);aspect-ratio:1}
+.kw-emblem svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.kw-track{fill:none;stroke:rgba(22,48,74,.07);stroke-width:2.4}
+.kw-arc{fill:none;stroke-width:3;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1}
+.kw-arc.a1{stroke:url(#kwGradA)}
+.kw-arc.a2{stroke:url(#kwGradB)}
+.kw-dot{transform-box:fill-box;transform-origin:center;transform:scale(0)}
+.kw-dot.d1{fill:#11998e}.kw-dot.d2{fill:#e4609e}
+.kw-mark-in{position:absolute;left:50%;top:50%;width:56%;height:auto;translate:-50% -50%;opacity:0;transform:scale(.5) rotate(-12deg);filter:drop-shadow(0 12px 22px rgba(59,130,196,.25))}
+
+.kw-word{position:relative;font-family:"Fraunces","Iowan Old Style","Palatino Linotype",Georgia,serif;font-weight:440;font-size:clamp(2.1rem,6.6vw,3.3rem);line-height:1.05;letter-spacing:-.015em;display:flex}
+.kw-word span{display:inline-block;opacity:0;transform:translateY(60%);
+  background:linear-gradient(100deg,#08a58d 0%,#1f78c8 38%,#6a43bd 68%,#de2f72 100%);background-size:var(--w,8em) 100%;background-position:var(--x,0) 0;
+  -webkit-background-clip:text;background-clip:text;color:transparent}
+.kw-tag{font-family:"Outfit","Segoe UI",system-ui,sans-serif;font-size:.78rem;letter-spacing:.22em;text-transform:uppercase;color:#5d7088;opacity:0}
+
+.kw-skip{position:absolute;bottom:calc(22px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);border:0;background:none;
+  color:#5d7088;font:600 12px "Outfit",system-ui,sans-serif;letter-spacing:.18em;text-transform:uppercase;cursor:pointer;padding:10px 14px;opacity:0;transition:opacity .6s}
+.kw-skip.show{opacity:1}
+.kw-skip:hover,.kw-skip:focus-visible{color:#16304a}
+
+/* safety net: if the script never runs, the intro still clears itself */
+html.kw-intro .kw-loader{animation:kwFailsafe .6s 8s forwards}
+@keyframes kwFailsafe{to{opacity:0;visibility:hidden}}
+@media (prefers-reduced-motion:reduce){.kw-loader{display:none!important}}

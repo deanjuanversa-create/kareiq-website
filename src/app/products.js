@@ -9,7 +9,7 @@ const PRODUCTS = {
     id: 'karehome',
     name: 'Kare@Home',
     tagline: 'Care at home',
-    plans: ['homestart', 'homeplus', 'homeelite', 'diabetic', 'customized', 'kb-base', 'kb-plus', 'kb-premium']
+    plans: ['homestart', 'homeplus', 'homeelite', 'diabetic', 'customized', 'kb-base', 'kb-plus', 'kb-premium', 'by-half', 'by-full', 'by-24', 'by-long']
   },
   karenest: {
     id: 'karenest',

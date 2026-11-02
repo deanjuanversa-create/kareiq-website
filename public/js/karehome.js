@@ -2,8 +2,10 @@
 /* links from the old one-page site (/kare-at-home#packages) open the matching page */
 (function () {
   if (document.body.dataset.page !== 'home') return;
-  var m = { packages: '/packages', karebalance: '/karebalance', 'kb-plans': '/karebalance#kb-plans', why: '#about-us' };
+  var m = { packages: '/packages', why: '#about-us', faq: '/faq' };
   var h = location.hash.slice(1);
+  // KareBalance is now on KareWellness, on the KareIQ website
+  if (h === 'karebalance' || h === 'kb-plans') return location.replace(((window.KARE_SITES && window.KARE_SITES.kareiq) || '/') + 'karewellness#karebalance');
   if (m[h]) location.replace('/kare-at-home' + m[h]);
 })();
 (function () {
@@ -135,10 +137,10 @@
     if (first && modal.classList.contains('open')) setTimeout(() => first.focus({ preventScroll: true }), 60);
   }
 
-  // KareBalance programmes have fixed pricing, so the payment plan does not apply
+  // KareBalance programmes and Bystander visits have fixed pricing, so the payment plan does not apply
   function kbBilling() {
     if (!F.billing) return;
-    const kb = /^kb-/.test(F.package.value) || F.service.value === 'karebalance';
+    const kb = /^(kb|by)-/.test(F.package.value) || F.service.value === 'karebalance' || F.service.value === 'bystander';
     const field = F.billing.closest('.field');
     if (field) field.hidden = kb;
     F.billing.disabled = kb;
@@ -255,22 +257,20 @@
 
 /* ---------- Care packages: payment-plan switch ----------
    Prices, names and "Includes" come from the admin (window.KARE_CONTENT).
-   The numbers below are only the fallback when the page is opened without the server. */
+   The numbers below are only the fallback when the page is opened without the server.
+   Payment plans are 1, 3, 6 and 12 months (Monthly, Quarterly, Semi-Annual, Annual), and the website shows no discounts:
+   no struck-through price, no offer tag, no "save x%". */
 (window.KareWhenContent || ((fn) => fn()))(function () {
   const C = window.KARE_CONTENT && window.KARE_CONTENT.pricing;
   const PRICES = {
-    homestart: { 1: [2599, 2599], 3: [2386, 7159], 6: [2333, 13999], 12: [2291, 27499] },
-    homeplus:  { 1: [4999, 4999], 3: [4586, 13759], 6: [4499, 26999], 12: [4408, 52899] },
-    homeelite: { 1: [9999, 9999], 3: [9183, 27549], 6: [8999, 53999], 12: [8816, 105799] }
+    homestart: { 1: [4499, 4499], 3: [4139, 12419], 6: [4049, 24299], 12: [3958, 47499] },
+    homeplus:  { 1: [6499, 6499], 3: [5979, 17939], 6: [5833, 34999], 12: [5719, 68629] },
+    homeelite: { 1: [11999, 11999], 3: [11039, 33119], 6: [10798, 64789], 12: [10558, 126699] }
   };
-  let SAVINGS = { 1: 0, 3: 5, 6: 7, 12: 10 };
-  if (C) {
-    C.packages.forEach((p) => { PRICES[p.key] = p.prices; });
-    SAVINGS = C.savings;
-  }
-  const BILLED = { 1: 'billed monthly', 3: 'billed quarterly', 6: 'billed half-yearly', 12: 'billed annually' };
-  const maxSave = Math.max(...Object.values(SAVINGS).map(Number));
-  const saveText = (m) => (+SAVINGS[m] > 0 ? `You save ${SAVINGS[m]}% with the ${m}-month payment plan.` : (maxSave > 0 ? `Pay monthly, or save up to ${maxSave}% with a longer payment plan.` : 'Choose the payment plan that suits you.'));
+  const PLAN_MONTHS = [1, 3, 6, 12];
+  if (C) C.packages.forEach((p) => { PRICES[p.key] = p.prices; });
+  const BILLED = { 1: 'billed monthly', 3: 'billed quarterly', 6: 'billed semi-annually', 12: 'billed annually' };
+  const saveText = () => 'Choose the payment plan that suits you.';
   const fmt = (n) => Number(n).toLocaleString('en-IN');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const box = document.querySelector('.billing');
@@ -290,10 +290,6 @@
       const btn = card.querySelector('[data-book],[data-auth]');
       btn.setAttribute('aria-label', 'Choose ' + p.name);
       btn.firstChild.textContent = 'Choose ' + p.name + ' ';
-      card.querySelector('.offer').hidden = !p.offer;
-      const mrp = card.querySelector('.mrp');
-      mrp.textContent = '₹' + fmt(p.mrp);
-      mrp.hidden = !p.mrp || p.mrp <= p.prices[1][0];
       card.classList.toggle('popular', !!p.popular);
       let badge = card.querySelector('.badge');
       if (p.popular && !badge) { badge = document.createElement('span'); badge.className = 'badge'; badge.textContent = 'Most Popular'; card.prepend(badge); }
@@ -302,7 +298,7 @@
       btn.classList.toggle('btn-outline', !p.popular);
       const ul = card.querySelector('.inc');
       ul.innerHTML = '';
-      p.includes.forEach((line) => {
+      p.includes.filter((line) => !/discount on (all )?add-on/i.test(line)).forEach((line) => {
         const li = document.createElement('li');
         li.innerHTML = tick;
         const span = document.createElement('span');
@@ -315,12 +311,7 @@
     const sel = document.getElementById('b-package');
     C.packages.forEach((p) => {
       const opt = sel && sel.querySelector(`option[value="${p.key}"]`);
-      if (opt) opt.textContent = `${p.name} · from ₹${fmt(Math.min(...Object.values(p.prices).map((x) => x[0])))} / month`;
-    });
-    const bill = document.getElementById('b-billing');
-    if (bill) [...bill.options].forEach((o) => {
-      const base = { 1: 'Monthly (1 month)', 3: 'Quarterly (3 months)', 6: 'Half-yearly (6 months)', 12: 'Annual (12 months)' }[o.value];
-      o.textContent = +SAVINGS[o.value] > 0 ? `${base} · save ${SAVINGS[o.value]}%` : base;
+      if (opt) opt.textContent = `${p.name} · from ₹${fmt(Math.min(...PLAN_MONTHS.map((m) => p.prices[m][0])))} / month`;
     });
   }
 
@@ -346,7 +337,6 @@
     months = m;
     btns.forEach((b) => { const on = +b.dataset.months === m; b.classList.toggle('on', on); b.setAttribute('aria-checked', on); if (on) movePill(b); });
     save.textContent = saveText(m);
-    save.classList.toggle('good', +SAVINGS[m] > 0);
     document.querySelectorAll('.pk[data-plan]').forEach((card) => {
       const p = PRICES[card.dataset.plan];
       if (!p) return;

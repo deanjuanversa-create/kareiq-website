@@ -3,23 +3,26 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>KareBalance | Kare@Home</title>
-<meta name="description" content="KareBalance: a personalised fall prevention and mobility programme that helps older adults stay steady, active and independent.">
+<title>Bystander caregiving support | Kare@Home</title>
+<meta name="description" content="Bystander — Caregiving Support: Half Day (4 hours) ₹799, Full Day (8 hours) ₹1,299, Round the Clock (24 hours) ₹2,499. Long-term services can be discussed and customised on a case-by-case basis.">
 <meta name="theme-color" content="#11998e">
-<meta property="og:title" content="KareBalance | Kare@Home">
+<meta property="og:title" content="Bystander caregiving support | Kare@Home">
 <meta property="og:description" content="Home care, health monitoring, physiotherapy and companionship for seniors, by KareIQ.">
 <meta property="og:image" content="/img/karehome-hero.jpg">
 <link rel="icon" type="image/png" href="/img/favicon-karehome.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Outfit:wght@300;400;500;600;700&family=Caveat:wght@500;600&display=swap">
-<link rel="stylesheet" href="/css/auth-popup.css?v=20261029f">
-<link rel="stylesheet" href="/css/karehome-loader.css?v=20261029f">
-<script src="/js/karehome-loader.js?v=20261029f"></script>
-<link rel="stylesheet" href="/css/karehome.css?v=20261029f">
-<script src="/js/api.js?v=20261029f"></script>
+<link rel="stylesheet" href="/css/auth-popup.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome-loader.css?v=20261102b">
+<script src="/js/karehome-loader.js?v=20261102b"></script>
+<link rel="stylesheet" href="/css/pkg-menu.css?v=20261102b">
+<link rel="stylesheet" href="/css/bystander.css?v=20261102b">
+<link rel="stylesheet" href="/css/karehome.css?v=20261102b">
+<link rel="stylesheet" href="/css/faq.css?v=20261102b">
+<script src="/js/api.js?v=20261102b"></script>
 </head>
-<body data-page="karebalance">
+<body data-page="bystander">
 <div class="kh-loader" id="khLoader" role="status" aria-label="Loading Kare@Home">
   <div class="kh-stage">
     <svg class="kh-emblem" viewBox="0 0 200 170" aria-hidden="true">
@@ -89,13 +92,32 @@
       <li><a href="/kare-at-home">Home</a></li>
       <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
       <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-      <li><a href="/kare-at-home/packages">Care Packages</a></li>
-      <li><a href="/kare-at-home/karebalance" aria-current="page" class="active">KareBalance</a></li>
+      <li class="has-dd"><button class="dd-btn active" type="button" aria-expanded="false" aria-controls="dd-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+        <div class="dd" id="dd-packages">
+          <ul>
+            <li><a href="/kare-at-home/packages">Care Packages<small>HomeStart · HomePlus · HomeElite</small></a></li>
+            <li class="sep" role="presentation"></li>
+            <li><a href="/kare-at-home/bystander" aria-current="page">Bystander<small>Caregiving support · 4, 8 or 24 hours</small></a></li>
+            <li class="has-dd2">
+              <div class="dd-row"><a href="/karewellness/" data-site="karewellness">Wellness<small>KareBalance · KareMind</small></a><button class="dd2-btn" type="button" aria-expanded="false" aria-controls="dd-wellness" aria-label="Show wellness programmes"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 6 6 6-6 6"/></svg></button></div>
+              <div class="dd2" id="dd-wellness">
+                <ul>
+                  <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance<small>Fall prevention &amp; mobility</small></a></li>
+                  <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind<small>Mental wellness program</small></a></li>
+                </ul>
+              </div>
+            </li>
+          </ul>
+        </div>
+      </li>
+      <li><a href="/kare-at-home/faq">FAQs</a></li>
       <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
     </ul>
     </nav>
+    <div class="nav-end">
     <button class="btn btn-grad nav-cta" data-book><svg aria-hidden="true" width="24" height="24"><use href="#i-calendar"/></svg>Book a Service</button>
     <a class="app-in" href="/app/#/signin?brand=karehome" data-app="karehome" aria-label="Sign in for families and caregivers" title="Sign in for families and caregivers"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c.9-3.8 3.8-6 7.5-6s6.6 2.2 7.5 6"/></svg><span>Sign in</span></a>
+    </div>
     <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="drawer"><span></span></button>
   </div>
   <nav class="drawer" id="drawer" aria-label="Menu">
@@ -104,8 +126,20 @@
         <li><a href="/kare-at-home">Home</a></li>
         <li><a href="/kare-at-home#about-us" data-section="about-us">About Us</a></li>
         <li><a href="/kare-at-home#services" data-section="services">Our Services</a></li>
-        <li><a href="/kare-at-home/packages">Care Packages</a></li>
-        <li><a href="/kare-at-home/karebalance" aria-current="page" class="active">KareBalance</a></li>
+        <li><button class="acc-btn" type="button" aria-expanded="true" aria-controls="m-packages">Our Packages<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+          <ul class="acc-panel" id="m-packages">
+            <li><a href="/kare-at-home/packages">Care Packages</a></li>
+            <li><a href="/kare-at-home/bystander" aria-current="page">Bystander</a></li>
+            <li><button class="acc-btn" type="button" aria-expanded="false" aria-controls="m-wellness">Wellness<svg class="chev" viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+              <ul class="acc-panel" id="m-wellness" hidden>
+                <li><a href="/karewellness/" data-site="karewellness">KareWellness overview</a></li>
+                <li><a href="/karewellness/karebalance" data-site="karewellness" data-path="karebalance">KareBalance</a></li>
+                <li><a href="/karewellness/karemind" data-site="karewellness" data-path="karemind">KareMind</a></li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+        <li><a href="/kare-at-home/faq">FAQs</a></li>
         <li><a href="/kare-at-home#contact" data-section="contact">Contact</a></li>
         <li><a href="/app/#/signin?brand=karehome" data-app="karehome">Sign in (families and caregivers)</a></li>
         <li class="back-kiq-li"><a href="/" data-site="kareiq">← Back to KareIQ</a></li>
@@ -116,116 +150,33 @@
 </header>
 
 <main id="main" tabindex="-1">
-  <h1 class="sr">KareBalance | Kare@Home</h1>
-  <nav class="kh-crumbs wrap" aria-label="Breadcrumb"><ol><li><a href="/kare-at-home">Kare@Home</a></li><li aria-current="page">KareBalance</li></ol></nav>
-  <section class="kb" id="karebalance" aria-labelledby="kb-title">
+  <h1 class="sr">Bystander | Kare@Home</h1>
+  <nav class="kh-crumbs wrap" aria-label="Breadcrumb"><ol><li><a href="/kare-at-home">Kare@Home</a></li><li aria-current="page">Bystander</li></ol></nav>
+  <section class="kh-by" id="durations" aria-labelledby="by-title">
     <div class="wrap">
-      <div class="kb-intro">
-        <div class="kb-copy rv">
-          <span class="kb-eyebrow">KareBalance</span>
-          <h2 class="kb-title" id="kb-title"><span>Better Balance.</span><span>Stronger Steps.</span><span>Fewer Falls.</span></h2>
-          <p class="kb-lead">A personalised fall prevention and mobility programme that helps older adults stay steady, active, and independent.</p>
-          <div class="kb-ctas">
-            <button class="btn btn-grad" data-book data-service="karebalance" data-package="undecided">Book a Consultation <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <a class="kb-link" href="#kb-plans">See programmes &amp; pricing <svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></a>
-          </div>
-        </div>
-        <figure class="kb-photo rv r">
-          <img src="/img/home.jpg" alt="A Kare@Home caregiver supporting an older woman at home" loading="lazy" decoding="async">
-          <figcaption class="kb-note">Stay active.<br>Stay independent.</figcaption>
-        </figure>
+      <div class="sec-intro rv">
+        <h2 class="sec-title" id="by-title">Bystander — Caregiving Support</h2>
+        <p class="sec-sub dark">A trained caregiver to stay with your loved one for half a day, a full day or round the clock.</p>
+        <p class="sec-text">When your loved one needs someone by their side, a Bystander from the KareIQ family stays with them and supports their everyday needs and comfort, so that the family can work, rest or travel with peace of mind. Choose the length of support that suits the day.</p>
       </div>
-
-      <div class="rv">
-        <h3 class="kb-h">How KareBalance Helps</h3>
-        <ul class="kb-helps">
-          <li class="kb-help" style="--c:var(--kb-c1)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><h4>Improve Balance &amp; Stability</h4><p>Build better control while standing, turning and walking.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c2)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><h4>Build Strength</h4><p>Strengthen leg and core muscles for everyday activities.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c1d)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="4" r="2"/><path d="M11 21l2.2-6.2-2.6-3 1.1-4.8 3 2.9 3 1.1M10.6 11.8 7.4 14M13.2 14.8 15.6 21"/></svg></span><h4>Move with Confidence</h4><p>Practise walking, stair climbing and sit-to-stand transitions.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c3)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 4.9-3.4 8.1-8 9-4.6-.9-8-4.1-8-9V6l8-3Z"/><path d="M8.6 12.6 12 9.6l3.4 3V16H8.6v-3.4Z"/></svg></span><h4>Identify Fall Risks</h4><p>Assess personal risk factors, medication-related concerns and home safety hazards.</p></li>
-          <li class="kb-help" style="--c:var(--kb-c5)"><span class="kb-badge"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="8" r="3"/><path d="M2.8 20c.5-3.6 2.9-5.6 5.7-5.6s5.2 2 5.7 5.6"/><circle cx="17" cy="9.2" r="2.4"/><path d="M15.6 14.7c2.7.1 4.6 1.9 5.4 5"/></svg></span><h4>Stay Independent</h4><p>Develop safer movement habits and confidence in daily life.</p></li>
-        </ul>
-      </div>
-
-      <div class="kb-for no-media rv">
-        
-        <div class="kb-for-body">
-          <h3 class="kb-h">Who Is KareBalance For?</h3>
-          <p class="kb-for-lead">KareBalance is designed for older adults who:</p>
-          <ul class="kb-checks">
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have experienced a fall or near-fall.</span></li>
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Fear falling and have started avoiding everyday activities.</span></li>
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Feel unsteady while walking, turning or climbing stairs.</span></li>
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Are recovering mobility after an illness, hospitalisation or a period of inactivity.</span></li>
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Have reduced leg strength, balance or mobility.</span></li>
-            <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Want to maintain their balance, strength and independence as they age.</span></li>
-          </ul>
-        </div>
-      </div>
-
-      <div id="kb-plans" class="rv">
-        <h3 class="kb-h">Our Programmes &amp; Pricing</h3>
-        <p class="kb-sub">Choose the right level of support for your needs and goals.</p>
-      </div>
-      <div class="kb-plans rv">
-        <article class="kb-plan " data-plan="kb-base">
-          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="4.2" r="2"/><path d="M12 6.8v7.4M12 14.2 8.6 21M12 14.2l3.6 2.6M5.5 10h13"/></svg></span><div><h4>KareBalance Base</h4><p class="kb-plan-sub">Assessment &amp; Report</p></div></div>
-          <p class="kb-price">₹7,999</p><p class="kb-unit">One-time fee</p><p class="gst-inc">Inclusive of all GST</p>
-          <hr>
-          <p class="kb-inc-h">What's included</p>
-          <ul class="kb-inc">
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive fall risk assessment</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Balance, strength and mobility testing</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Review of fall history and relevant risk factors</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety recommendations</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Personalised assessment report with next steps</span></li>
-          </ul>
-          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Understanding individual fall risks and prevention needs.</p></div>
-          <button class="btn btn-outline kb-choose" data-auth data-plan="kb-base" aria-label="Book KareBalance Base">Book Base <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+      <div class="pk-grid by-grid">
+        <article class="pk by-card rv" style="--d:0.05s">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-calendar"/></svg></span><h3>Half Day</h3></header>
+          <div class="price-block"><p class="price"><span class="cur">₹</span><span class="num">799</span><span class="per">for 4 hours</span></p></div>
+          <button class="btn btn-outline" type="button" data-bystander="by-half" aria-label="Book a Bystander for Half Day (4 hours)">Book Now <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
-        <article class="kb-plan c2" data-plan="kb-plus">
-          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7l10 10M3.8 10.2l6.4-6.4M13.8 20.2l6.4-6.4M2 12l2-2M20 14l2-2M5.4 13.2l7.8-7.8M10.8 18.6l7.8-7.8"/></svg></span><div><h4>KareBalance Plus</h4><p class="kb-plan-sub">Structured Training &amp; Prevention</p></div></div>
-          <p class="kb-price">₹39,999</p><p class="kb-unit">24 supervised training sessions</p><p class="gst-inc">Inclusive of all GST</p>
-          <hr>
-          <p class="kb-inc-h">What's included</p>
-          <ul class="kb-inc">
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Initial fall risk assessment</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>24 supervised training sessions</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progressive balance and strength exercises</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Walking, turning and sit-to-stand practice</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home safety review</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Progress monitoring and family report</span></li>
-          </ul>
-          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults with balance difficulties, reduced strength or a history of falls.</p></div>
-          <button class="btn btn-outline kb-choose" data-auth data-plan="kb-plus" aria-label="Book KareBalance Plus">Book Plus <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <article class="pk by-card rv" style="--d:0.12s">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-calendar"/></svg></span><h3>Full Day</h3></header>
+          <div class="price-block"><p class="price"><span class="cur">₹</span><span class="num">1,299</span><span class="per">for 8 hours</span></p></div>
+          <button class="btn btn-grad" type="button" data-bystander="by-full" aria-label="Book a Bystander for Full Day (8 hours)">Book Now <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
-        <article class="kb-plan c3" data-plan="kb-premium">
-          <div class="kb-plan-head"><span class="kb-plan-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7"/><path d="M5.5 9.5V20h13V9.5"/><path d="M10 20v-5h4v5"/></svg></span><div><h4>KareBalance Premium</h4><p class="kb-plan-sub">Comprehensive Six-Month Support</p></div></div>
-          <p class="kb-price">₹90,000</p><p class="kb-unit">Six-month programme</p><p class="gst-inc">Inclusive of all GST</p>
-          <hr>
-          <p class="kb-inc-h">What's included</p>
-          <ul class="kb-inc">
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Comprehensive initial assessment</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Weekly supervised balance and strength training</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Quarterly reassessments</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Home visits and safety recommendations</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Family coaching and caregiver guidance</span></li>
-              <li><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Ongoing progress tracking and personalised programme adjustments</span></li>
-          </ul>
-          <div class="kb-best"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.6"/><path d="M5 20.5c.8-4 3.5-6 7-6s6.2 2 7 6"/></svg><p><b>Best for:</b> Older adults needing continued support to maintain mobility, confidence and independence.</p></div>
-          <button class="btn btn-outline kb-choose" data-auth data-plan="kb-premium" aria-label="Book KareBalance Premium">Book Premium <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+        <article class="pk by-card rv" style="--d:0.19s">
+          <header><span class="ic sm"><svg width="24" height="24"><use href="#i-calendar"/></svg></span><h3>Round the Clock</h3></header>
+          <div class="price-block"><p class="price"><span class="cur">₹</span><span class="num">2,499</span><span class="per">for 24 hours</span></p></div>
+          <button class="btn btn-outline" type="button" data-bystander="by-24" aria-label="Book a Bystander for Round the Clock (24 hours)">Book Now <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button>
         </article>
       </div>
-
-      <div class="kb-band rv">
-        <span class="kb-band-ic"><svg class="kb-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><path d="M2.5 20v-2.5A4.5 4.5 0 0 1 7 13a4.5 4.5 0 0 1 4.5 4.5M12.5 17.5A4.5 4.5 0 0 1 17 13a4.5 4.5 0 0 1 4.5 4.5V20"/><path d="M12 6.6c-.6-1.3-2.6-1.2-2.6.4 0 1.4 2.6 3 2.6 3s2.6-1.6 2.6-3c0-1.6-2-1.7-2.6-.4Z"/></svg></span>
-        <div>
-          <h3>Not sure which programme is right for your loved one?</h3>
-          <p>Our team can help identify the most appropriate level of support based on mobility, fall history and individual goals.</p>
-        </div>
-        <a class="btn btn-grad" href="https://chat.whatsapp.com/GAl7KV4ZxtY5FzKHkRZgyM" target="_blank" rel="noopener">Talk to Our Team <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M2 8h11M9 4l4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></a>
-      </div>
-      <p class="kb-fine">Note: Final pricing may vary based on assessment complexity, session frequency, home-visit requirements and service location. Clinical suitability should be established before beginning supervised training. KareBalance is a fall risk reduction and mobility support programme and does not guarantee the prevention of falls.</p>
+      <div class="by-long rv"><span class="ic"><svg width="24" height="24"><use href="#i-calendar"/></svg></span><p><b>Need support for longer?</b> Long-term services can be discussed and customised on a case-by-case basis.</p><button class="btn btn-grad" type="button" data-bystander="by-long">Discuss long-term care <svg aria-hidden="true" width="24" height="24"><use href="#i-arrow"/></svg></button></div>
     </div>
   </section>
 </main>
@@ -259,7 +210,7 @@
   <div class="foot-base">
     <div class="wrap base-in">
       <span>© <span id="year">2026</span> KareIQ. All rights reserved.</span>
-      <nav aria-label="Legal"><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
+      <nav aria-label="Help and legal"><a href="/kare-at-home/faq">FAQs</a><a href="/privacy">Privacy Policy</a><a href="/terms">Terms &amp; Conditions</a></nav>
     </div>
   </div>
 </footer>
@@ -303,14 +254,14 @@
             <label for="b-package">Care package</label>
             <select id="b-package" name="package" required>
               <option value="undecided">Not decided yet</option>
-              <option value="homestart">HomeStart · from ₹2,291 / month</option>
-              <option value="homeplus">HomePlus · from ₹4,408 / month</option>
-              <option value="homeelite">HomeElite · from ₹8,816 / month</option>
+              <option value="homestart">HomeStart · from ₹3,958 / month</option>
+              <option value="homeplus">HomePlus · from ₹5,719 / month</option>
+              <option value="homeelite">HomeElite · from ₹10,558 / month</option>
               <option value="customized">Customised plan · get an estimate</option>
               <optgroup label="KareBalance">
-                <option value="kb-base">KareBalance Base · ₹7,999 one-time</option>
-                <option value="kb-plus">KareBalance Plus · ₹39,999 (24 sessions)</option>
-                <option value="kb-premium">KareBalance Premium · ₹90,000 (6 months)</option>
+                <option value="kb-base">KareBalance Base · ₹8,999 · One-time fee</option>
+                <option value="kb-plus">KareBalance Plus · ₹49,999 · 24 supervised training sessions</option>
+                <option value="kb-premium">KareBalance Premium · ₹84,999 · Six-month programme</option>
               </optgroup>
             </select>
             <span class="err"></span>
@@ -319,9 +270,9 @@
             <label for="b-billing">Payment plan</label>
             <select id="b-billing" name="billing">
               <option value="1">Monthly (1 month)</option>
-              <option value="3">Quarterly (3 months) · save 5%</option>
-              <option value="6">Half-yearly (6 months) · save 7%</option>
-              <option value="12">Annual (12 months) · save 10%</option>
+              <option value="3">Quarterly (3 months)</option>
+              <option value="6">Semi-annual (6 months)</option>
+              <option value="12">Annual (12 months)</option>
             </select>
             <span class="err"></span>
           </div>
@@ -412,10 +363,99 @@
 </div>
 
 
-<script src="/js/forms.js?v=20261029f" defer></script>
-<script src="/js/sites.js?v=20261029f" defer></script>
-<script src="/js/content.js?v=20261029f" defer></script>
-<script src="/js/karehome.js?v=20261029f" defer></script>
-<script src="/js/auth-popup.js?v=20261029f" data-brand="karehome" defer></script>
+<!-- ============ BYSTANDER BOOKING (written by tools/shared/bystander-form.js) ============ -->
+<dialog class="bf" id="bystanderForm" aria-labelledby="bfTitle" data-page="kare-at-home">
+  <div class="bf-sheet">
+    <button class="bf-x" type="button" data-bf-close aria-label="Close">×</button>
+    <div class="bf-view" data-bf-view="form">
+      <p class="bf-eyebrow">Bystander — Caregiving Support</p>
+      <h2 id="bfTitle">Book a Bystander</h2>
+      <p class="bf-sub">No sign-in needed. Tell us what you need and our team will call to confirm the caregiver and timing.</p>
+      <form id="bfForm" novalidate>
+        <div class="bf-alert" role="alert" hidden></div>
+        <fieldset class="bf-set">
+          <legend>1. Choose the support</legend>
+          <div class="bf-opts" role="radiogroup" aria-describedby="bf-package-err">
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-half" data-name="Half Day" data-label="4 hours" data-price="799"><span><b>Half Day</b><small>4 hours · ₹799</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-full" data-name="Full Day" data-label="8 hours" data-price="1299"><span><b>Full Day</b><small>8 hours · ₹1,299</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-24" data-name="Round the Clock" data-label="24 hours" data-price="2499"><span><b>Round the Clock</b><small>24 hours · ₹2,499</small></span></label>
+            <label class="bf-opt-card"><input type="radio" name="package" value="by-long" data-name="Long-term" data-label="to be discussed" data-price="0"><span><b>Long-term</b><small>Discussed case by case</small></span></label>
+          </div>
+          <span class="bf-err" id="bf-package-err"></span>
+          <p class="bf-note">Long-term services can be discussed and customised on a case-by-case basis.</p>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-date">Date needed</label><input id="bf-date" name="date" type="date" required aria-describedby="bf-date-err"><span class="bf-err" id="bf-date-err"></span></div>
+            <div class="bf-field"><label for="bf-startTime">Start time</label><input id="bf-startTime" name="startTime" type="time" required step="900" aria-describedby="bf-startTime-err"><span class="bf-err" id="bf-startTime-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>2. Your details</legend>
+          <div class="bf-field"><label for="bf-name">Your name</label><input id="bf-name" name="name" autocomplete="name" placeholder="e.g. Priya Raman" required aria-describedby="bf-name-err"><span class="bf-err" id="bf-name-err"></span></div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-phone">Mobile number</label><input id="bf-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="98765 43210" required aria-describedby="bf-phone-err"><span class="bf-err" id="bf-phone-err"></span></div>
+            <div class="bf-field"><label for="bf-altPhone">Another contact number <span class="bf-opt">(optional)</span></label><input id="bf-altPhone" name="altPhone" type="tel" inputmode="tel" placeholder="Family member or patient" aria-describedby="bf-altPhone-err"><span class="bf-err" id="bf-altPhone-err"></span></div>
+          </div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-email">Email <span class="bf-opt">(optional)</span></label><input id="bf-email" name="email" type="email" autocomplete="email" placeholder="you@example.com" aria-describedby="bf-email-err"><span class="bf-err" id="bf-email-err"></span></div>
+            <div class="bf-field"><label for="bf-careFor">The Bystander is for</label><select id="bf-careFor" name="careFor" aria-describedby="bf-careFor-err" required><option value="">Choose</option><option value="parent">My parent</option><option value="grandparent">My grandparent</option><option value="spouse">My spouse</option><option value="self">Myself</option><option value="other">Someone else</option></select><span class="bf-err" id="bf-careFor-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>3. Patient details</legend>
+          <div class="bf-row bf-row-3">
+            <div class="bf-field bf-wide"><label for="bf-patientName">Patient's name</label><input id="bf-patientName" name="patientName" placeholder="e.g. Lakshmi Nair" required aria-describedby="bf-patientName-err"><span class="bf-err" id="bf-patientName-err"></span></div>
+            <div class="bf-field"><label for="bf-patientAge">Age</label><input id="bf-patientAge" name="patientAge" type="number" inputmode="numeric" min="1" max="120" placeholder="72" required aria-describedby="bf-patientAge-err"><span class="bf-err" id="bf-patientAge-err"></span></div>
+          </div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-patientGender">Gender <span class="bf-opt">(optional)</span></label><select id="bf-patientGender" name="patientGender" aria-describedby="bf-patientGender-err"><option value="">Choose</option><option value="female">Female</option><option value="male">Male</option><option value="other">Other</option><option value="none">Prefer not to say</option></select><span class="bf-err" id="bf-patientGender-err"></span></div>
+            <div class="bf-field"><label for="bf-mobility">Moving around</label><select id="bf-mobility" name="mobility" aria-describedby="bf-mobility-err" required><option value="">Choose</option><option value="independent">Walks independently</option><option value="assisted">Needs help to walk</option><option value="wheelchair">Uses a wheelchair</option><option value="bedbound">Mostly in bed</option></select><span class="bf-err" id="bf-mobility-err"></span></div>
+          </div>
+          <div class="bf-field"><label for="bf-needs">Health conditions and care needs <span class="bf-opt">(optional)</span></label><textarea id="bf-needs" name="needs" rows="2" maxlength="600" placeholder="e.g. diabetic, recovering from knee surgery, needs help with meals and medicines" aria-describedby="bf-needs-err"></textarea><span class="bf-err" id="bf-needs-err"></span></div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>4. Where the service is needed</legend>
+          <div class="bf-field"><label for="bf-location">Location</label><select id="bf-location" name="location" aria-describedby="bf-location-err" required><option value="">Choose</option><option value="home">At home</option><option value="hospital">In hospital</option><option value="other">Somewhere else</option></select><span class="bf-err" id="bf-location-err"></span></div>
+          <div class="bf-field"><label for="bf-address">Full address</label><textarea id="bf-address" name="address" rows="2" maxlength="300" autocomplete="street-address" placeholder="House or flat number, street, landmark. For a hospital: hospital name, ward and room" required aria-describedby="bf-address-err"></textarea><span class="bf-err" id="bf-address-err"></span></div>
+          <div class="bf-row">
+            <div class="bf-field"><label for="bf-area">Area / city</label><input id="bf-area" name="area" autocomplete="address-level2" placeholder="e.g. Kakkanad, Kochi" required aria-describedby="bf-area-err"><span class="bf-err" id="bf-area-err"></span></div>
+            <div class="bf-field"><label for="bf-pincode">PIN code</label><input id="bf-pincode" name="pincode" inputmode="numeric" maxlength="6" autocomplete="postal-code" placeholder="682030" required aria-describedby="bf-pincode-err"><span class="bf-err" id="bf-pincode-err"></span></div>
+          </div>
+        </fieldset>
+
+        <fieldset class="bf-set">
+          <legend>5. Anything else</legend>
+          <div class="bf-field"><label for="bf-notes">Notes or special requirements <span class="bf-opt">(optional)</span></label><textarea id="bf-notes" name="notes" rows="3" maxlength="1000" placeholder="Language preference, preferred caregiver (male or female), pets at home, parking…"></textarea><span class="bf-err" id="bf-notes-err"></span></div>
+        </fieldset>
+
+        <div class="bf-hp" aria-hidden="true"><label for="bf-website">Leave this empty</label><input id="bf-website" name="website" tabindex="-1" autocomplete="off"></div>
+        <label class="bf-check"><input type="checkbox" name="consent" id="bf-consent" aria-describedby="bf-consent-err"><span>I agree to be contacted by KareIQ about this booking. See our <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.</span></label>
+        <span class="bf-err" id="bf-consent-err"></span>
+        <div class="bf-foot">
+          <p class="bf-total" aria-live="polite" data-bf-total>Choose an option to see the price.</p>
+          <button class="bf-go" type="submit">Request booking <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></button>
+        </div>
+      </form>
+    </div>
+    <div class="bf-view bf-done" data-bf-view="done" hidden tabindex="-1">
+      <div class="bf-tick"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+      <h2>Booking request received</h2>
+      <p>Thank you, <b data-bf-name></b>. Our team will call you on <b data-bf-phone></b> to confirm the caregiver and timing.</p>
+      <dl class="bf-summary" data-bf-summary></dl>
+      <p class="bf-ref">Your reference <b data-bf-ref></b></p>
+      <button class="bf-go bf-again" type="button" data-bf-close>Done</button>
+    </div>
+  </div>
+</dialog>
+
+<script src="/js/forms.js?v=20261102b" defer></script>
+<script src="/js/sites.js?v=20261102b" defer></script>
+<script src="/js/content.js?v=20261102b" defer></script>
+<script src="/js/karehome.js?v=20261102b" defer></script>
+<script src="/js/pkg-menu.js?v=20261102b" defer></script>
+<script src="/js/bystander.js?v=20261102b" defer></script>
+<script src="/js/auth-popup.js?v=20261102b" data-brand="karehome" defer></script>
 </body>
 </html>

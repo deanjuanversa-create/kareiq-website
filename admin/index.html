@@ -83,8 +83,9 @@
       </header>
       <form id="cform" novalidate>
         <div class="ctab" data-pane="pricing">
-          <article class="card">
-            <div class="card-h"><div><h2>Payment plan savings</h2><p class="sub">Shown under the 1 / 3 / 6 / 12 month switch on Kare@Home.</p></div></div>
+          <article class="card" hidden>
+            <!-- no discounts are shown since 30 Oct 2026; kept (hidden) so saving the form keeps working -->
+            <div class="card-h"><div><h2>Payment plan savings</h2><p class="sub">Shown under the 3 / 6 / 12 month switch on Kare@Home.</p></div></div>
             <div class="row4" id="savings"></div>
           </article>
           <div id="pkgEditors"></div>
@@ -92,7 +93,8 @@
             <div class="card-h"><div><h2>KareNest, KareBalance and KareMind prices</h2><p class="sub">Used on the KareNest website and in My KareIQ. Prices include GST.</p></div></div>
             <div class="table-wrap"><table class="prices"><thead><tr><th>Package</th><th>Price</th><th>Per</th></tr></thead><tbody id="nestPrices"></tbody></table></div>
           </article>
-          <article class="card">
+          <article class="card" hidden>
+            <!-- no discounts on KareNest packages since 30 Oct 2026 -->
             <div class="card-h"><div><h2>KareNest payment plan savings</h2><p class="sub">For KarePlus, KarePremium and KareNest Thrive, which are priced per month: the saving for paying 3, 6 or 12 months at once.</p></div></div>
             <div class="row4" id="nestSavings"></div>
           </article>
@@ -159,6 +161,6 @@
 
 <div class="tip" id="tip" role="status" hidden></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
-<script src="/admin/admin.js?v=20261030a"></script>
+<script src="/admin/admin.js?v=20261102a"></script>
 </body>
 </html>

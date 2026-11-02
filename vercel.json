@@ -26,6 +26,21 @@
       "permanent": true
     },
     {
+      "source": "/kare-at-home/karebalance",
+      "destination": "https://karewellness.co.in/karebalance",
+      "permanent": false
+    },
+    {
+      "source": "/karewellness",
+      "destination": "https://karewellness.co.in/",
+      "permanent": false
+    },
+    {
+      "source": "/karewellness/:path*",
+      "destination": "https://karewellness.co.in/:path*",
+      "permanent": false
+    },
+    {
       "source": "/app",
       "destination": "https://kareiq-api.onrender.com/app/",
       "permanent": false

@@ -1,4 +1,8 @@
-/* KareIQ main page behaviour: header, scroll animations, live care card, enquiry form */
+/* KareIQ page behaviour: header, scroll animations, live care card, enquiry form.
+   Used by the home page and by the other KareIQ pages (KareWellness, Bystander), so every
+   home-page-only part checks that its element is there. */
+/* the FAQs were a section of the home page until 2 Nov 2026: old links to /#faq open the FAQ page */
+if (location.hash === '#faq' && /^\/(index(\.html)?)?$/.test(location.pathname)) location.replace('/faq');
 (function () {
   const $ = (s, el = document) => el.querySelector(s);
   const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -26,11 +30,11 @@
     if (!scrolled && y > 40) { scrolled = true; nav.classList.add('scrolled'); }
     else if (scrolled && y < 8) { scrolled = false; nav.classList.remove('scrolled'); }
     const show = y > 700;
-    if (show !== topShown) { topShown = show; totop.classList.toggle('show', show); }
+    if (show !== topShown && totop) { topShown = show; totop.classList.toggle('show', show); }
     const pr = Math.min(1, y / maxScroll);
-    if (Math.abs(pr - lastBar) > 0.001) { lastBar = pr; bar.style.transform = 'scaleX(' + pr.toFixed(4) + ')'; }
+    if (bar && Math.abs(pr - lastBar) > 0.001) { lastBar = pr; bar.style.transform = 'scaleX(' + pr.toFixed(4) + ')'; }
     const rel = Math.max(0, y - heroTop); // the hero is no longer the first section
-    if (!reduce && rel < 900 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (rel * 0.18).toFixed(1) + 'px,0) scale(1.04)';
+    if (heroImg && !reduce && rel < 900 && heroImg.dataset.ready) heroImg.style.transform = 'translate3d(0,' + (rel * 0.18).toFixed(1) + 'px,0) scale(1.04)';
     ticking = false;
   }
   addEventListener('scroll', () => { if (!ticking) { requestAnimationFrame(onScroll); ticking = true; } }, { passive: true });
@@ -38,24 +42,59 @@
   addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { measure(); onScroll(); }, 120); }, { passive: true });
   addEventListener('load', () => { measure(); onScroll(); });
   measure();
-  heroImg.addEventListener('animationend', () => { heroImg.style.animation = 'none'; heroImg.dataset.ready = '1'; onScroll(); });
-  if (reduce) heroImg.dataset.ready = '1';
+  if (heroImg) {
+    heroImg.addEventListener('animationend', () => { heroImg.style.animation = 'none'; heroImg.dataset.ready = '1'; onScroll(); });
+    if (reduce) heroImg.dataset.ready = '1';
+  }
   onScroll();
 
-  /* ---------- active menu link ---------- */
+  /* ---------- active menu link ----------
+     Worked out from the scroll position: the last menu section whose top has passed a line 40% down the
+     screen is current; above "About KareIQ" (hero, Our Values) it is Home. "Home" points at <main id="top">,
+     which wraps the whole page, so it can't be detected like the other sections. Works the same for a
+     fresh load, a refresh, a link such as /#team, menu clicks and the browser back/forward buttons. */
   const links = $$('#menu a[href^="#"]');
-  const so = new IntersectionObserver((es) => es.forEach((e) => {
-    if (e.isIntersecting) links.forEach((a) => a.classList.toggle('active', a.getAttribute('href') === '#' + e.target.id));
-  }), { rootMargin: '-45% 0px -50% 0px' });
-  links.map((a) => document.querySelector(a.getAttribute('href'))).filter(Boolean).forEach((s) => so.observe(s));
+  const homeLink = links.find((a) => a.getAttribute('href') === '#top') || links[0] || null;
+  const secs = links.filter((a) => a !== homeLink)
+    .map((a) => ({ a, el: document.querySelector(a.getAttribute('href')), top: 0 }))
+    .filter((s) => s.el);
+  let curLink = null, navLock = 0, navLockT;
+  const measureSecs = () => secs.forEach((s) => { s.top = s.el.getBoundingClientRect().top + scrollY; });
+  function setActive(a) {
+    if (a === curLink) return;
+    curLink = a;
+    links.forEach((l) => { const on = l === a; l.classList.toggle('active', on); if (on) l.setAttribute('aria-current', 'location'); else l.removeAttribute('aria-current'); });
+  }
+  function pickActive() {
+    if (navLock || !links.length) return;
+    const y = scrollY, line = y + innerHeight * 0.4;
+    let pick = homeLink;
+    if (y > 4) {
+      secs.forEach((s) => { if (s.top <= line) pick = s.a; });
+      // at the very bottom the last section (Contact) may be too short to reach the line
+      if (y + innerHeight >= document.documentElement.scrollHeight - 4 && secs.length) pick = secs[secs.length - 1].a;
+    }
+    setActive(pick);
+  }
+  // a menu click shows its item straight away and holds it while the page scrolls there
+  const release = () => { clearTimeout(navLockT); navLock = 0; pickActive(); };
+  links.forEach((a) => a.addEventListener('click', () => {
+    setActive(a); navLock = 1; clearTimeout(navLockT); navLockT = setTimeout(release, 1200);
+  }));
+  if ('onscrollend' in window) addEventListener('scrollend', () => { if (navLock) { clearTimeout(navLockT); navLockT = setTimeout(release, 60); } });
+  addEventListener('scroll', pickActive, { passive: true }); // cheap: uses the cached section tops
+  addEventListener('resize', () => { measureSecs(); pickActive(); }, { passive: true });
+  addEventListener('load', () => { measureSecs(); pickActive(); setTimeout(() => { measureSecs(); pickActive(); }, 400); });
+  addEventListener('hashchange', () => { measureSecs(); pickActive(); });
+  measureSecs(); pickActive();
 
   /* ---------- mobile drawer ---------- */
   function setMenu(open) { nav.classList.toggle('open', open); burger.setAttribute('aria-expanded', open); }
   burger.addEventListener('click', () => setMenu(!nav.classList.contains('open')));
   $$('.drawer a').forEach((a) => a.addEventListener('click', () => setMenu(false)));
-  totop.addEventListener('click', () => scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }));
+  if (totop) totop.addEventListener('click', () => scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' }));
 
-  /* ---------- hero care card: cycles through example care updates, links to Kare@home ---------- */
+  /* ---------- hero care card: cycles through example care updates (information only, not a link) ---------- */
   const fc = $('#fcText');
   const updates = [
     ['Care visit complete', "Amma's wellness check · 10:30 am"],
@@ -89,6 +128,7 @@
     Kare.clearErrors(form);
     fv.hidden = false; dv.hidden = true;
     if (trigger && trigger.dataset.interest) F.interest.value = trigger.dataset.interest;
+    if (F.plan) F.plan.value = (trigger && trigger.dataset.plan) || ''; // a package button names its package
     modal.hidden = false;
     document.documentElement.style.overflow = 'hidden';
     requestAnimationFrame(() => requestAnimationFrame(() => modal.classList.add('open')));
@@ -121,7 +161,8 @@
     if (Object.keys(errs).length) return Kare.showErrors(form, errs);
 
     const data = Kare.data(form);
-    data.source = 'kareiq-home';
+    data.source = document.body.dataset.source || 'kareiq-home';
+    if (!data.plan) delete data.plan;
     Kare.busy(submit, true, 'Sending…');
     try {
       const res = await Kare.send('/api/enquiries', data);

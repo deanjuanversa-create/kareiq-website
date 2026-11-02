@@ -1,0 +1,74 @@
+/* Frequently asked questions (2 Nov 2026): the FAQ section of the KareIQ and Kare@Home home pages.
+   Markup from tools/shared/faq.js (native <details> accordions); colours and fonts come from the
+   page's own stylesheet (kareiq.css or karehome.css), so each site keeps its look. */
+.faq-sec{padding-block:72px 56px}
+.faq-head{max-width:760px;margin:0 auto 36px;text-align:center}
+.faq-head h2{margin-top:14px;font-size:clamp(30px,4vw,44px);line-height:1.12}
+.faq-head p{margin:14px 0 0;color:var(--ink-soft)}
+.faq-sec .sec-intro{margin-bottom:36px}
+.faqs{max-width:860px;margin:0 auto;display:grid;gap:34px}
+.faq-group-title{font:600 13px/1.4 var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--teal-deep);margin:0 0 12px}
+.faq-group-desc{margin:-4px 0 12px;color:var(--muted);font-size:15px}
+.faq{margin-top:10px;border:1px solid var(--line);border-radius:18px;background:#fff;transition:border-color .35s var(--smooth),box-shadow .35s var(--smooth)}
+.faq[open]{border-color:#cfe3e0;box-shadow:0 14px 30px -22px rgba(19,48,74,.35)}
+.faq summary{list-style:none;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:18px 22px;cursor:pointer;font:500 17px/1.4 var(--sans);color:var(--ink);border-radius:18px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"";flex:none;width:28px;height:28px;border-radius:50%;background:#e6f5f2 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%230b7d74' stroke-width='2.6' stroke-linecap='round'%3E%3Cpath d='M12 5v14M5 12h14'/%3E%3C/svg%3E") center/14px no-repeat;transition:transform .35s var(--smooth)}
+.faq[open] summary::after{transform:rotate(45deg)}
+.faq summary:focus-visible{outline-offset:-3px}
+.faq-body{padding:0 22px 20px;color:var(--ink-soft)}
+.faq-body p{margin:0 0 10px}
+.faq-body p:last-child{margin-bottom:0}
+.faq-body ul{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+.faq-body li{display:flex;gap:10px;align-items:flex-start}
+.faq-body li::before{content:"";flex:none;width:7px;height:7px;border-radius:50%;background:var(--pink);margin-top:.65em}
+.faq-body b{color:var(--ink);font-weight:600}
+.faq-body a{color:var(--teal-deep);text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
+.faq-outro{margin:40px auto 0;text-align:center;font-family:var(--serif);font-size:20px;color:var(--ink)}
+@media (hover:hover) and (pointer:fine){.faq summary:hover{color:var(--teal-deep)}}
+@media (max-width:600px){
+  .faq-sec{padding-block:56px 40px}
+  .faq summary{padding:16px 18px;font-size:16px}
+  .faq-body{padding:0 18px 18px}
+}
+@media (prefers-reduced-motion:reduce){.faq,.faq summary::after{transition:none}}
+
+/* FAQ pages of their own (/faq on KareIQ and Kare@Home, 2 Nov 2026): topics and a search box in a
+   column that stays in view beside the questions; above the questions on phones and tablets.
+   (KareNest has the same layout in karenest/site.css.) */
+.faq-page{padding-block:clamp(36px,5vw,64px) clamp(56px,7vw,88px)}
+.faq-layout{display:grid;grid-template-columns:minmax(220px,280px) minmax(0,1fr);gap:clamp(28px,4vw,56px);align-items:start;max-width:1180px;margin-inline:auto}
+.faq-layout .faqs{max-width:none;margin:0}
+.faq-tools{position:sticky;top:112px;display:grid;gap:16px}
+.faq-search{position:relative;display:flex;align-items:center}
+.faq-search[hidden]{display:none}
+.faq-search svg{position:absolute;left:14px;color:var(--muted);pointer-events:none}
+.faq-search input{width:100%;min-height:48px;padding:12px 40px 12px 44px;border:1px solid var(--line);border-radius:14px;background:#fff;font:inherit;font-size:16px;color:var(--ink);transition:border-color .25s var(--smooth),box-shadow .25s var(--smooth)}
+.faq-search input:focus{outline:none;border-color:var(--teal);box-shadow:0 0 0 4px rgba(17,153,142,.16)}
+.faq-search input::-webkit-search-cancel-button{display:none}
+.faq-clear{position:absolute;right:6px;width:36px;height:36px;border:0;border-radius:10px;background:transparent;color:var(--muted);font-size:22px;line-height:1;cursor:pointer}
+.faq-clear:hover{background:#f1f5f7;color:var(--ink)}
+.faq-topics{display:grid;gap:4px}
+.faq-topics a{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 14px;border-radius:12px;color:var(--ink-soft);text-decoration:none;font-weight:500;border-left:3px solid transparent;transition:background .25s var(--smooth),color .25s var(--smooth),border-color .25s var(--smooth)}
+.faq-topics a small{flex:none;min-width:26px;padding:2px 8px;border-radius:99px;background:#eef3f5;color:var(--muted);font-size:12px;text-align:center}
+.faq-topics a:hover{background:#f4f8f8;color:var(--ink)}
+.faq-topics a.on{background:var(--teal-tint,#e6f5f2);color:var(--teal-deep);border-left-color:var(--teal)}
+.faq-topics a.off{opacity:.4}
+.faq-count{margin:0;min-height:1.4em;font-size:14px;color:var(--muted)}
+.faq-count:empty{display:none}
+.faq-group{scroll-margin-top:112px}
+.faq-group .faq{scroll-margin-top:112px}
+.faq-group[hidden],.faq[hidden]{display:none}
+.faq-page .faq-group-title{font-size:13px}
+.faq-empty{padding:36px 28px;border:1px dashed var(--line);border-radius:18px;text-align:center;color:var(--ink-soft)}
+.faq-empty[hidden]{display:none}
+.faq-empty p{margin:0 0 6px}
+.faq-empty a{color:var(--teal-deep);text-decoration:underline;text-underline-offset:3px}
+@media (max-width:900px){
+  .faq-layout{grid-template-columns:minmax(0,1fr)}
+  .faq-tools{position:static}
+  .faq-topics{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+  .faq-topics a{flex:none;border-left:0;border:1px solid var(--line);border-radius:99px;padding:8px 14px;background:#fff}
+  .faq-topics a.on{border-color:var(--teal)}
+}
+@media (prefers-reduced-motion:reduce){.faq-search input,.faq-topics a{transition:none}}

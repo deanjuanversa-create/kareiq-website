@@ -1,12 +1,13 @@
-// KareIQ + Kare@Home web server — no dependencies, just Node.js 18+
+// KareIQ websites and dashboard server — no dependencies, just Node.js 18+
 //
 //   node server.js
 //
-// - Serves the websites in /public  (KareIQ at /, Kare@Home at /kare-at-home, KareNest at /karenest)
+// - Serves the websites in /public  (KareIQ at /, Kare@Home at /kare-at-home, KareNest at /karenest,
+//                                    KareWellness at /karewellness)
 // - Saves bookings and enquiries      (POST /api/bookings, POST /api/enquiries)
 // - Password-protected admin page     (/admin, set ADMIN_PASSWORD in .env)
-// - The KareIQ app                     (/app: families, caregivers and the office team sign in here;
-//                                       people see Kare@Home and/or KareNest depending on their plan)
+// - The KareIQ dashboard                (/app: families, nurses and the office team sign in here;
+//                                       the websites hand over to it through window.KARE_APP in public/js/sites.js)
 //
 // Live setup: the websites are static on Vercel, which forwards /api/* and /admin* to this
 // server on Render; data is stored in MongoDB Atlas (MONGODB_URI). Set SITE_URL on Render so
@@ -22,12 +23,12 @@ loadEnv(path.join(__dirname, '.env'));
 
 const store = require('./src/store');
 const catalog = require('./src/catalog');
-const { validateBooking, validateEnquiry } = require('./src/validate');
+const { validateBooking, validateEnquiry, validateBystander } = require('./src/validate');
+const { createAppApi } = require('./src/app/api');
+const appAuth = require('./src/app/auth');
 const { notify, emailEnabled } = require('./src/notify');
 const db = require('./src/db');
 const content = require('./src/content');
-const { createAppApi } = require('./src/app/api');
-const appAuth = require('./src/app/auth');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
@@ -37,8 +38,8 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
 const ON_VERCEL = Boolean(process.env.VERCEL);
 const TRUST_PROXY = ON_VERCEL || String(process.env.TRUST_PROXY || 'false') === 'true';
 const PUBLIC_DIR = path.join(__dirname, 'public');
-const ADMIN_DIR = path.join(__dirname, 'admin');
 const APP_DIR = path.join(__dirname, 'app');
+const ADMIN_DIR = path.join(__dirname, 'admin');
 const MAX_BODY = 64 * 1024; // content edits from admin can be larger than form posts
 // When set (on Render), plain page visits go to the real website instead of a second copy of it
 const SITE_URL = (process.env.SITE_URL || '').replace(/\/+$/, '');
@@ -189,7 +190,7 @@ function sessionOf(req) {
   return { user: ADMIN_USER, expires };
 }
 
-// Signed in to the KareIQ app as an office admin? Then the website editor opens too (one sign-in).
+// Signed in to the KareIQ dashboard as an office admin? Then the website editor opens too (one sign-in).
 async function appAdmin(req) {
   try { const s = await appAuth.sessionOf(req); return Boolean(s && s.user && s.user.role === 'admin'); } catch { return false; }
 }
@@ -277,16 +278,21 @@ async function handleSubmit(req, res, kind) {
   }
   const body = await readJson(req);
   const isBooking = kind === 'booking';
-  if (body.website) return json(res, 201, { ok: true, reference: isBooking ? 'KH-RECEIVED' : 'KQ-RECEIVED' }); // honeypot: only bots fill this
+  if (body.website) return json(res, 201, { ok: true, reference: isBooking ? (body.form === 'bystander' ? 'BY-RECEIVED' : 'KH-RECEIVED') : 'KQ-RECEIVED' }); // honeypot: only bots fill this
   if (isBooking) await content.get(); // current package names
-  const { errors, value } = isBooking ? validateBooking(body) : validateEnquiry(body);
+  // Bystander caregiving support has its own booking form (no sign-in): more details, its own reference
+  const isBystander = isBooking && body.service === 'bystander' && body.form === 'bystander';
+  const { errors, value } = isBystander ? validateBystander(body) : isBooking ? validateBooking(body) : validateEnquiry(body);
   if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-  const row = isBooking
-    ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
-    : await store.add('enquiries', 'KQ', value);
+  const row = isBystander
+    ? await store.add('bookings', 'BY', value)
+    : isBooking
+      ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
+      : await store.add('enquiries', 'KQ', value);
+  // a Kare@Home booking with a preferred day becomes a first visit, given to an available nurse
+  // (Bystander requests are arranged by the office: half days, full days and round-the-clock care)
+  if (isBooking && !isBystander && row.date && appApi && appApi.websiteBooking) appApi.websiteBooking(row).catch(() => {});
   notify(kind, row);
-  // a booking with a preferred day becomes a first visit, given to an available nurse
-  if (isBooking && row.date && appApi && appApi.websiteBooking) appApi.websiteBooking(row).catch(() => {});
   console.log(`[${kind}] ${row.reference} ${row.name} ${row.phone} ${isBooking ? row.serviceName : row.interestName + (row.planName ? ' / ' + row.planName : '')}`);
   json(res, 201, { ok: true, reference: row.reference });
 }
@@ -351,10 +357,10 @@ async function handleAdminApi(req, res, parts) {
   json(res, 405, { ok: false, message: 'Not allowed.' });
 }
 
-const appApi = createAppApi({ json, readJson, limited, isHttps, clientIp });
 
 // ---------- CORS: the websites (Vercel) call this API on its own address ----------
 // Only the public form/content endpoints are shared; the admin API stays same-origin.
+const appApi = createAppApi({ json, readJson, limited, isHttps, clientIp });
 const PUBLIC_API = new Set(['/api/bookings', '/api/enquiries', '/api/content.js', '/api/content', '/api/catalog', '/api/health', '/api/app/auth/providers', '/api/app/login', '/api/app/signup']);
 function cors(req, res, p) {
   const origin = String(req.headers.origin || '').replace(/\/+$/, '');
@@ -431,7 +437,7 @@ async function route(req, res) {
     return notFound(req, res);
   }
 
-  // the KareIQ app (one page; the screens are drawn by app/app.js)
+  // the KareIQ dashboard (one page; the screens are drawn by app/app.js, plus app/nurse.js or app/office.js)
   if (p === '/app') return send(res, 301, '', { Location: '/app/' + url.search });
   if (p.startsWith('/app/')) {
     const rel = p.slice('/app'.length);
@@ -439,7 +445,7 @@ async function route(req, res) {
     if (await serveFile(req, res, APP_DIR, rel)) return;
     return notFound(req, res);
   }
-  // app.<your domain> opens the app directly
+  // app.<your domain> opens the dashboard directly
   if (p === '/' && /^app\./i.test(String(req.headers['x-forwarded-host'] || req.headers.host || ''))) return send(res, 302, '', { Location: '/app/', 'Cache-Control': 'no-store' });
 
   // page visits go to the real website; files (logos, icons) are still served for the admin panel
@@ -462,6 +468,11 @@ async function route(req, res) {
   // Kare@Home About Us, Our Services and Contact are now sections of its home page
   const KH_MOVED = { '/kare-at-home/about': '#about-us', '/kare-at-home/services': '#services', '/kare-at-home/contact': '#contact' };
   if (KH_MOVED[p]) return send(res, 301, '', { Location: '/kare-at-home' + KH_MOVED[p] });
+  // KareBalance and KareMind are on the KareWellness website (served at /karewellness here)
+  const wm = p.match(/^\/(?:karenest\/(karebalance|karemind)(?:\/(?:base|plus|premium))?|kare-at-home\/(karebalance))\/?$/);
+  if (wm) return send(res, 302, '', { Location: '/karewellness/' + (wm[1] || wm[2]) });
+  // Bystander is a Kare@Home and KareIQ service
+  if (p === '/karenest/bystander') return send(res, 302, '', { Location: '/kare-at-home/bystander' });
   if (await serveFile(req, res, PUBLIC_DIR, p)) return;
   // trailing slash on a page that is a file (e.g. /karenest/live-with-us/) -> the clean address
   if (p.length > 1 && p.endsWith('/') && fs.existsSync(path.join(PUBLIC_DIR, path.normalize(p.slice(0, -1)) + '.html'))) {
@@ -489,8 +500,9 @@ if (require.main === module) {
     console.log(`  KareIQ:      ${base}/`);
     console.log(`  Kare@Home:   ${base}/kare-at-home`);
     console.log(`  KareNest:    ${base}/karenest`);
-    console.log(`  KareIQ app:  ${base}/app   (families, caregivers and the office team sign in here)`);
-    if (db.mode === 'file' && String(process.env.APP_DEMO || 'true') === 'true') console.log('               demo logins (password demo-pass-123): family@demo.kareiq (both)  arjun@demo.kareiq (Kare@Home only)  meena@demo.kareiq (KareNest + included Kare@Home)  nurse@demo.kareiq  admin@demo.kareiq');
+    console.log(`  KareWellness: ${base}/karewellness`);
+    console.log(`  Dashboard:   ${base}/app   (families, nurses and the office team sign in here)`);
+    if (db.mode === 'file' && String(process.env.APP_DEMO || 'true') === 'true') console.log('               demo logins (password demo-pass-123): family@demo.kareiq  nurse@demo.kareiq  admin@demo.kareiq');
     console.log(`  Admin:       ${base}/admin  ${ADMIN_PASSWORD ? '(sign in with ADMIN_PASSWORD from .env)' : '(off: add ADMIN_PASSWORD to .env, then restart)'}`);
     console.log(`  Storage:     ${{ mongo: 'MongoDB Atlas', redis: 'Upstash Redis', temporary: 'temporary (data will be lost)', file: 'files in the data folder' }[db.mode]}`);
     console.log(`  Email alerts: ${emailEnabled ? 'on' : 'off (optional, see README)'}\n`);

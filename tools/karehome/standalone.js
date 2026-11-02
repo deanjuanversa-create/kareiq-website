@@ -3,7 +3,8 @@
    ready to deploy as a separate Vercel project.
      node tools/karehome/build.js                  (first, if source.html changed)
      node tools/karehome/standalone.js ../karehome-only
-   - Pages: /  (home), /packages, /karebalance  (from public/kare-at-home*.html)
+   - Pages: /  (home), /packages, /bystander, /faq  (from public/kare-at-home*.html)
+   - KareBalance and KareMind are on the KareWellness website (KAREWELLNESS); /karebalance redirects there.
    - KareIQ links go to KAREIQ, KareNest links to KARENEST, sign-in to the app on Render.
    - Privacy Policy and Terms are KareIQ's pages on KAREIQ.
    - Old addresses (/kare-at-home/...) typed on this domain redirect to the new ones. */
@@ -12,6 +13,7 @@ const path = require('path');
 
 const KAREIQ = 'https://kareiq.co.in/';
 const KARENEST = 'https://karenest.co.in/';
+const KAREWELLNESS = 'https://karewellness.co.in/';
 const API = 'https://kareiq-api.onrender.com';
 const SELF = 'https://karehome.co.in';
 
@@ -29,12 +31,13 @@ const read = (rel) => fs.readFileSync(path.join(PUB, rel), 'utf8');
 const edit = (name, s, from, to) => { const r = s.split(from).join(to); if (r === s) throw new Error(name + ': "' + from + '" not found (the file changed; update tools/karehome/standalone.js)'); return r; };
 
 // ---------------------------------------------------------------- pages
-const PAGES = { 'index.html': 'kare-at-home.html', 'packages.html': 'kare-at-home/packages.html', 'karebalance.html': 'kare-at-home/karebalance.html' };
+const PAGES = { 'index.html': 'kare-at-home.html', 'packages.html': 'kare-at-home/packages.html', 'bystander.html': 'kare-at-home/bystander.html', 'faq.html': 'kare-at-home/faq.html' };
 const rootLinks = (html) => html
   .replace(/href="\/kare-at-home"/g, 'href="/"')
   .replace(/href="\/kare-at-home#/g, 'href="/#')
   .replace(/href="\/kare-at-home\//g, 'href="/')
   .replace(/href="\/" data-site="kareiq"/g, `href="${KAREIQ}" data-site="kareiq"`)
+  .replace(/href="\/karewellness\//g, `href="${KAREWELLNESS}`)
   .replace(/href="\/(privacy|terms)"/g, `href="${KAREIQ}$1" target="_blank" rel="noopener"`)
   .replace(/href="\/app\//g, `href="${API}/app/`)
   .replace(/content="\/img\//g, `content="${SELF}/img/`);
@@ -45,12 +48,12 @@ for (const [to, from] of Object.entries(PAGES)) {
 }
 
 // ---------------------------------------------------------------- scripts and styles
-const ASSETS = ['css/karehome.css', 'css/karehome-loader.css', 'css/auth-popup.css', 'css/page.css',
-  'js/api.js', 'js/content.js', 'js/forms.js', 'js/auth-popup.js'];
+const ASSETS = ['css/karehome.css', 'css/faq.css', 'css/karehome-loader.css', 'css/auth-popup.css', 'css/page.css', 'css/pkg-menu.css', 'css/bystander.css',
+  'js/api.js', 'js/content.js', 'js/forms.js', 'js/auth-popup.js', 'js/pkg-menu.js', 'js/bystander.js', 'js/faq-page.js'];
 ASSETS.forEach(copy);
 
 let sites = read('js/sites.js');
-sites = sites.replace(/window\.KARE_SITES = \{[^}]*\}/, `window.KARE_SITES = {\n  kareiq:   '${KAREIQ}',\n  karehome: '/',\n  karenest: '${KARENEST}'\n}`);
+sites = sites.replace(/window\.KARE_SITES = \{[^}]*\}/, `window.KARE_SITES = {\n  kareiq:   '${KAREIQ}',\n  karehome: '/',\n  karenest: '${KARENEST}',\n  karewellness: '${KAREWELLNESS}'\n}`);
 if (!sites.includes("karehome: '/'")) throw new Error('sites.js: could not set the addresses');
 write('js/sites.js', sites);
 
@@ -107,6 +110,9 @@ vj.redirects = [
   { source: '/services', destination: '/#services', permanent: false },
   { source: '/contact', destination: '/#contact', permanent: false },
   { source: '/index', destination: '/', permanent: false },
+  { source: '/karebalance', destination: KAREWELLNESS + 'karebalance', permanent: false },
+  { source: '/karewellness', destination: KAREWELLNESS, permanent: false },
+  { source: '/karewellness/:path*', destination: KAREWELLNESS + ':path*', permanent: false },
   { source: '/privacy', destination: KAREIQ + 'privacy', permanent: false },
   { source: '/terms', destination: KAREIQ + 'terms', permanent: false },
   { source: '/karenest', destination: KARENEST, permanent: false },

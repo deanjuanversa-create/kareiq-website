@@ -1,0 +1,47 @@
+/* "Our Packages" dropdown for the KareIQ and Kare@Home headers: the same structure, animation and
+   spacing as the KareNest menu (public/karenest/site.css). Each site sets its colours with the
+   --dd-* variables in its own stylesheet. Behaviour: /js/pkg-menu.js */
+.menu .has-dd{position:relative}
+.dd-btn{position:relative;display:flex;align-items:center;gap:5px;border:0;background:none;cursor:pointer;font:inherit;font-weight:500;color:var(--dd-ink,#13304a);white-space:nowrap}
+.dd-btn::after{content:"";position:absolute;left:var(--dd-pad,12px);right:var(--dd-pad,12px);bottom:var(--dd-line-y,2px);height:2px;border-radius:2px;background:var(--dd-grad);transform:scaleX(0);transform-origin:left;transition:transform .4s cubic-bezier(.4,0,.2,1)}
+.dd-btn:hover,.dd-btn.active,.has-dd.open>.dd-btn{color:var(--dd-accent);opacity:1}
+.dd-btn:hover::after,.dd-btn.active::after{transform:scaleX(1)}
+.dd-btn .chev{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s cubic-bezier(.22,.8,.24,1)}
+.has-dd.open>.dd-btn .chev{transform:rotate(180deg)}
+.dd-btn:focus-visible{outline:3px solid var(--dd-violet);outline-offset:1px;border-radius:10px}
+
+.dd{position:absolute;left:50%;top:100%;translate:-50% 0;padding-top:10px;min-width:290px;z-index:65;visibility:hidden;opacity:0;transform:translateY(6px);transition:opacity .2s,transform .25s cubic-bezier(.22,.8,.24,1),visibility 0s .25s}
+.has-dd.open>.dd{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .25s cubic-bezier(.22,.8,.24,1),visibility 0s}
+.dd>ul,.dd2>ul{list-style:none;margin:0;padding:8px;background:#fff;border-radius:22px;border:1px solid var(--dd-line,#e6ebee);box-shadow:0 30px 60px -28px rgba(19,48,74,.5)}
+.dd li{position:relative}
+.menu .dd a,.dd a{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:11px 14px;border-radius:14px;white-space:normal;font-size:15px;font-weight:600;line-height:1.3;color:var(--dd-ink,#13304a);opacity:1;text-align:left}
+.dd a small{font-weight:500;font-size:12.5px;color:var(--dd-muted,#7a8a99)}
+.dd a:hover,.dd a:focus-visible,.dd a[aria-current="page"]{background:var(--dd-soft);color:var(--dd-accent)}
+.menu .dd a::after,.dd a::after{display:none}
+.dd a:focus-visible{outline:3px solid var(--dd-violet);outline-offset:-1px}
+.dd .sep{height:1px;background:var(--dd-line,#e6ebee);margin:6px 10px}
+.dd-row{display:flex;align-items:stretch;gap:4px}
+.dd-row>a{flex:1}
+.dd2-btn{flex:none;width:44px;border:0;border-radius:14px;background:none;color:var(--dd-muted,#7a8a99);cursor:pointer;display:grid;place-items:center;transition:background .25s,color .25s}
+.dd2-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s cubic-bezier(.22,.8,.24,1)}
+.dd2-btn:hover,.has-dd2.open .dd2-btn{background:var(--dd-vsoft);color:var(--dd-violet)}
+.dd2-btn:focus-visible{outline:3px solid var(--dd-violet);outline-offset:-1px}
+.dd2{position:absolute;left:100%;top:-9px;padding-left:12px;min-width:270px;visibility:hidden;opacity:0;transform:translateX(-6px);transition:opacity .2s,transform .25s cubic-bezier(.22,.8,.24,1),visibility 0s .25s}
+.has-dd2.open>.dd2{visibility:visible;opacity:1;transform:none;transition:opacity .2s,transform .25s cubic-bezier(.22,.8,.24,1),visibility 0s}
+.has-dd2.flip>.dd2{left:auto;right:100%;padding-left:0;padding-right:12px;transform:translateX(6px)}
+.has-dd2.flip.open>.dd2{transform:none}
+.has-dd2.flip .dd2-btn svg{transform:rotate(180deg)}
+.has-dd2:has(.dd2 a[aria-current="page"])>.dd-row>a{color:var(--dd-accent)}
+
+/* phones and tablets: the drawer shows Our Packages as an accordion */
+.acc-btn{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;padding:14px 0;border:0;border-bottom:1px solid var(--dd-line,#e6ebee);background:none;font-family:inherit;font-size:17px;font-weight:500;line-height:1.3;color:var(--dd-ink,#13304a);text-align:left;cursor:pointer}
+.acc-btn svg{width:20px;height:20px;fill:none;stroke:var(--dd-accent);stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .3s cubic-bezier(.22,.8,.24,1);flex:none}
+.acc-btn[aria-expanded="true"]{color:var(--dd-accent)}
+.acc-btn[aria-expanded="true"] svg{transform:rotate(180deg)}
+.acc-panel{list-style:none;margin:4px 0 6px 4px;padding:0 0 0 16px;border-left:2px solid var(--dd-soft)}
+.acc-panel[hidden]{display:none}
+.drawer .acc-panel a,.drawer .acc-panel .acc-btn{font-size:16px;font-weight:600;padding:12px 0}
+.drawer .acc-panel .acc-panel a{font-weight:500;font-size:15.5px}
+.drawer .acc-panel a small{display:block;font-size:12.5px;font-weight:500;color:var(--dd-muted,#7a8a99)}
+.drawer .acc-panel a span{display:flex;flex-direction:column}
+@media (prefers-reduced-motion:reduce){.dd,.dd2,.dd-btn .chev,.dd2-btn svg,.acc-btn svg{transition:none}}

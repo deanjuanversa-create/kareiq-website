@@ -40,9 +40,29 @@
       "permanent": true
     },
     {
-      "source": "/karebalance/index",
-      "destination": "/karebalance",
-      "permanent": true
+      "source": "/karebalance",
+      "destination": "https://karewellness.co.in/karebalance",
+      "permanent": false
+    },
+    {
+      "source": "/karebalance/:path*",
+      "destination": "https://karewellness.co.in/karebalance",
+      "permanent": false
+    },
+    {
+      "source": "/karemind",
+      "destination": "https://karewellness.co.in/karemind",
+      "permanent": false
+    },
+    {
+      "source": "/karemind/:path*",
+      "destination": "https://karewellness.co.in/karemind",
+      "permanent": false
+    },
+    {
+      "source": "/bystander",
+      "destination": "https://karehome.co.in/bystander",
+      "permanent": false
     },
     {
       "source": "/contact",

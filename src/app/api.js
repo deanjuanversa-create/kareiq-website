@@ -299,7 +299,8 @@ async function planChoices() {
       if (!pk) return { id, name: planName(id), price: null };
       const price = pk.model === 'tiers' || pk.model === 'monthly' ? 'from ' + fmt(Math.min(...Object.values(pk.prices).map((x) => x.perMonth))) + ' a month'
         : pk.model === 'fixed' ? fmt(pk.price) + ' ' + pk.length : null;
-      return { ...pk, price };
+      // priceText is the label for the list; price stays the number the dialog works with
+      return { ...pk, priceText: price };
     })
   }));
 }
@@ -949,19 +950,21 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
 
     // ----- risk scores: forms for the care team, saving a result
     if (p === 'risk/forms' && req.method === 'GET') {
-      if (user.role !== 'admin') throw forbidden();
+      if (user.role !== 'caregiver') throw forbidden(); // risk checks are done by the nurses
       const forms = risk.forms();
       let prefill = {};
       const pid = url.searchParams.get('person');
       if (pid) {
         const person = await visiblePerson(user, pid);
+        if (!(await careTeam(user, person.id))) throw forbidden();
         prefill = await riskPrefill(person);
       }
       return json(res, 200, { ok: true, forms, prefill });
     }
     if (parts[0] === 'people' && parts[2] === 'risks' && req.method === 'POST') {
-      if (user.role !== 'admin') throw forbidden(); // risk checks are done by the office
+      if (user.role !== 'caregiver') throw forbidden(); // risk checks are done by the person's nurse
       const person = await visiblePerson(user, parts[1]);
+      if (!(await careTeam(user, person.id))) throw forbidden();
       const out = risk.evaluate(String(body.test || ''), body.inputs || {});
       if (out.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: out.errors });
       const at = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) && body.date <= todayIST() ? body.date + 'T12:00:00+05:30' : now();
