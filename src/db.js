@@ -117,6 +117,8 @@ async function pushHistory(key, value, keep = 20) {
 // Redis hash helpers: one field per record, so two submissions at the same
 // moment on different servers can never overwrite each other.
 async function hashSet(key, field, value) { await redis('HSET', PREFIX + key, field, JSON.stringify(value)); }
+// HSETNX: stores the field only if it is not there yet; true when stored (used for one-time records)
+async function hashSetNX(key, field, value) { return Number(await redis('HSETNX', PREFIX + key, field, JSON.stringify(value))) === 1; }
 async function hashGet(key, field) { const raw = await redis('HGET', PREFIX + key, field); return raw == null ? null : JSON.parse(raw); }
 async function hashDel(key, field) { await redis('HDEL', PREFIX + key, field); }
 async function hashAll(key) { const vals = (await redis('HVALS', PREFIX + key)) || []; return vals.map((v) => { try { return JSON.parse(v); } catch { return null; } }).filter(Boolean); }
@@ -132,4 +134,4 @@ async function recordUpdate(collection, id, changes) {
   return c.findOne({ _id: id }, NO_ID);
 }
 
-module.exports = { mode, col, ping, getJSON, setJSON, del, pushHistory, hashSet, hashGet, hashAll, hashDel, recordInsert, recordAll, recordUpdate };
+module.exports = { mode, col, ping, getJSON, setJSON, del, pushHistory, hashSet, hashSetNX, hashGet, hashAll, hashDel, recordInsert, recordAll, recordUpdate };

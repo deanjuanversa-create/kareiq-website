@@ -77,9 +77,37 @@ def prepare(cv2, np, img):
     otsu = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
     return [adaptive, otsu]
 
+# Lines read by the LSTM, with Tesseract's own word confidences (0-100), from its TSV output
+LINES = {}
+
 def tesseract(path, psm="3"):
-    r = run(["tesseract", path, "stdout", "-l", "eng", "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1"])
-    return r.stdout.decode("utf-8", "replace") if r.returncode == 0 else ""
+    r = run(["tesseract", path, "stdout", "-l", "eng", "--oem", "1", "--psm", psm, "-c", "preserve_interword_spaces=1", "tsv"])
+    if r.returncode != 0:
+        return ""
+    rows = r.stdout.decode("utf-8", "replace").split("\n")
+    lines, order = {}, []
+    for row in rows[1:]:
+        c = row.split("\t")
+        if len(c) < 12 or c[0] != "5":
+            continue
+        word, conf = c[11], float(c[10])
+        if not word.strip():
+            continue
+        key = (int(c[2]), int(c[3]), int(c[4]))  # block, paragraph, line
+        if key not in lines:
+            lines[key] = {"words": [], "confs": [], "top": int(c[7])}
+            order.append(key)
+        lines[key]["words"].append(word)
+        lines[key]["confs"].append(conf)
+    out = []
+    for k in sorted(order, key=lambda k: (lines[k]["top"], k)):
+        ln = lines[k]
+        cs = [x for x in ln["confs"] if x >= 0]
+        out.append({"text": " ".join(ln["words"]), "conf": round(sum(cs) / len(cs), 1) if cs else 0,
+                    "words": [[w, round(c, 1)] for w, c in zip(ln["words"], ln["confs"])]})
+    text = "\n".join(l["text"] for l in out)
+    LINES[text] = out
+    return text
 
 def ocr_image(cv2, np, img, work, tag, deep=False):
     if deep and img is not None:
@@ -113,6 +141,23 @@ def ocr_image(cv2, np, img, work, tag, deep=False):
                 break
     return best
 
+def lines_for(text):
+    """The lines (with confidences) behind one page text; deep passes join several readings."""
+    if text in LINES:
+        return LINES[text]
+    out = []
+    for part in text.split("\n"):
+        found = None
+        for t, ls in LINES.items():
+            for l in ls:
+                if l["text"] == part:
+                    found = l
+                    break
+            if found:
+                break
+        out.append(found or {"text": part, "conf": 0})
+    return out
+
 def main():
     if len(sys.argv) < 3:
         print(json.dumps({"ok": False, "error": "usage"})); return
@@ -137,20 +182,22 @@ def main():
             for n in range(1, count + 1):
                 t = run(["pdftotext", "-layout", "-f", str(n), "-l", str(n), src, "-"]).stdout.decode("utf-8", "replace")
                 if meaningful(t) >= 60 and not deep:
-                    pages.append({"page": n, "source": "text", "text": t})
+                    pages.append({"page": n, "source": "text", "text": t, "lines": [{"text": x, "conf": 100} for x in t.split("\n")]})
                     continue
                 prefix = os.path.join(work, "p%d" % n)
                 run(["pdftoppm", "-r", "400" if deep else "300", "-f", str(n), "-l", str(n), "-png", src, prefix], 90)
                 imgs = sorted(f for f in os.listdir(work) if f.startswith("p%d" % n) and f.endswith(".png"))
                 img = cv2.imread(os.path.join(work, imgs[0])) if imgs else None
-                pages.append({"page": n, "source": "ocr", "text": ocr_image(cv2, np, img, work, "o%d" % n, deep)})
+                t = ocr_image(cv2, np, img, work, "o%d" % n, deep)
+                pages.append({"page": n, "source": "ocr", "text": t, "lines": lines_for(t)})
         else:
             img = cv2.imread(src, cv2.IMREAD_COLOR)
             if img is None:
                 print(json.dumps({"ok": False, "error": "unreadable-image", "engine": versions()})); return
             if deep:
                 img = cv2.resize(img, None, fx=1.5, fy=1.5, interpolation=cv2.INTER_CUBIC)
-            pages.append({"page": 1, "source": "ocr", "text": ocr_image(cv2, np, img, work, "o1", deep)})
+            t = ocr_image(cv2, np, img, work, "o1", deep)
+            pages.append({"page": 1, "source": "ocr", "text": t, "lines": lines_for(t)})
         print(json.dumps({"ok": True, "pages": pages, "engine": versions()}))
     except subprocess.TimeoutExpired:
         print(json.dumps({"ok": False, "error": "timeout", "pages": pages, "engine": versions()}))

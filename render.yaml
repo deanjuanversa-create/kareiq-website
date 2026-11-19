@@ -3,16 +3,13 @@
 services:
   - type: web
     name: kareiq-api
-    runtime: node
+    runtime: docker            # builds from the Dockerfile, which installs the report-reading tools (Tesseract, Poppler, OpenCV)
+    dockerfilePath: ./Dockerfile
     plan: free
     region: singapore          # closest Render region to India
-    buildCommand: npm install
-    startCommand: node server.js
     healthCheckPath: /api/health
     autoDeploy: true
     envVars:
-      - key: NODE_VERSION
-        value: "20"
       - key: MONGODB_URI       # paste the Atlas connection string when Render asks
         sync: false
       - key: MONGODB_DB

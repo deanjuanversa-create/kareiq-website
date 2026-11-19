@@ -239,7 +239,7 @@ kareiq-website/
   On your own computer (`localhost`) the local server is used automatically.
 - Admin-edited text and prices load in the background (`js/api.js`), so pages never wait for the server.
   If it is asleep or down, pages show the built-in text and forms show a "call or WhatsApp us" message.
-- **Render** runs `node server.js` (see `render.yaml`). Environment variables:
+- **Render** builds the `Dockerfile` (`runtime: docker` in `render.yaml`), which installs Node plus the report-reading tools and runs `node server.js`. An existing Node-runtime service can't switch runtime: create a new Docker web service from the same repo with the same environment variables (or apply the Blueprint). Environment variables:
   `MONGODB_URI`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `TRUST_PROXY=true`,
   `SITE_URL` (where people who open the API address in a browser are sent) and
   `ALLOWED_ORIGINS` (websites allowed to send forms, e.g. `https://karenest.co.in,https://www.karenest.co.in,https://kareiq-website-full.vercel.app`).
@@ -375,3 +375,24 @@ the footer. The page has a search box, which filters the questions as you type, 
 questions. `/faq#q-3` opens question 3. Old links to `#faq` on a home page open the FAQ page (`public/js/faq-page.js`, styles in
 `public/css/faq.css` and `public/karenest/site.css`). KareWellness has no FAQ content yet; add a `karewellness` entry to
 `tools/shared/faq.js` and a page in `tools/karewellness/build.js` when there is one.
+
+## Medical document intelligence (nurse and customer uploads)
+
+Every medical document uploaded from the nurse portal (Upload documents) or a customer's Medical records goes through one pipeline (`src/app/docintel.js`):
+`Uploaded → Processing → Extracted → Completed | Needs Review | Failed`.
+
+1. **Check:** the file type is checked by its content (PDF, JPEG, PNG or WebP, at most 5 MB). A SHA-256 fingerprint is stored, so the same file for the same person is one document, even if it is sent twice at once. The fingerprint is checked again before the file is read.
+2. **Read:** `ocr/report_reader.py` takes the PDF text layer when there is one. Otherwise it reads the page with OpenCV preparation and Tesseract 5's pretrained LSTM neural-network OCR, keeping each word's confidence.
+3. **Extract:** `src/app/docextract.js` classifies the document and keeps the test or collection date apart from the report date and the printed date. The upload date is never used. It extracts only the values KareIQ stores (vitals and the risk engine's inputs), with their unit, page, line, section and confidence. Units are converted only by fixed factors.
+4. **Validate and store:** a value is stored automatically as a reading (`source: 'document'`, linked to the document and the extraction) when the number can be read (reading confidence at least 60%), its unit is known, it is within the possible range, it is an exact value and the document shows the test date.
+   - Kept as notes, not blockers: a confidence of 60–85%, a two-digit year (e.g. "28-May-16" is read as 2016) and blood sugar without a fasting or after-meal label (stored as random).
+   - Sent to review in Office › Customer management › Document review: no test date (the upload date is never used instead), two different test dates, a number outside what is possible, "<" or ">" values, a unit without a fixed conversion, a missing unit, and plain CRP (the rules use hs-CRP).
+   - The same measurement is never stored twice.
+   - Documents left waiting under the older, stricter rules are read again automatically when the server starts.
+5. **Risk:** the existing risk engine recalculates from the stored readings. Extraction never calculates risk.
+
+Failures that may pass are retried automatically (3 attempts); the office can also process a document again. Nurses see only the processing status. They never see the values read or any risk result; the server enforces this. Reports dated before a customer's registration are shown too: health history starts at the registration date or at the oldest record, whichever is earlier (Vitals period "All"). The risk engine uses them like any other reading.
+
+On a server without Tesseract, Poppler and OpenCV, documents stay Failed and are retried. The Dockerfile installs all three; on Render the service must run from the Dockerfile.
+
+Tests: `node tools/check-docs.js http://localhost:3000` on a fresh demo server. It needs `python3` with `reportlab` and `Pillow` to build the test documents.

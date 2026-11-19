@@ -25,7 +25,7 @@
     bodyfat: { label: 'Body fat', unit: '%' }, moisture: { label: 'Body moisture', unit: '%' }, visceral: { label: 'Visceral fat', unit: '' }, bone: { label: 'Bone mass', unit: '%' },
     bmr: { label: 'BMR', unit: 'kcal' }, protein: { label: 'Protein', unit: '%' }, subfat: { label: 'Subcutaneous fat', unit: '%' }, lean: { label: 'Lean body mass', unit: '%' }
   };
-  var PERIODS = [['7d', 'Last 7 days', 7], ['1m', 'Month', 30], ['6m', '6 months', 182], ['1y', '1 year', 365]];
+  var PERIODS = [['7d', 'Last 7 days', 7], ['1m', 'Month', 30], ['6m', '6 months', 182], ['1y', '1 year', 365], ['all', 'All', 36500]];
   var GLUCOSE = { fasting: 'Fasting', post_meal: 'After meal', random: 'Random' };
   var ACTIONS = {
     'signin': 'Signed in', 'password.set': 'Set their password', 'password.reset': 'Reset their password', 'password.changed': 'Changed their password',
@@ -78,6 +78,7 @@
   function waLink() { return nestOnly() ? WA_NEST : ((S.content && S.content.whatsappGroup) || WA_GROUP); }
   function icon(name) {
     var p = {
+      info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5.5M12 7.6v.1"/>',
       idcard: '<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle cx="9" cy="11" r="2.3"/><path d="M5.8 16.2c.6-1.7 1.8-2.6 3.2-2.6s2.6.9 3.2 2.6M14.5 10h3.5M14.5 13.5h3.5"/>',
       clip: '<rect x="5" y="4.5" width="14" height="16" rx="2.5"/><path d="M9 4.5V3.8A1.3 1.3 0 0 1 10.3 2.5h3.4A1.3 1.3 0 0 1 15 3.8v.7M9 10.5h6M9 14h6M9 17.5h4"/>',
       up: '<path d="M12 19V5M6 11l6-6 6 6"/>',
@@ -301,18 +302,23 @@
       return go('#/profile/personal' + queryOf(r), true);
     }
     if (top === 'health' && role !== 'caregiver') {
-      if (r.parts[1] === 'vitals' || r.parts[1] === 'risks') return healthView(r, r.parts[1]);
+      if (['vitals', 'body', 'wellbeing', 'risks'].indexOf(r.parts[1]) > -1) return healthView(r, r.parts[1]);
+      if (r.parts[1] === 'notes') return notesView(r);
       return go('#/health/vitals' + queryOf(r), true);
     }
     if (top === 'packages' && role === 'family') return otherPackagesView(r);
+    if (top === 'policies' && (role === 'family' || role === 'admin')) return policyView(r);
     if (top === 'account') return accountView();
     if (top === 'plans') return plansView(r);
     if (top === 'admin') { if (role !== 'admin') return go('#/', true); return adminView(r.parts[1] || 'today', r); }
     if (top === 'people' && role === 'admin') return go('#/office/customers', true);
     // recording a visit and risk checks are the nurses' work; the office opens the customer's profile instead
-    if ((top === 'visit' || top === 'assess') && role === 'admin') return go('#/office/customer' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true);
-    if (top === 'visit' && role === 'caregiver') return visitView(r);
-    if (top === 'assess' && role === 'caregiver') return assessView(r);
+    // Assessment: Regular Checkup and Onboarding Customer (nurses); the office can open a completed onboarding read only
+    if (top === 'assess' && r.parts[1] === 'onboarding' && (role === 'caregiver' || role === 'admin')) return onboardingView(r);
+    if ((top === 'visit' || top === 'assess' || top === 'risktests') && role === 'admin') return go('#/office/customer' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true);
+    if (top === 'assess' && r.parts[1] === 'regular' && role === 'caregiver') return regularView(r);
+    if ((top === 'assess' || top === 'visit') && role === 'caregiver') return go('#/assess/regular' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true);
+    if (top === 'risktests' && role === 'caregiver') return go('#/assess/regular' + (r.q.p ? '?p=' + encodeURIComponent(r.q.p) : ''), true); // nurses do not see risk test results
     if (top === 'records') return recordsView(r);
     if (top === 'clientinfo' && role !== 'family') return r.q.p ? detailsView(r) : clientInfoView();
     if (top === 'package') return packageView(r);
@@ -461,23 +467,30 @@
   // ================================================================ the shell: top bar + side menu
   // One layout for everyone. Families see their relatives' care; caregivers see the people
   // assigned to them (no health history); the office sees everyone plus the office pages.
+  // KareIQ Policies: the same seven pages for families (read only) and the office (can edit)
+  var POLICIES = [['onboarding-documents', 'Onboarding Documents'], ['disciplinary-framework', 'Disciplinary Framework'], ['code-of-conduct', 'Code of Conduct'], ['grievance-red-policy', 'Grievance Red Policy'],
+    ['resident-and-visitor', 'Resident and Visitor'], ['rights-and-charter', 'Rights and Charter'], ['resident-leave-form', 'Resident Leave Form']];
+  var POLICY_MENU = POLICIES.map(function (x) { return ['policies/' + x[0], x[1], 'file']; });
   var MENUS = {
     family: [
       { k: 'profile', label: 'Profile', icon: 'user', sub: [['profile/personal', 'Personal details', 'idcard'], ['profile/conditions', 'Pre-existing health conditions', 'clip']] },
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge']] },
-      ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt']
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
+      ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt'],
+      { k: 'pol', label: 'KareIQ Policies', icon: 'shield', sub: POLICY_MENU }
     ],
     caregiver: [
-      ['people', 'My people', 'people'], ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge'], ['records', 'Medical records', 'file']
+      ['people', 'My people', 'people'], ['clientinfo', 'Client information', 'clip'],
+      { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse'], ['assess/onboarding', 'Onboarding Customer', 'idcard']] },
+      ['records', 'Medical records', 'file']
     ],
     admin: [
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['invoices', 'Invoices', 'receipt'],
-      ['clientinfo', 'Client information', 'clip'], ['visit', 'Record a visit', 'plus'], ['assess', 'Risk checks', 'gauge']
+      ['clientinfo', 'Client information', 'clip']
     ]
   };
   // pages that belong to one person (the link keeps ?p= so the same person stays open)
-  var PERSON_PAGES = ['profile/personal', 'profile/conditions', 'health/vitals', 'health/risks', 'records', 'package', 'packages', 'invoices', 'visit', 'assess'];
+  var PERSON_PAGES = ['profile/personal', 'profile/conditions', 'health/vitals', 'health/body', 'health/wellbeing', 'health/risks', 'health/notes', 'records', 'package', 'packages', 'invoices', 'visit', 'assess', 'assess/regular', 'assess/onboarding', 'risktests'];
   var OFFICE = [['admin', 'Requests', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock']];
 
   function shell(active, inner) {
@@ -511,7 +524,7 @@
       (role === 'admin' && !mod ? '<p class="sb-h">Office</p>' + OFFICE.map(link).join('') + '<a href="/admin/" target="_blank" rel="noopener">' + icon('globe') + '<span>Website text and prices</span></a>' : '') +
       '<div class="sb-foot">' +
         (role === 'family' ? '<a href="#/plans"' + (active === 'plans' ? ' aria-current="page"' : '') + '>' + icon('plus') + '<span>Add a plan or booking</span></a>' : '') +
-        (role === 'admin' ? '' : '<a href="' + waLink('Hello, I am ' + u.name + ', contacting you from My KareIQ.') + '" target="_blank" rel="noopener">' + icon('wa') + '<span>WhatsApp us</span></a>') +
+        (role === 'family' ? '<a href="' + waLink('Hello, I am ' + u.name + ', contacting you from My KareIQ.') + '" target="_blank" rel="noopener">' + icon('wa') + '<span>WhatsApp us</span></a>' : '') +
         '<a href="#/account"' + (active === 'account' ? ' aria-current="page"' : '') + '>' + icon('pen') + '<span>Your account</span></a>' +
         '<a href="#" data-act="signout">' + icon('out') + '<span>Sign out</span></a>' +
       '</div></div></nav>';
@@ -620,7 +633,8 @@
       var u = S.me.user;
       var tiles = [
         ['#/profile/personal' + q, 'user', 'Profile', 'Personal details, contacts, health conditions and allergies'],
-        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals and risk trends over time'],
+        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals, body composition, wellbeing checks, risk trends and notes'],
+        ['#/policies/' + POLICIES[0][0], 'shield', 'KareIQ Policies', 'Policies, charters and forms, always the latest version'],
         ['#/records' + q, 'file', 'Medical records', 'Lab reports, scans and prescriptions'],
         ['#/package' + q, 'box', 'My package', 'What is included, and booking services'],
         ['#/packages' + q, 'layers', 'Other packages', 'Every Kare@Home, KareNest, KareBalance and KareMind package'],
@@ -635,8 +649,9 @@
     });
   }
 
-  // ================================================================ Health details: Vitals and Risk trends
-  // The former dashboard, split into two pages that share the date filter and Download trends.
+  // ================================================================ Health details: Vitals, Risk trends, Notes
+  // Separate pages, each built from separate sections (like Customer analytics): a summary section
+  // and a chart section whose period filter sits at the chart's top-right. Notes have their own page.
   function healthView(r, kind) {
     var page = 'health/' + kind;
     withPerson(r, page, function (p, people) {
@@ -648,41 +663,106 @@
         S.cache.dash = d; S.cache.page = page;
         var active = d.plans.filter(function (x) { return x.status !== 'pending'; });
         if (!active.length && d.plans.length && role === 'family') { fill(personBar(p, people) + pendingHtml(p, d)); return; }
-        // visits and risk checks are recorded by the nurses (the office no longer has these buttons)
-        var nurse = S.me.user.role === 'caregiver';
-        var actions = (d.canRecord && nurse ? '<a class="btn sm" href="#/visit?p=' + e(p.id) + '">' + icon('plus') + 'Record visit</a>' : '') +
-          (d.canAssess && nurse ? '<a class="btn sm ghost" href="#/assess?p=' + e(p.id) + '">' + icon('gauge') + 'Add a risk check</a>' : '');
         var guide = '<p class="note">' + icon('shield') + '<span>Colours compare readings with KareIQ\'s standard ranges. They are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>';
+        var head = function (title, sub, noDl) { return '<div class="pagehead hrow"><div><h1>' + e(title) + '</h1><p class="muted">' + sub + '</p></div>' + (noDl ? '' : downloadBtn()) + '</div>'; };
+        var hint = '<p class="muted small phint">' + icon('info') + '<span>Point to an item, or tap its ' + '<b>i</b>' + ', to see its summary. Choose the item to show its chart.</span></p>';
         if (kind === 'risks') {
-          // the same layout as Vitals: a summary card per risk check, and the chosen check's history
           var rgroup = S.cache.riskGroup || 'all';
           var groups = []; (d.risks || []).forEach(function (x) { if (groups.indexOf(x.groupName) === -1) groups.push(x.groupName); });
           if (rgroup !== 'all' && groups.indexOf(rgroup) === -1) rgroup = S.cache.riskGroup = 'all';
-          fill(personBar(p, people, actions) +
-            '<div class="pagehead"><h1>Risk trends</h1><p class="muted">Latest risk scores, and the history of the one you choose.</p></div>' +
-            '<div class="dgrid rgrid">' +
-              '<section class="sum" aria-labelledby="h-rsum"><h2 id="h-rsum">Summary</h2>' +
-                (groups.length > 1 ? '<label class="sumsel"><span class="sr">Show</span><select data-act="rgroup">' + [['all', 'All risk checks']].concat(groups.map(function (g) { return [g, g]; })).map(function (o) { return '<option value="' + e(o[0]) + '"' + (o[0] === rgroup ? ' selected' : '') + '>' + e(o[1]).toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '') +
-                '<div id="rsumlist">' + riskSummaryList(d, rgroup) + '</div>' +
-              '</section>' +
-              '<section class="trends" aria-label="Risk trends">' + trendsHead(d) + '<div id="rcharts">' + riskChartsHtml(d) + '</div></section>' +
-            '</div>' + guide);
+          var gsel = groups.length > 1 ? '<label class="sumsel"><span class="sr">Show</span><select data-act="rgroup">' + [['all', 'All indicators']].concat(groups.map(function (g) { return [g, g]; })).map(function (o) { return '<option value="' + e(o[0]) + '"' + (o[0] === rgroup ? ' selected' : '') + '>' + e(o[1]).toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '';
+          fill(personBar(p, people) + head('Risk trends', 'The overall risk category, then each indicator: its summary and the history of the one you choose.') +
+            '<section class="hsec" aria-labelledby="h-rall"><div class="hsec-h"><h2 id="h-rall">Overall risk</h2><span class="muted small">Calculated automatically from the recorded vitals and assessments</span></div>' + riskHeroHtml(d.riskStatus, { history: role !== 'caregiver', pid: p.id }) + '</section>' +
+            '<section class="hsec trends" aria-labelledby="h-rtr"><div class="hsec-h"><h2 id="h-rtr">Indicators</h2><div class="hsec-tools">' + gsel + periodChips(d) + '</div></div>' + (d.risks && d.risks.length ? hint : '') + rangeNote(d) + '<div id="rcharts">' + riskChartsHtml(d, rgroup) + '</div></section>' + guide);
           drawCharts(true);
           return;
         }
-        var group = S.cache.sumGroup || 'vitals';
-        fill(personBar(p, people, actions) +
-          '<div class="pagehead"><h1>Vitals</h1><p class="muted">Latest readings, and the history of the one you choose.</p></div>' +
-          '<div class="dgrid">' +
-            '<section class="sum" aria-labelledby="h-sum"><h2 id="h-sum">Summary</h2>' +
-              '<label class="sumsel"><span class="sr">Show</span><select data-act="sumgroup">' + [['vitals', 'Vitals'], ['body', 'Body composition'], ['wellbeing', 'Wellbeing checks']].map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === group ? ' selected' : '') + '>' + o[1].toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' +
-              '<div id="sumlist">' + summaryList(d, group) + '</div>' +
-            '</section>' +
-            '<section class="trends" aria-label="Trends">' + trendsHead(d) + '<div id="charts">' + chartsHtml(d, group) + '</div></section>' +
-          '</div>' + notesHtml(d) + guide);
+        if (kind === 'wellbeing') {
+          fill(personBar(p, people) + head('Wellbeing checks', 'Food, water, toilet, sleep, pain, memory and medicine checks the care team records at each visit.', true) +
+            '<section class="hsec" aria-labelledby="h-wb"><div class="hsec-h"><h2 id="h-wb">Latest checks</h2></div><div class="sumgrid wb">' + wellbeingHtml(d.obs) + '</div></section>' +
+            ((d.obsHistory || []).length > 1 ? '<section class="hsec" aria-labelledby="h-wbh"><div class="hsec-h"><h2 id="h-wbh">Earlier visits</h2><span class="muted small">' + (d.obsHistory.length - 1) + ' earlier visit' + (d.obsHistory.length === 2 ? '' : 's') + ' with checks</span></div>' +
+              d.obsHistory.slice(1).map(function (o) { return '<details class="wbvisit"><summary><b>' + e(dt(o.at)) + '</b> <span class="muted small">by ' + e(o.by) + (o.flags ? ' · ' + o.flags + ' to watch' : '') + '</span></summary><div class="sumgrid wb">' + wellbeingHtml(o, true) + '</div></details>'; }).join('') + '</section>' : '') +
+            '<p class="note">' + icon('shield') + '<span>Items marked with a dot need attention. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>');
+          return;
+        }
+        var group = kind === 'body' ? 'body' : 'vitals';
+        var has = vitalList(d, group).length;
+        fill(personBar(p, people) + head(group === 'body' ? 'Body composition' : 'Vitals', group === 'body' ? 'Weight, BMI and the smart-scale measurements: the summary of each and the history of the one you choose.' : 'Blood pressure, pulse, oxygen, perfusion index, sugar and the other vital signs: the summary of each and the history of the one you choose.') +
+          '<section class="hsec trends" aria-labelledby="h-vtr"><div class="hsec-h"><h2 id="h-vtr">' + (group === 'body' ? 'Measurements' : 'Your vitals') + '</h2>' + periodChips(d) + '</div>' + (has ? hint : '') + rangeNote(d) + '<div id="charts">' + chartsHtml(d, group) + '</div></section>' +
+          (group === 'vitals' ? '<p class="muted small notes-link">' + icon('chat') + ' Notes from the care team are under <a href="#/health/notes?p=' + e(p.id) + '">Health details, Notes</a>.</p>' : '') + guide);
         drawCharts(true);
       });
     });
+  }
+  // Wellbeing checks from one visit, grouped (food and water, toilet, sleep...)
+  function wellbeingHtml(o, noHead) {
+    if (!o) return '<div class="empty small"><b>No wellbeing checks yet</b>Food, water, toilet, sleep, pain and medicine checks from visits appear here.</div>';
+    var when = o.form === 'regular_checkup' ? 'Regular Checkup' + (o.inTime ? ', in ' + o.inTime + (o.outTime ? ', out ' + o.outTime : '') : '') + '. ' : '';
+    return (noHead ? (when ? '<p class="muted small" style="margin:0 0 10px">' + e(when) + '</p>' : '') : '<p class="muted small" style="margin:0 0 10px">' + e(when) + 'From the visit on ' + e(dt(o.at)) + ' by ' + e(o.by) + '</p>') + o.groups.map(function (g) {
+      return '<div class="obsg"><h3>' + e(g.title) + '</h3><dl>' + g.items.map(function (it) {
+        return '<dt>' + e(it.label) + '</dt><dd' + (it.flag ? ' class="flag"' : '') + '>' + (it.flag ? dotHtml('warn') : '') + e(it.text) + '</dd>';
+      }).join('') + '</dl></div>';
+    }).join('');
+  }
+  // An item in a filter card: the button that opens its chart, an "i" button, and a summary
+  // popover. The popover opens on hover (devices with a pointer), on keyboard focus, and on a
+  // click or tap of the "i" (touch screens), and closes with Escape or a click elsewhere.
+  function popItem(id, btn, label, pop) {
+    return '<div class="pitem">' + btn + '<button type="button" class="pinfo" data-act="pinfo" aria-expanded="false" aria-controls="' + id + '" aria-label="Summary of ' + e(label) + '">' + icon('info') + '</button>' +
+      '<div class="pop" id="' + id + '" role="group" aria-label="' + e(label) + ' summary">' + pop + '</div></div>';
+  }
+  function closePops(except) { $$('.pitem.open').forEach(function (x) { if (x !== except) { x.classList.remove('open'); var b = x.querySelector('.pinfo'); if (b) b.setAttribute('aria-expanded', 'false'); } }); }
+  // Health details > Notes: every note the care team wrote on a visit, newest first
+  function notesView(r) {
+    withPerson(r, 'health/notes', function (p, people) {
+      fill(personBar(p, people) + loading(90) + loading(300));
+      api('GET', 'people/' + encodeURIComponent(p.id) + '/notes').then(function (d) {
+        if (!d.ok) return pageError(d);
+        S.cache.notes = d.rows; S.cache.notesShown = 20; S.cache.notesQ = '';
+        fill(personBar(p, people) + '<div class="pagehead"><h1>Notes</h1><p class="muted">Notes the care team wrote on each visit for ' + e(first(p.name)) + ', newest first.</p></div>' +
+          '<section class="hsec" aria-labelledby="h-notes"><div class="hsec-h"><h2 id="h-notes">Notes from the care team</h2>' +
+            (d.rows.length ? '<label class="nsearch"><span class="sr">Search notes</span>' + icon('funnel') + '<input class="in" type="search" data-act="notes-q" placeholder="Search notes"></label>' : '') + '</div>' +
+          '<div id="noteslist">' + notesListHtml() + '</div></section>');
+      });
+    });
+  }
+  function notesListHtml() {
+    var all = S.cache.notes || [], q = (S.cache.notesQ || '').toLowerCase();
+    var rows = q ? all.filter(function (v) { return (v.note + ' ' + v.by).toLowerCase().indexOf(q) > -1; }) : all;
+    if (!all.length) return '<div class="empty"><b>No notes yet</b>Notes the care team writes during visits appear here.</div>';
+    if (!rows.length) return '<div class="empty small"><b>No notes match</b>Try another word.</div>';
+    var shown = rows.slice(0, S.cache.notesShown || 20);
+    return '<ol class="tl notes">' + shown.map(function (v) {
+      return '<li><div class="t">' + e(dt(v.at)) + '</div><div class="m">' + e(v.by) + '</div><p class="n">' + e(v.note) + '</p></li>';
+    }).join('') + '</ol>' + (rows.length > shown.length ? '<button class="btn ghost block" data-act="notes-more">Show ' + Math.min(20, rows.length - shown.length) + ' more (' + (rows.length - shown.length) + ' left)</button>' : '');
+  }
+  // The overall risk card: the authoritative category from the risk engine, why, and which
+  // indicator(s) decided it. Shared by the family, office and nurse pages (KQ.riskHero).
+  var CAT_ICON = { red: '!', amber: '!', green: '✓', grey: '–' };
+  function riskHeroHtml(st, opt) {
+    opt = opt || {};
+    if (!st) return '<div class="empty small"><b>Risk not available</b>The risk status could not be loaded. Please refresh the page.</div>';
+    var c = st.category || 'grey';
+    var resp = (st.responsible || []);
+    var respHtml = resp.length ? '<div class="rh-why"><span class="muted small">' + (c === 'green' ? 'Required assessments, all clear:' : 'Decided by:') + '</span><ul>' + resp.map(function (x) {
+      return '<li><b>' + e(x.title) + '</b>' + (x.display ? ' · ' + e(x.display) : '') + (x.band ? ' · ' + e(x.band) : '') + (x.at ? ' <span class="muted small">(' + e(date(x.at)) + ')</span>' : '') + '</li>';
+    }).join('') + '</ul></div>' : '';
+    return '<div class="rhero ' + c + '" role="status"><div class="rh-cat"><span class="rcat ' + c + '"><i aria-hidden="true">' + CAT_ICON[c] + '</i>' + e(st.categoryName || c) + '</span></div>' +
+      '<p class="rh-reason">' + e(st.reason || '') + '</p>' + respHtml +
+      (st.error ? '<p class="alert bad small">The last recalculation failed (' + e(st.error) + '). The result shown may be out of date; the office has been told.</p>' : '') +
+      '<p class="muted small rh-meta">Last calculated ' + e(dt(st.checkedAt || st.at)) + (st.validUntil ? ' · next review due by ' + e(date(st.validUntil)) : '') + '</p>' +
+      (opt.history ? '<details class="rh-hist" data-pid="' + e(opt.pid || '') + '"><summary data-act="risk-hist">Category history</summary><div class="rh-hl">' + loading(60) + '</div></details>' : '') + '</div>';
+  }
+  function downloadBtn() { return '<button class="btn ghost sm dlbtn" data-act="dl" aria-haspopup="dialog">' + icon('download') + 'Download trends</button>'; }
+  function periodChips(d) {
+    var rr = d.range, custom = rr.key === 'custom';
+    return '<div class="chips pchips" role="group" aria-label="Period">' + PERIODS.map(function (x) {
+      return '<button data-act="period" data-k="' + x[0] + '" aria-pressed="' + (!custom && x[0] === rr.key) + '">' + x[1] + '</button>';
+    }).join('') + '<button class="cal" data-act="calendar" aria-pressed="' + custom + '" aria-label="Choose dates" title="Choose dates">' + icon('cal') + '</button></div>';
+  }
+  function rangeNote(d) {
+    var rr = d.range;
+    return rr.key === 'custom' ? '<p class="muted small" style="margin:-4px 0 10px">Showing ' + e(rr.label) + ' · <button class="link" data-act="period" data-k="7d">Back to last 7 days</button></p>' : '';
   }
   function pendingHtml(p, d) {
     var plan = d.plans[0];
@@ -720,7 +800,7 @@
         '<div class="rw">' + e(date(x.at)) + (x.by ? ' · ' + e(x.by) : '') + '</div>' +
         (x.scale || x.note ? '<details><summary>What this means</summary>' + (x.scale ? '<p>' + e(x.scale) + '</p>' : '') + (x.note ? '<p>' + e(x.note) + '</p>' : '') + '</details>' : '') + '</article>';
     }).join('') + '</div>'
-      : '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div>';
+      : '<div class="risk-empty">Indicator results appear here once the nurse has recorded the vitals and assessments they need.</div>';
     return '<section class="riskbox" aria-labelledby="h-risk"><div class="sec-h"><h2 id="h-risk">Risk score</h2><span class="muted small">A guide to support the doctor\'s review</span></div>' + body + '</section>';
   }
   // Risk trend: one button per risk check (coloured by its latest category). The selected check
@@ -746,7 +826,7 @@
   function riskTrendHtml(d) {
     var items = riskItems(d);
     var head = '<div class="sec-h"><h2 id="h-rtrend">Your risk checks</h2><span class="muted small">Choose one to see whether it is improving, worsening or stable, and its history</span></div>';
-    if (!items.length) return '<section class="trendbox" aria-labelledby="h-rtrend">' + head + '<div class="risk-empty">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the care team does the checks.</div></section>';
+    if (!items.length) return '<section class="trendbox" aria-labelledby="h-rtrend">' + head + '<div class="risk-empty">Indicator results appear here once the nurse has recorded the vitals and assessments they need.</div></section>';
     var sel = riskSelected(d);
     return '<section class="trendbox" aria-labelledby="h-rtrend">' + head +
       '<div class="rsel" role="group" aria-label="Risk checks">' + items.map(function (it) { return riskButton(it, it.r.test === sel); }).join('') + '</div>' +
@@ -775,7 +855,7 @@
       (x.scale || x.note ? '<details class="rmean"><summary>What this means</summary>' + (x.scale ? '<p>' + e(x.scale) + '</p>' : '') + (x.note ? '<p>' + e(x.note) + '</p>' : '') + '</details>' : '') + '</article>';
     var span = date(d.range.from) + ' – ' + date(d.range.to);
     var hist = '<div class="rchart"><div class="rchart-h"><h3>History</h3><span class="muted small">' + e(span) + ' · ' + rows.length + ' assessment' + (rows.length === 1 ? '' : 's') + '</span></div>';
-    if (d.range.clamped) hist += '<p class="histline">' + icon('clock') + '<span>History begins on the registration date, <b>' + e(date(d.range.registeredOn)) + '</b>. There is no earlier data.</span></p>';
+    if (d.range.clamped) hist += '<p class="histline">' + icon('clock') + '<span>History begins on <b>' + e(date(d.range.registeredOn)) + '</b>, the first record. There is no earlier data.</span></p>';
     if (!rows.length) {
       hist += '<div class="empty small"><b>No ' + e(x.title) + ' assessments in this period</b>' +
         (t || x.at ? 'The latest assessment was ' + e(cur.display) + ' (' + e(cur.band) + ') on ' + e(date(cur.at)) + '. ' : '') + 'Choose a longer period to see more history.</div>';
@@ -791,31 +871,34 @@
     return '<div class="rdgrid">' + sum + hist + '</div></div>';
   }
   // Summary cards (like the vitals cards): latest score in its category colour, the band, when, and the trend
-  function riskSummaryList(d, group) {
-    var items = riskItems(d).filter(function (it) { return group === 'all' || !group || it.r.groupName === group; });
-    if (!items.length) return '<div class="empty small">Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the nurse does the checks.</div>';
-    var sel = riskSelected(d);
-    return items.map(function (it) {
-      var x = it.r, lv = LV[x.level] || 'none', prev = it.t && it.t.previous;
-      return '<button type="button" class="vcard rcard ' + lv + (x.test === sel ? ' on' : '') + '" data-act="rsel" data-k="' + e(x.test) + '" data-jump="1" aria-pressed="' + (x.test === sel) + '" aria-controls="rdetail">' +
-        '<span class="vl ' + lv + '">' + dotHtml(x.level) + e(x.title) + '</span>' +
-        '<span class="vv">' + e(x.display) + '</span>' +
-        '<span class="vd"><b class="' + lv + '">' + e(x.band) + '</b> · checked on ' + e(date(x.at)) + '</span>' +
-        '<span class="vr">' + trendChip(x.trend) + (prev ? ' <span class="muted">vs ' + e(prev.display) + '</span>' : '') + '</span>' +
-      '</button>';
-    }).join('');
+  // the indicator's category in words: approved category, or why it has none
+  function catWord(x) {
+    if (x.legacy) return '<span class="rtag">Earlier manual check</span>';
+    if (x.expired) return '<span class="rtag">Out of date</span>';
+    if (x.category) return '<span class="rcat sm ' + x.category + '"><i aria-hidden="true">' + CAT_ICON[x.category] + '</i>' + e(x.categoryName) + '</span>';
+    return '<span class="rtag">' + (x.band && x.band !== 'Between workbook bands' ? 'No category in the workbook' : 'No workbook band') + '</span>';
   }
   // right side: one button per check (category-colour border), then the chosen check's history
-  function riskChartsHtml(d) {
-    var items = riskItems(d);
-    if (!items.length) return '<div class="empty"><b>No risk checks yet</b>Risk scores for heart, kidney, liver, diabetes, mood, memory, sleep and falls appear here after the nurse does the checks.</div>';
-    var sel = riskSelected(d), p = periodMs(d);
-    var picker = '<div class="rsel rpick" role="group" aria-label="Choose a risk check to show">' + items.map(function (it) {
-      var x = it.r, lv = LV[x.level] || 'none';
+  function riskChartsHtml(d, group) {
+    var items = riskItems(d).filter(function (it) { return !group || group === 'all' || it.r.groupName === group; });
+    if (!items.length) return '<div class="empty"><b>No indicator results yet</b>Indicator results appear here once the nurse has recorded the vitals and assessments they need.</div>';
+    var sel = riskSelected(d);
+    if (!items.some(function (it) { return it.r.test === sel; })) sel = S.cache.riskSel = items[0].r.test;
+    var p = periodMs(d);
+    // compact items, the same as the Vitals filter: dot, short name, latest value; the rest is in the popover
+    var picker = '<div class="vsel rpick" role="group" aria-label="Choose an indicator to show">' + items.map(function (it) {
+      var x = it.r, lv = LV[x.level] || 'none', prev = it.t && it.t.previous;
       var n = it.t ? it.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }).length : 0;
-      return '<button type="button" class="rbtn ' + lv + '" data-act="rsel" data-k="' + e(x.test) + '" aria-pressed="' + (x.test === sel) + '" aria-controls="rdetail">' +
-        '<span class="rbi" aria-hidden="true">' + icon(RISK_ICON[x.group] || 'gauge') + '</span>' +
-        '<span class="rbt"><b>' + e(shortTitle(x.title)) + '</b><small>' + (n ? n + ' assessment' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span>' + trendChip(x.trend) + '</button>';
+      var btn = '<button type="button" class="vbtn ' + lv + '" data-act="rsel" data-k="' + e(x.test) + '" aria-pressed="' + (x.test === sel) + '" aria-controls="rdetail">' +
+        dotHtml(x.level) + '<span>' + e(shortTitle(x.title)) + '<small>' + e(x.display) + ' · ' + (n ? n + ' result' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+      var pop = '<span class="pop-g">' + e(x.groupName) + '</span><span class="pop-t ' + lv + '">' + e(x.title) + '</span>' +
+        '<span class="pop-v">' + e(x.display) + '</span><span class="pop-s"><b class="' + lv + '">' + e(x.band) + '</b></span>' +
+        '<span class="pop-c">' + catWord(x) + '</span>' +
+        '<span class="pop-l">' + (x.legacy ? 'Entered on ' : 'From results of ') + e(date(x.at)) + '</span>' +
+        '<span class="pop-l">' + trendChip(x.trend) + (prev ? ' <span class="muted">vs ' + e(prev.display) + ' on ' + e(date(prev.at)) + '</span>' : '') + '</span>' +
+        '<span class="pop-l">' + (n ? n + ' result' + (n === 1 ? '' : 's') + ' in this period' : 'No results in this period') + '</span>' +
+        (x.message ? '<span class="pop-m">' + e(x.message) + '</span>' : '');
+      return popItem('rp-' + x.test, btn, x.title, pop);
     }).join('') + '</div>';
     return picker + '<div id="rdetail" aria-live="polite">' + riskBlockHtml(d, sel) + '</div>';
   }
@@ -836,7 +919,7 @@
         '<div><dt>Status</dt><dd><b class="rst ' + status + '">' + TREND_WORD[status] + '</b></dd></div>' +
         '<div><dt>Assessments</dt><dd><b>' + rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div>' +
       '</dl>';
-    if (d.range.clamped) html += '<p class="histline">' + icon('clock') + '<span>History begins on the registration date, <b>' + e(date(d.range.registeredOn)) + '</b>. There is no earlier data.</span></p>';
+    if (d.range.clamped) html += '<p class="histline">' + icon('clock') + '<span>History begins on <b>' + e(date(d.range.registeredOn)) + '</b>, the first record. There is no earlier data.</span></p>';
     if (!rows.length) {
       html += '<div class="empty"><b>No ' + e(x.title) + ' assessments in this period</b>' +
         (t || x.at ? 'The latest assessment was ' + e(cur.display) + ' (' + e(cur.band) + ') on ' + e(date(cur.at)) + '. ' : '') + 'Try a longer period, or choose dates with the calendar.</div>';
@@ -868,39 +951,6 @@
       tip: function (r) { return dt(r.at) + ': ' + r.display + (r.band ? ' (' + r.band + ')' : ''); } };
   }
 
-  function summaryList(d, group) {
-    if (group === 'wellbeing') {
-      var o = d.obs;
-      if (!o) return '<div class="empty small">Food, water, toilet, sleep, pain and medicine checks from visits appear here.</div>';
-      return '<p class="muted small" style="margin:4px 0 10px">From the visit on ' + e(dt(o.at)) + ' by ' + e(o.by) + '</p>' + o.groups.map(function (g) {
-        return '<div class="obsg"><h3>' + e(g.title) + '</h3><dl>' + g.items.map(function (it) {
-          return '<dt>' + e(it.label) + '</dt><dd' + (it.flag ? ' class="flag"' : '') + '>' + (it.flag ? dotHtml('warn') : '') + e(it.text) + '</dd>';
-        }).join('') + '</dl></div>';
-      }).join('');
-    }
-    var rows = d.latest.filter(function (x) { return group === 'body' ? x.group === 'body' : x.group !== 'body'; });
-    if (!rows.length) return '<div class="empty small">' + (group === 'body' ? 'Body composition from the smart scale appears here.' : 'Blood pressure, heart rate, sugar and oxygen appear here after the first visit.') + '</div>';
-    var sel = S.cache.metric;
-    return rows.map(function (x) {
-      return '<button class="vcard' + (x.metric === sel ? ' on' : '') + '" data-act="jump" data-k="' + x.metric + '">' +
-        '<span class="vl ' + (LV[x.level] || 'none') + '">' + dotHtml(x.level) + e(x.label) + (x.context ? ' <small>(' + e(GLUCOSE[x.context] || x.context) + ')</small>' : '') + '</span>' +
-        '<span class="vv">' + e(x.value) + (x.unit ? '<small>' + e(x.unit) + '</small>' : '') + '</span>' +
-        '<span class="vd">Last measured on ' + e(date(x.at)) + '</span>' +
-        (x.range ? '<span class="vr">Normal range: ' + e(x.range) + (x.status ? ' · <b class="' + (LV[x.level] || '') + '">' + e(x.status) + '</b>' : '') + '</span>' : '') +
-      '</button>';
-    }).join('');
-  }
-
-  function trendsHead(d) {
-    var r = d.range, custom = r.key === 'custom';
-    var qp = custom ? 'from=' + r.from + '&to=' + r.to : 'period=' + r.key;
-    return '<div class="thead"><div class="chips" role="group" aria-label="Period">' + PERIODS.map(function (x) {
-      return '<button data-act="period" data-k="' + x[0] + '" aria-pressed="' + (!custom && x[0] === r.key) + '">' + x[1] + '</button>';
-    }).join('') + '<button class="cal" data-act="calendar" aria-pressed="' + custom + '" aria-label="Choose dates" title="Choose dates">' + icon('cal') + '</button></div>' +
-      '<button class="dl" data-act="dl" aria-haspopup="dialog">Download trends' + icon('arrow') + '</button></div>' +
-      (custom ? '<p class="muted small" style="margin:-4px 0 10px">Showing ' + e(r.label) + ' · <button class="link" data-act="period" data-k="7d">Back to last 7 days</button></p>' : '');
-  }
-
   // Vitals on demand: a button per vital; only the chosen vital's chart is shown
   function vitalList(d, group) {
     return d.latest.filter(function (x) { return group === 'body' ? x.group === 'body' : x.group !== 'body'; });
@@ -914,14 +964,21 @@
   function chartsHtml(d, group) {
     var list = vitalList(d, group);
     var reg = d.range.registeredOn ? date(d.range.registeredOn) : '';
-    if (!list.length) return '<div class="empty"><b>No readings yet</b>' + (group === 'body' ? 'Body composition from the smart scale appears here.' : 'Blood pressure, heart rate, sugar and oxygen appear here after the first visit.') + '</div>';
+    if (!list.length) return '<div class="empty"><b>No readings yet</b>' + (group === 'body' ? 'Weight, BMI and the smart-scale measurements appear here after the first visit.' : 'Blood pressure, heart rate, sugar and oxygen appear here after the first visit.') + '</div>';
     var sel = vitalSelected(d, group);
     var count = function (k) { var m = d.metrics.filter(function (x) { return x.k === k; })[0]; return m ? m.count : 0; };
-    var head = d.range.clamped ? '<p class="histnote">' + icon('clock') + '<span>' + e(first(d.person.name)) + '\'s recorded history begins on <b>' + e(reg) + '</b>, the registration date, so this view starts there. There is no earlier data for this period.</span></p>' : '';
-    var picker = '<div class="vsel" role="group" aria-label="Choose a vital to show">' + list.map(function (x) {
+    var head = d.range.clamped ? '<p class="histnote">' + icon('clock') + '<span>' + e(first(d.person.name)) + '\'s recorded history begins on <b>' + e(reg) + '</b> (the first record), so this view starts there. There is no earlier data for this period.</span></p>' : '';
+    var picker = '<div class="vsel" role="group" aria-label="Choose a ' + (group === 'body' ? 'measurement' : 'vital') + ' to show">' + list.map(function (x) {
       var n = count(x.metric);
-      return '<button type="button" class="vbtn ' + (LV[x.level] || 'none') + '" data-act="vsel" data-k="' + x.metric + '" aria-pressed="' + (x.metric === sel) + '" aria-controls="vdetail">' +
-        dotHtml(x.level) + '<span>' + e(x.label) + '<small>' + (n ? n + ' reading' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+      var btn = '<button type="button" class="vbtn ' + (LV[x.level] || 'none') + '" data-act="vsel" data-k="' + x.metric + '" aria-pressed="' + (x.metric === sel) + '" aria-controls="vdetail">' +
+        dotHtml(x.level) + '<span>' + e(x.label) + '<small>' + e(x.value) + (x.unit ? ' ' + e(x.unit) : '') + ' · ' + (n ? n + ' reading' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+      var pop = '<span class="pop-t ' + (LV[x.level] || 'none') + '">' + dotHtml(x.level) + e(x.label) + (x.context ? ' <small>(' + e(GLUCOSE[x.context] || x.context) + ')</small>' : '') + '</span>' +
+        '<span class="pop-v">' + e(x.value) + (x.unit ? ' <small>' + e(x.unit) + '</small>' : '') + '</span>' +
+        (x.status ? '<span class="pop-s"><b class="' + (LV[x.level] || '') + '">' + e(x.status) + '</b></span>' : '') +
+        '<span class="pop-l">Last measured on ' + e(date(x.at)) + '</span>' +
+        (x.range ? '<span class="pop-l">Normal range: ' + e(x.range) + '</span>' : '') +
+        '<span class="pop-l">' + (n ? n + ' reading' + (n === 1 ? '' : 's') + ' in this period' : 'No readings in this period') + '</span>';
+      return popItem('vp-' + x.metric, btn, x.label, pop);
     }).join('') + '</div>';
     return picker + head + '<div id="vdetail" aria-live="polite">' + vitalDetailHtml(d, sel) + '</div>';
   }
@@ -980,7 +1037,7 @@
         return out.map(function (t) { var p = istParts(t); return [t, short ? WD[p.wd] + ' ' + p.d : p.d + ' ' + MON[p.m]]; });
       }
     }
-    var monthCands = [1, 2, 3, 6, 12];
+    var monthCands = [1, 2, 3, 6, 12, 24, 36, 60, 120];
     for (var k = 0; k < monthCands.length; k++) {
       var mstep = monthCands[k], s = istParts(start), list = [];
       for (var y = s.y, mo = s.m; ; mo += mstep) {
@@ -1080,18 +1137,12 @@
           '<td>' + dotHtml(r.level) + '</td></tr>';
       }).join('') + '</tbody></table></div>';
   }
-  function notesHtml(d) {
-    if (!d.notes.length) return '';
-    return '<section class="panel" style="margin-top:22px"><h2>Notes from the care team</h2><ol class="tl">' + d.notes.map(function (v) {
-      return '<li><div class="t">' + e(dt(v.at)) + '</div><div class="m">' + e(v.by) + '</div><p class="n">' + e(v.note) + '</p></li>';
-    }).join('') + '</ol></section>';
-  }
   function calendarDialog() {
     var d = S.cache.dash; if (!d) return;
     var min = d.range.registeredOn || '', max = todayIST();
     var fromV = d.range.from < min ? min : d.range.from;
     openDialog('Choose dates', '<form data-form="range" novalidate data-min="' + e(min) + '"><div class="alert bad" data-msg hidden></div>' +
-      (min ? '<p class="dl-period">' + icon('cal') + '<span>Health trends are available from <b>' + e(date(min)) + '</b>, ' + e(first(d.person.name)) + '\'s registration date. Earlier dates cannot be chosen.</span></p>' : '') +
+      (min ? '<p class="dl-period">' + icon('cal') + '<span>Health trends are available from <b>' + e(date(min)) + '</b>, ' + e(first(d.person.name)) + '\'s first record. Earlier dates cannot be chosen.</span></p>' : '') +
       '<div class="row2">' +
       field('from', 'From', 'type="date" data-act="range-date" value="' + e(fromV) + '" min="' + e(min) + '" max="' + e(max) + '"') + field('to', 'To', 'type="date" data-act="range-date" value="' + e(d.range.to) + '" min="' + e(min) + '" max="' + e(max) + '"') +
       '</div><p class="muted small">Up to 2 years at a time.</p></form>', '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Show</button>');
@@ -1100,7 +1151,7 @@
   function rangeDateCheck(inp) {
     var f = inp.form, min = inp.min, max = inp.max, msg = f.querySelector('[data-msg]');
     if (!inp.value) return;
-    if (min && inp.value < min) { inp.value = min; inp.setAttribute('data-fixed', min); msg.textContent = 'Dates before ' + date(min) + ' (the registration date) are not available, so the date was set to ' + date(min) + '.'; msg.hidden = false; }
+    if (min && inp.value < min) { inp.value = min; inp.setAttribute('data-fixed', min); msg.textContent = 'Dates before ' + date(min) + ' (the first record) are not available, so the date was set to ' + date(min) + '.'; msg.hidden = false; }
     else if (max && inp.value > max) { inp.value = max; inp.setAttribute('data-fixed', max); msg.textContent = 'Dates after today are not available.'; msg.hidden = false; }
     else if (inp.getAttribute('data-fixed') !== inp.value) msg.hidden = true;
   }
@@ -1118,7 +1169,8 @@
     var pg = dlPage(), keep = (S.cache.dlBy || {})[pg] || {};
     var withData = d.metrics.filter(function (m) { return m.count; }).map(function (m) { return m.k; });
     var risksWithData = riskItems(d).filter(function (it) { return it.r.test !== 'bmi' && riskInPeriod(d, it.t).length; }).map(function (it) { return 'risk:' + it.r.test; });
-    var sel = keep.metrics || (pg === 'risks' ? risksWithData : withData.filter(function (k) { return ['bp', 'hr', 'glucose', 'spo2', 'pi'].indexOf(k) > -1; }));
+    var bodyKeys = d.metrics.filter(function (m) { return m.group === 'body'; }).map(function (m) { return m.k; });
+    var sel = keep.metrics || (pg === 'risks' ? risksWithData : pg === 'body' ? withData.filter(function (k) { return bodyKeys.indexOf(k) > -1; }) : withData.filter(function (k) { return ['bp', 'hr', 'glucose', 'spo2', 'pi'].indexOf(k) > -1; }));
     if (!sel.length) sel = pg === 'risks' ? riskItems(d).filter(function (it) { return it.r.test !== 'bmi'; }).slice(0, 1).map(function (it) { return 'risk:' + it.r.test; }) : withData.slice(0, 1);
     var parts = keep.parts || (pg === 'risks' ? ['charts', 'readings', 'latest', 'risktrend'] : ['charts', 'readings', 'averages', 'latest']), fmt = keep.format || 'pdf';
     var r = d.range, period = (r.key === 'custom' ? r.label : r.label + ' (' + date(r.from) + ' – ' + date(r.to) + ')');
@@ -1152,7 +1204,7 @@
     dlg.classList.add('wide');
     dlSync();
   }
-  function dlPage() { return S.cache.page === 'health/risks' ? 'risks' : 'vitals'; }
+  function dlPage() { return S.cache.page === 'health/risks' ? 'risks' : S.cache.page === 'health/body' ? 'body' : 'vitals'; }
   function dlState() {
     var dlg = $('dialog[open]'); if (!dlg) return null;
     var vals = function (sel) { return $$(sel, dlg).filter(function (x) { return x.checked && !x.disabled; }).map(function (x) { return x.value; }); };
@@ -1338,8 +1390,8 @@
     return wrap(lab + '<input class="in" id="' + id + '" name="' + fd.k + '" type="' + type + '" value="' + e(v || '') + '"' + extra + '>' + (fd.hint ? '<span class="hint">' + e(fd.hint) + '</span>' : ''));
   }
   // follow-up questions and "Please specify" boxes appear only when they apply
-  function detToggle() {
-    var form = $('form[data-form=details]'); if (!form) return;
+  function detToggle(form) {
+    form = form && form.matches && form.matches('form') ? form : $('form[data-form=details]'); if (!form) return;
     $$('[data-show]', form).forEach(function (el) {
       var p = el.getAttribute('data-show').split(':'), src = form.elements[p[0]];
       var on = src && src.value && src.value !== 'Never';
@@ -1423,13 +1475,42 @@
     if (!rows.length) { el.innerHTML = '<div class="empty"><b>No records here yet</b>Upload lab reports, scans and prescriptions as PDF or photos. They stay private to the family and the KareIQ team.</div>'; return; }
     el.innerHTML = '<div class="rec-all"><label><input type="checkbox" data-act="rall"> <b>Select all</b></label></div><ul class="recs">' + rows.map(function (x) {
       return '<li><label class="rc"><input type="checkbox" data-act="rpick" value="' + e(x.id) + '"><span class="sr">Select ' + e(x.name) + '</span></label>' +
-        '<div class="ri"><b>' + e(x.name) + '</b><span>' + recDateHtml(x) + ' · ' + e(d.categories[x.category] || x.category) + ' · ' + e(sizeText(x.size)) + ' · added by ' + e(x.by) + '</span>' +
+        '<div class="ri"><b>' + e(x.name) + '</b><span>' + recDateHtml(x) + ' · ' + e(d.categories[x.category] || x.category) + ' · ' + e(sizeText(x.size)) + ' · added by ' + e(x.by) + '</span>' + procChip(x) +
           (d.canReread && x.dateStatus === 'review' ? '<button class="link small" data-act="reread" data-id="' + e(x.id) + '">Read the date again</button>' + (x.dateNote ? ' <span class="muted small">' + e(x.dateNote) + '</span>' : '') : '') + '</div>' +
         '<div class="ra"><a class="ib" href="/api/app/records/' + e(x.id) + '/file?view=1" target="_blank" rel="noopener" aria-label="Open ' + e(x.name) + '" title="Open">' + icon('eye') + '</a>' +
         '<a class="ib" href="/api/app/records/' + e(x.id) + '/file" download aria-label="Download ' + e(x.name) + '" title="Download">' + icon('download') + '</a>' +
         (x.canRemove ? '<button class="ib" data-act="rremove" data-id="' + e(x.id) + '" data-name="' + e(x.name) + '" aria-label="Remove ' + e(x.name) + '" title="Remove">' + icon('trash') + '</button>' : '') + '</div></li>';
     }).join('') + '</ul>';
     syncPicks();
+  }
+  // automatic reading of the document: its status, and what was read (button)
+  var PROC_HELP = { uploaded: 'Waiting to be read', processing: 'Being read now', extracted: 'Values found; being checked', needs_review: 'Some values wait for the KareIQ team to check them', completed: 'Values read and added to the health records', failed: 'The document could not be read automatically', not_processed: 'Uploaded before automatic reading' };
+  function procChip(x) {
+    var p = x.processing; if (!p || p.status === 'not_processed') return '';
+    var busy = p.status === 'uploaded' || p.status === 'processing';
+    return '<span class="procrow"><span class="pchip ' + e(p.status) + '" title="' + e(PROC_HELP[p.status] || '') + '">' + (busy ? '<span class="spin" aria-hidden="true"></span>' : '') + e(p.label) + '</span>' +
+      (!busy ? '<button class="link small" data-act="rec-ex" data-id="' + e(x.id) + '">What was read</button>' : '') + '</span>';
+  }
+  function recExDialog(id) {
+    var pid = S.pid;
+    openDialog('What was read from this document', loading(120), '<button class="btn" data-act="close">Close</button>');
+    api('GET', 'people/' + encodeURIComponent(pid) + '/records/' + encodeURIComponent(id) + '/extraction').then(function (d) {
+      var box = $('dialog[open]'); if (!box) return;
+      var html;
+      if (!d.ok) html = '<p class="alert bad">' + e(d.message || 'Not available.') + '</p>';
+      else {
+        var SV = { accepted: 'Added to the records', needs_review: 'Waiting for a check by the KareIQ team', duplicate: 'Already in the records', rejected: 'Not used' };
+        html = '<p><span class="pchip ' + e(d.status) + '">' + e(d.label) + '</span>' + (d.docType ? ' <span class="muted small">' + e(d.docType) + '</span>' : '') + '</p>' +
+          '<dl class="kv"><dt>Test date</dt><dd>' + (d.dates && d.dates.test ? e(date(d.dates.test)) : '<span class="muted">' + e((d.dates && d.dates.testNote) || 'Not found') + '</span>') + '</dd>' +
+          (d.dates && d.dates.report ? '<dt>Report date</dt><dd>' + e(date(d.dates.report)) + '</dd>' : '') + '</dl>' +
+          (d.error ? '<p class="alert bad small">' + e(d.error) + '</p>' : '') + (d.note ? '<p class="muted small">' + e(d.note) + '</p>' : '') +
+          (d.values.length ? '<div class="tw"><table class="otable"><thead><tr><th>Measurement</th><th>Value</th><th>Status</th></tr></thead><tbody>' + d.values.map(function (v) {
+            return '<tr><td>' + e(v.name) + (v.context ? ' <span class="muted small">(' + e(GLUCOSE[v.context] || v.context) + ')</span>' : '') + (v.notes && v.notes.length ? '<br><span class="muted small">' + e(v.notes.join(' ')) + '</span>' : '') + '</td><td><b>' + e(v.value) + '</b> ' + e(v.unit || '') + '</td><td><span class="vst ' + e(v.status) + '">' + e(SV[v.status] || v.status) + '</span></td></tr>';
+          }).join('') + '</tbody></table></div>' : '') +
+          '<p class="muted small">Values with a readable number, a known unit and the test date are added automatically. Values that cannot be stored safely (no test date, a number outside what is possible, "less than" values) are checked by the KareIQ team.</p>';
+      }
+      var slot = box.querySelector('.dlg-b'); if (slot) slot.innerHTML = html;
+    });
   }
   var REVIEW_MSG = 'We couldn\'t automatically identify the report date. The report has been uploaded; its date shows once it can be read from the report.';
   // the report date, or where it is in being read / checked
@@ -1453,7 +1534,7 @@
           if (x.dateStatus === 'detected') toast('Report date found for ' + x.name + ': ' + date(x.date) + '.');
           else if (x.dateStatus === 'review') toast(REVIEW_MSG);
         });
-        if (d.rows.some(function (x) { return x.dateStatus === 'processing'; }) && tries < 40) pollRecords(pid, tries + 1);
+        if (d.rows.some(function (x) { return x.dateStatus === 'processing' || (x.processing && (x.processing.status === 'uploaded' || x.processing.status === 'processing')); }) && tries < 40) pollRecords(pid, tries + 1);
       });
     }, 3000);
   }
@@ -1633,20 +1714,56 @@
         S.cache.pkg = d; S.cache.orders = od.ok ? od.rows : [];
         // packages that are active now; a package waiting for payment is shown as such
         var mine = d.plans.filter(function (pl) { return pl.status === 'active' || pl.status === 'paused'; }).map(function (pl) { return pl.planId; });
-        var tabs = '<nav class="pkgjump" aria-label="Brands">' + PKG_BRANDS.map(function (b) { return '<a href="#pk-' + b.k + '" data-act="det-jump" data-id="pk-' + b.k + '">' + e(b.name) + '</a>'; }).join('') + '</nav>';
-        var sections = PKG_BRANDS.map(function (b) {
-          var list = d.catalog.filter(b.test);
-          if (!list.length) return '';
-          return '<section class="pkbrand ' + b.k + '" id="pk-' + b.k + '" aria-labelledby="h-pk-' + b.k + '"><div class="pkb-head">' +
-            (b.logo ? '<img src="' + b.logo + '" alt="" class="pkb-logo">' : '<span class="pkb-mark" aria-hidden="true">' + icon(b.k === 'karebalance' ? 'walk' : b.k === 'bystander' ? 'people' : 'smile') + '</span>') +
-            '<div><h2 id="h-pk-' + b.k + '">' + e(b.name) + '</h2><p class="muted">' + e(b.text) + '</p></div>' +
-            '<a class="arrowlink pkb-site" href="' + e(b.site) + '" target="_blank" rel="noopener">' + e(b.name) + ' website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></div>' +
-            '<div class="cards3">' + list.map(function (pk) { return otherPkgCard(pk, mine.indexOf(pk.id) > -1, openOrder(pk.id)); }).join('') + '</div></section>';
-        }).join('');
-        fill(personBar(p, people) + '<div class="pagehead"><h1>Other packages</h1><p class="muted">Every KareIQ package for ' + e(first(p.name)) + '. Buy a package here. Your current package only changes once the payment for a new one is confirmed.</p></div>' + tabs + sections +
+        S.cache.pkgMine = mine; S.cache.pkgPerson = p;
+        fill(personBar(p, people) + '<div class="pagehead"><h1>Other packages</h1><p class="muted">Every KareIQ package for ' + e(first(p.name)) + '. Buy a package here. Your current package only changes once the payment for a new one is confirmed.</p></div>' +
+          '<div id="pkfbar">' + pkgFilterBar(d, r.q) + '</div><div id="pklist" aria-live="polite">' + pkgListHtml(d, mine, r.q) + '</div>' +
           '<p class="muted small" style="margin-top:18px">Questions? <a href="' + waLink('Hello, I would like to know more about the KareIQ packages.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
       });
     });
+  }
+  // Filter: a brand, or one package. Nothing is listed until one is chosen; then only the matching
+  // packages are shown. "Clear selection" goes back to the empty start. The choice is kept in the address, so Back and refresh keep it.
+  function pkgFilterBar(d, q) {
+    var brand = q.brand || '', pkg = q.pkg || '';
+    var brands = PKG_BRANDS.filter(function (b) { return d.catalog.some(b.test); });
+    return '<div class="pkfilter" role="search" aria-label="Filter packages">' +
+      '<div class="chips pkchips" role="group" aria-label="Brand">' +
+        brands.map(function (b) { return '<button data-act="pkf-brand" data-k="' + b.k + '" aria-pressed="' + (brand === b.k && !pkg) + '">' + e(b.name) + '</button>'; }).join('') + '</div>' +
+      '<label class="pkpick"><span>Go to a package</span><select class="in" data-act="pkf-pkg"><option value="">Choose a package…</option>' + brands.map(function (b) {
+        return '<optgroup label="' + e(b.name) + '">' + d.catalog.filter(b.test).map(function (pk) { return '<option value="' + e(pk.id) + '"' + (pk.id === pkg ? ' selected' : '') + '>' + e(pk.name) + '</option>'; }).join('') + '</optgroup>';
+      }).join('') + '</select></label>' +
+      (brand || pkg ? '<button class="btn sm ghost" data-act="pkf-clear">' + icon('x') + 'Clear selection</button>' : '') + '</div>';
+  }
+  function pkgListHtml(d, mine, q) {
+    var brand = q.brand || '', pkg = q.pkg || '';
+    // nothing is listed until a brand or a package is chosen
+    if (!brand && !pkg) return '<div class="empty pkpick-empty">' + icon('box') + '<b>Choose a brand or a package</b>Pick one of the options above to see its packages, prices and how to buy.</div>';
+    var shown = 0;
+    var html = PKG_BRANDS.map(function (b) {
+      if (brand && brand !== b.k && !pkg) return '';
+      var list = d.catalog.filter(b.test).filter(function (pk) { return !pkg || pk.id === pkg; });
+      if (!list.length) return '';
+      shown += list.length;
+      return '<section class="pkbrand ' + b.k + '" id="pk-' + b.k + '" aria-labelledby="h-pk-' + b.k + '"><div class="pkb-head">' +
+        (b.logo ? '<img src="' + b.logo + '" alt="" class="pkb-logo">' : '<span class="pkb-mark" aria-hidden="true">' + icon(b.k === 'karebalance' ? 'walk' : b.k === 'bystander' ? 'people' : 'smile') + '</span>') +
+        '<div><h2 id="h-pk-' + b.k + '">' + e(b.name) + '</h2><p class="muted">' + e(b.text) + '</p></div>' +
+        '<a class="arrowlink pkb-site" href="' + e(b.site) + '" target="_blank" rel="noopener">' + e(b.name) + ' website' + icon('arrow') + '<span class="sr"> (opens in a new tab)</span></a></div>' +
+        '<div class="cards3' + (pkg ? ' single' : '') + '">' + list.map(function (pk) { return otherPkgCard(pk, mine.indexOf(pk.id) > -1, openOrder(pk.id)); }).join('') + '</div></section>';
+    }).join('');
+    var label = pkg ? 'Showing 1 package' : 'Showing ' + shown + ' ' + ((PKG_BRANDS.filter(function (b) { return b.k === brand; })[0] || {}).name || '') + ' package' + (shown === 1 ? '' : 's');
+    return '<p class="muted small pkcount">' + e(label) + '</p>' + (html || '<div class="empty"><b>No packages match</b><button class="link" data-act="pkf-clear">Clear the selection</button></div>');
+  }
+  function pkgFilterApply(q) {
+    var r = route(), nq = {};
+    if (r.q.p) nq.p = r.q.p;
+    if (q.brand) nq.brand = q.brand;
+    if (q.pkg) nq.pkg = q.pkg;
+    var hash = '#/packages' + Object.keys(nq).map(function (k, i) { return (i ? '&' : '?') + k + '=' + encodeURIComponent(nq[k]); }).join('');
+    history.replaceState(null, '', hash); S.lastHash = location.hash;
+    var d = S.cache.pkg; if (!d) return render();
+    $('#pkfbar').innerHTML = pkgFilterBar(d, nq);
+    swapPanel($('#pklist'), pkgListHtml(d, S.cache.pkgMine || [], nq));
+    var top = $('#pkfbar'); if (top && top.getBoundingClientRect().top < 0) top.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
   }
   function openOrder(planId) { return (S.cache.orders || []).filter(function (o) { return o.planId === planId && o.status === 'awaiting_payment'; })[0] || null; }
   function canBuy(pk) { return pk.model === 'tiers' || pk.model === 'monthly' || pk.model === 'fixed'; }
@@ -1769,92 +1886,215 @@
   function greeting() { var h = Number(nowHM().slice(0, 2)); return h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening'; }
 
   // ================================================================ record a visit (care team)
-  function visitView(r) {
-    withPerson(r, 'visit', function (p, people) {
-      var forms = S.cache.visitForm ? Promise.resolve(S.cache.visitForm) : api('GET', 'forms/visit').then(function (d) { S.cache.visitForm = d; return d; });
-      Promise.all([forms, api('GET', 'people/' + encodeURIComponent(p.id) + '/recent')]).then(function (res) {
-        var f = res[0], rec = res[1];
+  // ================================================================ Assessment > Regular Checkup (nurses)
+  // Every sheet of "Copy of Data Collection - Caregiver Regular Visits.xlsx" in the workbook's order,
+  // with its labels and drop-down options exactly as written (definitions come from the server).
+  // Readings go to the usual Vitals and Body composition charts; the rest is kept with the visit.
+  function regularView(r) {
+    withPerson(r, 'assess/regular', function (p, people) {
+      fill(personBar(p, people) + loading(120) + loading(420));
+      var defs = S.cache.ckDef ? Promise.resolve(S.cache.ckDef) : api('GET', 'forms/regular-checkup').then(function (d) { if (d.ok) S.cache.ckDef = d; return d; });
+      Promise.all([defs, api('GET', 'people/' + encodeURIComponent(p.id) + '/recent'), api('GET', 'people/' + encodeURIComponent(p.id) + '/checkups')]).then(function (x) {
+        var f = x[0], rec = x[1], past = x[2];
         if (!f.ok) return pageError(f);
-        if (p.status !== 'active') { fill(personBar(p, people) + '<div class="empty"><b>Visits can be recorded while the plan is active</b>' + e(p.name) + '\'s plan is ' + e(p.status) + '.</div>'); return; }
-        function unit(name, label, u, attrs) {
-          return '<label class="field"><span>' + label + '</span><div class="unit"><input class="in" name="' + name + '" inputmode="decimal" autocomplete="off" ' + (attrs || '') + '><em>' + u + '</em></div><em class="err" data-err="' + name + '"></em></label>';
-        }
-        var obsField = function (k) {
-          var o = f.obs[k];
-          if (o.options) {
-            return '<div class="field"><span>' + e(o.label) + '</span><div class="seg wrap">' + Object.keys(o.options).map(function (v) {
-              return '<label><input type="' + (o.multi ? 'checkbox' : 'radio') + '" name="obs.' + k + '" value="' + e(v) + '"><span>' + e(o.options[v]) + '</span></label>';
-            }).join('') + '</div><em class="err" data-err="obs.' + k + '"></em></div>';
+        if (p.status !== 'active') { fill(personBar(p, people) + '<div class="empty"><b>Checkups can be recorded while the plan is active</b>' + e(p.name) + '\'s plan is ' + e(p.status) + '.</div>'); return; }
+        var sec = function (sc, i) {
+          var body;
+          if (sc.info) {
+            body = '<p class="muted">' + e(sc.text) + '</p><ul class="ck-info">' + sc.items.map(function (it) { return '<li><b>' + e(it[0]) + '</b>' + (it[1].length ? ': ' + e(it[1].join('; ')) : '') + '</li>'; }).join('') + '</ul>' +
+              '<p class="alert info small">' + e(sc.note) + '. This is not recorded by the nurse, and nothing is calculated here yet.</p>';
+          } else {
+            body = '<div class="ck-grid">' + sc.fields.map(function (fd) { return ckField(fd, f); }).join('') + '</div>' + (sc.table ? ckTable(sc.table) : '');
           }
-          var attrs = o.number ? 'inputmode="decimal" placeholder="' + o.number[0] + '–' + o.number[1] + '"' : o.time ? 'type="time"' : 'maxlength="' + o.text + '"';
-          return '<label class="field"><span>' + e(o.label) + '</span><input class="in" name="obs.' + k + '" ' + attrs + '><em class="err" data-err="obs.' + k + '"></em></label>';
+          return '<details class="vgroup ck-sec" id="ck-' + sc.id + '"' + (i < 2 ? ' open' : '') + '><summary><span>' + e(sc.title) + '</span><small class="muted">Sheet: ' + e(sc.sheet) + '</small></summary><div class="ck-body">' + body + '</div></details>';
         };
+        var extra = '<details class="vgroup ck-sec"><summary><span>Also recorded in KareIQ</span><small class="muted">Not in the workbook; kept from the existing visit form</small></summary><div class="ck-body"><div class="ck-grid">' +
+          '<div class="field ck-wide"><span>Blood Glucose: when measured</span><div class="seg wrap">' + Object.keys(f.glucose).map(function (k) { return '<label><input type="radio" name="glucoseContext" value="' + k + '"><span>' + e(f.glucose[k]) + '</span></label>'; }).join('') + '</div><em class="err" data-err="glucoseContext"></em></div>' +
+          ckNum('chol', 'Total cholesterol', 'mg/dL', f.limits.chol) +
+          '<label class="field"><span>Date of the visit</span><input class="in" type="date" name="date" max="' + todayIST() + '" value="' + todayIST() + '"><em class="err" data-err="when"></em></label>' +
+          '<label class="field ck-wide"><span>Note for the family</span><textarea class="in" name="note" maxlength="1000" rows="3" placeholder="How was ' + e(first(p.name)) + ' today?"></textarea><em class="err" data-err="note"></em></label>' +
+          '</div></div></details>';
+        var pastHtml = (past.rows || []).length ? '<ul class="rlist">' + past.rows.slice(0, 8).map(function (v) {
+          return '<li><span><b>' + e(dt(v.at)) + '</b><br><span class="muted small">' + (v.inTime ? 'In ' + e(v.inTime) + (v.outTime ? ' · Out ' + e(v.outTime) : '') + ' · ' : '') + e(v.mine ? 'You' : v.by) + '</span></span></li>';
+        }).join('') + '</ul>' : '<p class="muted">No Regular Checkup recorded yet.</p>';
         fill(personBar(p, people) +
-          '<div class="head"><div><h1>Visit for ' + e(p.name) + '</h1><p class="sub">Fill in only what you checked. The family and office see these readings and your note.</p></div></div>' +
-          '<div class="visit"><form data-form="visit" data-id="' + e(p.id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
-            '<fieldset class="vgroup"><legend>Blood pressure</legend><div class="field"><div class="bp"><input class="in" name="systolic" inputmode="numeric" aria-label="Top number (systolic)"><b>/</b><input class="in" name="diastolic" inputmode="numeric" aria-label="Bottom number (diastolic)"><span class="muted">mmHg</span></div>' +
-            '<em class="err" data-err="systolic"></em><em class="err" data-err="diastolic"></em></div></fieldset>' +
-            '<fieldset class="vgroup"><legend>Pulse oximeter</legend><div class="row2">' + unit('hr', 'Heart rate', 'bpm') + unit('spo2', 'Oxygen (SpO2)', '%') + unit('pi', 'Perfusion index (PI)', '') + '</div></fieldset>' +
-            '<fieldset class="vgroup"><legend>Blood sugar</legend>' + unit('glucose', 'Reading', 'mg/dL') +
-              '<div class="field"><span>Measured</span><div class="seg">' + Object.keys(GLUCOSE).map(function (k) { return '<label><input type="radio" name="glucoseContext" value="' + k + '"><span>' + GLUCOSE[k] + '</span></label>'; }).join('') + '</div><em class="err" data-err="glucoseContext"></em></div></fieldset>' +
-            '<fieldset class="vgroup"><legend>Temperature</legend><div class="row2">' + unit('temp', 'Body temperature', '°C') + '<span></span></div></fieldset>' +
-            '<details class="vgroup"><summary>Weight, height and cholesterol</summary><div class="row2" style="margin-top:12px">' +
-              unit('weight', 'Weight', 'kg') + unit('height', 'Height', 'cm', 'placeholder="Once a year"') + unit('chol', 'Total cholesterol', 'mg/dL') + '</div></details>' +
-            '<details class="vgroup"><summary>Body composition (smart scale)</summary><div class="row2" style="margin-top:12px">' + f.body.map(function (b) { return unit(b.k, b.label, b.unit); }).join('') + '</div></details>' +
-            f.groups.map(function (g) { return '<details class="vgroup"><summary>' + e(g[0]) + '</summary><div style="margin-top:12px">' + g[1].map(obsField).join('') + '</div></details>'; }).join('') +
-            '<label class="field"><span>Note for the family</span><textarea class="in" name="note" maxlength="1000" placeholder="How was ' + e(first(p.name)) + ' today? Meals, mood, walking, medicines..."></textarea><em class="err" data-err="note"></em></label>' +
-            '<details style="margin-bottom:10px"><summary class="link" style="text-decoration:none">The visit was earlier</summary><div class="row2" style="margin-top:10px">' +
-              '<label class="field"><span>Date</span><input class="in" type="date" name="date" max="' + todayIST() + '" value="' + todayIST() + '"></label>' +
-              '<label class="field"><span>Time</span><input class="in" type="time" name="time" value="' + nowHM() + '"></label></div><em class="err" data-err="when"></em></details>' +
-            '<div class="savebar"><button class="btn" type="submit">' + icon('check') + 'Save visit</button></div>' +
-          '</form>' +
-          '<aside class="stack"><section class="panel"><h2>' + (S.me.user.role === 'admin' ? 'Recent readings' : 'Your readings today') + '</h2>' + recentHtml(rec.rows || []) + '</section></aside></div>');
+          '<div class="head"><div><span class="eyebrow">Assessment</span><h1>Regular Checkup</h1><p class="sub">For ' + e(p.name) + '. Fill in what you checked at this visit. The sections follow the workbook "Data Collection - Caregiver Regular Visits".</p></div></div>' +
+          '<div class="visit"><form data-form="checkup" data-id="' + e(p.id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+            f.sections.map(sec).join('') + extra +
+            '<div class="savebar"><button class="btn" type="submit">' + icon('check') + 'Save Regular Checkup</button></div></form>' +
+          '<aside class="stack"><section class="panel"><h2>Earlier checkups</h2><p class="muted small">Dates only. Every visit adds a new checkup.</p>' + pastHtml + '</section>' +
+            '<section class="panel"><h2>Your readings today</h2>' + recentHtml(rec.rows || []) + '</section></aside></div>');
+        ckToggle($('form[data-form=checkup]'));
       });
     });
   }
+  function ckNum(name, label, unit, lim) {
+    return '<label class="field"><span>' + e(label) + '</span><div class="unit"><input class="in" name="' + name + '" inputmode="decimal" autocomplete="off"' + (lim ? ' placeholder="' + lim[0] + '–' + lim[1] + '"' : '') + ' data-act="ck-num">' + (unit ? '<em>' + e(unit) + '</em>' : '') + '</div><em class="err" data-err="' + name + '"></em></label>';
+  }
+  function ckField(fd, f) {
+    var dep = fd.showIf ? ' data-if="' + fd.showIf[0] + '" data-is="' + e(fd.showIf[1]) + '"' : '';
+    var name = 'ck.' + fd.k;
+    if (fd.type === 'number' && fd.metric) return ckNum(fd.k, fd.label, fd.unit, f.limits[fd.k]);
+    if (fd.type === 'number') return '<label class="field"' + dep + '><span>' + e(fd.label) + '</span><div class="unit"><input class="in" name="' + name + '" inputmode="decimal" placeholder="' + fd.limits[0] + '–' + fd.limits[1] + '"><em>' + e(fd.unit || '') + '</em></div><em class="err" data-err="' + name + '"></em></label>';
+    if (fd.type === 'computed') return '<label class="field ro"><span>' + e(fd.label) + '</span><div class="unit"><input class="in" id="ck-bmi" readonly placeholder="Auto"><em>kg/m²</em></div><span class="hint">' + e(fd.help) + '</span></label>';
+    if (fd.type === 'auto') return '<label class="field ro"><span>' + e(fd.label) + '</span><input class="in" readonly value="' + e(S.me.user.name) + '"><span class="hint">' + e(fd.help) + '</span></label>';
+    if (fd.type === 'bp') return '<div class="field"><span>' + e(fd.label) + '</span><div class="bp"><input class="in" name="systolic" inputmode="numeric" aria-label="Systolic" placeholder="Systolic"><b>/</b><input class="in" name="diastolic" inputmode="numeric" aria-label="Diastolic" placeholder="Diastolic"><span class="muted">mmHg</span></div><em class="err" data-err="systolic"></em><em class="err" data-err="diastolic"></em></div>';
+    if (fd.type === 'time') return '<label class="field"><span>' + e(fd.label) + '</span><input class="in" type="time" name="' + name + '"><em class="err" data-err="' + name + '"></em></label>';
+    if (fd.type === 'select') return '<label class="field"' + dep + '><span>' + e(fd.label) + '</span><select class="in" name="' + name + '" data-act="ck-dep"><option value="">Choose…</option>' + fd.options.map(function (o) { return '<option>' + e(o) + '</option>'; }).join('') + '</select><em class="err" data-err="' + name + '"></em></label>';
+    return '<label class="field"' + dep + '><span>' + e(fd.label) + '</span><input class="in" name="' + name + '" maxlength="' + (fd.max || 120) + '"><em class="err" data-err="' + name + '"></em></label>';
+  }
+  function ckTable(t) {
+    return '<div class="ck-table" role="table" aria-label="' + e(t.title) + '"><h3>' + e(t.title) + '</h3><div class="ck-tr ck-th" role="row"><span role="columnheader">' + e(t.columns[0]) + '</span><span role="columnheader"><span class="sr">Choice</span></span><span role="columnheader">' + e(t.columns[2]) + '</span></div>' +
+      t.rows.map(function (rw) {
+        var n = 'ck.food.' + rw.k;
+        var choice = rw.options ? '<select class="in" name="' + n + '.choice" aria-label="' + e(rw.label) + '"><option value="">Choose…</option>' + rw.options.map(function (o) { return '<option>' + e(o) + '</option>'; }).join('') + '</select>'
+          : '<input class="in" name="' + n + '.choice" maxlength="120" aria-label="' + e(rw.label) + '">';
+        return '<div class="ck-tr" role="row"><b role="cell">' + e(rw.label) + '</b><span role="cell">' + choice + '<em class="err" data-err="' + n + '.choice"></em></span><span role="cell"><input class="in" name="' + n + '.quantity" maxlength="40" aria-label="' + e(rw.label) + ': Quantity/Day" placeholder="Quantity/Day"></span></div>';
+      }).join('') + '</div>';
+  }
+  // follow-up questions (column C of the workbook) show only when the answer in column B is "Yes"; BMI updates live
+  function ckToggle(form) {
+    if (!form) return;
+    $$('[data-if]', form).forEach(function (el) {
+      var src = form.elements['ck.' + el.getAttribute('data-if')], on = src && src.value === el.getAttribute('data-is');
+      el.hidden = !on;
+    });
+    var h = Number(String((form.elements.height || {}).value || '').replace(',', '.')), w = Number(String((form.elements.weight || {}).value || '').replace(',', '.'));
+    var b = $('#ck-bmi'); if (b) b.value = h > 0 && w > 0 ? String(Math.round((w / Math.pow(h / 100, 2)) * 10) / 10) : '';
+  }
+
+  // ================================================================ Assessment > Onboarding Customer
+  // "Copy of Data Collection - Caregiver First Visit.xlsx": done once per customer. Before it is
+  // submitted the nurse fills the form; afterwards everyone sees it read only (the server refuses a
+  // second submission and any change).
+  function onboardingView(r) {
+    withPerson(r, 'assess/onboarding', function (p, people) {
+      fill(personBar(p, people) + loading(120) + loading(420));
+      var defs = S.cache.onbDef ? Promise.resolve(S.cache.onbDef) : api('GET', 'forms/onboarding').then(function (d) { if (d.ok) S.cache.onbDef = d; return d; });
+      Promise.all([defs, api('GET', 'people/' + encodeURIComponent(p.id) + '/onboarding')]).then(function (x) {
+        var def = x[0], d = x[1];
+        if (!def.ok) return pageError(def); if (!d.ok) return pageError(d);
+        S.cache.onb = d;
+        var head = '<div class="head"><div><span class="eyebrow">Assessment</span><h1>Onboarding Customer</h1><p class="sub">' + e(p.name) + '. The sections follow the workbook "Data Collection - Caregiver First Visit". Onboarding is done once per customer.</p></div></div>';
+        if (d.record) { fill(personBar(p, people) + head + onbReadHtml(def, d.record)); return; }
+        if (!d.canSubmit) {
+          fill(personBar(p, people) + head + '<div class="onb-status pending" role="status">' + icon('clock') + '<span><b>Not completed yet</b></span></div><div class="empty">' + (S.me.user.role === 'admin' ? 'The nurse completes the onboarding at the first visit. It will appear here, read only.' : 'You can onboard a customer while their plan is active and they are assigned to you.') + '</div>');
+          return;
+        }
+        var draft = null; try { draft = JSON.parse(localStorage.getItem('kq.onb.' + p.id) || 'null'); } catch (xx) { draft = null; }
+        var data = draft || d.prefill || {};
+        fill(personBar(p, people) + head +
+          '<div class="onb-status pending" role="status">' + icon('clock') + '<span><b>Not completed</b> · Submit once, when every section is checked. After submission the record is permanent and read only.' + (draft ? ' <button type="button" class="link" data-act="onb-clear">Clear the draft on this device</button>' : '') + '</span></div>' +
+          '<form data-form="onboarding" data-id="' + e(p.id) + '" class="detform onbform" novalidate><div class="alert bad" data-msg hidden></div>' +
+            def.sections.map(function (sc, i) {
+              return '<details class="vgroup ck-sec" id="onb-' + sc.id + '"' + (i === 0 ? ' open' : '') + '><summary><span>' + e(sc.title) + '</span><small class="muted">Sheet: ' + e(sc.sheet || sc.title) + '</small></summary><div class="ck-body">' +
+                sc.groups.map(function (g) { return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<div class="detgrid">' + g.fields.map(function (fd) { return detField(fd, data, [], null); }).join('') + '</div>'; }).join('') + '</div></details>';
+            }).join('') +
+            '<div class="onb-confirm"><label class="ck"><input type="checkbox" name="confirm" value="1"><span>I have completed this onboarding with ' + e(first(p.name)) + '. I understand it cannot be changed after it is submitted.</span></label><span class="err" id="f-confirm-err"></span></div>' +
+            '<div class="savebar"><span class="muted small">A draft is kept on this device until you submit.</span><button class="btn" type="submit">' + icon('check') + 'Submit onboarding</button></div></form>');
+        var form = $('form[data-form=onboarding]');
+        detToggle(form);
+        var gps = form.elements.gpsCoordinates;
+        if (gps && navigator.geolocation) gps.insertAdjacentHTML('afterend', '<button type="button" class="btn sm ghost onb-gps" data-act="onb-gps">' + icon('route') + 'Use my current location</button>');
+      });
+    });
+  }
+  function onbValue(fd, v) {
+    if (v == null || v === '' || (Array.isArray(v) && !v.length)) return '<span class="muted">Not recorded</span>';
+    if (fd.format === 'url') return '<a href="' + e(v) + '" target="_blank" rel="noopener noreferrer">' + e(v) + '</a>';
+    return e(Array.isArray(v) ? v.join(', ') : v);
+  }
+  function onbReadHtml(def, rec) {
+    var data = rec.data || {};
+    return '<div class="onb-status done" role="status">' + icon('check') + '<span><b>Completed</b> on ' + e(dt(rec.completedAt)) + ' by ' + e(rec.completedByMe ? 'you (' + rec.completedBy + ')' : rec.completedBy) + '. This record is read only.</span></div>' +
+      (rec.masked ? '<p class="muted small">Phone numbers and the ID number are masked in the nurse portal, as elsewhere.</p>' : '') +
+      def.sections.map(function (sc) {
+        return '<section class="panel onb-read"><h2>' + e(sc.title) + '</h2>' + sc.groups.map(function (g) {
+          return (g.title ? '<h3 class="detg">' + e(g.title) + '</h3>' : '') + '<dl class="onb-dl">' + g.fields.map(function (fd) {
+            var v = fd.type === 'computed' ? (rec.age != null ? rec.age + ' years' : null) : data[fd.k];
+            var sp = fd.specify && data[fd.specify] ? ' <span class="muted small">(' + e(data[fd.specify]) + ')</span>' : '';
+            return '<div><dt>' + e(fd.label) + '</dt><dd>' + onbValue(fd, v) + sp + '</dd></div>';
+          }).join('') + '</dl>';
+        }).join('') + '</section>';
+      }).join('');
+  }
+  function onbCollect(form) {
+    var def = S.cache.onbDef, out = {};
+    def.sections.forEach(function (sc) { sc.groups.forEach(function (g) { g.fields.forEach(function (fd) {
+      if (fd.type === 'computed') return;
+      var box = form.querySelector('.det-f[data-k="' + fd.k + '"]'); if (box && box.hidden) return;
+      if (fd.type === 'multi') {
+        var list = $$('input[name="' + fd.k + '"]', form).filter(function (c) { return c.checked; }).map(function (c) { return c.value; });
+        if (list.length) out[fd.k] = list;
+        var sp = form.elements[fd.specify]; if (sp && !sp.closest('[data-spec]').hidden && sp.value.trim()) out[fd.specify] = sp.value.trim();
+      } else { var el = form.elements[fd.k]; if (el && el.value.trim()) out[fd.k] = el.value.trim(); }
+    }); }); });
+    return out;
+  }
+  function onbDraft(form) { try { localStorage.setItem('kq.onb.' + form.getAttribute('data-id'), JSON.stringify(onbCollect(form))); } catch (x) {} }
+
   function recentHtml(rows) {
     if (!rows.length) return '<p class="muted">None yet.</p>';
     return '<ul class="rlist">' + rows.slice(0, 12).map(function (r) {
-      var m = METRICS[r.metric] || { label: r.metric, unit: '' };
+      var m = METRICS[r.metric] || { label: r.label || r.metric, unit: r.unit || '' };
       var v = r.metric === 'bp' ? r.systolic + '/' + r.diastolic : r.value;
       return '<li><span><b>' + e(m.label) + '</b> ' + e(v) + ' ' + e(m.unit) + '<br><span class="muted small">' + e(dt(r.at)) + '</span></span>' +
         (r.mine ? '<button class="btn sm ghost" data-act="remove-reading" data-id="' + e(r.id) + '" data-label="' + e(m.label + ' ' + v + ' ' + m.unit) + '">Remove</button>' : '') + '</li>';
     }).join('') + '</ul>';
   }
 
-  // ================================================================ risk checks (care team)
-  function assessView(r) {
-    withPerson(r, 'assess', function (p, people) {
-      api('GET', 'risk/forms?person=' + encodeURIComponent(p.id)).then(function (d) {
-        if (!d.ok) return pageError(d);
-        S.cache.riskForms = d;
-        var t = d.forms.filter(function (x) { return x.id === r.q.test; })[0];
-        if (!t) {
-          var groups = {};
-          d.forms.forEach(function (x) { if (x.women && d.prefill.sex === 'male') return; (groups[x.groupName] = groups[x.groupName] || []).push(x); });
-          fill(personBar(p, people) + '<div class="head"><div><h1>Risk checks for ' + e(p.name) + '</h1><p class="sub">Choose a check, enter the result, and the score is worked out with the KareIQ formulas. The family sees it under Health details, Risk trends.</p></div></div>' +
-            (!d.prefill.sex || !d.prefill.age ? profileForm(p, d.prefill) : '') +
-            '<div class="cards3">' + Object.keys(groups).map(function (g) {
-              return groups[g].map(function (x) {
-                return '<a class="bcard link-card" href="#/assess?p=' + e(p.id) + '&test=' + x.id + '"><span class="kind">' + e(g) + ' · ' + ({ lab: 'Blood test', questionnaire: 'Questionnaire', home: 'Home test' }[x.kind]) + '</span><h3>' + e(x.title) + '</h3><p class="muted small">' + e(x.help) + '</p><span class="arrowlink">Enter result' + icon('arrow') + '</span></a>';
-              }).join('');
-            }).join('') + '</div>' + '<p class="note">' + icon('shield') + '<span>Not included yet: the COPD / asthma score. The KareIQ sheet notes its formula still needs to be checked.</span></p>');
-          return;
-        }
-        var input = function (f) {
-          var v = f.prefill ? d.prefill[f.prefill] : f.default;
-          if (f.type === 'number') return '<label class="field"><span>' + e(f.label) + (f.optional ? ' (if applicable)' : '') + '</span><div class="unit"><input class="in" name="' + f.k + '" inputmode="decimal" value="' + (v != null ? e(v) : '') + '" placeholder="' + f.min + '–' + f.max + '">' + (f.unit ? '<em>' + e(f.unit) + '</em>' : '') + '</div><em class="err" data-err="' + f.k + '"></em></label>';
-          var opts = f.type === 'yesno' ? { yes: 'Yes', no: 'No' } : f.type === 'sex' ? { female: 'Female', male: 'Male' } : f.options;
-          return '<div class="field"><span>' + e(f.label) + '</span><div class="seg wrap">' + Object.keys(opts).map(function (k) { return '<label><input type="radio" name="' + f.k + '" value="' + e(k) + '"' + (String(v) === k ? ' checked' : '') + '><span>' + e(opts[k]) + '</span></label>'; }).join('') + '</div><em class="err" data-err="' + f.k + '"></em></div>';
-        };
-        fill(personBar(p, people) + '<div class="head"><div><h1>' + e(t.title) + '</h1><p class="sub">' + e(t.help) + '</p></div><a class="btn ghost" href="#/assess?p=' + e(p.id) + '">All checks</a></div>' +
-          '<div class="visit"><form data-form="risk" data-id="' + e(p.id) + '" data-test="' + t.id + '" novalidate><div class="alert bad" data-msg hidden></div>' +
-            t.inputs.map(input).join('') + field('date', 'Date of the test', 'type="date" value="' + todayIST() + '" max="' + todayIST() + '"') +
-            '<div class="savebar"><button class="btn" type="submit">' + icon('check') + 'Work out and save</button></div></form>' +
-          '<aside class="stack"><section class="panel" id="riskres"><h2>Result</h2><p class="muted">The score appears here after you save.</p></section></aside></div>');
-      });
+  // ================================================================ KareIQ Policies
+  // Families read the seven policies; the office also edits them. The server refuses any change
+  // from a family login, whatever the screen shows. "Last Updated" is the date an administrator
+  // last saved a change (viewing never changes it).
+  function policyView(r) {
+    var key = r.parts[1] || POLICIES[0][0];
+    if (!POLICIES.some(function (x) { return x[0] === key; })) return go('#/policies/' + POLICIES[0][0], true);
+    var editing = r.q.edit === '1' && S.me.user.role === 'admin';
+    var active = 'policies/' + key;
+    shell(active, '<div class="ppage">' + loading(80) + loading(320) + '</div>');
+    api('GET', 'policies/' + key).then(function (d) {
+      if (!d.ok) return pageError(d);
+      var pol = d.policy, can = d.canEdit;
+      var nav = '<nav class="polnav" aria-label="KareIQ Policies">' + POLICIES.map(function (x) { return '<a href="#/policies/' + x[0] + '"' + (x[0] === key ? ' aria-current="page"' : '') + '>' + e(x[1]) + '</a>'; }).join('') + '</nav>';
+      var updated = '<footer class="polupd" aria-label="Last Updated"><h2>Last Updated</h2><p>' + (pol.updatedAt ? '<b>' + e(date(pol.updatedAt)) + '</b>' + (can && pol.updatedBy ? ' <span class="muted small">by ' + e(pol.updatedBy) + ', version ' + pol.version + '</span>' : '') : '<b>Not yet updated</b> <span class="muted small">This policy has not been published yet.</span>') + '</p></footer>';
+      var att = pol.attachment ? '<p class="polatt">' + icon('file') + '<span><b>' + e(pol.attachment.name) + '</b> <span class="muted small">PDF · ' + Math.max(1, Math.round(pol.attachment.size / 1024)) + ' KB</span></span>' +
+        '<a class="btn sm ghost" href="/api/app/policies/' + key + '/attachment" target="_blank" rel="noopener">' + icon('eye') + 'Open</a><a class="btn sm ghost" href="/api/app/policies/' + key + '/attachment?download=1">' + icon('download') + 'Download</a>' +
+        (can ? '<button class="btn sm ghost" data-act="pol-att-del" data-id="' + key + '">' + icon('trash') + 'Remove</button>' : '') + '</p>' : '';
+      var right = can && !editing ? '<a class="btn" href="#/policies/' + key + '?edit=1">' + icon('pen') + (pol.content || pol.attachment ? 'Edit policy' : 'Add policy content') + '</a>' : '';
+      var body;
+      if (editing) {
+        body = '<form data-form="policy" data-id="' + key + '" class="poledit" novalidate><div class="alert bad" data-msg hidden></div>' +
+          '<label class="field"><span>Policy text</span><textarea class="in poltext" name="content" rows="18" maxlength="200000" placeholder="Paste or type the policy here.">' + e(pol.content) + '</textarea><em class="err" data-err="content"></em></label>' +
+          '<p class="muted small">Formatting: a line starting with <code># </code> is a heading, <code>## </code> a sub-heading, <code>- </code> a bullet point. Leave an empty line between paragraphs.</p>' +
+          '<div class="savebar"><a class="btn ghost" href="#/policies/' + key + '">Cancel</a><button class="btn" type="submit">' + icon('check') + 'Save and publish</button></div></form>' +
+          '<section class="panel" style="margin-top:18px"><h2>Policy document (PDF)</h2><p class="muted small">Optional. Families can open and download it with the policy.</p>' + att +
+            '<form data-form="policy-att" data-id="' + key + '" novalidate><div class="alert bad" data-msg hidden></div><label class="field"><span>' + (pol.attachment ? 'Replace with' : 'Upload') + ' a PDF (up to 5 MB)</span><input class="in" type="file" name="file" accept="application/pdf"></label><button class="btn sm" type="submit">' + icon('upload') + 'Upload</button></form></section>' +
+          '<section class="panel" style="margin-top:18px"><details data-act="pol-versions" data-id="' + key + '"><summary>Earlier versions</summary><div class="polver">' + loading(60) + '</div></details></section>';
+      } else {
+        body = (pol.content || pol.attachment ? '<article class="polbody">' + policyText(pol.content) + att + '</article>' :
+          '<div class="empty"><b>Not published yet</b>' + (can ? 'Add the policy text or upload the policy document when it is ready.' : 'The KareIQ team will publish this policy here.') + '</div>');
+      }
+      shell(active, '<div class="ppage"><div class="head"><div><span class="eyebrow">KareIQ Policies</span><h1>' + e(pol.title) + '</h1>' + (can ? '' : '<p class="sub">Read only. Contact the KareIQ team with any questions about this policy.</p>') + '</div>' + right + '</div>' + nav + body + updated + '</div>');
     });
   }
+  // safe, simple formatting: everything is escaped first
+  function policyText(t) {
+    if (!t) return '';
+    var out = [], list = null;
+    String(t).split(/\n/).forEach(function (line) {
+      var l = line.trim();
+      if (/^- /.test(l)) { if (!list) { list = []; } list.push('<li>' + e(l.slice(2)) + '</li>'); return; }
+      if (list) { out.push('<ul>' + list.join('') + '</ul>'); list = null; }
+      if (!l) { out.push(''); return; }
+      if (/^## /.test(l)) out.push('<h3>' + e(l.slice(3)) + '</h3>');
+      else if (/^# /.test(l)) out.push('<h2>' + e(l.slice(2)) + '</h2>');
+      else out.push('<p>' + e(l) + '</p>');
+    });
+    if (list) out.push('<ul>' + list.join('') + '</ul>');
+    return out.join('');
+  }
+
   function profileForm(p, pre) {
     return '<section class="panel" style="margin-bottom:18px"><h2>About ' + e(first(p.name)) + '</h2><p class="muted small" style="margin-bottom:12px">Several scores need sex and age. Saved once for all checks.</p>' +
       '<form data-form="profile2" data-id="' + e(p.id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2"><div class="field"><span>Sex</span><div class="seg"><label><input type="radio" name="sex" value="female"' + (pre.sex === 'female' ? ' checked' : '') + '><span>Female</span></label><label><input type="radio" name="sex" value="male"' + (pre.sex === 'male' ? ' checked' : '') + '><span>Male</span></label></div></div>' +
@@ -2345,6 +2585,43 @@
         return loadSession().then(function () { go('#/package'); toast('Booking added to your account.'); });
       });
     },
+    checkup: function (f, v) {
+      var id = f.getAttribute('data-id'), body = { checkup: { food: {} } };
+      Object.keys(v).forEach(function (k) {
+        if (k.indexOf('ck.food.') === 0) { var pp = k.slice(8).split('.'); body.checkup.food[pp[0]] = body.checkup.food[pp[0]] || {}; body.checkup.food[pp[0]][pp[1]] = v[k]; }
+        else if (k.indexOf('ck.') === 0) { var el0 = f.querySelector('[name="' + k + '"]'), dep = el0 && el0.closest('[data-if]'); if (!(dep && dep.hidden)) body.checkup[k.slice(3)] = v[k]; }
+        else body[k] = v[k];
+      });
+      return api('POST', 'people/' + encodeURIComponent(id) + '/visits', body).then(function (d) {
+        if (!d.ok) { var bad = Object.keys(d.errors || {})[0]; if (bad) { var el = f.querySelector('[name="' + bad + '"]') || f.querySelector('[data-err="' + bad + '"]'); var sec = el && el.closest('details'); if (sec) sec.open = true; } return d; }
+        toast('Regular Checkup saved. The family can see it now.');
+        render();
+      });
+    },
+    onboarding: function (f) {
+      var id = f.getAttribute('data-id'), msg = f.querySelector('[data-msg]');
+      $$('.err', f).forEach(function (x) { x.textContent = ''; }); $$('[aria-invalid]', f).forEach(function (x) { x.removeAttribute('aria-invalid'); });
+      msg.hidden = true;
+      if (!f.elements.confirm.checked) { $('#f-confirm-err').textContent = 'Tick to confirm before submitting: the record cannot be changed afterwards.'; f.elements.confirm.focus(); return Promise.resolve(); }
+      if (!confirm('Submit the onboarding now? It is saved permanently and cannot be changed or submitted again.')) return Promise.resolve();
+      return api('POST', 'people/' + encodeURIComponent(id) + '/onboarding', { data: onbCollect(f), confirm: true }).then(function (d) {
+        if (!d.ok) {
+          msg.textContent = d.message; msg.hidden = false;
+          var firstBad = null;
+          Object.keys(d.errors || {}).forEach(function (k) {
+            var err = $('#f-' + k + '-err'), inp = f.elements[k];
+            if (err) err.textContent = d.errors[k];
+            if (inp && inp.setAttribute) { inp.setAttribute('aria-invalid', 'true'); var sec = inp.closest && inp.closest('details'); if (sec) sec.open = true; firstBad = firstBad || inp; }
+          });
+          if (d.status === 409) { try { localStorage.removeItem('kq.onb.' + id); } catch (x) {} setTimeout(render, 1600); }
+          (firstBad || msg).scrollIntoView({ block: 'center' }); if (firstBad && firstBad.focus) firstBad.focus({ preventScroll: true });
+          return;
+        }
+        try { localStorage.removeItem('kq.onb.' + id); } catch (x) {}
+        toast('Onboarding submitted. It is now read only.');
+        render();
+      });
+    },
     visit: function (f, v) {
       var id = f.getAttribute('data-id'), body = {}, obs = {};
       Object.keys(v).forEach(function (k) { if (k.indexOf('obs.') !== 0) body[k] = v[k]; });
@@ -2378,7 +2655,7 @@
     range: function (f, v) {
       var min = f.getAttribute('data-min') || '';
       if (!v.from || !v.to || v.from > v.to) return Promise.resolve({ ok: false, message: 'Choose a start date before the end date.' });
-      if (min && v.from < min) return Promise.resolve({ ok: false, message: 'Health trends are available from ' + date(min) + ', the registration date. Choose a start date on or after it.' });
+      if (min && v.from < min) return Promise.resolve({ ok: false, message: 'Health trends are available from ' + date(min) + ', the first record. Choose a start date on or after it.' });
       if (v.to > todayIST()) return Promise.resolve({ ok: false, message: 'Choose an end date up to today.' });
       closeDialog(); go('#/' + (S.cache.page || 'health/vitals') + '?p=' + encodeURIComponent(S.pid) + '&from=' + v.from + '&to=' + v.to);
     },
@@ -2405,17 +2682,21 @@
           render();
         });
     },
-    risk: function (f, v) {
-      var id = f.getAttribute('data-id'), date = v.date; delete v.date;
-      return api('POST', 'people/' + encodeURIComponent(id) + '/risks', { test: f.getAttribute('data-test'), inputs: v, date: date }).then(function (d) {
+    policy: function (f, v) {
+      var key = f.getAttribute('data-id');
+      return api('PUT', 'policies/' + key, { content: f.elements.content.value }).then(function (d) {
         if (!d.ok) return d;
-        var x = d.result, box = $('#riskres');
-        if (box) box.innerHTML = '<h2>Result</h2><div class="risk ' + (x.level || 'none') + '" style="border:0;padding:0;box-shadow:none"><div class="rv">' + e(x.display) + '</div><div class="rb">' + dotHtml(x.level) + e(x.band) + '</div>' +
-          (x.scale ? '<p class="muted small" style="margin-top:8px">' + e(x.scale) + '</p>' : '') + (x.note ? '<p class="small" style="margin-top:8px">' + e(x.note) + '</p>' : '') + '</div>' +
-          '<p class="muted small" style="margin-top:12px">Saved. The family sees it under Health details, Risk trends.</p><a class="btn sm ghost" style="margin-top:12px" href="#/assess?p=' + e(id) + '">Do another check</a>';
-        toast('Saved.');
-        if (box && window.innerWidth < 980) box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        toast(d.unchanged ? 'No changes to save.' : 'Policy saved and published.'); go('#/policies/' + key);
       });
+    },
+    'policy-att': function (f) {
+      var key = f.getAttribute('data-id'), file = f.elements.file.files[0];
+      if (!file) return Promise.resolve({ ok: false, message: 'Choose a PDF file.' });
+      if (file.size > 5 * 1024 * 1024) return Promise.resolve({ ok: false, message: 'That file is larger than 5 MB.' });
+      return fetch('/api/app/policies/' + key + '/attachment', { method: 'POST', credentials: 'same-origin', body: file,
+        headers: { 'Content-Type': 'application/octet-stream', 'X-Requested-With': 'kareiq', 'X-CSRF': S.csrf, 'X-File-Name': encodeURIComponent(file.name) } })
+        .then(function (r) { return r.json().catch(function () { return { ok: false, message: 'The upload did not finish. Please try again.' }; }); }, function () { return { ok: false, message: 'Could not reach KareIQ. Check your internet connection.' }; })
+        .then(function (d) { if (!d.ok) return d; toast('Document uploaded and published.'); render(); });
     },
     'add-pkg': function (f, v) {
       return api('POST', 'admin/plans', { personId: S.pid, product: f.getAttribute('data-product'), planId: f.getAttribute('data-id'), startDate: v.startDate, months: v.months }).then(function (d) {
@@ -2479,6 +2760,7 @@
   // ================================================================ clicks
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]');
+    if (!ev.target.closest('.pitem.open')) closePops();
     var menu = $('.menu:not([hidden])');
     if (menu && !(t && t.getAttribute('data-act') === 'menu') && !ev.target.closest('.menu')) { menu.hidden = true; var mb = $('.me>button'); if (mb) mb.setAttribute('aria-expanded', 'false'); }
     var bpn = $('.bellp:not([hidden])');
@@ -2488,6 +2770,55 @@
     var id = t.getAttribute('data-id');
     switch (act) {
       case 'reload': location.reload(); break;
+      case 'pkf-brand': { var pr = route(); pkgFilterApply(pr.q.brand === t.getAttribute('data-k') && !pr.q.pkg ? {} : { brand: t.getAttribute('data-k') }); break; }
+      case 'pkf-clear': pkgFilterApply({}); break;
+      case 'onb-clear': { var oid = (S.cache.onb && S.cache.onb.person) ? S.cache.onb.person.id : S.pid; try { localStorage.removeItem('kq.onb.' + oid); } catch (x) {} render(); break; }
+      case 'onb-gps': {
+        var gin = $('form[data-form=onboarding] [name=gpsCoordinates]'); t.disabled = true;
+        navigator.geolocation.getCurrentPosition(function (pos) {
+          t.disabled = false; if (!gin) return;
+          var la = Math.round(pos.coords.latitude * 1e6) / 1e6, lo = Math.round(pos.coords.longitude * 1e6) / 1e6;
+          gin.value = la + ', ' + lo;
+          var lk = $('form[data-form=onboarding] [name=gpsLink]'); if (lk && !lk.value) lk.value = 'https://maps.google.com/?q=' + la + ',' + lo;
+          onbDraft(gin.form); toast('Location added.');
+        }, function () { t.disabled = false; toast('The location could not be read. Type it in instead.', 'bad'); }, { enableHighAccuracy: true, timeout: 15000 });
+        break;
+      }
+      case 'rec-ex': recExDialog(id); break;
+      case 'pinfo': { var pi = t.closest('.pitem'), wasOpen = pi.classList.contains('open'); closePops(); pi.classList.toggle('open', !wasOpen); t.setAttribute('aria-expanded', String(!wasOpen)); break; }
+      case 'notes-more': S.cache.notesShown = (S.cache.notesShown || 20) + 20; $('#noteslist').innerHTML = notesListHtml(); break;
+      case 'risk-hist': {
+        var det = t.closest('details'), box = det && $('.rh-hl', det);
+        if (!det || det.getAttribute('data-loaded')) break;
+        det.setAttribute('data-loaded', '1');
+        api('GET', 'people/' + encodeURIComponent(det.getAttribute('data-pid')) + '/risk/history').then(function (d) {
+          if (!box) return;
+          if (!d.ok) { box.innerHTML = '<p class="muted small">' + e(d.message || 'Could not load the history.') + '</p>'; return; }
+          box.innerHTML = d.rows.length ? '<ol class="tl">' + d.rows.map(function (h) {
+            return '<li><div class="t"><span class="rcat sm ' + h.category + '"><i aria-hidden="true">' + CAT_ICON[h.category] + '</i>' + e(h.categoryName) + '</span>' + (h.previous && h.previous !== h.category ? ' <span class="muted small">(was ' + e(h.previous) + ')</span>' : '') + '</div><div class="m">' + e(dt(h.at)) + (h.trigger ? ' · ' + e(h.trigger) : '') + '</div>' +
+              (h.responsible.length ? '<p class="n small">' + e(h.responsible.map(function (x) { return x.title + (x.band ? ' (' + x.band + ')' : ''); }).join(', ')) + '</p>' : '') + '</li>';
+          }).join('') + '</ol>' : '<p class="muted small">No history yet.</p>';
+        });
+        break;
+      }
+      case 'pol-versions': {
+        if (t.getAttribute('data-loaded')) break;
+        t.setAttribute('data-loaded', '1');
+        var pv = $('.polver', t);
+        api('GET', 'policies/' + id + '/versions').then(function (d) {
+          if (!pv) return;
+          if (!d.ok) { pv.innerHTML = '<p class="muted small">' + e(d.message) + '</p>'; return; }
+          pv.innerHTML = d.rows.length ? '<ul class="rlist">' + d.rows.map(function (v) {
+            return '<li><span><b>Version ' + v.version + '</b> · ' + (v.updatedAt ? 'published ' + e(dt(v.updatedAt)) : 'first draft') + (v.updatedBy ? ' by ' + e(v.updatedBy) : '') + '<br><span class="muted small">Replaced ' + e(dt(v.replacedAt)) + ' · ' + v.length + ' characters' + (v.attachment ? ' · ' + e(v.attachment) : '') + '</span>' +
+              (v.content ? '<details><summary class="small">Show text</summary><div class="polbody small">' + policyText(v.content) + '</div></details>' : '') + '</span></li>';
+          }).join('') + '</ul>' : '<p class="muted small">No earlier versions.</p>';
+        });
+        break;
+      }
+      case 'pol-att-del':
+        if (!confirm('Remove the policy document? The previous version keeps a copy.')) break;
+        api('DELETE', 'policies/' + id + '/attachment').then(function (d) { toast(d.ok ? 'Document removed.' : d.message, d.ok ? 'ok' : 'bad'); render(); });
+        break;
       case 'bell': {
         var bp = t.nextElementSibling, opening = bp.hidden;
         bp.hidden = !opening; t.setAttribute('aria-expanded', String(opening));
@@ -2543,17 +2874,16 @@
         var k2 = t.getAttribute('data-k'), dd2 = S.cache.dash; if (!dd2) break;
         var same = $('[data-act=vsel][data-k="' + k2 + '"][aria-pressed=true]') && $('#vdetail [data-chart="' + k2 + '"], #vdetail .empty');
         S.cache.metric = k2;
-        $$('.vcard').forEach(function (c) { c.classList.toggle('on', c.getAttribute('data-k') === k2); });
         $$('[data-act=vsel]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === k2)); });
         if (!same) swapPanel($('#vdetail'), vitalDetailHtml(dd2, k2), function () { drawCharts(true); });
-        if (act === 'jump') { var blk = $('#charts'); if (blk) blk.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
+        closePops();
         break;
       }
       case 'rsel': {
         // show only the chosen risk check's summary and history
         var rk = t.getAttribute('data-k'), dd3 = S.cache.dash; if (!dd3) break;
         if (t.getAttribute('aria-pressed') === 'true') { if (t.getAttribute('data-jump') && window.innerWidth < 1100) { var rc0 = $('#rcharts'); if (rc0) rc0.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); } break; } // already showing
-        S.cache.riskSel = rk;
+        S.cache.riskSel = rk; closePops();
         $$('[data-act=rsel]').forEach(function (b) { var on = b.getAttribute('data-k') === rk; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); });
         swapPanel($('#rdetail'), riskBlockHtml(dd3, rk), function () { drawCharts(true); });
         if (t.getAttribute('data-jump')) { var rc = $('#rcharts'); if (rc && window.innerWidth < 1100) rc.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
@@ -2651,7 +2981,9 @@
     var t = ev.target, act = t.getAttribute('data-act');
     if (act === 'dlm' || act === 'dlp' || act === 'dlf') { dlSync(); return; }
     if (act === 'dlc') { $$('dialog[open] [data-act=dlp]').forEach(function (c) { if (!c.disabled) c.checked = t.checked; }); dlSync(); return; }
-    if (act === 'det-field') { detToggle(); return; }
+    if (act === 'det-field') { detToggle(t.form); if (t.form && t.form.getAttribute('data-form') === 'onboarding') onbDraft(t.form); return; }
+    if (act === 'ck-dep') { ckToggle(t.form); return; }
+    if (t.form && t.form.getAttribute && t.form.getAttribute('data-form') === 'onboarding') { onbDraft(t.form); return; }
     if (act === 'photo-file') { photoUpload(t); return; }
     if (act === 'co-dur' || act === 'co-agree') {
       var cf = t.closest('form'), cpk = (S.cache.dlgPlans || [])[0];
@@ -2675,13 +3007,12 @@
       if (pk && out) out.innerHTML = priceHtml(pk, t.value);
       if (t.closest('dialog')) S.cache.dlgMonths = t.value;
     } else if (act === 'person') {
-      var r = route(); go('#/' + r.parts[0] + '?p=' + encodeURIComponent(t.value));
+      var r = route(); go('#/' + r.parts.join('/') + '?p=' + encodeURIComponent(t.value));
+    } else if (act === 'pkf-pkg') {
+      pkgFilterApply(t.value ? { pkg: t.value } : {});
     } else if (act === 'rgroup') {
       S.cache.riskGroup = t.value; var rd = S.cache.dash;
-      if (rd) $('#rsumlist').innerHTML = riskSummaryList(rd, t.value);
-    } else if (act === 'sumgroup') {
-      S.cache.sumGroup = t.value; var dd = S.cache.dash;
-      if (dd) { $('#sumlist').innerHTML = summaryList(dd, t.value); $('#charts').innerHTML = chartsHtml(dd, t.value); drawCharts(true); }
+      if (rd) { $('#rcharts').innerHTML = riskChartsHtml(rd, t.value); drawCharts(true); }
     } else if (act === 'rsort') {
       S.cache.rsort = t.value; drawRecords();
     } else if (act === 'rall') {
@@ -2696,6 +3027,9 @@
     }
   });
   document.addEventListener('input', function (ev) {
+    if (ev.target.getAttribute('data-act') === 'ck-num') { ckToggle(ev.target.form); return; }
+    if (ev.target.form && ev.target.form.getAttribute('data-form') === 'onboarding') { clearTimeout(S.onbT); var of = ev.target.form; S.onbT = setTimeout(function () { onbDraft(of); }, 400); return; }
+    if (ev.target.getAttribute('data-act') === 'notes-q') { S.cache.notesQ = ev.target.value.trim(); S.cache.notesShown = 20; $('#noteslist').innerHTML = notesListHtml(); return; }
     if (ev.target.getAttribute('data-act') !== 'search') return;
     var q = ev.target.value.toLowerCase().trim();
     $$('tr[data-search]').forEach(function (tr) { tr.hidden = q && tr.getAttribute('data-search').indexOf(q) === -1; });
@@ -2703,6 +3037,7 @@
   var rsz;
   window.addEventListener('resize', function () { clearTimeout(rsz); rsz = setTimeout(function () { if ($('[data-chart]')) drawCharts(); }, 200); });
   document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { var po = $('.pitem.open'); if (po) { closePops(); var pb = po.querySelector('.pinfo'); if (pb) pb.focus(); return; } }
     // side menu sections: arrow keys move through a section, Escape closes it
     var g = ev.target.closest && ev.target.closest('.sbg');
     if (g) {
@@ -2754,6 +3089,7 @@
     shell: shell, go: go, route: route, render: render, loading: loading, pageError: pageError, FORMS: FORMS, todayIST: todayIST, first: first, initials: initials,
     queryOf: queryOf, reducedMotion: reducedMotion, phoneNice: phoneNice, field: field, busy: busy, showErrors: showErrors, formData: formData, withPerson: withPerson,
     personBar: personBar, fill: fill, loadPeople: loadPeople, rs: rs, BRANDS: BRANDS, waLink: waLink, refreshBell: refreshBell, ACTIONS: ACTIONS, METRICS: METRICS,
+    riskHero: riskHeroHtml, CAT_ICON: CAT_ICON, POLICIES: POLICIES, swapPanel: swapPanel,
     register: function (name, mod) { MODS[name] = mod; }
   };
   render();

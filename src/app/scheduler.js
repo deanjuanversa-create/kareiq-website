@@ -67,8 +67,10 @@ function create(ctx) {
     const profiles = await docs.find('app_staff', { userId: { $in: users.map((u) => u.id) } });
     return users.map((u) => ({ user: u, profile: profiles.find((p) => p.userId === u.id) || null }));
   }
+  // approved leave only (pending, rejected and cancelled leave do not block visits; leave recorded
+  // before leave had a status was always in force, so it counts as approved)
   function onLeave(profile, date) {
-    return ((profile && profile.leave) || []).some((l) => l.from <= date && date <= l.to);
+    return ((profile && profile.leave) || []).some((l) => (!l.status || l.status === 'approved') && l.from <= date && date <= l.to);
   }
 
   // Can this nurse take this visit? Returns { ok, start, why }

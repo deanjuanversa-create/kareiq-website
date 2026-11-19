@@ -77,6 +77,17 @@ async function insert(col, doc) {
   return doc;
 }
 
+// Insert only if no record with this id exists yet, atomically on every storage mode (MongoDB's
+// unique _id, Redis HSETNX, the file queue). Returns true when inserted, false when it already existed.
+async function insertOnce(col, doc) {
+  if (!doc.id) throw new Error('documents need an id');
+  if (db.mode === 'mongo') {
+    try { await (await db.col(col)).insertOne({ _id: doc.id, ...doc }); return true; } catch (e) { if (e && e.code === 11000) return false; throw e; }
+  }
+  if (db.mode === 'redis') return db.hashSetNX(col, doc.id, doc);
+  return mutate(col, (rows) => { if (rows.some((r) => r.id === doc.id)) return false; rows.push(clone(doc)); return true; });
+}
+
 async function update(col, id, changes) {
   if (db.mode === 'mongo') {
     const c = await db.col(col);
@@ -134,6 +145,8 @@ async function ensureIndexes() {
     await (await db.col('app_records')).createIndex({ personId: 1, date: -1 });
     await (await db.col('app_details')).createIndex({ personId: 1 });
     await (await db.col('app_details_versions')).createIndex({ personId: 1, version: -1 });
+    // one onboarding per customer: the id is 'onb-' + personId, and personId is unique as well
+    await (await db.col('app_onboarding')).createIndex({ personId: 1 }, { unique: true });
     await (await db.col('app_orders')).createIndex({ personId: 1, createdAt: -1 });
     await (await db.col('app_orders')).createIndex({ status: 1 });
     // a nurse can hold one visit per start time: the database refuses a second one (double-booking guard)
@@ -150,4 +163,4 @@ async function ensureIndexes() {
   } catch (e) { indexed = false; console.error('[app] index setup failed:', e.message); }
 }
 
-module.exports = { find, findOne, insert, update, remove, removeWhere, count, matches, ensureIndexes };
+module.exports = { find, findOne, insert, insertOnce, update, remove, removeWhere, count, matches, ensureIndexes };

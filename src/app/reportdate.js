@@ -85,8 +85,8 @@ function scoreLabel(ctx, category) {
   return { score: 0, label: '' };
 }
 
-// pages: [{ page, text }]; returns { status, date, label, page, confidence, candidates, reason }
-function findReportDate(pages, opts) {
+// Every date in the pages with its label and score (also used by the document extraction)
+function candidates(pages, opts) {
   const o = opts || {};
   const today = o.today || new Date(Date.now() + 5.5 * 3600e3).toISOString().slice(0, 10);
   const todayY = Number(today.slice(0, 4));
@@ -107,10 +107,16 @@ function findReportDate(pages, opts) {
         let s = scoreLabel(ctx, o.category);
         // "Date: 12/03/2026" style labels a little further back on the same line
         if (s.score === 0 && !prevDate) s = scoreLabel(before, o.category);
-        cands.push({ date: d.iso, score: s.score - (d.twoDigitYear ? 1 : 0), label: s.label, page: pg.page, context: (ctx.trim() + ' ' + d.raw).replace(/\s+/g, ' ').trim().slice(-70) });
+        cands.push({ date: d.iso, score: s.score - (d.twoDigitYear ? 1 : 0), label: s.label, page: pg.page, line: i + 1, raw: d.raw, twoDigitYear: d.twoDigitYear, context: (ctx.trim() + ' ' + d.raw).replace(/\s+/g, ' ').trim().slice(-70) });
       }
     });
   }
+  return cands;
+}
+
+// pages: [{ page, text }]; returns { status, date, label, page, confidence, candidates, reason }
+function findReportDate(pages, opts) {
+  const cands = candidates(pages, opts);
   const shown = cands.filter((c) => c.score > -20).sort((a, b) => b.score - a.score || a.page - b.page).slice(0, 6).map(({ date, label, page, context, score }) => ({ date, label, page, context, score }));
   if (!cands.length) return { status: 'notfound', date: null, candidates: [], reason: 'No date could be read in the report.' };
   const usable = cands.filter((c) => c.score > -20);
@@ -132,4 +138,4 @@ function findReportDate(pages, opts) {
   return { status: 'detected', date: pick, label: how, page: best.page, confidence, rule, candidates: shown };
 }
 
-module.exports = { findReportDate, datesIn };
+module.exports = { findReportDate, datesIn, candidates };

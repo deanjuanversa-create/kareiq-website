@@ -134,7 +134,7 @@ const base = process.argv[2];
     ok((await nurse('nurse/customers/P-DEMO01')).status === 200, 'an assigned nurse opens the restricted customer page');
     // risk checks in the download
     r = await fam('people/P-DEMO01/export?period=6m&metrics=risk:phq9&parts=readings,risktrend&format=csv');
-    const rc = await r.text(); ok(r.status === 200 && /Depression check \(PHQ-9\)/.test(rc) && /Improving/.test(rc) && !/Heart disease/.test(rc), 'download with a risk check only');
+    const rc = await r.text(); ok(r.status === 200 && /Depression( check)? \(PHQ-9\)/.test(rc) && /Improving/.test(rc) && !/Heart disease/.test(rc), 'download with a risk check only');
     ok((await fam('people/P-DEMO01/export?period=6m&metrics=risk:unknown&format=csv')).status === 400, 'unknown risk check: refused');
     const nest = await login('nest@demo.kareiq');
     ok([403, 404].includes((await nest('people/P-DEMO01/details')).status) && (await nest('nurse/customers/P-DEMO01')).status === 404, 'an unassigned nurse cannot open the customer');

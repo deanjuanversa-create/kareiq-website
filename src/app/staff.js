@@ -55,7 +55,7 @@ function create(ctx) {
     await docs.insert('app_staff', p);
     return p;
   }
-  function onLeaveToday(p) { const t = todayIST(); return (p.leave || []).some((l) => l.from <= t && t <= l.to); }
+  function onLeaveToday(p) { const t = todayIST(); return (p.leave || []).some((l) => (!l.status || l.status === 'approved') && l.from <= t && t <= l.to); }
   function view(user, p, opts) {
     const t = todayIST();
     const status = !user.active || p.status === 'inactive' ? 'inactive' : onLeaveToday(p) ? 'on_leave' : 'active';

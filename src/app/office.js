@@ -37,7 +37,7 @@ function create(ctx) {
         brands: [...new Set(all.map((p) => BRAND_OF(p.planId, p.product)))], packages: [...new Set(all.map((p) => p.planId).filter(Boolean))],
         currentPackages: own.filter((p) => p.status === 'active' || p.status === 'paused').map((p) => planName(p.planId)),
         phone: (fam[0] && fam[0].phone) || (det && det.data && det.data.phone1) || null, email: (fam[0] && fam[0].email) || (det && det.data && det.data.email) || null,
-        family: fam.map((u) => u.name), nurses: nurses.map((u) => ({ id: u.id, name: u.name })), hasPlan: all.length > 0
+        family: fam.map((u) => u.name), nurses: nurses.map((u) => ({ id: u.id, name: u.name })), hasPlan: all.length > 0, risk: x.riskCategory || 'grey'
       };
     });
   }
@@ -385,22 +385,37 @@ function create(ctx) {
         await audit(admin.id, 'nurse.hours', null, { employee: prof.employeeId });
         return json(res, 200, { ok: true });
       }
+      // Leave from "Nurses and hours": the same records and rules as Leave Record Management
+      // (src/app/features.js): approved straight away, no overlaps, affected visits listed, and
+      // removing keeps the record as cancelled (history is never deleted).
       if (parts[3] === 'leave' && parts.length === 4 && req.method === 'POST') {
         if (!isDate(body.from) || !isDate(body.to) || body.to < body.from) return json(res, 400, { ok: false, message: 'Choose the first and last day of leave.' });
-        const clash = (await docs.find('app_schedule', { nurseId: user.id, date: { $gte: body.from, $lte: body.to } })).filter((v) => ACTIVE.includes(v.status));
-        await docs.update('app_staff', prof.id, { leave: [...(prof.leave || []), { id: uid(), from: body.from, to: body.to, reason: clean(body.reason, 120) }], updatedAt: now() });
-        // visits in the leave go back to the pool and are given to someone free
-        const moved = [];
-        for (const v of clash) {
-          await docs.update('app_schedule', v.id, { nurseId: null, slotKey: null, start: null, end: null, status: 'awaiting_assignment', officeToldAt: null, history: [...(v.history || []), { at: now(), by: admin.id, byRole: 'admin', action: 'unassigned', from: user.id, note: 'Nurse on leave' }] });
-          const r = await scheduler.assign(v.id, { by: admin.id, byRole: 'admin', note: 'Reassigned because the nurse is on leave' });
+        const clash = (prof.leave || []).find((x) => (!x.status || x.status === 'approved' || x.status === 'pending') && x.from <= body.to && body.from <= x.to);
+        if (clash) return json(res, 400, { ok: false, message: `This overlaps leave from ${clash.from} to ${clash.to}.` });
+        const type = ['casual', 'sick', 'earned', 'emergency', 'unpaid', 'other'].includes(body.type) ? body.type : 'other';
+        // saved first, so the auto-assigner already treats the nurse as unavailable for these days
+        const entry = { id: uid(), from: body.from, to: body.to, type, status: 'approved', reason: clean(body.reason, 300), createdBy: admin.id, createdAt: now(), decidedBy: admin.id, decidedAt: now(), affected: [], history: [{ at: now(), by: admin.id, action: 'added-approved' }] };
+        await docs.update('app_staff', prof.id, { leave: [...(prof.leave || []), entry], updatedAt: now() });
+        const visitsIn = (await docs.find('app_schedule', { nurseId: user.id, date: { $gte: body.from, $lte: body.to } })).filter((v) => ACTIVE.includes(v.status));
+        const moved = [], affected = [];
+        for (const v of visitsIn) {
+          await docs.update('app_schedule', v.id, { nurseId: null, slotKey: null, start: null, end: null, status: 'awaiting_assignment', officeToldAt: null, history: [...(v.history || []), { at: now(), by: admin.id, byRole: 'admin', action: 'unassigned', from: user.id, note: 'Nurse on approved leave' }] });
+          const r = await scheduler.assign(v.id, { by: admin.id, byRole: 'admin', note: 'Reassigned because the nurse is on approved leave' });
+          const after = await docs.findOne('app_schedule', { id: v.id });
+          const to = after && after.nurseId ? await docs.findOne('app_users', { id: after.nurseId }) : null;
           moved.push({ reference: v.reference, assigned: r.ok });
+          affected.push({ visitId: v.id, reference: v.reference, date: v.date, slot: v.slot, customerName: v.customerName || null, personId: v.personId || null, serviceName: v.serviceName || null, result: r.ok ? 'reassigned' : 'awaiting_assignment', newNurse: to ? to.name : null, at: now() });
         }
+        entry.affected = affected;
+        await docs.update('app_staff', prof.id, { leave: [...(prof.leave || []), entry], updatedAt: now() });
         await audit(admin.id, 'nurse.leave', null, { employee: prof.employeeId, from: body.from, to: body.to });
         return json(res, 201, { ok: true, moved });
       }
       if (parts[3] === 'leave' && parts.length === 5 && req.method === 'DELETE') {
-        await docs.update('app_staff', prof.id, { leave: (prof.leave || []).filter((l) => l.id !== parts[4]), updatedAt: now() });
+        const l = (prof.leave || []).find((x) => x.id === parts[4]);
+        if (!l) throw notFound();
+        await docs.update('app_staff', prof.id, { leave: (prof.leave || []).map((x) => (x.id === l.id ? { ...x, status: 'cancelled', decidedBy: admin.id, decidedAt: now(), history: [...(x.history || []), { at: now(), by: admin.id, action: 'cancelled' }] } : x)), updatedAt: now() });
+        await audit(admin.id, 'nurse.leave.cancelled', null, { employee: prof.employeeId, from: l.from, to: l.to });
         return json(res, 200, { ok: true });
       }
     }

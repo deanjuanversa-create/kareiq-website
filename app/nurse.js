@@ -11,7 +11,7 @@
     ['nurse/schedule', 'Scheduler', 'cal'],
     ['nurse/customers', 'Assigned customers', 'people'],
     ['nurse/customer', 'Customer information', 'idcard'],
-    ['assess', 'Risk checks', 'gauge'],
+    { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse'], ['assess/onboarding', 'Onboarding Customer', 'idcard']] },
     ['nurse/upload', 'Upload documents', 'upload'],
     ['nurse/notifications', 'Notifications', 'bell']
   ];
@@ -86,7 +86,7 @@
     var acts = '';
     if (v.status === 'assigned') acts += '<button class="btn sm" data-act="nv-status" data-id="' + e(v.id) + '" data-s="accepted">' + icon('check') + 'Accept</button>';
     if (v.status === 'assigned' || v.status === 'accepted') acts += '<button class="btn sm ' + (v.status === 'accepted' ? '' : 'ghost') + '" data-act="nv-status" data-id="' + e(v.id) + '" data-s="in_progress">' + icon('play') + 'Start visit</button>';
-    if (v.status === 'in_progress') acts += '<a class="btn sm ghost" href="#/visit?p=' + e(v.personId) + '">' + icon('pulse') + 'Record readings</a><button class="btn sm" data-act="nv-status" data-id="' + e(v.id) + '" data-s="completed">' + icon('check') + 'Complete visit</button>';
+    if (v.status === 'in_progress') acts += '<a class="btn sm ghost" href="#/assess/regular?p=' + e(v.personId) + '">' + icon('pulse') + 'Regular Checkup</a><button class="btn sm" data-act="nv-status" data-id="' + e(v.id) + '" data-s="completed">' + icon('check') + 'Complete visit</button>';
     return '<article class="vcard2 ' + e(v.status) + '"><div class="vtime"><b>' + e(v.start ? K.hm12(v.start) : (v.slot === 'evening' ? 'Evening' : 'Morning')) + '</b><span>' + e(v.end ? 'to ' + K.hm12(v.end) : '') + '</span></div>' +
       '<div class="vbody"><div class="vtop">' + pill(v.status) + '<span class="muted small">' + e(v.reference) + '</span></div>' +
       '<h3><a href="#/nurse/customer?p=' + e(v.personId) + '">' + e(v.customerName) + '</a></h3>' +
@@ -161,9 +161,9 @@
         (rows.length ? '<div class="ncards">' + rows.map(function (c) {
           return '<article class="ncard" data-find="' + e((c.name + ' ' + c.customerId).toLowerCase()) + '"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div></div>' +
             '<p class="nc-next">' + icon('clock') + (c.next ? '<span>Next visit: <b>' + e(rel(c.next.date)) + ', ' + e(c.next.start ? K.hm12(c.next.start) : SLOT[c.next.slot]) + '</b> · ' + e(c.next.serviceName) + '</span>' : '<span class="muted">No visit scheduled</span>') + '</p>' +
-            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess?p=' + e(c.id) + '">' + icon('gauge') + 'Risk check</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
+            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess/regular?p=' + e(c.id) + '">' + icon('pulse') + 'Regular Checkup</a><a class="btn sm ghost" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon('idcard') + 'Onboarding</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
         }).join('') + '</div><p class="empty" data-none hidden><b>No customer matches</b>Try another name or ID.</p>' : '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers, and new visits appear under My visits.</div>') +
-        '<p class="note">' + icon('shield') + '<span>For privacy, nurses do not see health history, medical records or earlier risk scores; you enter new risk checks under Risk checks. Phone numbers stay hidden until you need them for a visit or an emergency.</span></p></div>';
+        '<p class="note">' + icon('shield') + '<span>For privacy, nurses do not see health history, medical records or risk results. Record visits under Assessment and upload reports: they are read automatically and the family and the office see the results. Phone numbers stay hidden until you need them for a visit or an emergency.</span></p></div>';
     }, fail);
   }
 
@@ -178,7 +178,8 @@
       api('GET', 'nurse/customers/' + encodeURIComponent(pick.id)).then(function (d) {
         if (!d.ok) return fail(d);
         S.cache.ncard = d.customer; S.cache.nopen = {};
-        $('#mn').innerHTML = '<div class="npage">' + head('Customer information', 'What you need for a visit. Numbers stay hidden until you need them.') + selectBar(list, pick) + cardHtml(d.customer) + '</div>';
+        $('#mn').innerHTML = '<div class="npage">' + head('Customer information', 'What you need for a visit. Numbers stay hidden until you need them.') + selectBar(list, pick) +
+          cardHtml(d.customer) + '</div>';
       });
     }, fail);
   }
@@ -273,7 +274,7 @@
 
   // ================================================================ Upload documents (submit only)
   function uploadPage(r) {
-    shell('nurse/upload', head('Upload documents', 'Send a report or prescription for a customer. Once sent, it goes to the family and the office.') + K.loading(300));
+    shell('nurse/upload', head('Upload documents', 'Send a report or prescription for a customer. It is read automatically: measurements with a clear test date go into the customer\'s health records, and the rest is checked by the office.') + K.loading(300));
     Promise.all([customers(), api('GET', 'nurse/submissions')]).then(function (x) {
       var list = x[0], subs = x[1];
       if (!subs.ok) return fail(subs);
@@ -286,10 +287,10 @@
         '<div class="upstate" data-upstate role="status" aria-live="polite" hidden></div>' +
         '<button class="btn" type="submit">' + icon('upload') + 'Submit document</button></form>' : '<p class="muted">No customers are assigned to you yet.</p>') + '</section>';
       var receipts = '<section class="panel nsec"><div class="panel-h"><h2>Your submissions</h2><span class="muted small">' + subs.rows.length + ' sent</span></div>' +
-        (subs.rows.length ? '<div class="tw"><table class="stackable rtable"><thead><tr><th>Customer</th><th>Document</th><th>Category</th><th>Submitted</th><th>Status</th></tr></thead><tbody>' + subs.rows.map(function (s) {
-          return '<tr><td data-l="Customer"><b>' + e(names[s.customerId] || s.customerId) + '</b><br><span class="muted small">' + e(s.customerId) + '</span></td><td data-l="Document">' + e(s.documentName) + '</td><td data-l="Category">' + e(CATS[s.category] || s.category || '') + '</td><td data-l="Submitted">' + e(K.dt(s.submittedAt)) + '</td><td data-l="Status"><span class="pill ' + (s.status === 'Submitted' ? 'active' : 'ended') + '"><i></i>' + e(s.status) + '</span></td></tr>';
+        (subs.rows.length ? '<div class="tw"><table class="stackable rtable"><thead><tr><th>Customer</th><th>Document</th><th>Category</th><th>Submitted</th><th>Processing status</th></tr></thead><tbody>' + subs.rows.map(function (s) {
+          return '<tr><td data-l="Customer"><b>' + e(names[s.customerId] || s.customerId) + '</b><br><span class="muted small">' + e(s.customerId) + '</span></td><td data-l="Document">' + e(s.documentName) + '</td><td data-l="Category">' + e(CATS[s.category] || s.category || '') + '</td><td data-l="Submitted">' + e(K.dt(s.submittedAt)) + '</td><td data-l="Status"><span class="pchip ' + e(s.processing || (s.status === 'Submitted' ? 'completed' : 'failed')) + '">' + (s.processing === 'uploaded' || s.processing === 'processing' ? '<span class="spin" aria-hidden="true"></span>' : '') + e(s.status) + '</span></td></tr>';
         }).join('') + '</tbody></table></div>' : '<p class="muted">Documents you send appear here as receipts.</p>') + '</section>';
-      $('#mn').innerHTML = '<div class="npage">' + head('Upload documents', 'Send a report or prescription for a customer. Once sent, it goes to the family and the office.') +
+      $('#mn').innerHTML = '<div class="npage">' + head('Upload documents', 'Send a report or prescription for a customer. It is read automatically: measurements with a clear test date go into the customer\'s health records, and the rest is checked by the office.') +
         '<div class="ngrid2">' + form + receipts + '</div><p class="note">' + icon('lock') + '<span>For privacy, a document cannot be opened, downloaded, replaced or deleted after you submit it. If you sent the wrong file, tell the office.</span></p></div>';
     }, fail);
   }
@@ -314,6 +315,9 @@
           '<dt>Customer ID</dt><dd>' + e(rc.customerId) + '</dd><dt>Document</dt><dd>' + e(rc.documentName) + '</dd><dt>Submitted</dt><dd>' + e(K.dt(rc.submittedAt)) + '</dd><dt>Status</dt><dd>' + e(rc.status) + '</dd></dl></div>',
           '<button class="btn" data-act="close">Done</button>');
         K.render();
+        // the status moves on as the document is read: refresh the list a few times
+        var tries = 0, tick = function () { if (tries++ > 12 || !$('#mn') || location.hash.indexOf('nurse/upload') === -1) return; api('GET', 'nurse/submissions').then(function (x) { if (x.ok && x.rows.some(function (r) { return r.processing === 'uploaded' || r.processing === 'processing'; })) setTimeout(tick, 4000); else if (!$('dialog[open]')) K.render(); }); };
+        setTimeout(tick, 4000);
       });
   };
 
@@ -382,7 +386,7 @@
   K.register('nurse', {
     label: 'Nurse portal',
     menu: MENU,
-    personPages: ['nurse/customer', 'nurse/upload', 'assess'],
+    personPages: ['nurse/customer', 'nurse/upload', 'assess', 'assess/regular', 'assess/onboarding'],
     notifPage: '#/nurse/notifications',
     route: function (r, top) {
       if (top !== 'nurse') return false;

@@ -1,0 +1,491 @@
+{
+ "regular": {
+  "sheets": [
+   "Sheet7",
+   "General Data",
+   "Vitals",
+   "Diet",
+   "Stool Details",
+   "Urine Details",
+   "Sleep",
+   "Nutrient Profile"
+  ],
+  "cells": {
+   "Sheet7!A1": "In time",
+   "Sheet7!B1": "Out time",
+   "Sheet7!C1": "Name of Caregiver",
+   "General Data!A1": "Parameter",
+   "General Data!A2": "Height",
+   "General Data!A3": "Weight",
+   "General Data!A4": "Standard Weight",
+   "General Data!A5": "BMI ",
+   "General Data!A6": "Body Fat rate",
+   "General Data!A7": "Body mositure rate",
+   "General Data!A8": "Visceral fat",
+   "General Data!A9": "Bone mass",
+   "General Data!A10": "BMR",
+   "General Data!A11": "Protein",
+   "General Data!A12": "Obesity Levels",
+   "General Data!A13": "Subcutaneous Fat%",
+   "General Data!A14": "Lean Body Mass",
+   "General Data!A15": "Body type",
+   "General Data!A16": "Body Temperature",
+   "General Data!A17": "Back pain",
+   "General Data!A18": "Knee/joint Pain",
+   "General Data!A19": "Dizziness",
+   "General Data!B19": "No",
+   "General Data!A20": "Toothache ",
+   "General Data!A21": "Headache",
+   "General Data!A22": "Eye Sight",
+   "General Data!A23": "Life style",
+   "General Data!A24": "Cognitive State",
+   "General Data!A25": "Did they Consume medicine on Time",
+   "General Data!C26": "Weekly Consumption",
+   "General Data!A27": "Alchohol Consumption",
+   "General Data!A28": "Smoking",
+   "Vitals!A1": "Oxygen Saturation Levels",
+   "Vitals!A2": "Heart Beat Rate (pulse rate)",
+   "Vitals!A3": "Perfusion Index",
+   "Vitals!A4": "Blood Glucose",
+   "Vitals!A5": "Blood Pressure",
+   "Vitals!B5": "Systolic",
+   "Vitals!C5": "Diastolic",
+   "Diet!B1": "# Meals per day",
+   "Diet!C1": "Quantity per Meal",
+   "Diet!A2": "Frequency of food Intake",
+   "Diet!A3": "Last Meal of the day",
+   "Diet!A4": "What was the last meal?",
+   "Diet!A5": "Water Intake Per day",
+   "Diet!A6": "Frequency of Water Consumption",
+   "Diet!A7": "Type & Quantity of Food Consumed",
+   "Diet!B7": "Food Category",
+   "Diet!D7": "Quantity/Day",
+   "Diet!B8": "Cereals",
+   "Diet!B9": "Meat",
+   "Diet!B10": "Lentils & Pulses",
+   "Diet!B11": "Vegetables",
+   "Diet!B12": "Fruits",
+   "Diet!B13": "Nuts",
+   "Diet!B14": "Cooking Method",
+   "Diet!B15": "Spice",
+   "Diet!B16": "Salt",
+   "Diet!B17": "Sugar",
+   "Diet!B18": "Diary",
+   "Diet!C18": "Milk",
+   "Stool Details!A1": "Frequency of Passing Stools",
+   "Stool Details!A2": "Color",
+   "Stool Details!A3": "Constipation",
+   "Stool Details!A4": "Blood Stain",
+   "Stool Details!A5": "Pain during passing of Stools",
+   "Stool Details!A6": "Type of Stool",
+   "Urine Details!A1": "Frequency of Passing Urine",
+   "Urine Details!A2": "Colour of Urine",
+   "Urine Details!A3": "Type of Urine",
+   "Urine Details!A4": "Blood Stain in Urine",
+   "Urine Details!A5": "Pain during urine passing",
+   "Sleep!A1": "When (what time) do you go to bed? ",
+   "Sleep!A2": "Number of Hours of sleep per day",
+   "Sleep!A3": "How good is the sleep?",
+   "Sleep!A4": "Do You watch phone before sleeping?",
+   "Sleep!A5": "If yes, How much time do you spend on the Phone?",
+   "Nutrient Profile!A1": "Measures the nutrient profile based on Food intake by careseekers",
+   "Nutrient Profile!B3": "Calories",
+   "Nutrient Profile!A4": "Macro Nutrients",
+   "Nutrient Profile!B4": "Carbohydrates",
+   "Nutrient Profile!C4": "Sugar",
+   "Nutrient Profile!B5": "Fat",
+   "Nutrient Profile!C5": "Saturated",
+   "Nutrient Profile!D5": "Unsaturated",
+   "Nutrient Profile!B6": "Proteins",
+   "Nutrient Profile!A7": "Micro Nutrients",
+   "Nutrient Profile!B7": "Vitamins",
+   "Nutrient Profile!C7": "Vitamin A, C, D, B-complex",
+   "Nutrient Profile!B8": "Minerals",
+   "Nutrient Profile!C8": "Iron, Calcium, Potassium, Sodium",
+   "Nutrient Profile!A9": "Other Essential Components",
+   "Nutrient Profile!B9": "Dietary Fiber",
+   "Nutrient Profile!B10": "Phytonutrients",
+   "Nutrient Profile!B11": "Antioxidants",
+   "Nutrient Profile!B12": "Water",
+   "Nutrient Profile!A14": "We need to use AI tools to extract this data from the recorded food intake"
+  },
+  "lists": [
+   {
+    "sheet": "General Data",
+    "cells": "B25",
+    "raw": "Yes,No,Irregular"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "B17:B20 B27:B28",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "B23",
+    "raw": "Sedentary,Moderately Active,Highly Active"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "C27",
+    "raw": "1,2,3,4,More than 4"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "B21",
+    "raw": "No,Mild,Severe"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "C28",
+    "raw": "1 Pack,2 Packs,3 Packs,More than 3 packs"
+   },
+   {
+    "sheet": "General Data",
+    "cells": "B24",
+    "raw": "Perfect,Mild Memory Issues,Severe Memory Issues"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C18",
+    "raw": "Milk,Cheese,Yogurt (Curd),Cream,Butter & Ghee,Frozen Diary Products,Concentrated & Dried Milk"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "B5",
+    "raw": "1.6 Litres,2 Litres,<1.6 litres,>2 Litres"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C8",
+    "raw": "Rice,Millet,Wheat"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C13",
+    "raw": "Cashew,Almond,Peanuts,Pistachio,Walnut"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "B6",
+    "raw": "Every hour,2-3 times a day,After every meals only,3-5 times a day,More than 5 times a day"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C17",
+    "raw": "No,Low,Medium,High"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "B4",
+    "raw": "Rice and Curries,Chappati and Curry,Fruits,Other "
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C9",
+    "raw": "Red Meat,Poultry,Seafood,Game Meat"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C11",
+    "raw": "Root,Stem,Leaf,Flower,Fruit Vegetables"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C15:C16",
+    "raw": "Low,Medium,High"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "B3",
+    "raw": ">2 hours before going to bed,Immediately Before going to Bed,>30 Minutes and Less Than 2 Hours before going to bed"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "B2",
+    "raw": "1,2,3,4,5,>5"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C14",
+    "raw": "Steamed,Shallow Fried,Deep Fried,Raw,Pickled"
+   },
+   {
+    "sheet": "Diet",
+    "cells": "C12",
+    "raw": "Citrus,Tropical,Berries,Stone Fruits,Pome Fruits,Melons,Dry Fruits"
+   },
+   {
+    "sheet": "Stool Details",
+    "cells": "B1",
+    "raw": "1,2,3,>3"
+   },
+   {
+    "sheet": "Stool Details",
+    "cells": "B3:B5",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "Stool Details",
+    "cells": "B6",
+    "raw": "Separate Hard Lumps like Nuts,Sausage Shaped with Cracks,Sausage Shaped with Cracks on Surface,Smooth and Snake like,Soft Blobs with clear cut edges,Fluffy, Mushy or Regged Edges,Liquidy/Watery"
+   },
+   {
+    "sheet": "Stool Details",
+    "cells": "B2",
+    "raw": "Brown,Green,Red,Black or Tarry,Pale, White or Clay Colour,Yellow"
+   },
+   {
+    "sheet": "Stool Details",
+    "cells": "C3 C5",
+    "raw": "Mild,Severe"
+   },
+   {
+    "sheet": "Urine Details",
+    "cells": "B1",
+    "raw": "4-10 times/day,<4 times a day,>10 times a day"
+   },
+   {
+    "sheet": "Urine Details",
+    "cells": "B4:B5",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "Urine Details",
+    "cells": "B3",
+    "raw": "Cloudy or Milky,Foamy or Frothy,Normal"
+   },
+   {
+    "sheet": "Urine Details",
+    "cells": "B2",
+    "raw": "Clear or Pale Yellow,Dark Yellow or Amber,Orange,Pink or Red,Dark Brown or Tea/Cola Coloured,Blue or Green"
+   },
+   {
+    "sheet": "Sleep",
+    "cells": "B4",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "Sleep",
+    "cells": "B2",
+    "raw": "7-8 Hours,<7 hours ,>8 hours"
+   },
+   {
+    "sheet": "Sleep",
+    "cells": "B3",
+    "raw": "Good,Moderate,Bad"
+   }
+  ]
+ },
+ "first": {
+  "sheets": [
+   "General Checklist",
+   "General Information",
+   "Emergency Contact",
+   "Doctors Contact",
+   "Allergies",
+   "Pre-existing Health Conditions"
+  ],
+  "cells": {
+   "General Checklist!A1": "Consent to share past health records",
+   "General Checklist!A2": "Consent to share the health data with Physician (Physical Form)",
+   "General Checklist!A3": "Consent to Share Family Doctor Contact",
+   "General Checklist!A4": "Specialist Consultant Doctor Contact",
+   "General Checklist!B7": "ID Type",
+   "General Checklist!C7": "ID Number",
+   "General Checklist!A8": "KYC Details",
+   "General Checklist!A9": "Photo",
+   "General Checklist!A10": "Copy of ID Card",
+   "General Checklist!A12": "Location Details",
+   "General Checklist!B12": "GPS Coordinates",
+   "General Checklist!C12": "GPS Link",
+   "General Information!A1": "Name",
+   "General Information!A2": "Date of Birth",
+   "General Information!A3": "Age",
+   "General Information!A4": "Gender",
+   "General Information!A5": "Blood Group",
+   "General Information!A6": "Qualifications",
+   "General Information!A7": "Languages Spoken",
+   "General Information!A8": "Address",
+   "General Information!A9": "Email",
+   "General Information!A10": "Primary Contact Number",
+   "General Information!A11": "Secondary Contact Number",
+   "General Information!A13": "Smoking",
+   "General Information!A14": "Drinking",
+   "Emergency Contact!A1": "Emergency Contact 1",
+   "Emergency Contact!A2": "Name",
+   "Emergency Contact!A3": "Gender",
+   "Emergency Contact!A4": "Relationship with Client",
+   "Emergency Contact!A5": "Email",
+   "Emergency Contact!A6": "Contact Number",
+   "Emergency Contact!A7": "Languages Spoken",
+   "Emergency Contact!A10": "Emergency Contact 2",
+   "Emergency Contact!A11": "Name",
+   "Emergency Contact!A12": "Gender",
+   "Emergency Contact!A13": "Relationship with Client",
+   "Emergency Contact!A14": "Email",
+   "Emergency Contact!A15": "Contact Number",
+   "Emergency Contact!A16": "Languages Spoken",
+   "Doctors Contact!A1": "Family Doctor",
+   "Doctors Contact!A2": "Name",
+   "Doctors Contact!A3": "Address",
+   "Doctors Contact!A4": "Phone Number",
+   "Doctors Contact!A6": "Specialist Consultant Doctor",
+   "Doctors Contact!A7": "Name",
+   "Doctors Contact!A8": "Address",
+   "Doctors Contact!A9": "Phone Number",
+   "Doctors Contact!A10": "Hospital",
+   "Doctors Contact!A11": "Hospital Contact Number",
+   "Allergies!A1": "General Allergies",
+   "Allergies!A2": "Food Allergies",
+   "Allergies!A3": "Drug Allergies",
+   "Pre-existing Health Conditions!A1": "Cardiovascular Disease",
+   "Pre-existing Health Conditions!A2": "Cancer",
+   "Pre-existing Health Conditions!A3": "Diabetes",
+   "Pre-existing Health Conditions!A4": "Respiratory Illness",
+   "Pre-existing Health Conditions!A5": "Autoimmune Disorders",
+   "Pre-existing Health Conditions!A6": "Nuerological Conditions",
+   "Pre-existing Health Conditions!A7": "Kidney and Liver Disease",
+   "Pre-existing Health Conditions!A8": "Endocrine Disorders",
+   "Pre-existing Health Conditions!A9": "Obesity",
+   "Pre-existing Health Conditions!A10": "Eye Problems",
+   "Pre-existing Health Conditions!A11": "Sleep Disorders",
+   "Pre-existing Health Conditions!A12": "Ear Problems",
+   "Pre-existing Health Conditions!A13": "Contagious Diseases",
+   "Pre-existing Health Conditions!A14": "Mental and Behavioral Health",
+   "Pre-existing Health Conditions!A15": "Other (Specify)"
+  },
+  "lists": [
+   {
+    "sheet": "General Checklist",
+    "cells": "B1:B4 B9:B10 B13",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "General Checklist",
+    "cells": "B8",
+    "raw": "Aadhar,Passport,Driver License,Ration Card,Voter ID Card"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "B4",
+    "raw": "Male,Female,Transgender,Do not want to disclose"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "B6",
+    "raw": "Did not Attend School,Primary Education,10th Pass,10+2,Degree,Masters,MPhil/PhD etc"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "B13",
+    "raw": "Never,Once in a While,Atleast once a week,Daily"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "C14",
+    "raw": "1-2 drinks/day,3-5 drinks/day,>5 drinks/day,Non-drinker"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "C13",
+    "raw": "<1 pack per week,1 Pack per week,2-5 packs per week,>5 packs per week"
+   },
+   {
+    "sheet": "General Information",
+    "cells": "B14",
+    "raw": "Never,Social Drinking,Regular ,Daily "
+   },
+   {
+    "sheet": "Emergency Contact",
+    "cells": "B3 B12",
+    "raw": "Male,Female,Transgender,Do not want to disclose"
+   },
+   {
+    "sheet": "Allergies",
+    "cells": "B2",
+    "raw": "Peanuts,Tree nuts,Milk,Eggs,Wheat,Soy,Seafood,Other (Specify)"
+   },
+   {
+    "sheet": "Allergies",
+    "cells": "B1",
+    "raw": "Allergic rhinitis (Hay fever),Prawn and shellfish allergies,Insect and cockroach allergies,Dust mites"
+   },
+   {
+    "sheet": "Allergies",
+    "cells": "B3",
+    "raw": "Antibiotics (like penicillin),NSAIDs,Chemotherapy drugs,Other (Specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B5",
+    "raw": "Lupus,Multiple sclerosis,Rheumatoid arthritis,Crohn's disease,Other (specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B4",
+    "raw": "Asthma,Breathlessness,Chronic obstructive pulmonary disease (COPD),Emphysema,Diphtheria,Other (specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B11",
+    "raw": "Sleep apnea,Sleep walking,Insomnia,Others (Specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B3",
+    "raw": "Type 1,Type 2"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B9",
+    "raw": "Yes,No"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B6",
+    "raw": "Parkinson's disease,Epilepsy,Migraines"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B7",
+    "raw": "Hepatitis,Fatty Liver,Cirrhosis,Other (specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B1",
+    "raw": "Coronary artery disease,Atherosclerosis,High blood pressure (hypertension),Previous heart attacks or strokes"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B2",
+    "raw": "Lung Cancer,Breast Cancer (Women),Cervical Cancer (Women),Prostate cancer (Men),Oral Cancer,Colorectal Cancer,Other (Specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B8",
+    "raw": "Hypothyroidism,Hyperthyroidism,Other (Specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B12",
+    "raw": "Age-related hearing loss (Presbycusis),Middle ear infections,Chronic Suppurative Otitis Media (CSOM),Serous otitis media,Noise-induced hearing loss (NIHL),Congenital and genetic hearing loss,Other (Specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B13",
+    "raw": "HIV/AIDS,Tuberculosis,Leprosy,Hepatitis,Viral Hepatitis"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B14",
+    "raw": "Dementia,Alzheimer's,Obsessive Compulsive Disorders,Depression,Bipolar,Anxiety disorders (Specify),Psychotic disorders (specify),Substance abuse disorders,Other (specify)"
+   },
+   {
+    "sheet": "Pre-existing Health Conditions",
+    "cells": "B10",
+    "raw": "Myopia (Near-sightedness),Hyperopia (Far-sightedness),Astigmatism (Blurry Vision),Cataract,Glaucoma,Age-related macular degeneration (AMD),Diabetic retinopathy,Strabismus (eyes are misaligned and do not point in the same direction),Retinal detachment,Other (specify)"
+   }
+  ]
+ }
+}

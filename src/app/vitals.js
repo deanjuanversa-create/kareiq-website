@@ -43,7 +43,7 @@ const STALE_AFTER_DAYS = 30;
 const CARDS = ['bp', 'hr', 'glucose', 'spo2', 'pi', 'temp', 'bmi', 'weight', 'chol']; // order on the dashboard
 const ALWAYS_SHOW = ['bp', 'hr', 'glucose', 'spo2'];
 const TRENDS = ['bp', 'glucose', 'hr', 'spo2', 'pi', 'temp', 'weight', 'bmi', 'chol', ...BODY];
-const PERIODS = { '7d': ['Last 7 days', 7], '1m': ['Month', 30], '6m': ['6 months', 182], '1y': ['1 year', 365] };
+const PERIODS = { '7d': ['Last 7 days', 7], '1m': ['Month', 30], '6m': ['6 months', 182], '1y': ['1 year', 365], all: ['All', 36500] };
 const IST_OFFSET = '+05:30';
 
 // ---------------------------------------------------------------- standard ranges
@@ -246,7 +246,7 @@ function measuredAt(date, time, errors, now = new Date()) {
 }
 
 // Turns one visit form into a list of readings plus observations, or errors shown next to each field.
-function parseVisit(body, lastHeight) {
+function parseVisit(body, lastHeight, hasOther) {
   const errors = {};
   const sys = number(body.systolic, 'systolic', errors, true);
   const dia = number(body.diastolic, 'diastolic', errors, true);
@@ -266,7 +266,7 @@ function parseVisit(body, lastHeight) {
   if (note.length > 1000) errors.note = 'Note is too long (max 1000 characters)';
 
   const any = sys !== null || Object.values(vals).some((v) => v !== null) || Object.keys(obs).length;
-  if (!any && !note && !Object.keys(errors).length) errors.form = 'Enter at least one reading, a check, or a note about the visit';
+  if (!any && !note && !hasOther && !Object.keys(errors).length) errors.form = 'Enter at least one reading, a check, or a note about the visit';
   if (Object.keys(errors).length) return { errors };
 
   const readings = [];

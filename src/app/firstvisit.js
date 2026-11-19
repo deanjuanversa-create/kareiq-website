@@ -38,7 +38,7 @@ const SECTIONS = [
         T('email', 'Email', { format: 'email', max: 160 }),
         T('phone1', 'Primary Contact Number', { format: 'phone', max: 20 }),
         T('phone2', 'Secondary Contact Number', { format: 'phone', max: 20 }),
-        S('smoking', 'Smoking', ['Never', 'Once in a While', 'At least once a week', 'Daily']),
+        S('smoking', 'Smoking', ['Never', 'Once in a While', 'Atleast once a week', 'Daily']),
         S('smokingAmount', 'Smoking: how much', ['<1 pack per week', '1 Pack per week', '2-5 packs per week', '>5 packs per week'], { showIf: ['smoking', 'notNever'] }),
         S('drinking', 'Drinking', ['Never', 'Social Drinking', 'Regular', 'Daily']),
         S('drinkingAmount', 'Drinking: how much', ['1-2 drinks/day', '3-5 drinks/day', '>5 drinks/day', 'Non-drinker'], { showIf: ['drinking', 'notNever'] })
@@ -76,7 +76,7 @@ const SECTIONS = [
         S('pcDiabetes', 'Diabetes', ['Type 1', 'Type 2']),
         M('pcRespiratory', 'Respiratory Illness', ['Asthma', 'Breathlessness', 'Chronic obstructive pulmonary disease (COPD)', 'Emphysema', 'Diphtheria', 'Other (specify)']),
         M('pcAutoimmune', 'Autoimmune Disorders', ['Lupus', 'Multiple sclerosis', 'Rheumatoid arthritis', "Crohn's disease", 'Other (specify)']),
-        M('pcNeuro', 'Neurological Conditions', ["Parkinson's disease", 'Epilepsy', 'Migraines']),
+        M('pcNeuro', 'Nuerological Conditions', ["Parkinson's disease", 'Epilepsy', 'Migraines']),
         M('pcKidneyLiver', 'Kidney and Liver Disease', ['Hepatitis', 'Fatty Liver', 'Cirrhosis', 'Other (specify)']),
         M('pcEndocrine', 'Endocrine Disorders', ['Hypothyroidism', 'Hyperthyroidism', 'Other (Specify)']),
         S('pcObesity', 'Obesity', ['Yes', 'No']),
@@ -103,7 +103,8 @@ const BY_KEY = Object.fromEntries(FIELDS.map((f) => [f.k, f]));
 
 // Points in the workbook to confirm with the KareIQ team (shown in the hand-over notes, not to families)
 const REVIEW = [
-  'Spelling fixed: "Nuerological Conditions" shown as "Neurological Conditions"; "Atleast once a week" as "At least once a week".',
+  'Spelling is kept exactly as in the workbook ("Nuerological Conditions", "Atleast once a week"). Details saved earlier with "At least once a week" are read as the workbook option.',
+  'Trailing spaces in the workbook options ("Regular ", "Daily ") are trimmed.',
   'The workbook drop-downs allow one choice per cell. Allergies and health conditions accept several ticks, because a person can have more than one; Diabetes and Obesity stay single choices.',
   'Age has no formula in the workbook; it is worked out from the Date of Birth.',
   'Blood Group has no drop-down in the workbook, so it is a short text box.',
@@ -112,6 +113,9 @@ const REVIEW = [
   'The workbook marks no field as required, so a form can be saved partly filled.',
   'Columns C and D of "Pre-existing Health Conditions" are empty in the workbook and are not used.'
 ];
+
+// values saved before the workbook spelling was restored
+const ALIAS = { 'At least once a week': 'Atleast once a week' };
 
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,}$/;
 const clean = (v, max) => String(v == null ? '' : v).replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, max);
@@ -134,8 +138,9 @@ function validate(raw) {
       if (list.length) data[f.k] = [...new Set(list)];
     } else if (f.type === 'select') {
       if (v == null || v === '') continue;
-      if (!f.options.includes(String(v))) { errors[f.k] = 'Please choose from the list'; continue; }
-      data[f.k] = String(v);
+      const sv = ALIAS[String(v)] && f.options.includes(ALIAS[String(v)]) ? ALIAS[String(v)] : String(v);
+      if (!f.options.includes(sv)) { errors[f.k] = 'Please choose from the list'; continue; }
+      data[f.k] = sv;
     } else if (f.type === 'date') {
       if (v == null || v === '') continue;
       const s = String(v);

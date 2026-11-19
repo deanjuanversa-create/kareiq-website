@@ -77,4 +77,30 @@ async function readNow(buf, mime, category) {
   }
 }
 
-module.exports = { available, read };
+// The pages of one document with their lines (and, for OCR, the word confidences), for the
+// document extraction. Same queue and private temporary folder as read(); a second, deeper OCR pass
+// is made when asked. Returns { ok, pages, engine } or { ok: false, error, retryable }.
+function readPages(buf, mime, opts) {
+  const job = queue.then(() => readPagesNow(buf, mime, opts || {}));
+  queue = job.catch(() => {});
+  return job;
+}
+async function readPagesNow(buf, mime, opts) {
+  const can = await available();
+  if (!can.ok) return { ok: false, error: can.why, retryable: true };
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kq-up-'));
+  try {
+    fs.chmodSync(dir, 0o700);
+    const file = path.join(dir, 'doc' + (mime === 'application/pdf' ? '.pdf' : mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg'));
+    fs.writeFileSync(file, buf, { mode: 0o600 });
+    const r = await exec(PY, [SCRIPT, file, mime].concat(opts.deep ? ['deep'] : []), { timeout: TIMEOUT });
+    let out = null; try { out = JSON.parse(r.stdout); } catch { out = null; }
+    if (!out) return { ok: false, error: r.err && r.err.killed ? 'Reading the document took too long.' : 'The document reader did not answer.', retryable: true };
+    if (!out.ok) return { ok: false, error: out.error === 'timeout' ? 'Reading the document took too long.' : out.error === 'unreadable-image' ? 'The file could not be opened as an image.' : 'The document could not be read (' + out.error + ').', retryable: out.error === 'timeout', engine: out.engine };
+    return { ok: true, pages: out.pages, engine: out.engine };
+  } finally {
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+module.exports = { available, read, readPages };

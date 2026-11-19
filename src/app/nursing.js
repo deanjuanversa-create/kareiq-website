@@ -183,7 +183,10 @@ function create(ctx) {
     if (p === 'nurse/submissions' && req.method === 'GET') {
       const rows = await docs.find('app_records', { uploadedBy: user.id }, { sort: { uploadedAt: -1 }, limit: 100 });
       // a receipt only: no file, no link, no report date or contents
-      return json(res, 200, { ok: true, rows: rows.map((r) => ({ customerId: r.personId, documentName: r.name, category: r.category, submittedAt: r.uploadedAt, status: r.removed ? 'Withdrawn by the office' : 'Submitted' })) });
+      // the processing status (Uploaded ... Completed / Needs Review / Failed), never the values read
+      const ST = { uploaded: 'Uploaded', processing: 'Processing', extracted: 'Extracted', needs_review: 'Needs Review', completed: 'Completed', failed: 'Failed' };
+      return json(res, 200, { ok: true, rows: rows.map((r) => ({ customerId: r.personId, documentName: r.name, category: r.category, submittedAt: r.uploadedAt,
+        status: r.removed ? 'Withdrawn by the office' : r.processing ? ST[r.processing.status] || 'Submitted' : 'Submitted', processing: r.removed ? 'withdrawn' : r.processing ? r.processing.status : null })) });
     }
     return undefined;
   }

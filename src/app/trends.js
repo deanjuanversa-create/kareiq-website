@@ -24,7 +24,8 @@ const NO_HISTORY = 'Not enough historical data to determine your risk trend yet.
 const AXIS = {
   cvd: [0, null, '%'], kidney: [0, null, '%'], fib4: [0, null, ''], nfs: [null, null, ''], elf: [null, null, ''], idrs: [0, 100, 'points'],
   psqi: [0, 21, 'points'], phq9: [0, 27, 'points'], gad7: [0, 21, 'points'], mmse: [0, 30, 'points'], tug: [0, null, 'seconds'],
-  balance4: [0, 4, 'stages'], reach: [0, null, 'cm'], chair30: [0, null, 'stands'], snehita: [0, 1, ''], bmi: [null, null, 'kg/m²']
+  balance4: [0, 4, 'stages'], reach: [0, null, 'cm'], chair30: [0, null, 'stands'], snehita: [0, 1, ''], bmi: [null, null, 'kg/m²'],
+  bp_std: [null, null, 'mmHg'], spo2_std: [null, 100, '%'], pulse_std: [null, null, 'bpm'], pi_std: [0, null, ''], glucose_std: [null, null, 'mg/dL']
 };
 
 const decimals = (v) => { const s = String(v); return s.includes('.') ? s.split('.')[1].length : 0; };
@@ -94,6 +95,13 @@ function dayStartIST(isoOrMs) {
 }
 // a person's registration date (the earliest point of their history)
 function registeredMs(person) { return dayStartIST(person.registeredAt || person.createdAt || 0) || 0; }
+// Where a person's health history starts: the registration date, or the day of the earliest valid
+// reading when one is older (e.g. a report from before registration, uploaded later).
+function historyStartMs(person, readings) {
+  let start = registeredMs(person);
+  for (const r of readings || []) if (!r.voided && Number.isFinite(r.measuredMs) && r.measuredMs < start) start = dayStartIST(r.measuredMs);
+  return start;
+}
 
 // readings newest first -> one reading per metric and timestamp (repeated entries count once)
 function dedupe(readings) {
@@ -101,4 +109,4 @@ function dedupe(readings) {
   return readings.filter((r) => { const k = r.metric + '|' + r.measuredMs; if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-module.exports = { AXIS, compare, riskTrends, registeredMs, dayStartIST, dedupe, NO_HISTORY, BETTER, RANK };
+module.exports = { AXIS, compare, riskTrends, registeredMs, historyStartMs, dayStartIST, dedupe, NO_HISTORY, BETTER, RANK };

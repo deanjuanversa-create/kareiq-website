@@ -14,7 +14,12 @@ const crypto = require('crypto');
 const docs = require('../docs');
 const store = require('../store');
 const auth = require('./auth');
+const checkup = require('./checkup');
 const vitals = require('./vitals');
+// Health details pages: Body composition holds weight, height, BMI and the smart-scale measures;
+// Vitals holds the vital signs (and cholesterol, the one lab value recorded at visits). Display only:
+// the readings themselves are unchanged.
+const dashGroup = (k) => (vitals.METRICS[k].group === 'body' || ['weight', 'height', 'bmi'].includes(k) ? 'body' : 'vitals');
 const { PRODUCTS, INCLUDES, PLAN_STATUS, planName, plansFor, productOfRequest } = require('./products');
 const { normalisePhone } = require('../validate');
 const { sendMail, mailReady } = require('../notify');
@@ -35,6 +40,9 @@ const staffMod = require('./staff');
 const financeMod = require('./finance');
 const nursingMod = require('./nursing');
 const officeMod = require('./office');
+const riskEngineMod = require('./riskengine');
+const riskRules = require('./riskrules');
+const featuresMod = require('./features');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
 const RELATIONS_MAX = 40;
@@ -179,6 +187,10 @@ const shared = { docs, uid, now, todayIST: dayIST, store };
 shared.scheduler = schedulerMod.create(shared);
 shared.staff = staffMod.create(shared);
 shared.finance = financeMod.create(shared);
+// the automatic risk engine: one authoritative result per person, used by every dashboard
+shared.risk = riskEngineMod.create(shared);
+// document intelligence: every uploaded medical document (nurse or customer) goes through this one pipeline
+shared.documents = require('./docintel').create({ ...shared, audit, risk: shared.risk });
 // a nurse may see a customer they are linked to, or one they have an active visit with
 async function nurseVisit(userId, personId) {
   const since = dayIST(-1);
@@ -227,7 +239,7 @@ async function personView(user, person, product, period) {
   const users = userIds.length ? await docs.find('app_users', { id: { $in: userIds } }) : [];
   const nameOf = (id) => (users.find((u) => u.id === id) || {}).name || 'Care team';
 
-  const regMs = trends.registeredMs(person);
+  const regMs = trends.historyStartMs(person, readingsAll);
   const readings = trends.dedupe(readingsAll.filter((r) => r.measuredMs >= regMs));
   const latest = {};
   for (const r of readings) if (!latest[r.metric]) latest[r.metric] = r;
@@ -262,6 +274,7 @@ function readingOut(r) {
   const o = { id: r.id, metric: r.metric, at: r.measuredAt };
   for (const k of ['value', 'systolic', 'diastolic', 'context']) if (r[k] !== undefined && r[k] !== null) o[k] = r[k];
   if (r.source === 'calculated') o.calculated = true;
+  if (riskRules.INPUTS[r.metric]) { o.label = riskRules.INPUTS[r.metric].label; o.unit = riskRules.INPUTS[r.metric].unit; o.kind = 'assessment'; }
   return o;
 }
 
@@ -389,8 +402,8 @@ async function dashboardData(user, person, range) {
     docs.find('app_risks', { personId: person.id }, { sort: { at: -1 } })
   ]);
   const sex = person.sex || null;
-  // history starts on the person's registration date: nothing earlier is shown or exported
-  const regMs = trends.registeredMs(person);
+  // history starts on the registration date, or earlier when an older record exists (an older report uploaded later)
+  const regMs = trends.historyStartMs(person, readingsAll);
   const readings = trends.dedupe(readingsAll.filter((r) => r.measuredMs >= regMs));
   const risksIn = risks.filter((r) => Date.parse(r.at) >= regMs);
   const fromMs = Math.max(range.fromMs, regMs);
@@ -404,7 +417,7 @@ async function dashboardData(user, person, range) {
   const latestOut = Object.keys(latest).filter((k) => vitals.METRICS[k]).map((k) => {
     const r = latest[k];
     const c = vitals.classify(k, r, sex);
-    return { metric: k, label: vitals.METRICS[k].label, unit: vitals.METRICS[k].unit, value: valueText(k, r), context: r.context || null, at: r.measuredAt, level: c.level, status: c.label, range: c.range, group: vitals.METRICS[k].group || 'vitals' };
+    return { metric: k, label: vitals.METRICS[k].label, unit: vitals.METRICS[k].unit, value: valueText(k, r), context: r.context || null, at: r.measuredAt, level: c.level, status: c.label, range: c.range, group: dashGroup(k) };
   });
   const order = [...vitals.CARDS, 'height', ...vitals.BODY];
   latestOut.sort((a, b) => order.indexOf(a.metric) - order.indexOf(b.metric));
@@ -428,7 +441,7 @@ async function dashboardData(user, person, range) {
     const rounded = Object.fromEntries(Object.entries(avgFor).map(([a, b]) => [a, typeof b === 'number' ? Math.round(b * (k === 'bp' || k === 'hr' || k === 'spo2' ? 1 : 10)) / (k === 'bp' || k === 'hr' || k === 'spo2' ? 1 : 10) : b]));
     const c = vitals.classify(k, rounded, sex);
     series.push({
-      metric: k, label: m.label, unit: m.unit, names: m.series.map((s) => s[1]), keys, group: m.group || 'vitals',
+      metric: k, label: m.label, unit: m.unit, names: m.series.map((s) => s[1]), keys, group: dashGroup(k),
       average: k === 'bp' ? `${rounded.systolic}/${rounded.diastolic}` : String(rounded.value), averageNote: k === 'glucose' ? (avgFor.context === 'fasting' ? 'fasting readings' : 'all readings') : null,
       level: c.level, status: c.label, range: c.range,
       rows: rows.map((r) => {
@@ -441,36 +454,46 @@ async function dashboardData(user, person, range) {
     });
   }
 
-  // risk scores: the latest of each test, plus BMI from the latest weight and height
+  // risk: the one authoritative result from the risk engine (the same for every dashboard), the
+  // indicators it calculated, and each indicator's history. Results typed in by hand before the
+  // engine existed stay in the history but are marked as earlier manual checks without a colour.
+  const st = await shared.risk.status(person.id);
+  const riskStatus = riskEngineMod.view(st, user.role);
+  const titleOf = (t) => (riskRules.BY_ID[t] || {}).title || ((risk.TESTS.find((x) => x.id === t) || {}).title) || t;
+  const groupOf = (t) => (riskRules.BY_ID[t] || {}).group || ((risk.TESTS.find((x) => x.id === t) || {}).group) || 'other';
   const riskLatest = [];
-  const seen = new Set();
+  for (const i of (riskStatus ? riskStatus.indicators : []).filter((x) => x.status === 'calculated')) {
+    riskLatest.push({ id: 'cur-' + i.id, test: i.id, group: i.group, groupName: i.groupName, title: i.title, value: i.value, display: i.display, level: i.level, band: i.band || 'Between workbook bands',
+      category: i.category, categoryName: i.categoryName, counts: i.counts, approved: i.approved, expired: i.expired, message: i.message, note: i.note, scale: '', at: i.at, by: 'Calculated automatically' });
+  }
+  const seen = new Set(riskLatest.map((x) => x.test));
   for (const r of risksIn) {
-    if (seen.has(r.test)) continue;
+    if (seen.has(r.test) || r.source === 'auto') continue;
     seen.add(r.test);
-    const t = risk.TESTS.find((x) => x.id === r.test);
-    if (!t) continue;
-    riskLatest.push({ id: r.id, test: r.test, group: t.group, groupName: risk.GROUPS[t.group], title: t.title, value: r.value, display: r.display, level: r.level, band: r.band, note: r.note || null, scale: r.scale || '', at: r.at, by: nameOf(r.enteredBy) });
+    riskLatest.push({ id: r.id, test: r.test, group: groupOf(r.test), groupName: riskRules.GROUPS[groupOf(r.test)] || risk.GROUPS[groupOf(r.test)] || 'Other', title: titleOf(r.test), value: r.value, display: r.display, level: null, band: r.band,
+      legacy: true, message: 'Entered by hand before risk was calculated automatically. It does not count towards the overall category.', note: r.note || null, scale: r.scale || '', at: r.at, by: nameOf(r.enteredBy) });
   }
-  if (latest.bmi) {
-    const b = risk.bmiRisk(latest.bmi.value);
-    riskLatest.push({ id: 'bmi', test: 'bmi', group: 'weight', groupName: risk.GROUPS.weight, title: 'Obesity (Body Mass Index)', ...b, note: null, at: latest.bmi.measuredAt, by: 'From the latest weight and height' });
-  }
-  const groupOrder = Object.keys(risk.GROUPS);
+  const groupOrder = Object.keys(riskRules.GROUPS);
   riskLatest.sort((a, b) => groupOrder.indexOf(a.group) - groupOrder.indexOf(b.group));
-  // risk trend: each check against its previous assessment (real assessments only)
-  const riskTrend = trends.riskTrends(risksIn, readings.filter((r) => r.metric === 'bmi'), regMs, {
-    bmi: (v) => risk.bmiRisk(v), title: (t) => (t === 'bmi' ? 'Obesity (Body Mass Index)' : (risk.TESTS.find((x) => x.id === t) || {}).title || t)
-  });
+  // risk trend: each indicator against its previous result (real results only). Manual results keep
+  // their value and band but no colour; BMI history comes from the weight and height readings.
+  const histRows = risksIn.filter((r) => r.test !== 'bmi').map((r) => ({ ...r, level: r.source === 'auto' ? r.level || null : null }));
+  const bmiCalc = (v) => { const o = riskRules.BY_ID.bmi.calc({ bmi: v }); return { value: v, display: o.display, band: riskRules.pickBand(riskRules.BY_ID.bmi.bands, o.bandKey).label, level: null }; };
+  const riskTrend = trends.riskTrends(histRows, readings.filter((r) => r.metric === 'bmi'), regMs, { bmi: bmiCalc, title: titleOf });
   const trendOf = Object.fromEntries(riskTrend.map((t) => [t.test, t]));
   for (const r of riskLatest) r.trend = trendOf[r.test] ? { direction: trendOf[r.test].direction, text: trendOf[r.test].text, previous: trendOf[r.test].previous, change: trendOf[r.test].change, pct: trendOf[r.test].pct, unit: trendOf[r.test].unit } : null;
   riskTrend.sort((a, b) => riskLatest.findIndex((x) => x.test === a.test) - riskLatest.findIndex((x) => x.test === b.test));
 
   // the latest wellbeing checks (food, toilet, sleep...) and notes from visits
-  const lastObs = visits.find((v) => v.obs && Object.keys(v.obs).length);
-  const obs = lastObs ? {
-    at: lastObs.at, by: nameOf(lastObs.by), flags: vitals.obsFlags(lastObs.obs),
-    groups: vitals.OBS_GROUPS.map(([title, keys]) => ({ title, items: keys.filter((k) => lastObs.obs[k] !== undefined).map((k) => ({ k, label: vitals.OBS[k].label, text: vitals.obsText(k, lastObs.obs[k]), flag: vitals.obsFlags({ [k]: lastObs.obs[k] }).length > 0 })) })).filter((g) => g.items.length)
-  } : null;
+  // Health details > Wellbeing checks: the latest visit's checks and the earlier ones (same visit records)
+  const obsOf = (v) => ({
+    at: v.at, by: nameOf(v.by), flags: vitals.obsFlags(v.obs).length,
+    groups: vitals.OBS_GROUPS.map(([title, keys]) => ({ title, items: keys.filter((k) => v.obs[k] !== undefined).map((k) => ({ k, label: vitals.OBS[k].label, text: vitals.obsText(k, v.obs[k]), flag: vitals.obsFlags({ [k]: v.obs[k] }).length > 0 })) })).filter((g) => g.items.length)
+  });
+  // a Regular Checkup (workbook answers) or an earlier visit's checks
+  const ckOf = (v) => ({ at: v.at, by: nameOf(v.by), flags: 0, form: 'regular_checkup', inTime: v.inTime || null, outTime: v.outTime || null, groups: checkup.display(v.checkup) });
+  const obsHistory = visits.filter((v) => (v.checkup && Object.keys(v.checkup).length) || (v.obs && Object.keys(v.obs).length)).slice(0, 20).map((v) => (v.checkup && Object.keys(v.checkup).length ? ckOf(v) : obsOf(v)));
+  const obs = obsHistory[0] || null;
   const open = plans.filter((pl) => pl.status !== 'ended');
   return {
     person: { id: person.id, name: person.name, birthYear: person.birthYear || null, age: ageOf(person), sex, smoker: person.smoker ?? null, parentalMI: person.parentalMI ?? null, diabetic: person.diabetic ?? null, relation: person.relation || null },
@@ -481,23 +504,12 @@ async function dashboardData(user, person, range) {
       registeredOn: istDate(regMs), clamped: range.fromMs < regMs, beforeRegistration: range.toMs < regMs
     },
     riskTrend,
-    metrics: vitals.TRENDS.map((k) => ({ k, label: vitals.METRICS[k].label, group: vitals.METRICS[k].group === 'body' ? 'body' : 'vitals', count: (series.find((m) => m.metric === k) || { rows: [] }).rows.length })),
-    latest: latestOut, series, risks: riskLatest, obs,
+    metrics: vitals.TRENDS.map((k) => ({ k, label: vitals.METRICS[k].label, group: dashGroup(k), count: (series.find((m) => m.metric === k) || { rows: [] }).rows.length })),
+    latest: latestOut, series, risks: riskLatest, riskStatus, obs, obsHistory,
     notes: visits.filter((v) => v.note).slice(0, 8).map((v) => ({ at: v.at, by: nameOf(v.by), note: v.note, product: v.product })),
     lastVisit: visits[0] ? { at: visits[0].at, by: nameOf(visits[0].by) } : null,
     canRecord: await careTeam(user, person.id) && open.some((pl) => pl.status === 'active'),
     canAssess: await careTeam(user, person.id)
-  };
-}
-
-async function riskPrefill(person) {
-  const rows = await docs.find('app_readings', { personId: person.id, voided: false, metric: { $in: ['bp', 'chol', 'bmi'] } }, { sort: { measuredAt: -1 } });
-  const last = (m) => rows.find((r) => r.metric === m);
-  const yn = (v) => (v === true ? 'yes' : v === false ? 'no' : undefined);
-  return {
-    sex: person.sex || undefined, age: ageOf(person) || undefined,
-    sbp: last('bp') ? last('bp').systolic : undefined, chol: last('chol') ? last('chol').value : undefined, bmi: last('bmi') ? last('bmi').value : undefined,
-    smoker: yn(person.smoker), parentalMI: yn(person.parentalMI), diabetic: yn(person.diabetic)
   };
 }
 
@@ -869,8 +881,17 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const prod = PRODUCTS[product] ? product : productOf((await docs.find('app_plans', { personId: person.id })).filter((pl) => pl.status !== 'ended'));
       if (!(await canRecord(user, person.id, prod))) throw forbidden();
       const last = (await docs.find('app_readings', { personId: person.id, metric: 'height', voided: false }, { sort: { measuredAt: -1 }, limit: 1 }))[0];
-      const parsed = vitals.parseVisit(body, last ? last.value : null);
-      if (parsed.errors) return json(res, 400, { ok: false, message: parsed.errors.form || 'Please check the highlighted fields.', errors: parsed.errors });
+      // Assessment > Regular Checkup sends the workbook answers as body.checkup; the readings use the usual names
+      const isCheckup = body.checkup && typeof body.checkup === 'object';
+      const ckErrors = {};
+      const ck = isCheckup ? checkup.parse(body.checkup, ckErrors) : null;
+      if (isCheckup && ck.inTime) body.time = ck.inTime; // the readings are timed at the In time
+      const parsed = vitals.parseVisit(body, last ? last.value : null, Boolean(ck && Object.keys(ck).length));
+      if (isCheckup && ck.outTime && !ckErrors['ck.outTime']) {
+        const outMs = Date.parse(`${body.date || new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date())}T${ck.outTime}:00+05:30`);
+        if (outMs > Date.now() + 5 * 60 * 1000) ckErrors['ck.outTime'] = 'Out time cannot be in the future';
+      }
+      if (parsed.errors || Object.keys(ckErrors).length) { const errs = { ...(parsed.errors || {}), ...ckErrors }; return json(res, 400, { ok: false, message: errs.form || 'Please check the highlighted fields.', errors: errs }); }
       if (Date.parse(parsed.when) < trends.registeredMs(person)) {
         return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: { when: 'The visit date cannot be before ' + String(person.name).split(' ')[0] + '\'s registration date (' + fmtDay.format(new Date(trends.registeredMs(person))) + ')' } });
       }
@@ -884,8 +905,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         });
       }
       const metrics = [...new Set(parsed.readings.map((r) => r.metric))];
-      await docs.insert('app_visits', { id: visitId, personId: person.id, product: prod, by: user.id, at: new Date(at).toISOString(), note: parsed.note, metrics, obs: parsed.obs, createdAt: now() });
-      await audit(user.id, 'visit.save', person.id, { metrics, product: prod });
+      const visit = { id: visitId, personId: person.id, product: prod, by: user.id, at: new Date(at).toISOString(), note: parsed.note, metrics, obs: parsed.obs, createdAt: now() };
+      if (isCheckup) Object.assign(visit, { form: 'regular_checkup', checkup: ck, inTime: ck.inTime || null, outTime: ck.outTime || null, caregiverName: user.name });
+      await docs.insert('app_visits', visit);
+      await audit(user.id, isCheckup ? 'checkup.save' : 'visit.save', person.id, { metrics, product: prod });
+      await shared.risk.recalc(person.id, 'visit', user.id); // new vitals: indicators and the overall category are worked out again
       return json(res, 201, { ok: true, saved: metrics });
     }
 
@@ -893,11 +917,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       const r = await docs.findOne('app_readings', { id: String(parts[1]) });
       if (!r || r.voided) throw notFound();
       await visiblePerson(user, r.personId, r.product);
-      if (user.role !== 'admin' && !(user.role === 'caregiver' && r.enteredBy === user.id)) throw forbidden();
+      if (user.role !== 'admin' && !(user.role === 'caregiver' && r.enteredBy === user.id && r.source === 'caregiver_visit')) throw forbidden();
       const reason = clean(body.reason, 300);
       if (reason.length < 3) return json(res, 400, { ok: false, message: 'Please say why this reading is wrong.', errors: { reason: 'Required' } });
       await docs.update('app_readings', r.id, { voided: true, voidReason: reason, voidedBy: user.id, voidedAt: now() });
       await audit(user.id, 'reading.remove', r.personId, { metric: r.metric, reason });
+      await shared.risk.recalc(r.personId, 'reading corrected', user.id);
       return json(res, 200, { ok: true });
     }
 
@@ -905,7 +930,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (parts[0] === 'people' && parts[2] === 'recent' && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1], product);
       let rows = await docs.find('app_readings', { personId: person.id, voided: false }, { sort: { measuredAt: -1 }, limit: 60 });
-      if (!historyAllowed(user)) rows = rows.filter((r) => r.enteredBy === user.id && Date.now() - Date.parse(r.enteredAt) < 86400000);
+      // nurses: only the visit readings they typed in today; never values read from documents and never
+      // lab or questionnaire results (risk test results are not shown to nurses)
+      if (!historyAllowed(user)) rows = rows.filter((r) => r.enteredBy === user.id && Date.now() - Date.parse(r.enteredAt) < 86400000 && r.source === 'caregiver_visit' && r.kind !== 'assessment');
       return json(res, 200, { ok: true, rows: rows.filter((r) => r.source !== 'calculated').slice(0, 20).map((r) => ({ ...readingOut(r), mine: r.enteredBy === user.id || user.role === 'admin' })) });
     }
 
@@ -948,37 +975,10 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, obs: vitals.OBS, groups: vitals.OBS_GROUPS, body: vitals.BODY.map((k) => ({ k, label: vitals.METRICS[k].label, unit: vitals.METRICS[k].unit })), contexts: vitals.GLUCOSE_CONTEXTS });
     }
 
-    // ----- risk scores: forms for the care team, saving a result
-    if (p === 'risk/forms' && req.method === 'GET') {
-      if (user.role !== 'caregiver') throw forbidden(); // risk checks are done by the nurses
-      const forms = risk.forms();
-      let prefill = {};
-      const pid = url.searchParams.get('person');
-      if (pid) {
-        const person = await visiblePerson(user, pid);
-        if (!(await careTeam(user, person.id))) throw forbidden();
-        prefill = await riskPrefill(person);
-      }
-      return json(res, 200, { ok: true, forms, prefill });
-    }
-    if (parts[0] === 'people' && parts[2] === 'risks' && req.method === 'POST') {
-      if (user.role !== 'caregiver') throw forbidden(); // risk checks are done by the person's nurse
-      const person = await visiblePerson(user, parts[1]);
-      if (!(await careTeam(user, person.id))) throw forbidden();
-      const out = risk.evaluate(String(body.test || ''), body.inputs || {});
-      if (out.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: out.errors });
-      const at = body.date && /^\d{4}-\d{2}-\d{2}$/.test(body.date) && body.date <= todayIST() ? body.date + 'T12:00:00+05:30' : now();
-      const row = { id: uid(), personId: person.id, test: body.test, inputs: out.inputs, ...out.result, at: new Date(at).toISOString(), enteredBy: user.id, createdAt: now() };
-      await docs.insert('app_risks', row);
-      // remember sex and risk factors on the person, so the next form is filled in
-      const keep = {};
-      if (out.inputs.sex && !person.sex) keep.sex = out.inputs.sex;
-      if (out.inputs.smoker !== undefined) keep.smoker = Boolean(out.inputs.smoker);
-      if (out.inputs.parentMI !== undefined) keep.parentalMI = Boolean(out.inputs.parentMI);
-      if (out.inputs.diabetic !== undefined) keep.diabetic = Boolean(out.inputs.diabetic);
-      if (Object.keys(keep).length) await docs.update('app_people', person.id, keep);
-      await audit(user.id, 'risk.save', person.id, { test: body.test });
-      return json(res, 201, { ok: true, result: out.result });
+    // ----- risk checks are no longer typed in: nurses record the inputs (Assessments) and the engine
+    // calculates every indicator (src/app/riskengine.js). Earlier manual results stay in the history.
+    if ((p === 'risk/forms' && req.method === 'GET') || (parts[0] === 'people' && parts[2] === 'risks' && req.method === 'POST')) {
+      return json(res, 410, { ok: false, message: 'Risk scores are now calculated automatically. Record the vitals and the test results under Assessments.' });
     }
     if (parts[0] === 'people' && parts[2] === 'profile' && req.method === 'POST') {
       const person = await visiblePerson(user, parts[1]);
@@ -993,6 +993,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       for (const k of ['smoker', 'parentalMI', 'diabetic']) if (body[k] === 'yes' || body[k] === 'no') keep[k] = body[k] === 'yes';
       if (Object.keys(keep).length) await docs.update('app_people', person.id, keep);
       await audit(user.id, 'person.edit', person.id, { fields: Object.keys(keep) });
+      if (Object.keys(keep).length) await shared.risk.recalc(person.id, 'details changed', user.id);
       return json(res, 200, { ok: true });
     }
 
@@ -1057,6 +1058,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         if (v.data.pcDiabetes) sync.diabetic = true;
         if (Object.keys(sync).length) await docs.update('app_people', person.id, sync);
         await audit(user.id, 'details.save', person.id, { version, fields: changed.length, status });
+        await shared.risk.recalc(person.id, 'details changed', user.id); // age (date of birth), sex, smoking or diabetes may have changed
         return json(res, 200, { ok: true, version, status, updatedAt: at });
       }
     }
@@ -1075,6 +1077,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, categories: RECORD_CATEGORIES, canUpload: true, canSeeAll: historyAllowed(user), canReread, rows: rows.map((r) => ({
         id: r.id, name: r.name, category: r.category, date: r.date || null, dateStatus: r.dateStatus || 'given', dateLabel: r.dateLabel || null, size: r.size, type: r.mime, uploadedAt: r.uploadedAt,
         by: (users.find((u) => u.id === r.uploadedBy) || {}).name || 'KareIQ', mine: r.uploadedBy === user.id, canRemove: user.role === 'admin' || r.uploadedBy === user.id,
+        processing: shared.documents.statusOf(r), docType: r.docTypeLabel || null,
         ...(canReread ? { dateNote: r.dateNote || null } : {})
       })) });
     }
@@ -1101,7 +1104,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       await visiblePerson(user, r.personId);
       if (user.role !== 'admin' && r.uploadedBy !== user.id) throw forbidden();
       await docs.update('app_records', r.id, { removed: true, removedBy: user.id, removedAt: now() });
-      await audit(user.id, 'record.remove', r.personId, { name: r.name });
+      // values read from this document stop counting (kept, marked removed with the reason; never deleted)
+      const fromDoc = await docs.find('app_readings', { recordId: r.id, voided: false });
+      for (const x of fromDoc) await docs.update('app_readings', x.id, { voided: true, voidReason: 'The document it was read from was removed', voidedBy: user.id, voidedAt: now() });
+      if (r.sha256) await docs.remove('app_doc_hashes', 'h-' + r.personId + '-' + r.sha256);
+      await audit(user.id, 'record.remove', r.personId, { name: r.name, readings: fromDoc.length });
+      if (fromDoc.length) await shared.risk.recalc(r.personId, 'document removed', user.id);
       return json(res, 200, { ok: true });
     }
 
@@ -1734,18 +1742,33 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     try { name = decodeURIComponent(String(req.headers['x-file-name'] || '')); } catch { name = ''; }
     name = clean(name.replace(/\.[A-Za-z0-9]{2,5}$/, ''), 80) || 'Report';
     const category = RECORD_CATEGORIES[req.headers['x-category']] ? String(req.headers['x-category']) : 'others';
+    // the same file for the same person is one document (also when sent twice at the same moment)
+    const hash = shared.documents.sha256(buf);
+    const ref = await docs.findOne('app_doc_hashes', { id: 'h-' + person.id + '-' + hash });
+    const existing = ref ? await docs.findOne('app_records', { id: ref.recordId }) : null;
+    if (existing && !existing.removed) {
+      await audit(user.id, 'record.duplicate', person.id, { record: existing.id });
+      const st = shared.documents.statusOf(existing);
+      if (user.role === 'caregiver') return json(res, 200, { ok: true, duplicate: true, receipt: { customerId: person.id, documentName: existing.name, submittedAt: existing.uploadedAt, status: 'Already received: ' + st.label } });
+      return json(res, 200, { ok: true, duplicate: true, id: existing.id, processing: st, message: 'This document was already uploaded on ' + fmtDay.format(new Date(existing.uploadedAt)) + '. It was not added again.' });
+    }
     // the report date is read from the report itself (never typed in, never the upload date)
     const fileId = uid();
     await docs.insert('app_files', { id: fileId, personId: person.id, data: buf.toString('base64'), createdAt: now() });
-    const row = { id: uid(), personId: person.id, name, category, date: null, dateStatus: 'processing', mime, ext: FILE_TYPES[mime], size: buf.length, fileId, uploadedBy: user.id, uploadedAt: now() };
+    const row = { id: uid(), personId: person.id, name, category, date: null, dateStatus: 'processing', mime, ext: FILE_TYPES[mime], size: buf.length, sha256: hash, fileId, uploadedBy: user.id, uploadedByRole: user.role, uploadedAt: now(),
+      processing: { status: 'uploaded', attempts: 0, updatedAt: now() } };
+    if (!(await docs.insertOnce('app_doc_hashes', { id: 'h-' + person.id + '-' + hash, personId: person.id, recordId: row.id, at: now() }))) {
+      await docs.remove('app_files', fileId);
+      return json(res, 200, { ok: true, duplicate: true, message: 'This document is already being uploaded.' });
+    }
     await docs.insert('app_records', row);
-    await audit(user.id, 'record.add', person.id, { name, category });
-    const job = readReportDate(row.id, buf, mime, category);
+    await audit(user.id, 'record.add', person.id, { name, category, sha256: hash });
+    const job = shared.documents.enqueue(row.id);
     // a serverless demo stops working once it has answered, so it reads before answering (briefly)
     if (process.env.APP_STATELESS === 'true') await Promise.race([job, new Promise((r) => setTimeout(r, 9000))]);
     const now2 = await docs.findOne('app_records', { id: row.id });
-    if (user.role === 'caregiver') return json(res, 201, { ok: true, receipt: { customerId: person.id, documentName: name, submittedAt: row.uploadedAt, status: 'Submitted' } });
-    return json(res, 201, { ok: true, id: row.id, dateStatus: now2.dateStatus, date: now2.date || null });
+    if (user.role === 'caregiver') return json(res, 201, { ok: true, receipt: { customerId: person.id, documentName: name, submittedAt: row.uploadedAt, status: shared.documents.statusOf(now2).label } });
+    return json(res, 201, { ok: true, id: row.id, dateStatus: now2.dateStatus, date: now2.date || null, processing: shared.documents.statusOf(now2) });
   }
   async function readReportDate(id, buf, mime, category) {
     let r;
@@ -1756,22 +1779,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (still && still.dateStatus === 'processing') await docs.update('app_records', id, changes);
     return changes;
   }
-  // Reports saved while this server could not read them (or left half-read by a restart) are read
-  // again automatically, once, shortly after the server starts and the reader is available.
+  // Documents left waiting by a restart (or a failure that may pass) are processed again shortly after start
   if (!global.__kqReread && process.env.APP_STATELESS !== 'true') {
     global.__kqReread = true;
     setTimeout(async () => {
-      try {
-        if (!(await reportreader.available()).ok) return;
-        const rows = (await docs.find('app_records', { dateStatus: { $in: ['review', 'processing'] } })).filter((r) => !r.removed && (r.dateStatus === 'processing' || !r.dateReadAt || /not available|not installed|took too long|could not be read/i.test(r.dateNote || ''))).slice(0, 50);
-        for (const r of rows) {
-          const f = await docs.findOne('app_files', { id: r.fileId });
-          if (!f) continue;
-          await docs.update('app_records', r.id, { dateStatus: 'processing' });
-          await readReportDate(r.id, Buffer.from(f.data, 'base64'), r.mime, r.category);
-        }
-        if (rows.length) console.log(`[app] read the dates of ${rows.length} waiting report(s)`);
-      } catch (e) { console.error('[app] reading waiting reports failed:', e.message); }
+      try { const n = await shared.documents.resume(); if (n) console.log(`[app] processing ${n} waiting document(s)`); } catch (e) { console.error('[app] resuming documents failed:', e.message); }
     }, 15000).unref();
   }
   async function downloadRecord(req, res, id, user, url) {
@@ -1835,6 +1847,15 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   const nursingApi = nursingMod.create(modCtx);
   modCtx.nursing = nursingApi;
   const officeApi = officeMod.create(modCtx);
+  const featuresApi = featuresMod.create({ ...modCtx, visiblePerson, careTeam, canRecord, historyAllowed, readJson, risk: shared.risk });
+
+  // keep every stored risk category current: once shortly after start, then every hour
+  if (!global.__kqRiskTimer && process.env.APP_STATELESS !== 'true') {
+    global.__kqRiskTimer = true;
+    const tick = () => ensureReady().then(() => shared.risk.refreshStale()).catch((e) => console.error('[risk] refresh failed:', e.message));
+    setTimeout(tick, 15000).unref();
+    setInterval(tick, 3600000).unref();
+  }
 
   const handler = async function handleAppApi(req, res, parts, url) {
     await ensureReady();
@@ -1884,6 +1905,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         if (done !== undefined) return;
         return json(res, 404, { ok: false, message: 'Not found.' });
       }
+      // assessments, automatic risk, policies, leave records and notes (src/app/features.js)
+      const fdone = await featuresApi.handle(req, res, parts, url, signed.user);
+      if (fdone !== undefined) return;
       const handled = await signedInRoute(req, res, parts, url, signed.user, signed.session);
       if (handled === undefined && !res.headersSent) return json(res, 404, { ok: false, message: 'Not found.' });
     } catch (err) {

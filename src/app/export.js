@@ -82,7 +82,7 @@ function fileName(ds, opts) {
 }
 
 const periodLine = (ds) => `${ds.period.label}: ${nice(ds.period.from + 'T12:00:00+05:30')} to ${nice(ds.period.to + 'T12:00:00+05:30')}` +
-  (ds.period.clamped ? ` (history begins on ${nice(ds.period.registeredOn + 'T12:00:00+05:30')}, the registration date)` : '');
+  (ds.period.clamped ? ` (history begins on ${nice(ds.period.registeredOn + 'T12:00:00+05:30')}, the first record)` : '');
 const trendWord = { improving: 'Improving', worsening: 'Worsening', stable: 'Stable', none: 'Insufficient data' };
 
 // ---------------------------------------------------------------- CSV

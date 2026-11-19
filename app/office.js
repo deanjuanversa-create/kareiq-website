@@ -6,15 +6,15 @@
   var K = window.KQ, S = K.S, e = K.e, $ = K.$, $$ = K.$$, icon = K.icon, api = K.api;
 
   var MENU = [
-    { k: 'ov', label: 'Overview', icon: 'chart', sub: [['office/overview/customers', 'Customer analytics', 'people'], ['office/overview/revenue', 'Revenue analytics', 'rupee']] },
+    { k: 'ov', label: 'Overview', icon: 'chart', sub: [['office/overview/summary', 'Summary', 'grid'], ['office/overview/customers', 'Customer analytics', 'people'], ['office/overview/revenue', 'Revenue analytics', 'rupee']] },
     { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/leads/assign', 'Assign to a member', 'team']] },
-    { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/customer', 'Customer profile', 'idcard']] },
-    { k: 'care', label: 'Customer care', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip']] },
+    { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/documents', 'Document review', 'file']] },
     { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/finance/due', 'Payment due', 'clock']] },
     { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard']] },
-    { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/scheduler/nurses', 'Nurses and hours', 'clock'], ['office/scheduler/holidays', 'Holidays', 'star']] },
+    { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/scheduler/nurses', 'Nurses and hours', 'clock'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
+    { k: 'pol', label: 'KareIQ Policies', icon: 'shield', sub: K.POLICIES.map(function (x) { return ['policies/' + x[0], x[1], 'file']; }) },
     ['office/contact-audit', 'Contact access audit', 'lock'],
-    { k: 'set', label: 'Settings', icon: 'sliders', sub: [['admin', 'Requests and orders', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock'], ['/admin/', 'Website text and prices', 'globe']] }
+    { k: 'set', label: 'Settings', icon: 'sliders', sub: [['admin', 'Requests and orders', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock'], ['office/risk-rules', 'Risk rules', 'gauge'], ['/admin/', 'Website text and prices', 'globe']] }
   ];
   // categorical colours in a fixed order (validated palette); one hue for single-series charts
   var PAL = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
@@ -150,10 +150,10 @@
     var R = 54, C = 2 * Math.PI * R, off = 0;
     var segs = items.map(function (it, i) {
       var len = (it.value / total) * C, gap = items.filter(function (x) { return x.value; }).length > 1 ? 2 : 0;
-      var s = it.value ? '<circle class="oseg" r="' + R + '" cx="70" cy="70" style="stroke:' + (colorOf ? colorOf(it, i) : PAL[i % PAL.length]) + ';stroke-dasharray:' + Math.max(0, len - gap) + ' ' + C + ';stroke-dashoffset:' + (-off) + ';animation-delay:' + (i * 0.08) + 's" data-tip="' + e((it.label || it.key) + ': ' + f(it.value) + ' (' + Math.round((it.value / total) * 100) + '%)') + '"/>' : '';
+      var s = it.value ? '<circle class="oseg" r="' + R + '" cx="70" cy="70" transform="rotate(-90 70 70)" style="stroke:' + (colorOf ? colorOf(it, i) : PAL[i % PAL.length]) + ';stroke-dasharray:' + Math.max(0, len - gap) + ' ' + C + ';stroke-dashoffset:' + (-off) + ';animation-delay:' + (i * 0.08) + 's" data-tip="' + e((it.label || it.key) + ': ' + f(it.value) + ' (' + Math.round((it.value / total) * 100) + '%)') + '"/>' : '';
       off += len; return s;
     }).join('');
-    var body = '<div class="odn"><svg viewBox="0 0 140 140" role="img" aria-label="' + e(title) + '"><g transform="rotate(-90 70 70)">' + segs + '</g><text x="70" y="68" text-anchor="middle" class="odn-t">' + e(f(total)) + '</text><text x="70" y="86" text-anchor="middle" class="odn-s">total</text></svg>' +
+    var body = '<div class="odn"><svg viewBox="0 0 140 140" role="img" aria-label="' + e(title) + '"><g>' + segs + '</g><text x="70" y="68" text-anchor="middle" class="odn-t">' + e(f(total)) + '</text><text x="70" y="86" text-anchor="middle" class="odn-s">total</text></svg>' +
       '<ul class="odn-l">' + items.map(function (it, i) { return '<li><i style="background:' + (colorOf ? colorOf(it, i) : PAL[i % PAL.length]) + '"></i><span>' + e(it.label || it.key) + '</span><b>' + e(f(it.value)) + '</b><small>' + Math.round((it.value / total) * 100) + '%</small></li>'; }).join('') + '</ul></div>';
     return figure(title, body, items, f);
   }
@@ -220,6 +220,350 @@
           hbars('Payment status (invoices and orders)', d.payStatus, num, function (it) { return { paid: PAL[2], partial: PAL[3], unpaid: PAL[7], orders: '#9aa5b1' }[it.key]; }) +
         '</div><p class="note">' + icon('shield') + '<span>' + e(d.note) + ' The payment gateway is not connected yet, so payments are recorded by the office after checking them.</span></p>');
     });
+  }
+
+  // ================================================================ Overview: Summary
+  // Summary: aggregate analysis of risk categories and packages. Counts only: no names, IDs,
+  // profiles or links to individual customers. Filters (risk category, package) are applied on
+  // the server, and every chart and count below follows them.
+  function summaryPage(r) {
+    page('office/overview/summary', 'Summary', 'Your customers at a glance: packages and risk. Counts only; no customer is identified here.', '<button class="btn sm ghost" data-act="o-risk-recalc">' + icon('gauge') + 'Recalculate risk</button>', skeleton());
+    S.cache.sumF = { risk: r.q.risk || '', pkg: r.q.pkg || '', ind: r.q.risk ? r.q.ind || '' : '' };
+    summaryLoad(false);
+  }
+  function summaryLoad(update) {
+    var f = S.cache.sumF;
+    var q = []; if (f.risk) q.push('risk=' + enc(f.risk)); if (f.pkg) q.push('pkg=' + enc(f.pkg)); if (f.ind) q.push('ind=' + enc(f.ind));
+    history.replaceState(null, '', '#/office/overview/summary' + (q.length ? '?' + q.join('&') : '')); S.lastHash = location.hash;
+    var box = $('#sumbody'); if (box) box.setAttribute('aria-busy', 'true');
+    api('GET', 'admin/summary' + (q.length ? '?' + q.join('&') : '')).then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.summary = d; S.cache.sumF = { risk: d.filter.risk, pkg: d.filter.pkg, ind: d.filter.ind };
+      if (update && $('#sumbody')) { $('#sumbody').outerHTML = summaryHtml(); var c = $('#sumbody'); $$('.och', c).forEach(function (x) { x.classList.add('anim'); }); }
+      else swap(summaryHtml());
+    });
+  }
+  var RISK_NAME = { red: 'Red', amber: 'Amber', green: 'Green', grey: 'Grey' };
+  // Executive layout: overview cards (total, packages, the four risk categories), then one chart
+  // for risk distribution and one for packages. The indicator breakdown appears only once a risk
+  // category is chosen. Everything is an aggregate count from the server; nothing identifies a customer.
+  function summaryHtml() {
+    var d = S.cache.summary, f = S.cache.sumF;
+    var pkName = function (id) { return (d.packages.filter(function (x) { return x.id === id; })[0] || {}).name || id; };
+    var indName = function (id) { return (d.indicatorList.filter(function (x) { return x.id === id; })[0] || {}).title || id; };
+    var pct = function (n, of) { return of ? Math.round((n / of) * 100) + '%' : '0%'; };
+    var plural = function (n) { return num(n) + ' customer' + (n === 1 ? '' : 's'); };
+    var cats = d.byCategory, base = cats.reduce(function (t, x) { return t + x.count; }, 0);
+    var SHORT = { red: 'Red', amber: 'Amber', green: 'Green', grey: 'Not assessed' };
+    var SUB = { red: 'Very high risk', amber: 'Needs attention', green: 'No risk', grey: 'Not enough current data' };
+
+    // ---- filter bar: package dropdown, active filters, reset
+    var active = [];
+    if (f.risk) active.push('<span class="xchip ' + f.risk + '"><i></i>' + e(SHORT[f.risk]) + '<button data-act="o-sum-risk" data-k="' + f.risk + '" aria-label="Remove the risk filter">' + icon('x') + '</button></span>');
+    if (f.pkg) active.push('<span class="xchip">' + e(pkName(f.pkg)) + '<button data-act="o-sum-pkg" data-k="' + e(f.pkg) + '" aria-label="Remove the package filter">' + icon('x') + '</button></span>');
+    if (f.ind) active.push('<span class="xchip">' + e(indName(f.ind)) + '<button data-act="o-sum-ind" data-k="' + e(f.ind) + '" aria-label="Remove the indicator filter">' + icon('x') + '</button></span>');
+    var bar = '<div class="xbar" role="region" aria-label="Filters">' +
+      '<label class="xsel"><span>Package</span><select class="in" data-act="o-sum-sel" name="pkg"><option value="">All packages</option>' + d.packages.map(function (p) { return '<option value="' + e(p.id) + '"' + (f.pkg === p.id ? ' selected' : '') + '>' + e(p.name) + '</option>'; }).join('') + '</select></label>' +
+      '<div class="xactive" aria-live="polite">' + (active.length ? '<span class="muted small">Filtered by</span>' + active.join('') + '<button class="link small" data-act="o-sum-clear">Reset all</button>' : '<span class="muted small">Choose a risk card or a package to analyse further.</span>') + '</div></div>';
+
+    // ---- overview cards
+    var pkReal = d.packages.filter(function (p) { return p.id !== '_none'; });
+    var topPk = d.matrix.filter(function (m) { return m.id !== '_none'; }).slice().sort(function (a, b2) { return b2.total - a.total; })[0];
+    var cards = '<div class="xkpis">' +
+      '<div class="xk total"><span class="xk-l">Total customers</span><b>' + num(d.totalAll) + '</b><span class="xk-s">' + (f.pkg ? num(base) + ' in ' + e(pkName(f.pkg)) : 'with a current or recent package') + '</span></div>' +
+      '<div class="xk pk"><span class="xk-l">Packages</span><b>' + num(pkReal.length) + '</b><span class="xk-s">' + (topPk && topPk.total ? 'Most customers: ' + e(topPk.name) + ' (' + num(topPk.total) + ')' : 'No active packages') + '</span></div>' +
+      cats.map(function (c) {
+        return '<button type="button" class="xk risk ' + c.key + (f.risk && f.risk !== c.key ? ' dim' : '') + '" data-act="o-sum-risk" data-k="' + c.key + '" aria-pressed="' + (f.risk === c.key) + '" title="' + e(f.risk === c.key ? 'Show all categories again' : 'See what is behind ' + SHORT[c.key]) + '">' +
+          '<span class="xk-l"><i></i>' + e(SHORT[c.key]) + '</span><b>' + num(c.count) + '</b><span class="xk-s">' + pct(c.count, base) + ' · ' + e(SUB[c.key]) + '</span></button>';
+      }).join('') + '</div>';
+
+    // ---- primary chart 1: risk distribution (one 100% bar) and the same split for each package
+    var stack = function (cells, total, label) {
+      return '<span class="xstack" role="img" aria-label="' + e(label + ': ' + cells.map(function (c) { return SHORT[c.key] + ' ' + c.count; }).join(', ')) + '">' + cells.map(function (c) {
+        return c.count ? '<i class="' + c.key + (f.risk && f.risk !== c.key ? ' dim' : '') + '" style="flex:' + c.count + '" data-tip="' + e(label + ' · ' + SHORT[c.key] + ': ' + plural(c.count) + ' (' + pct(c.count, total) + ')') + '"></i>' : '';
+      }).join('') + '</span>';
+    };
+    var riskPanel = '<section class="xpanel" aria-labelledby="h-xrisk"><div class="xp-h"><h2 id="h-xrisk">Risk distribution</h2><span class="muted small">' + (f.pkg ? e(pkName(f.pkg)) : 'All customers') + ' · ' + plural(base) + '</span></div>' +
+      (base ? stack(cats, base, f.pkg ? pkName(f.pkg) : 'All customers').replace('class="xstack"', 'class="xstack big"') +
+        '<ul class="xlegend">' + cats.map(function (c) { return '<li class="' + c.key + '"><i></i>' + e(SHORT[c.key]) + ' <b>' + num(c.count) + '</b> <span class="muted">' + pct(c.count, base) + '</span></li>'; }).join('') + '</ul>'
+        : empty('No customers' + (f.pkg ? ' in this package.' : ' yet.'))) + '</section>';
+
+    // ---- primary chart 2: packages, each bar split by risk category (or the chosen category only)
+    var rows = d.matrix.filter(function (m) { return m.total; });
+    var pmax = Math.max.apply(null, rows.map(function (m) { return f.risk ? (m.cells.filter(function (c) { return c.key === f.risk; })[0] || {}).count || 0 : m.total; }).concat([1]));
+    var pkgPanel = '<section class="xpanel" aria-labelledby="h-xpkg"><div class="xp-h"><h2 id="h-xpkg">Packages</h2><span class="muted small">' + (f.risk ? e(SHORT[f.risk]) + ' customers per package' : 'Customers per package, split by risk') + '</span></div>' +
+      (rows.length ? '<ul class="xpk" role="group" aria-label="Filter by package">' + rows.map(function (m) {
+        var n = f.risk ? (m.cells.filter(function (c) { return c.key === f.risk; })[0] || {}).count || 0 : m.total;
+        var cells = f.risk ? m.cells.filter(function (c) { return c.key === f.risk; }) : m.cells;
+        return '<li><button type="button" data-act="o-sum-pkg" data-k="' + e(m.id) + '" aria-pressed="' + (f.pkg === m.id) + '" class="' + (f.pkg && f.pkg !== m.id ? 'dim' : '') + '">' +
+          '<span class="xpk-n">' + e(m.name) + '</span><span class="xpk-b"><span style="width:' + (n / pmax * 100) + '%">' + stack(cells, m.total, m.name) + '</span></span><b>' + num(n) + '</b></button></li>';
+      }).join('') + '</ul><p class="muted small xnote">A customer with two packages is counted under each. Select a package to narrow everything on this page.</p>' : empty('No customers yet.')) + '</section>';
+
+    // ---- risk indicator breakdown: only once a risk category is chosen
+    var breakdown = '';
+    if (f.risk) {
+      var inds = d.indicators, catTotal = d.total && !f.ind ? d.total : (cats.filter(function (c) { return c.key === f.risk; })[0] || {}).count || 0;
+      var imax = Math.max.apply(null, inds.map(function (x) { return x.total; }).concat([1]));
+      var head = { red: 'What is making customers Red', amber: 'What is making customers Amber', green: 'Required indicators that are clear for Green customers', grey: 'What is keeping customers Not assessed' }[f.risk];
+      var help = { red: 'Each indicator that is Very High Risk for these customers. A customer can have more than one.', amber: 'Each indicator that needs attention for these customers. A customer can have more than one.', green: 'Green customers have every required indicator current and clear.', grey: 'Required indicators that are not complete and clear for these customers, and why.' }[f.risk];
+      breakdown = '<section class="xpanel xbreak ' + f.risk + '" aria-labelledby="h-xbr"><div class="xp-h"><div><h2 id="h-xbr">' + e(head) + '</h2><p class="muted small">' + e(help) + '</p></div><span class="muted small">' + e(SHORT[f.risk]) + (f.pkg ? ' · ' + e(pkName(f.pkg)) : '') + ' · ' + plural(catTotal) + '</span></div>' +
+        (inds.length ? '<ul class="xind" role="group" aria-label="Filter by risk indicator">' + inds.map(function (x) {
+          var reasons = f.risk === 'grey' ? Object.keys(x.reasons).sort(function (a2, b2) { return x.reasons[b2] - x.reasons[a2]; }).map(function (k) { return '<span class="xr">' + e(d.greyReasons[k]) + ' ' + x.reasons[k] + '</span>'; }).join('') : '';
+          return '<li><button type="button" data-act="o-sum-ind" data-k="' + e(x.id) + '" aria-pressed="' + (f.ind === x.id) + '" class="' + (f.ind && f.ind !== x.id ? 'dim' : '') + '">' +
+            '<span class="xi-n"><b>' + e(x.title) + '</b>' + (reasons ? '<span class="xi-r">' + reasons + '</span>' : '<span class="muted small">' + e(x.group) + '</span>') + '</span>' +
+            '<span class="xi-b"><i style="width:' + (x.total / imax * 100) + '%"></i></span><span class="xi-c"><b>' + num(x.total) + '</b><small>' + pct(x.total, (cats.filter(function (c) { return c.key === f.risk; })[0] || {}).count) + '</small></span></button></li>';
+        }).join('') + '</ul><p class="muted small xnote">Select an indicator to narrow the cards and charts to customers it applies to.</p>' : empty('No ' + SHORT[f.risk] + ' customers' + (f.pkg ? ' in this package.' : ' yet.'))) + '</section>';
+    }
+    return '<div id="sumbody" class="xdash">' + bar + cards + breakdown + '<div class="xgrid">' + riskPanel + pkgPanel + '</div>' +
+      (d.riskCounts.failed ? '<p class="alert bad small">The last risk recalculation failed for ' + plural(d.riskCounts.failed) + '; they are counted from their last good result.</p>' : '') +
+      '<p class="note">' + icon('shield') + '<span>Aggregate counts only, from current packages and each customer\'s latest risk result. No customer is named or identified. Very small counts in a narrow filter can still point to a person; treat them with care.</span></p></div>';
+  }
+
+  // ================================================================ Settings: Risk rules
+  // The workbook rules are clinically approved and active as written. This page shows, per
+  // indicator, where the workbook is inconsistent (and so which values cannot be classified), the
+  // category of every band, and lets the owner record an answer, a category for a band the
+  // workbook leaves without one, a validity period, and whether it is required for Green.
+  var CATS3 = [['red', 'Red – Very High Risk'], ['amber', 'Amber – Lower Risk / Needs Attention'], ['green', 'Green – No Risk']];
+  var RSTATE = { active: ['active', 'Active as written'], partial: ['pending', 'Active; some values unresolved'], conflict: ['ended', 'Not calculated: workbook conflict'], blocked: ['ended', 'Cannot be calculated'] };
+  function rulesPage() {
+    page('office/risk-rules', 'Risk rules', 'The risk rules from the KareIQ workbook, calculated exactly as written. Where the workbook is inconsistent, the affected values are not classified until an answer is recorded here.', '', K.loading(120) + K.loading(400));
+    api('GET', 'admin/risk/rules').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.rules = d;
+      var n = function (st) { return d.indicators.filter(function (i) { return i.state === st; }).length; };
+      var open = d.indicators.reduce(function (t, i) { return t + i.open.length; }, 0) + d.global.decisions.filter(function (dc) { return !d.global.choices[dc.id]; }).length;
+      var unc = d.indicators.reduce(function (t, i) { return t + (i.blocked ? 0 : i.uncategorised.length); }, 0);
+      var g = d.global;
+      var globalCard = '<section class="panel rcard2" id="rule-_global"><div class="panel-h"><h2>All indicators: shared boundaries</h2>' + rulePill(g.rule) + '</div>' +
+        '<form data-form="o-rule" data-id="_global" novalidate><div class="alert bad" data-msg hidden></div>' + g.decisions.map(function (dc) { return decisionHtml(dc, g.choices); }).join('') + approverHtml(g.rule, '_global') + '</form></section>';
+      swap(kpis([kpi('Active as written', n('active'), { icon: 'check', tone: 'good' }), kpi('Active, some values unresolved', n('partial'), { icon: 'clock', tone: n('partial') ? 'warn' : '' }),
+          kpi('Workbook conflicts', n('conflict'), { icon: 'x', tone: n('conflict') ? 'warn' : 'muted', sub: 'two formulas or methods' }), kpi('Open questions', open, { icon: 'clip', tone: open ? 'warn' : '', sub: unc + ' bands without a category' })]) +
+        '<p class="note">' + icon('shield') + '<span>The workbook\'s formulas, bands and thresholds are applied exactly as supplied. Band categories follow the agreed wording ("very high" → Red; "elevated, moderate, medium, intermediate, high" → Amber; normal / low / good / standard → Green). A result is used only where every reading of the workbook gives the same answer; values that fall on a workbook inconsistency, and bands the workbook gives no category, are shown but never counted, so they can never make anyone Green. Every answer recorded here keeps the name of the person deciding and the date, and earlier answers stay in the history.</span></p>' +
+        globalCard + d.indicators.map(function (ind) { return indicatorCard(ind, d); }).join(''));
+    });
+  }
+  function rulePill(rule) {
+    if (!rule) return '<span class="pill">Workbook defaults</span>';
+    if (!rule.approved) return '<span class="pill">Back to workbook defaults ' + e(K.date(rule.at)) + '</span>';
+    return '<span class="pill active"><i></i>Answer recorded by ' + e(rule.approverName) + ', ' + e(K.date(rule.at)) + '</span>';
+  }
+  function decisionHtml(dc, chosen) {
+    var refs = '<span class="muted small rrefs">Workbook: ' + e(dc.refs.join('; ')) + (dc.affects === 'all' ? ' · affects every value' : ' · affects only the values in question') + '</span>';
+    if (dc.kind === 'thresholds') {
+      var v = chosen[dc.id] || {};
+      return '<fieldset class="rdec"><legend>' + e(dc.question) + '</legend>' + refs + '<p class="muted small">Leave both empty to keep it open (the result is shown without a band).</p><div class="row2">' + dc.fields.map(function (fl) { return K.field('t.' + dc.id + '.' + fl[0], fl[1] + ' (' + fl[2] + ')', 'inputmode="decimal" value="' + (v[fl[0]] != null ? e(v[fl[0]]) : '') + '"'); }).join('') + '</div><em class="err" data-err="c-' + e(dc.id) + '"></em></fieldset>';
+    }
+    return '<fieldset class="rdec"><legend>' + e(dc.question) + '</legend>' + refs +
+      '<label class="ropt"><input type="radio" name="c.' + dc.id + '" value=""' + (chosen[dc.id] ? '' : ' checked') + '><span><b>Leave open</b><small>The affected values stay unresolved and are not counted.</small></span></label>' +
+      dc.options.map(function (o) {
+        return '<label class="ropt"><input type="radio" name="c.' + dc.id + '" value="' + e(o.id) + '"' + (chosen[dc.id] === o.id ? ' checked' : '') + '><span><b>' + e(o.label) + '</b>' + (o.detail ? '<small>' + e(o.detail) + '</small>' : '') + '</span></label>';
+      }).join('') + '</fieldset>';
+  }
+  function bandsHtml(ind) {
+    return '<table class="otable rmap"><thead><tr><th>Workbook band</th><th>From the agreed wording</th><th>Category used</th></tr></thead><tbody>' + ind.bands.map(function (b) {
+      var sug = b.proposed ? CATS3.filter(function (c) { return c[0] === b.proposed; })[0][1] : 'None (the wording is not covered)';
+      return '<tr><td data-l="Band">' + e(b.label) + (b.scale ? ' <span class="muted small">(' + e(b.scale) + ')</span>' : '') + '</td><td data-l="Agreed wording"><span class="muted small">' + e(sug) + '</span></td><td data-l="Category"><select class="in sm" name="m.' + e(b.key) + '" aria-label="Category for ' + e(b.label) + '"><option value="">No category: shown, not counted</option>' + CATS3.map(function (c) { return '<option value="' + c[0] + '"' + (b.category === c[0] ? ' selected' : '') + '>' + e(c[1]) + '</option>'; }).join('') + '</select></td></tr>';
+    }).join('') + '</tbody></table>';
+  }
+  function approverHtml(rule, id) {
+    return '<div class="rapprove"><div class="row2">' + K.field('approverName', 'Decided by (name)', 'maxlength="120" value="' + e(rule && rule.approved ? rule.approverName : '') + '"') + K.field('note', 'Note (optional)', 'maxlength="300"') + '</div>' +
+      '<label class="ck"><input type="checkbox" name="confirm" value="1"><span>I confirm this was decided by the person named above.</span></label><em class="err" data-err="confirm"></em>' +
+      '<div class="savebar"><button class="btn" type="submit">' + icon('check') + 'Save and recalculate</button>' + (rule && rule.approved ? '<button class="btn ghost" type="button" data-act="o-rule-withdraw" data-id="' + e(id) + '">Back to workbook defaults</button>' : '') + '</div></div>';
+  }
+  function indicatorCard(ind, d) {
+    var st = RSTATE[ind.state];
+    if (ind.blocked) return '<section class="panel rcard2 blocked"><div class="panel-h"><h2>' + e(ind.title) + '</h2><span class="pill ended"><i></i>' + st[1] + '</span></div><p class="muted">' + e(ind.blocked) + '</p></section>';
+    var req = ind.required || { mode: 'all', packages: [] };
+    var openQs = ind.decisions.filter(function (dc) { return ind.open.indexOf(dc.id) > -1; });
+    return '<details class="panel rcard2" id="rule-' + e(ind.id) + '"' + (location.hash.indexOf('open=' + ind.id) > -1 ? ' open' : '') + '><summary><span class="rc-t"><b>' + e(ind.title) + '</b><span class="muted small">' + e(ind.group) + (ind.vital ? ' · single vital (Standard Range sheet)' : '') + (ind.women ? ' · women only' : '') +
+        (openQs.length ? ' · ' + openQs.length + ' open question' + (openQs.length === 1 ? '' : 's') : '') + (ind.uncategorised.length ? ' · ' + ind.uncategorised.length + ' band' + (ind.uncategorised.length === 1 ? '' : 's') + ' without a category' : '') + '</span></span>' +
+        '<span class="pill ' + st[0] + '"><i></i>' + st[1] + '</span></summary>' +
+      '<form data-form="o-rule" data-id="' + e(ind.id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      '<p class="muted small">Inputs: ' + e(ind.inputs.join(', ')) + '. Workbook: ' + e(ind.refs.join('; ')) + '.</p>' +
+      (ind.usesGlobal ? '<p class="muted small">Also uses the shared boundary rule at the top of this page.</p>' : '') +
+      ind.decisions.map(function (dc) { return decisionHtml(dc, ind.choices); }).join('') +
+      '<fieldset class="rdec"><legend>Category for each band</legend>' + bandsHtml(ind) + '</fieldset>' +
+      '<fieldset class="rdec"><legend>How long a result counts</legend><p class="muted small">The workbook gives no validity period, so by default a result counts until a newer one is recorded. Enter days to make results expire (counted from the oldest reading the score uses).</p>' + K.field('validityDays', 'Days (empty = no expiry)', 'inputmode="numeric" value="' + (ind.validityDays || '') + '"') + '</fieldset>' +
+      '<fieldset class="rdec"><legend>Required for Green</legend><p class="muted small">A customer is Green only when every required indicator is current and Green. The workbook does not say which are required; by default every applicable indicator is.</p>' +
+        [['all', 'Required for every customer it applies to (default)'], ['packages', 'Required only for the packages ticked below'], ['none', 'Not required (counts only when it shows a risk)']].map(function (o) { return '<label class="ropt"><input type="radio" name="reqmode" value="' + o[0] + '"' + (req.mode === o[0] ? ' checked' : '') + '><span><b>' + e(o[1]) + '</b></span></label>'; }).join('') +
+        '<div class="chips2">' + d.packages.map(function (pk) { return '<label class="chipck"><input type="checkbox" name="pk.' + e(pk.id) + '"' + ((req.packages || []).indexOf(pk.id) > -1 ? ' checked' : '') + '>' + e(pk.name) + '</label>'; }).join('') + '</div><em class="err" data-err="required"></em></fieldset>' +
+      approverHtml(ind.rule, ind.id) + '</form></details>';
+  }
+  K.FORMS['o-rule'] = function (f, v) {
+    var id = f.getAttribute('data-id'), body = { choices: {}, mapping: {}, approverName: v.approverName, note: v.note, confirm: Boolean(f.elements.confirm && f.elements.confirm.checked) };
+    Object.keys(v).forEach(function (k) {
+      var p = k.split('.');
+      if (p[0] === 'c' && v[k]) body.choices[p.slice(1).join('.')] = v[k];
+      else if (p[0] === 'm' && v[k]) body.mapping[p.slice(1).join('.')] = v[k];
+      else if (p[0] === 't' && v[k] !== '') { var dk = p.slice(1, -1).join('.'); body.choices[dk] = body.choices[dk] || {}; body.choices[dk][p[p.length - 1]] = Number(v[k]); }
+    });
+    if (id !== '_global') {
+      body.validityDays = v.validityDays;
+      body.required = { mode: v.reqmode || 'all', packages: $$('input[type=checkbox][name^="pk."]', f).filter(function (c) { return c.checked; }).map(function (c) { return c.name.slice(3); }) };
+    }
+    return api('POST', 'admin/risk/rules/' + enc(id), body).then(function (d) {
+      if (!d.ok) return d;
+      K.toast('Saved. Risk recalculated for ' + d.recalculated + ' people.', 'ok');
+      history.replaceState(null, '', '#/office/risk-rules?open=' + id); K.render();
+    });
+  };
+
+  // ================================================================ Customer management: Document review
+  // Medical documents uploaded by nurses and customers are read automatically. Values with a clear
+  // test date and a confident reading are stored straight away; the others wait here. The office
+  // accepts (correcting the value or date if needed) or rejects each one; nothing is stored until then.
+  var DST = { uploaded: 'Uploaded', processing: 'Processing', extracted: 'Extracted', needs_review: 'Needs Review', completed: 'Completed', failed: 'Failed', not_processed: 'Not processed' };
+  var EXST = { accepted: 'Stored', needs_review: 'Needs review', duplicate: 'Already stored', rejected: 'Rejected' };
+  function docsPage(r) {
+    var id = r.q.id;
+    if (id) return docPage(id);
+    var st = r.q.status || 'open';
+    page('office/documents', 'Document review', 'Medical documents from nurses and customers, read automatically. Check the values that could not be stored automatically.', '', skeleton());
+    api('GET', 'admin/documents?status=' + enc(st)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var tabs = [['open', 'Open'], ['needs_review', 'Needs Review'], ['failed', 'Failed'], ['completed', 'Completed'], ['all', 'All']];
+      var c = d.counts || {};
+      swap(kpis([kpi('Needs review', c.needs_review || 0, { icon: 'clip', tone: c.needs_review ? 'warn' : '' }), kpi('Failed', c.failed || 0, { icon: 'x', tone: c.failed ? 'bad' : '' }),
+          kpi('Processing', (c.processing || 0) + (c.uploaded || 0) + (c.extracted || 0), { icon: 'clock' }), kpi('Completed', c.completed || 0, { icon: 'check', tone: 'good' })]) +
+        '<nav class="otabs" aria-label="Show">' + tabs.map(function (t) { return '<a href="#/office/documents?status=' + t[0] + '"' + (t[0] === st ? ' aria-current="page"' : '') + '>' + t[1] + '</a>'; }).join('') + '</nav>' +
+        (d.rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Document</th><th>Customer</th><th>Uploaded</th><th>Status</th><th></th></tr></thead><tbody>' + d.rows.map(function (x) {
+          return '<tr><td data-l="Document"><b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.docType || '') + '</span></td>' +
+            '<td data-l="Customer">' + e(x.personName) + '<br><span class="muted small">' + e(x.personId) + '</span></td>' +
+            '<td data-l="Uploaded">' + e(K.dt(x.uploadedAt)) + '<br><span class="muted small">by ' + e(x.uploadedBy) + (x.uploadedByRole === 'caregiver' ? ' (nurse)' : x.uploadedByRole === 'family' ? ' (customer)' : '') + '</span></td>' +
+            '<td data-l="Status"><span class="pchip ' + e(x.processing.status) + '">' + e(x.processing.label) + '</span>' + (x.pending ? '<br><span class="muted small">' + x.pending + ' to check</span>' : '') + (x.error ? '<br><span class="small" style="color:var(--bad)">' + e(x.error) + '</span>' : '') + '</td>' +
+            '<td><a class="btn sm ghost" href="#/office/documents?id=' + enc(x.id) + '">Open</a></td></tr>';
+        }).join('') + '</tbody></table></section>' : '<div class="empty"><b>Nothing here</b>Documents appear here when they are uploaded.</div>') +
+        '<p class="note">' + icon('shield') + '<span>Values are stored automatically when the number can be read, the unit is known and the document shows the test or collection date. Only values that cannot be stored safely wait here: no test date, a number outside what is possible, "less than" values or an unknown unit. The upload date is never used as the test date. Every stored value links back to its document and line.</span></p>');
+    });
+  }
+  function docPage(id) {
+    page('office/documents', 'Document review', '', '<a class="btn sm ghost" href="#/office/documents">' + icon('left') + 'All documents</a>', skeleton());
+    api('GET', 'admin/documents/' + enc(id)).then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.docr = d;
+      var rec = d.record, ds = rec.dates || {}, pr = rec.processing || {};
+      var dateRow = function (label, x) { return '<div><dt>' + label + '</dt><dd>' + (x && x.date ? '<b>' + e(K.date(x.date)) + '</b> <span class="muted small">"' + e(x.raw) + '", page ' + e(x.page) + '</span>' : x && x.ambiguous ? '<span class="pill pending">More than one: ' + e((x.values || []).join(', ')) + '</span>' : '<span class="muted">Not in the document</span>') + '</dd></div>'; };
+      var head = '<section class="panel"><div class="panel-h"><h2>' + e(rec.name) + '</h2><span class="pchip ' + e(rec.status.status) + '">' + e(rec.status.label) + '</span></div>' +
+        '<dl class="onb-dl">' +
+          '<div><dt>Customer</dt><dd>' + e(rec.personName) + ' <span class="muted small">' + e(rec.personId) + '</span></dd></div>' +
+          '<div><dt>Uploaded</dt><dd>' + e(K.dt(rec.uploadedAt)) + ' by ' + e(rec.uploadedBy) + '</dd></div>' +
+          '<div><dt>Document type</dt><dd>' + e(rec.docType || 'Not identified') + (rec.sections.length ? ' <span class="muted small">(' + e(rec.sections.join(', ')) + ')</span>' : '') + '</dd></div>' +
+          dateRow('Test / collection date', ds.test) + dateRow('Report date', ds.report) + dateRow('Issue / printed date', ds.issue) +
+          '<div><dt>Reading</dt><dd>' + (pr.engine ? e((pr.engine.sources || []).map(function (x) { return x === 'text' ? 'PDF text' : 'OCR (Tesseract LSTM)'; }).join(', ')) + (pr.engine.tesseract ? ' <span class="muted small">' + e(pr.engine.tesseract) + '</span>' : '') : '<span class="muted">Not read yet</span>') + ' · attempt ' + e(pr.attempts || 0) + '</dd></div>' +
+          '<div><dt>File</dt><dd><a href="/api/app/records/' + enc(rec.id) + '/file?view=1" target="_blank" rel="noopener">Open the document</a> <span class="muted small">' + e(Math.round(rec.size / 1024)) + ' KB · SHA-256 ' + e((rec.sha256 || '').slice(0, 12)) + '…</span></dd></div>' +
+        '</dl>' + (ds.measuredNote ? '<p class="alert info small">' + e(ds.measuredNote) + '</p>' : '') + (pr.status === 'failed' ? '<p class="alert bad small">' + e(pr.lastError || 'Failed') + '</p>' : '') + (pr.note ? '<p class="muted small">' + e(pr.note) + '</p>' : '') +
+        '<div class="oacts">' + (pr.status === 'failed' || pr.status === 'uploaded' || pr.status === 'needs_review' || !pr.status ? '<button class="btn sm" data-act="o-doc-retry" data-id="' + e(rec.id) + '">' + icon('route') + 'Read again</button>' : '') +
+          (pr.status === 'needs_review' && !d.extractions.some(function (x) { return x.status === 'needs_review'; }) ? '<button class="btn sm ghost" data-act="o-doc-close" data-id="' + e(rec.id) + '">Mark reviewed (no values to store)</button>' : '') + '</div></section>';
+      var rows = d.extractions.length ? '<section class="panel"><h2>Values read</h2><div class="docx">' + d.extractions.map(function (x) {
+        var val = x.field === 'bp' ? x.systolic + '/' + x.diastolic : x.value;
+        var raw = x.rawValue + (x.rawUnit ? ' ' + x.rawUnit : '');
+        var review = x.status === 'needs_review';
+        return '<article class="docv ' + e(x.status) + '"><div class="docv-h"><div><b>' + e(x.name) + '</b>' + (x.context ? ' <span class="muted small">(' + e(d.glucose[x.context] || x.context) + ')</span>' : '') +
+            '<div class="docv-v">' + e(val) + ' <small>' + e(x.unit || '') + '</small></div></div><span class="vst ' + e(x.status) + '">' + e(EXST[x.status] || x.status) + '</span></div>' +
+          '<p class="muted small">"' + e(x.rawLine) + '" · page ' + e(x.page) + ', line ' + e(x.line) + (x.section ? ' · ' + e(x.section) : '') + '</p>' +
+          '<p class="small">Read as <b>' + e(raw) + '</b>' + (x.conversion && x.conversion !== 'none' ? ' · ' + e(x.conversion) : '') + (x.refRange ? ' · reference ' + e(x.refRange) : '') + ' · confidence <b>' + Math.round(x.confidence * 100) + '%</b> · test date ' + (x.measuredDate ? e(K.date(x.measuredDate)) : '<b>unknown</b>') + '</p>' +
+          (x.reasons && x.reasons.length ? '<ul class="docv-r">' + x.reasons.map(function (r) { return '<li>' + e(r) + '</li>'; }).join('') + '</ul>' : '') +
+          (x.notes && x.notes.length ? '<ul class="docv-n">' + x.notes.map(function (r) { return '<li>' + e(r) + '</li>'; }).join('') + '</ul>' : '') +
+          (x.corrected ? '<p class="muted small">Corrected on review: ' + e(Object.keys(x.corrected).map(function (k) { return k + ' ' + x.corrected[k].from + ' → ' + x.corrected[k].to; }).join(', ')) + '</p>' : '') +
+          (x.reviewNote ? '<p class="muted small">Note: ' + e(x.reviewNote) + '</p>' : '') +
+          (review ? '<form data-form="o-docv" data-id="' + e(x.id) + '" class="docv-f" novalidate><div class="alert bad" data-msg hidden></div><div class="row3">' +
+            (x.field === 'bp' ? K.field('systolic', 'Systolic', 'inputmode="numeric" value="' + e(x.systolic) + '"') + K.field('diastolic', 'Diastolic', 'inputmode="numeric" value="' + e(x.diastolic) + '"')
+              : K.field('value', 'Value (' + (x.unit || 'score') + ')', 'inputmode="decimal" value="' + e(x.conversion === 'none' ? '' : x.value) + '"' + (x.conversion === 'none' ? ' placeholder="Convert to ' + e(x.unit) + '"' : ''))) +
+            K.field('date', 'Test date (from the document)', 'type="date" value="' + e(x.measuredDate || '') + '"') +
+            (x.field === 'glucose' ? '<label class="field"><span>Measured</span><select class="in" name="context"><option value="">Choose…</option>' + Object.keys(d.glucose).map(function (k) { return '<option value="' + k + '"' + (x.context === k ? ' selected' : '') + '>' + e(d.glucose[k]) + '</option>'; }).join('') + '</select><em class="err" data-err="context"></em></label>' : '') +
+            '</div>' + K.field('note', 'Note (required to reject)', 'maxlength="300"') +
+            '<div class="oacts"><button class="btn sm" type="submit" name="action" value="accept">' + icon('check') + 'Accept and store</button><button class="btn sm ghost" type="button" data-act="o-docv-reject" data-id="' + e(x.id) + '">Reject</button></div></form>' : '') +
+          '</article>';
+      }).join('') + '</div></section>' : '<div class="empty"><b>No supported values were found</b>The document may be a prescription, an image report or a format the reader does not know. Open it to check.</div>';
+      swap(head + rows);
+    });
+  }
+  K.FORMS['o-docv'] = function (f, v) {
+    var body = { action: 'accept', date: v.date, note: v.note };
+    ['value', 'systolic', 'diastolic', 'context'].forEach(function (k) { if (v[k] !== undefined && v[k] !== '') body[k] = v[k]; });
+    return api('POST', 'admin/extractions/' + enc(f.getAttribute('data-id')), body).then(function (d) {
+      if (!d.ok) return d;
+      K.toast(d.duplicate ? 'Already stored: nothing added twice.' : 'Stored. Risk recalculated.', 'ok'); K.render();
+    });
+  };
+
+  // ================================================================ Nurse scheduler: Leave records
+  var LEAVE_TYPES = { casual: 'Casual leave', sick: 'Sick leave', earned: 'Earned / annual leave', emergency: 'Emergency leave', unpaid: 'Unpaid leave', other: 'Other' };
+  function liveLeave(l) { return !l.status || l.status === 'approved' || l.status === 'pending'; }
+  var LST = { pending: 'pending', approved: 'active', rejected: 'ended', cancelled: 'ended' };
+  function leavePage(r) {
+    page('office/scheduler/leave', 'Leave records', 'Every nurse\'s leave: who is away now, approved leave coming up, requests to decide, and the visits each leave affects.', '<button class="btn sm" data-act="o-leave-add">' + icon('plus') + 'Add leave</button>', skeleton());
+    api('GET', 'admin/leave').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.leave = d;
+      var q = r.q;
+      var nurses = {}; d.nurses.forEach(function (n) { nurses[n.id] = n.name + ' (' + n.employeeId + ')'; });
+      var rows = d.rows.filter(function (l) {
+        if (q.nurse && l.nurseId !== q.nurse) return false;
+        if (q.status && l.status !== q.status) return false;
+        if (q.from && l.to < q.from) return false;
+        if (q.to && l.from > q.to) return false;
+        return true;
+      });
+      var who = q.nurse ? d.nurses.filter(function (n) { return n.id === q.nurse; })[0] : null;
+      var mini = function (title, list, emptyText) {
+        return '<section class="panel"><h2>' + e(title) + ' (' + list.length + ')</h2>' + (list.length ? '<ul class="rlist">' + list.map(function (l) {
+          return '<li><span><b>' + e(l.nurseName) + '</b> · ' + e(l.typeName) + '<br><span class="muted small">' + e(K.date(l.from)) + (l.to !== l.from ? ' to ' + e(K.date(l.to)) : '') + ' · ' + l.days + ' day' + (l.days === 1 ? '' : 's') + '</span></span></li>';
+        }).join('') + '</ul>' : '<p class="muted small">' + e(emptyText) + '</p>') + '</section>';
+      };
+      swap(kpis([kpi('On leave today', d.onLeaveNow.length, { icon: 'cal', tone: d.onLeaveNow.length ? 'warn' : '' }), kpi('Upcoming approved leave', d.upcoming.length, { icon: 'clock' }), kpi('Waiting for a decision', d.pending.length, { icon: 'inbox', tone: d.pending.length ? 'warn' : '' }),
+          kpi('Visits needing a nurse', d.needsNurse, { icon: 'people', tone: d.needsNurse ? 'warn' : 'good', sub: 'because of leave' })]) +
+        '<div class="ogrid2">' + mini('On leave today', d.onLeaveNow, 'Nobody is on leave today.') + mini('Upcoming approved leave', d.upcoming.slice(0, 8), 'No approved leave coming up.') + '</div>' +
+        filters(r, [['nurse', 'Nurse', 'select', nurses], ['status', 'Status', 'select', d.statuses], ['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        (who ? '<h2 class="sec">Leave history for ' + e(who.name) + '</h2>' : '') +
+        (rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Nurse</th><th>Dates</th><th>Days</th><th>Type</th><th>Status</th><th>Affected visits</th><th></th></tr></thead><tbody>' + rows.map(function (l) {
+          var need = l.affected.filter(function (a) { return a.result === 'awaiting_assignment'; }).length;
+          var acts = l.status === 'pending' ? '<button class="btn sm" data-act="o-leave-approve" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Approve</button><button class="btn sm ghost" data-act="o-leave-reject" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Reject</button>' : '';
+          if (l.status === 'pending' || l.status === 'approved') acts += '<button class="btn sm ghost" data-act="o-leave-edit" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Edit</button><button class="btn sm ghost" data-act="o-leave-cancel" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Cancel</button>';
+          return '<tr><td data-l="Nurse"><a href="#/office/scheduler/leave?nurse=' + e(l.nurseId) + '"><b>' + e(l.nurseName) + '</b></a><br><span class="muted small">' + e(l.employeeId) + '</span></td>' +
+            '<td data-l="Dates"><b>' + e(K.date(l.from)) + '</b>' + (l.to !== l.from ? ' to <b>' + e(K.date(l.to)) + '</b>' : '') + (l.current ? '<br><span class="pill pending"><i></i>On leave now</span>' : '') + (l.reason ? '<br><span class="muted small">' + e(l.reason) + '</span>' : '') + '</td>' +
+            '<td data-l="Days">' + l.days + '</td><td data-l="Type">' + e(l.typeName) + '</td>' +
+            '<td data-l="Status"><span class="pill ' + LST[l.status] + '"><i></i>' + e(l.statusName) + '</span>' + (l.legacy ? '<br><span class="muted small">Recorded before statuses</span>' : '') + (l.decisionNote ? '<br><span class="muted small">' + e(l.decisionNote) + '</span>' : '') + '</td>' +
+            '<td data-l="Affected visits">' + (l.affected.length ? '<button class="link" data-act="o-leave-visits" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">' + l.affected.length + ' visit' + (l.affected.length === 1 ? '' : 's') + '</button>' + (need ? '<br><span class="pill pending"><i></i>' + need + ' need a nurse</span>' : '') : '<span class="muted small">' + (l.status === 'approved' ? 'None' : 'Checked when approved') + '</span>') + '</td>' +
+            '<td><div class="oacts">' + acts + '</div></td></tr>';
+        }).join('') + '</tbody></table></section>' : '<div class="empty"><b>No leave records match</b>Try other filters, or add leave.</div>') +
+        '<p class="note">' + icon('shield') + '<span>Only approved leave makes a nurse unavailable. When leave is approved, that nurse\'s visits in the period go to a free nurse where possible; any that cannot be moved are left for you on the Visit board. Nothing is cancelled automatically, and cancelled or rejected leave stays in the history.</span></p>');
+    });
+  }
+  function leaveOf(u, id) { return (S.cache.leave.rows || []).filter(function (l) { return l.nurseId === u && l.id === id; })[0]; }
+  function leaveDialog(l) {
+    var d = S.cache.leave, edit = Boolean(l);
+    K.openDialog(edit ? 'Edit leave for ' + l.nurseName : 'Add leave', '<form data-form="o-leave2" data-u="' + e(edit ? l.nurseId : '') + '" data-id="' + e(edit ? l.id : '') + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      (edit ? '' : '<label class="field"><span>Nurse</span><select class="in" name="nurseId"><option value="">Choose a nurse</option>' + d.nurses.map(function (n) { return '<option value="' + e(n.id) + '">' + e(n.name + ' (' + n.employeeId + ')') + '</option>'; }).join('') + '</select><em class="err" data-err="nurseId"></em></label>') +
+      '<div class="row2">' + K.field('from', 'First day', 'type="date" value="' + e(edit ? l.from : '') + '"') + K.field('to', 'Last day', 'type="date" value="' + e(edit ? l.to : '') + '"') + '</div>' +
+      '<label class="field"><span>Type of leave</span><select class="in" name="type">' + (edit ? '' : '<option value="">Choose…</option>') + Object.keys(d.types).map(function (k) { return '<option value="' + k + '"' + (edit && l.type === k ? ' selected' : '') + '>' + e(d.types[k]) + '</option>'; }).join('') + '</select><em class="err" data-err="type"></em></label>' +
+      (edit ? '' : '<div class="field"><span>Status</span><div class="seg"><label><input type="radio" name="status" value="approved" checked><span>Approved</span></label><label><input type="radio" name="status" value="pending"><span>Pending (a request to decide)</span></label></div></div>') +
+      K.field('reason', 'Reason (optional)', 'maxlength="300" value="' + e(edit ? l.reason : '') + '"') +
+      '<p class="muted small">Approved leave makes the nurse unavailable. Their visits in this period go to a free nurse where possible; the rest are listed for you to reassign.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">' + (edit ? 'Save' : 'Add leave') + '</button>');
+  }
+  K.FORMS['o-leave2'] = function (f, v) {
+    var u = f.getAttribute('data-u'), id = f.getAttribute('data-id');
+    var call = id ? api('PATCH', 'admin/leave/' + enc(u) + '/' + enc(id), v) : api('POST', 'admin/leave', v);
+    return call.then(function (d) {
+      if (!d.ok) return d;
+      K.closeDialog();
+      var need = (d.affected || []).filter(function (a) { return a.result === 'awaiting_assignment'; }).length;
+      K.toast(id ? 'Leave updated.' : 'Leave added.' + (d.affected && d.affected.length ? ' ' + d.affected.length + ' visit(s) affected' + (need ? ', ' + need + ' need a nurse.' : ', all moved to another nurse.') : ''), need ? 'bad' : 'ok');
+      K.render();
+    });
+  };
+  K.FORMS['o-leave-decide'] = function (f, v) {
+    return api('POST', 'admin/leave/' + enc(f.getAttribute('data-u')) + '/' + enc(f.getAttribute('data-id')) + '/' + f.getAttribute('data-kind'), { note: v.note }).then(function (d) {
+      if (!d.ok) return d; K.closeDialog(); K.toast('Leave ' + (f.getAttribute('data-kind') === 'reject' ? 'rejected.' : 'cancelled.'), 'ok'); K.render();
+    });
+  };
+  function leaveVisitsDialog(l) {
+    K.openDialog('Visits affected by ' + l.nurseName + '\'s leave', '<p class="muted small">' + e(K.date(l.from)) + ' to ' + e(K.date(l.to)) + '</p><ul class="rlist">' + l.affected.map(function (a) {
+      return '<li><span><b>' + e(K.date(a.date)) + '</b> · ' + e(a.customerName || '') + (a.serviceName ? ' · ' + e(a.serviceName) : '') + '<br><span class="muted small">' + e(a.reference || '') + '</span></span>' +
+        (a.result === 'reassigned' ? '<span class="pill active"><i></i>Moved to ' + e(a.newNurse || 'another nurse') + '</span>' : '<span class="pill pending"><i></i>Needs a nurse</span>') + '</li>';
+    }).join('') + '</ul>', '<a class="btn ghost" href="#/office/scheduler" data-act="close">Open the Visit board</a><button class="btn" data-act="close">Done</button>');
   }
 
   // ================================================================ Lead management
@@ -305,9 +649,10 @@
       var nurses = {}; d.nurses.forEach(function (n) { nurses[n.id] = n.name; });
       var ST = { active: 'Active', paused: 'Paused', pending: 'Being set up', inactive: 'Inactive', no_plan: 'No package' };
       swap(filters(r, [['q', 'Search', 'search', 'Name, customer ID, phone or email'], ['brand', 'Brand', 'select', brandOpts(d)], ['package', 'Package', 'select', pkgOpts(d)], ['status', 'Status', 'select', { active: 'Active', inactive: 'Not active', paused: 'Paused', pending: 'Being set up', no_plan: 'No package' }], ['from', 'Registered from', 'date'], ['to', 'Registered to', 'date'], ['nurse', 'Nurse', 'select', nurses], ['sort', 'Sort', 'select', { new: 'Newest first', old: 'Oldest first', name: 'Name', id: 'Customer ID' }]]) +
-        (d.rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Customer</th><th>Brand</th><th>Package</th><th>Status</th><th>Registered</th><th>Contact</th><th>Nurses</th><th></th></tr></thead><tbody>' + d.rows.map(function (c) {
+        (d.rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Customer</th><th>Brand</th><th>Package</th><th>Status</th><th>Risk</th><th>Registered</th><th>Contact</th><th>Nurses</th><th></th></tr></thead><tbody>' + d.rows.map(function (c) {
           return '<tr><td data-l="Customer"><a class="ocust" href="#/office/customer?p=' + e(c.id) + '"><span class="av">' + e(K.initials(c.name)) + '</span><span><b>' + e(c.name) + '</b><span class="muted small">' + e(c.id) + '</span></span></a></td>' +
             '<td data-l="Brand">' + (tags(c.brands, d.brands) || '–') + '</td><td data-l="Package">' + e(c.currentPackages.join(', ') || '–') + '</td><td data-l="Status"><span class="pill ' + (c.status === 'active' ? 'active' : c.status === 'pending' ? 'pending' : c.status === 'paused' ? 'paused' : 'ended') + '"><i></i>' + e(ST[c.status]) + '</span></td>' +
+            '<td data-l="Risk"><span class="rcat sm ' + e(c.risk || 'grey') + '"><i aria-hidden="true">' + K.CAT_ICON[c.risk || 'grey'] + '</i>' + e(RISK_NAME[c.risk || 'grey']) + '</span></td>' +
             '<td data-l="Registered">' + e(K.date(c.registeredAt)) + '</td><td data-l="Contact"><span class="small">' + e(K.phoneNice(c.phone) || '–') + '</span>' + (c.family.length ? '<br><span class="muted small">' + e(c.family.join(', ')) + '</span>' : '') + '</td>' +
             '<td data-l="Nurses">' + e(c.nurses.map(function (n) { return n.name; }).join(', ') || '–') + '</td><td><a class="btn sm ghost" href="#/office/customer?p=' + e(c.id) + '">Profile</a></td></tr>';
         }).join('') + '</tbody></table></section>' + pager(d, r) : '<div class="empty"><b>No customers match</b>Try other filters.</div>'));
@@ -321,12 +666,13 @@
         var d = x[0], inv = x[1];
         if (!d.ok) return fail(d);
         var c = d.customer, det = d.details || {}, pid = enc(p.id);
-        var quick = [['health/vitals', 'Vitals', 'pulse'], ['health/risks', 'Risk trends', 'gauge'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip']]
+        var quick = [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat'], ['assess/onboarding', 'Onboarding record', 'idcard'], ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['clientinfo', 'Client information', 'clip']]
           .map(function (q) { return '<a class="gotile sm" href="#/' + q[0] + '?p=' + pid + '"><span class="gt-i">' + icon(q[2]) + '</span><span class="gt-t"><b>' + q[1] + '</b></span>' + icon('arrow') + '</a>'; }).join('');
         var ro = function (l, v) { return '<div class="rof"><dt>' + e(l) + '</dt><dd>' + (v ? e(v) : '<span class="muted">Not given</span>') + '</dd></div>'; };
         var fam = d.links.filter(function (l) { return l.kind === 'family'; }), nur = d.links.filter(function (l) { return l.kind === 'caregiver'; });
         var html = '<section class="phead"><div class="avatar">' + (c.photo ? '<img src="/api/app/people/' + pid + '/photo?v=' + enc(c.photo) + '" alt="" width="112" height="112">' : '<span class="ph">' + icon('user') + '</span>') + '</div><div class="phead-t"><h2>' + e(c.name) + '</h2><p class="muted">Customer ID <b>' + e(c.id) + '</b> · registered ' + e(K.date(c.registeredAt)) + '</p><div class="ptags" style="margin-top:8px">' + tags(c.brands, { karehome: 'Kare@Home', karenest: 'KareNest', karewellness: 'KareWellness' }) + ' <span class="pill ' + (c.status === 'active' ? 'active' : 'pending') + '"><i></i>' + e(c.status === 'active' ? 'Active' : c.status.replace('_', ' ')) + '</span></div></div></section>' +
           '<div class="gotiles osm">' + quick + '</div>' +
+          '<section class="panel"><div class="panel-h"><h2>Overall risk</h2><a class="btn sm ghost" href="#/health/risks?p=' + pid + '">' + icon('gauge') + 'Risk trends</a></div><div id="orisk">' + K.loading(80) + '</div></section>' +
           '<div class="ogrid2"><section class="panel"><h2>Details</h2><dl class="rogrid">' + ro('Phone', K.phoneNice(det.phone1 || c.phone)) + ro('Email', det.email || c.email) + ro('Address', det.address) + ro('Blood group', det.bloodGroup) + ro('Packages', c.currentPackages.join(', ')) + ro('Details form', d.detailsStatus) + '</dl></section>' +
           '<section class="panel"><h2>Family and care team</h2><ul class="rlist">' + fam.concat(nur).map(function (l) { return '<li><span><b>' + e(l.name) + '</b><br><span class="muted small">' + e(l.kind === 'family' ? 'Family' + (l.relation ? ', ' + l.relation : '') : 'Nurse') + ' · since ' + e(K.date(l.since)) + '</span></span></li>'; }).join('') + '</ul>' + (fam.length + nur.length ? '' : '<p class="muted">No one linked yet.</p>') + '<a class="link small" href="#/admin/people">Change in People and plans</a></section></div>' +
           '<section class="panel"><div class="panel-h"><h2>Visits</h2><a class="btn sm ghost" href="#/office/scheduler">' + icon('cal') + 'Visit board</a></div>' + (d.visits.length ? '<div class="tw"><table class="stackable otable"><thead><tr><th>Date</th><th>Service</th><th>Nurse</th><th>Status</th></tr></thead><tbody>' + d.visits.slice(0, 12).map(function (v) { return '<tr><td data-l="Date"><b>' + e(K.date(v.date)) + '</b> ' + e(v.start ? K.hm12(v.start) : v.slot) + '<br><span class="muted small">' + e(v.reference) + '</span></td><td data-l="Service">' + e(v.serviceName) + '</td><td data-l="Nurse">' + e(v.nurse || '–') + '</td><td data-l="Status"><span class="vpill ' + e(v.status) + '">' + e(v.statusName) + '</span></td></tr>'; }).join('') + '</tbody></table></div>' : '<p class="muted">No visits booked.</p>') + '</section>' +
@@ -335,6 +681,7 @@
           '<section class="panel"><h2>Recent activity</h2>' + (d.activity.length ? '<ol class="tl">' + d.activity.slice(0, 15).map(function (a) { return '<li><div class="t">' + e(K.ACTIONS[a.action] || a.action) + '</div><div class="m">' + e(K.dt(a.at)) + ' · ' + e(a.by) + '</div></li>'; }).join('') + '</ol>' : '<p class="muted">Nothing yet.</p>') + '</section>' +
           '<p class="note">' + icon('shield') + '<span>You are viewing this customer as the office. Nothing here signs you in as them.</span></p>';
         K.fill(top + K.personBar(p, people) + html);
+        api('GET', 'people/' + pid + '/risk').then(function (rk) { var b = $('#orisk'); if (b) b.innerHTML = rk.ok ? K.riskHero(rk.status, { history: true, pid: p.id }) : '<p class="muted">' + e(rk.message || 'Not available') + '</p>'; });
       });
     });
   }
@@ -544,8 +891,8 @@
           '<fieldset class="multi"><legend>Brands</legend><div class="chips2">' + [['karehome', 'Kare@Home'], ['karenest', 'KareNest']].map(function (b) { return '<label class="chipck"><input type="checkbox" name="b.' + b[0] + '"' + (a.brands.indexOf(b[0]) > -1 ? ' checked' : '') + '>' + b[1] + '</label>'; }).join('') + '</div></fieldset>' +
           '<fieldset class="multi" style="margin-top:10px"><legend>Services (none ticked = every service)</legend><div class="chips2">' + d.services.map(function (s) { return '<label class="chipck"><input type="checkbox" name="s.' + e(s.id) + '"' + (a.services && a.services.indexOf(s.id) > -1 ? ' checked' : '') + '>' + e(s.name) + '</label>'; }).join('') + '</div></fieldset>' +
           '<button class="btn sm" type="submit" style="margin-top:12px">Save hours</button></form>' +
-          '<h3 class="osub-h">Leave</h3>' + (n.leave.length ? '<ul class="rlist">' + n.leave.map(function (l) { return '<li><span><b>' + e(K.date(l.from)) + (l.to !== l.from ? ' to ' + e(K.date(l.to)) : '') + '</b>' + (l.reason ? '<br><span class="muted small">' + e(l.reason) + '</span>' : '') + '</span><button class="btn sm ghost" data-act="o-leave-del" data-u="' + e(n.id) + '" data-id="' + e(l.id) + '">Remove</button></li>'; }).join('') + '</ul>' : '<p class="muted small">No leave planned.</p>') +
-          '<form data-form="o-leave" data-id="' + e(n.id) + '" class="oleave" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('from', 'First day', 'type="date" min="' + K.todayIST() + '"') + K.field('to', 'Last day', 'type="date" min="' + K.todayIST() + '"') + K.field('reason', 'Reason (optional)', 'maxlength="120"') + '<button class="btn sm ghost" type="submit">Add leave</button></form></section>';
+          '<h3 class="osub-h">Leave <a class="link small" href="#/office/scheduler/leave?nurse=' + e(n.id) + '">Full leave history</a></h3>' + (n.leave.filter(liveLeave).length ? '<ul class="rlist">' + n.leave.filter(liveLeave).map(function (l) { return '<li><span><b>' + e(K.date(l.from)) + (l.to !== l.from ? ' to ' + e(K.date(l.to)) : '') + '</b>' + (l.reason ? '<br><span class="muted small">' + e(l.reason) + '</span>' : '') + '</span>' + (l.status === 'pending' ? '<span class="pill pending"><i></i>Pending</span>' : '<button class="btn sm ghost" data-act="o-leave-del" data-u="' + e(n.id) + '" data-id="' + e(l.id) + '">Cancel leave</button>') + '</li>'; }).join('') + '</ul>' : '<p class="muted small">No leave planned.</p>') +
+          '<form data-form="o-leave" data-id="' + e(n.id) + '" class="oleave" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('from', 'First day', 'type="date" min="' + K.todayIST() + '"') + K.field('to', 'Last day', 'type="date" min="' + K.todayIST() + '"') + '<label class="field"><span>Type</span><select class="in" name="type">' + Object.keys(LEAVE_TYPES).map(function (k) { return '<option value="' + k + '">' + LEAVE_TYPES[k] + '</option>'; }).join('') + '</select></label>' + K.field('reason', 'Reason (optional)', 'maxlength="300"') + '<button class="btn sm ghost" type="submit">Add approved leave</button></form></section>';
       }).join('') + '</div>' : '<div class="empty"><b>No nurse logins yet</b>Add a caregiver login under Settings, Logins.</div>');
     });
   }
@@ -627,7 +974,40 @@
   document.addEventListener('click', function (ev) {
     var t = ev.target.closest('[data-act]'); if (!t) return;
     var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
-    if (act === 'o-lead') leadDialog(t.getAttribute('data-type'), id);
+    if (act === 'o-sum-pkg' || act === 'o-sum-risk' || act === 'o-sum-ind') { var fk = act === 'o-sum-pkg' ? 'pkg' : act === 'o-sum-ind' ? 'ind' : 'risk', fv = t.getAttribute('data-k'); S.cache.sumF[fk] = S.cache.sumF[fk] === fv ? '' : fv; if (fk === 'risk') S.cache.sumF.ind = ''; summaryLoad(true); }
+    else if (act === 'o-sum-clear') { S.cache.sumF = { pkg: '', risk: '', ind: '' }; summaryLoad(true); }
+    else if (act === 'o-doc-retry') { t.disabled = true; api('POST', 'admin/documents/' + enc(id) + '/retry', {}).then(function (d) { K.toast(d.ok ? 'Processing again. This page updates in a moment.' : d.message, d.ok ? 'ok' : 'bad'); setTimeout(K.render, 2500); }); }
+    else if (act === 'o-doc-close') { api('POST', 'admin/documents/' + enc(id) + '/close', {}).then(function (d) { K.toast(d.ok ? 'Marked reviewed.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-docv-reject') {
+      var fm = t.closest('form'), note = fm.elements.note.value.trim();
+      if (note.length < 3) { var er = fm.querySelector('[data-err=note]'); if (er) er.textContent = 'Say why this value is not used'; fm.elements.note.focus(); return; }
+      api('POST', 'admin/extractions/' + enc(id), { action: 'reject', note: note }).then(function (d) { K.toast(d.ok ? 'Rejected. Nothing was stored.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+    }
+    else if (act === 'o-risk-recalc') {
+      t.disabled = true;
+      api('POST', 'admin/risk/recalculate', {}).then(function (d) { t.disabled = false; K.toast(d.ok ? 'Risk recalculated for ' + d.recalculated + ' people.' : d.message, d.ok ? 'ok' : 'bad'); if (d.ok) K.render(); });
+    } else if (act === 'o-rule-withdraw') {
+      var why = prompt('Why go back to the workbook defaults? (Recorded answers for this indicator stop applying straight away.)');
+      if (why === null) return;
+      api('POST', 'admin/risk/rules/' + enc(id), { withdraw: true, note: why }).then(function (d) { K.toast(d.ok ? 'Back to the workbook defaults. Risk recalculated.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+    } else if (act === 'o-leave-add') leaveDialog(null);
+    else if (act === 'o-leave-edit') leaveDialog(leaveOf(t.getAttribute('data-u'), id));
+    else if (act === 'o-leave-visits') leaveVisitsDialog(leaveOf(t.getAttribute('data-u'), id));
+    else if (act === 'o-leave-approve') {
+      if (!confirm('Approve this leave? The nurse becomes unavailable for these days and their visits are moved to a free nurse where possible.')) return;
+      t.disabled = true;
+      api('POST', 'admin/leave/' + enc(t.getAttribute('data-u')) + '/' + enc(id) + '/approve', {}).then(function (d) {
+        t.disabled = false; if (!d.ok) return K.toast(d.message, 'bad');
+        var need = d.affected.filter(function (a) { return a.result === 'awaiting_assignment'; }).length;
+        K.toast('Leave approved.' + (d.affected.length ? ' ' + d.affected.length + ' visit(s) affected' + (need ? ', ' + need + ' need a nurse.' : ', all moved.') : ''), need ? 'bad' : 'ok'); K.render();
+      });
+    } else if (act === 'o-leave-reject' || act === 'o-leave-cancel') {
+      var rej = act === 'o-leave-reject', lv = leaveOf(t.getAttribute('data-u'), id);
+      K.openDialog((rej ? 'Reject' : 'Cancel') + ' leave for ' + lv.nurseName, '<form data-form="o-leave-decide" data-kind="' + (rej ? 'reject' : 'cancel') + '" data-u="' + e(lv.nurseId) + '" data-id="' + e(lv.id) + '" novalidate><div class="alert bad" data-msg hidden></div><p>' + e(K.date(lv.from)) + ' to ' + e(K.date(lv.to)) + ' · ' + e(lv.typeName) + '</p>' +
+        K.field('note', rej ? 'Reason (required)' : 'Reason (optional)', 'maxlength="300"') + (rej ? '' : '<p class="muted small">The record stays in the history. Visits already moved to other nurses are not moved back.</p>') + '</form>',
+        '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">' + (rej ? 'Reject leave' : 'Cancel leave') + '</button>');
+    }
+    else if (act === 'o-lead') leadDialog(t.getAttribute('data-type'), id);
     else if (act === 'o-pay' || act === 'o-refund') payDialog(id, t.getAttribute('data-n'), Number(t.getAttribute('data-o')), act === 'o-refund');
     else if (act === 'o-assign') assignDialog(id);
     else if (act === 'o-auto-assign') {
@@ -641,7 +1021,8 @@
       var s = t.getAttribute('data-s'); t.disabled = true;
       api('POST', 'admin/employees/' + enc(t.getAttribute('data-u')) + '/kyc/' + enc(id), { status: s }).then(function (d) { if (!d.ok) { t.disabled = false; return K.toast(d.message, 'bad'); } K.toast(s === 'verified' ? 'Marked as verified.' : 'Marked as rejected.', 'ok'); K.render(); });
     } else if (act === 'o-leave-del') {
-      api('DELETE', 'admin/scheduler/nurses/' + enc(t.getAttribute('data-u')) + '/leave/' + enc(id)).then(function (d) { K.toast(d.ok ? 'Leave removed.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+      if (!confirm('Cancel this leave? It stays in the leave history. Visits already moved to other nurses are not moved back.')) return;
+      api('DELETE', 'admin/scheduler/nurses/' + enc(t.getAttribute('data-u')) + '/leave/' + enc(id)).then(function (d) { K.toast(d.ok ? 'Leave cancelled.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     } else if (act === 'o-hol-del') {
       var day = t.getAttribute('data-d');
       saveHolidays((S.cache.holidays || []).filter(function (h) { return h.date !== day; }), 'Holiday removed.');
@@ -653,6 +1034,7 @@
   });
   document.addEventListener('change', function (ev) {
     var t = ev.target, act = t.getAttribute && t.getAttribute('data-act');
+    if (act === 'o-sum-sel') { S.cache.sumF[t.name] = t.value; summaryLoad(true); return; }
     if (act === 'o-auto') { var f = t.closest('form'); if (f) f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
     else if (act === 'o-lead-status') {
       api('PATCH', 'admin/leads/' + t.getAttribute('data-type') + '/' + enc(t.getAttribute('data-id')), { status: t.value }).then(function (d) { K.toast(d.ok ? 'Status saved.' : d.message, d.ok ? 'ok' : 'bad'); });
@@ -674,15 +1056,15 @@
       var p = r.parts.slice(1).join('/');
       refreshCounts();
       var pages = {
-        'overview/customers': customerAnalytics, 'overview/revenue': revenueAnalytics, overview: customerAnalytics,
+        'overview/summary': summaryPage, 'overview/customers': customerAnalytics, 'overview/revenue': revenueAnalytics, overview: summaryPage,
         'leads/overview': leadOverview, leads: leadOverview, 'leads/list': leadsList, 'leads/assign': leadsAssign,
         customers: customersPage, customer: customerProfile,
         'finance/invoices': invoicesPage, finance: invoicesPage, 'finance/due': duePage,
         employees: employeesPage, 'employees/kyc': kycPage,
-        scheduler: boardPage, 'scheduler/nurses': nursesPage, 'scheduler/holidays': holidaysPage,
-        'contact-audit': auditPage
+        scheduler: boardPage, 'scheduler/nurses': nursesPage, 'scheduler/holidays': holidaysPage, 'scheduler/leave': leavePage, 'risk-rules': rulesPage,
+        'contact-audit': auditPage, documents: docsPage
       };
-      (pages[p] || function () { K.go('#/office/overview/customers', true); })(r);
+      (pages[p] || function () { K.go('#/office/overview/summary', true); })(r);
       return true;
     }
   });
