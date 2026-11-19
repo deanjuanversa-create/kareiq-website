@@ -1534,9 +1534,10 @@
           if (x.dateStatus === 'detected') toast('Report date found for ' + x.name + ': ' + date(x.date) + '.');
           else if (x.dateStatus === 'review') toast(REVIEW_MSG);
         });
-        if (d.rows.some(function (x) { return x.dateStatus === 'processing' || (x.processing && (x.processing.status === 'uploaded' || x.processing.status === 'processing')); }) && tries < 40) pollRecords(pid, tries + 1);
+        // a small server can take a few minutes to read a scanned report: keep checking for up to ~15 minutes
+        if (d.rows.some(function (x) { return x.dateStatus === 'processing' || (x.processing && (x.processing.status === 'uploaded' || x.processing.status === 'processing')); }) && tries < 100) pollRecords(pid, tries + 1);
       });
-    }, 3000);
+    }, tries < 20 ? 3000 : 10000);
   }
   function sizeText(n) { return n > 1048576 ? (Math.round(n / 104857.6) / 10) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB'; }
   function syncPicks() {

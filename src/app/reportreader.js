@@ -6,6 +6,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 const { execFile } = require('child_process');
+const crypto = require('crypto');
 const { findReportDate } = require('./reportdate');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'ocr', 'report_reader.py');
@@ -35,6 +36,35 @@ function available() {
   return ready;
 }
 
+// One upload is read twice: first for its report date, then by the document extraction. The OCR is
+// the slow part (about a minute on a small server), so a successful read of the same file is kept in
+// memory for a short while and reused. Only this server's memory; nothing is written anywhere.
+const CACHE_MS = 15 * 60 * 1000, CACHE_MAX = 8;
+const cache = new Map();
+const keyOf = (buf, mime, deep) => crypto.createHash('sha256').update(buf).digest('hex') + '|' + mime + '|' + (deep ? 'deep' : 'std');
+function cached(key) {
+  const c = cache.get(key);
+  if (!c) return null;
+  if (Date.now() - c.at > CACHE_MS) { cache.delete(key); return null; }
+  return c.out;
+}
+function remember(key, out) {
+  if (!out || !out.ok) return;
+  cache.delete(key);
+  cache.set(key, { at: Date.now(), out });
+  while (cache.size > CACHE_MAX) cache.delete(cache.keys().next().value);
+}
+// runs the reader on the file (or reuses the last read of the same file); parsed JSON, or null
+async function runReader(file, buf, mime, deep) {
+  const key = keyOf(buf, mime, deep);
+  const hit = cached(key);
+  if (hit) return { out: hit, err: null };
+  const r = await exec(PY, [SCRIPT, file, mime].concat(deep ? ['deep'] : []), { timeout: TIMEOUT });
+  let out = null; try { out = JSON.parse(r.stdout); } catch { out = null; }
+  remember(key, out);
+  return { out, err: r.err };
+}
+
 let queue = Promise.resolve();
 function read(buf, mime, category) {
   const job = queue.then(() => readNow(buf, mime, category));
@@ -50,10 +80,7 @@ async function readNow(buf, mime, category) {
     fs.chmodSync(dir, 0o700);
     const file = path.join(dir, 'report' + (mime === 'application/pdf' ? '.pdf' : mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg'));
     fs.writeFileSync(file, buf, { mode: 0o600 });
-    const pass = async (deep) => {
-      const r = await exec(PY, [SCRIPT, file, mime].concat(deep ? ['deep'] : []), { timeout: TIMEOUT });
-      try { return JSON.parse(r.stdout); } catch { return null; }
-    };
+    const pass = async (deep) => (await runReader(file, buf, mime, deep)).out;
     let out = await pass(false);
     if (!out || !out.ok) {
       const why = out && out.error === 'timeout' ? 'Reading the report took too long.' : 'The report could not be read automatically.';
@@ -93,8 +120,8 @@ async function readPagesNow(buf, mime, opts) {
     fs.chmodSync(dir, 0o700);
     const file = path.join(dir, 'doc' + (mime === 'application/pdf' ? '.pdf' : mime === 'image/png' ? '.png' : mime === 'image/webp' ? '.webp' : '.jpg'));
     fs.writeFileSync(file, buf, { mode: 0o600 });
-    const r = await exec(PY, [SCRIPT, file, mime].concat(opts.deep ? ['deep'] : []), { timeout: TIMEOUT });
-    let out = null; try { out = JSON.parse(r.stdout); } catch { out = null; }
+    const r = await runReader(file, buf, mime, Boolean(opts.deep));
+    const out = r.out;
     if (!out) return { ok: false, error: r.err && r.err.killed ? 'Reading the document took too long.' : 'The document reader did not answer.', retryable: true };
     if (!out.ok) return { ok: false, error: out.error === 'timeout' ? 'Reading the document took too long.' : out.error === 'unreadable-image' ? 'The file could not be opened as an image.' : 'The document could not be read (' + out.error + ').', retryable: out.error === 'timeout', engine: out.engine };
     return { ok: true, pages: out.pages, engine: out.engine };
