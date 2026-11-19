@@ -2,17 +2,21 @@
 /* Writes a DEMO copy of everything (KareIQ, Kare@Home, KareNest websites + My KareIQ app + API)
    that runs as one separate Vercel project, filled with sample people and demo logins.
      node tools/demo/build.js ../kareiq-demo
-   Then deploy that folder as a NEW Vercel project. It never talks to the live Render server:
-   pages, sign-in and forms all use the demo project's own /api.
-   Storage: none needed. Without a database every copy of the server builds the same sample data
-   and sign-ins are kept in the browser cookie; changes visitors make are not kept for long.
-   Optional: MONGODB_URI + MONGODB_DB=kareiq-demo (a separate database, never the live "kareiq")
-   keeps changes too.
+   Then deploy that folder as a NEW Vercel project. It never talks to the live Render server.
+   Vercel serves the pages; /api, /app and /admin are passed through (same address in the browser)
+   to the DEMO server on Render, "kareiq-demo" in render.yaml: Docker, so uploaded reports are read,
+   with its own database "kareiq-demo", so demo changes are kept and never reach the live data.
+     DEMO_BACKEND=https://other-name.onrender.com node tools/demo/build.js ../kareiq-demo
+   uses another address. DEMO_BACKEND=vercel keeps the old setup: the server runs inside Vercel with no
+   report reading and, without a database, sample data that is rebuilt on every request.
    No passwords or .env files are copied. */
 const fs = require('fs');
 const path = require('path');
 
 const out = process.argv[2];
+const BACKEND = String(process.env.DEMO_BACKEND || 'https://kareiq-demo.onrender.com').replace(/\/+$/, '');
+const ON_VERCEL = BACKEND === 'vercel';
+if (!ON_VERCEL && !/^https:\/\/[a-z0-9.-]+$/i.test(BACKEND)) { console.error('DEMO_BACKEND must be an https address or "vercel"'); process.exit(1); }
 if (!out) { console.error('Usage: node tools/demo/build.js <output folder>'); process.exit(1); }
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.resolve(out);
@@ -88,6 +92,8 @@ htmlFiles.forEach((f) => {
 
 // ---------------------------------------------------------------- vercel.json
 const to = (p) => '/api/index?__path=' + p;
+// the demo server on Render, or (DEMO_BACKEND=vercel) the function inside this project
+const go = (p) => ON_VERCEL ? to(p) : BACKEND + p;
 const headers = JSON.parse(fs.readFileSync(path.join(ROOT, 'vercel.json'), 'utf8')).headers || [];
 headers.forEach((h) => (h.headers || []).forEach((x) => {
   if (x.key === 'Content-Security-Policy') x.value = x.value.replace(/ https:\/\/kareiq-api\.onrender\.com| https:\/\/api\.karenest\.co\.in/g, '');
@@ -99,7 +105,7 @@ const vercel = {
   outputDirectory: 'public',
   cleanUrls: true,
   trailingSlash: false,
-  functions: { 'api/index.js': { includeFiles: '{app,admin,public,src,tools}/**', maxDuration: 15 } },
+  ...(ON_VERCEL ? { functions: { 'api/index.js': { includeFiles: '{app,admin,public,src,tools}/**', maxDuration: 15 } } } : {}),
   redirects: [
     { source: '/kare-at-home/', destination: '/kare-at-home', permanent: false },
     { source: '/kare-at-home/about', destination: '/kare-at-home#about-us', permanent: false },
@@ -109,14 +115,14 @@ const vercel = {
   ],
   rewrites: [
     { source: '/karenest', destination: '/karenest/index.html' },
-    { source: '/api/:path*', destination: to('/api/:path*') },
-    { source: '/app', destination: to('/app/') },
-    { source: '/app/:path*', destination: to('/app/:path*') },
-    { source: '/admin', destination: to('/admin/') },
-    { source: '/admin/:path*', destination: to('/admin/:path*') }
+    { source: '/api/:path*', destination: go('/api/:path*') },
+    { source: '/app', destination: go('/app/') },
+    { source: '/app/:path*', destination: go('/app/:path*') },
+    { source: '/admin', destination: go('/admin/') },
+    { source: '/admin/:path*', destination: go('/admin/:path*') }
   ],
   headers
 };
 fs.writeFileSync(path.join(OUT, 'vercel.json'), JSON.stringify(vercel, null, 2) + '\n');
-fs.writeFileSync(path.join(OUT, '.vercelignore'), '.env\n.env.*\ndata\nnode_modules\n');
-console.log('Demo site written to ' + OUT + ' (' + htmlFiles.length + ' pages marked as demo)');
+fs.writeFileSync(path.join(OUT, '.vercelignore'), '.env\n.env.*\ndata\nnode_modules\n' + (ON_VERCEL ? '' : '/api\n'));
+console.log('Demo site written to ' + OUT + ' (' + htmlFiles.length + ' pages marked as demo); /api, /app and /admin go to ' + (ON_VERCEL ? 'the function in this project' : BACKEND));

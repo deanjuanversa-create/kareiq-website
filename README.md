@@ -259,6 +259,21 @@ kareiq-website/
 | CNAME | www  | the value Vercel shows (cname.vercel-dns.com)    | www.karenest.co.in             |
 | CNAME | api  | the value Render shows (kareiq-api.onrender.com) | api.karenest.co.in -> the API  |
 
+## Public demo: Vercel pages + Render demo server
+
+`node tools/demo/build.js ../kareiq-demo` writes the demo website (demo ribbon, demo logins, no
+passwords or `.env`). Deploy that folder as its own Vercel project. Vercel serves the pages and passes
+`/api`, `/app` and `/admin` straight through to the Render service **kareiq-demo** (`render.yaml`), so
+the browser stays on the demo address. That service:
+
+- runs from the Dockerfile, so uploaded reports are read and stored like on the live app;
+- has `APP_DEMO=true` and its own database `MONGODB_DB=kareiq-demo` on the same Atlas cluster, so demo
+  changes are kept and never touch the live `kareiq` data. The server refuses to start a demo on `kareiq`;
+- fills itself with the demo logins and sample people the first time it starts on an empty database.
+
+A different Render address: `DEMO_BACKEND=https://name.onrender.com node tools/demo/build.js ../kareiq-demo`.
+`DEMO_BACKEND=vercel` builds the old all-in-Vercel demo (no report reading, nothing kept without a database).
+
 ## Older setup: everything on Vercel
 
 The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and JS from Vercel's CDN, and sends `/api/*` and `/admin` to one serverless function (`api/index.js`, which runs the same code as `server.js`).

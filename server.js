@@ -28,6 +28,10 @@ const { createAppApi } = require('./src/app/api');
 const appAuth = require('./src/app/auth');
 const { notify, emailEnabled } = require('./src/notify');
 const db = require('./src/db');
+// A demo (APP_DEMO=true) must never run on the live database: demo logins and sample people would be added to it.
+if (String(process.env.APP_DEMO || '') === 'true' && db.mode === 'mongo' && (process.env.MONGODB_DB || 'kareiq') === 'kareiq') {
+  throw new Error('APP_DEMO=true needs its own database: set MONGODB_DB to a demo name such as kareiq-demo (never the live "kareiq").');
+}
 const content = require('./src/content');
 
 const PORT = Number(process.env.PORT || 3000);

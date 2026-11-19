@@ -30,3 +30,26 @@ services:
         value: https://kareiq-api.onrender.com
       # Google / Facebook sign-in: add GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, FACEBOOK_APP_ID and
       # FACEBOOK_APP_SECRET in Render → Environment when you have them (never in this file or GitHub).
+
+  # The DEMO app (demo logins, sample people). Its own database "kareiq-demo" on the same Atlas
+  # cluster, so demo changes are kept and never touch the live "kareiq" data. The demo website
+  # on Vercel (tools/demo/build.js) passes /api, /app and /admin through to this service.
+  - type: web
+    name: kareiq-demo
+    runtime: docker            # same Dockerfile: report reading works in the demo too
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: MONGODB_URI       # the same Atlas connection string as kareiq-api
+        sync: false
+      - key: MONGODB_DB        # never "kareiq": the server refuses to start a demo on the live database
+        value: kareiq-demo
+      - key: APP_DEMO
+        value: "true"
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "true"
