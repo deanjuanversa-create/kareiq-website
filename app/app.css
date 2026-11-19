@@ -565,6 +565,10 @@ b.good{color:var(--c-good)}b.ok{color:#8a6a00}b.warn{color:#a24f00}b.bad{color:v
 .chart2 text{font-size:13px;fill:#333;font-family:var(--f-body)}
 .chart2 .ln{fill:none;stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
 .chart2 .ln.s1{stroke:#63c9f2}.chart2 .ln.s2{stroke:#1f3fd6}
+/* a folded stretch with no readings: light band, // break mark on the axis, dashed join */
+.chart2 .gap rect{fill:rgba(120,130,150,.07)}
+.chart2 .gap line{stroke:#8a94a6;stroke-width:1.6}
+.chart2 .gapln{stroke-dasharray:4 5;stroke-width:1.6;opacity:.6}
 .chart2 .pt.s1{fill:#63c9f2}.chart2 .pt.s2{fill:#1f3fd6}
 .legend2{display:flex;gap:26px;justify-content:center;padding:12px 0 2px;background:#fff;font-size:.95rem}
 .legend2 i{display:inline-block;width:14px;height:14px;margin-right:8px;vertical-align:-2px}

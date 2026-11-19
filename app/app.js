@@ -1091,8 +1091,9 @@
       if (!(hi > lo)) hi = lo + stepGuess;
     }
     var x0 = L + PAD, x1 = W - R - PAD;
-    // each reading sits at its real date and time
-    var x = function (ms) { return x0 + (x1 - x0) * Math.min(1, Math.max(0, (ms - start) / (end - start))); };
+    // each reading sits at its real date and time; long stretches with no readings are folded into a
+    // narrow break so the readings around them stay readable (e.g. one old report, then two busy months)
+    var tl = timeline(m, start, end, x0, x1), x = tl.x;
     var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
     var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">';
     // y grid and labels
@@ -1102,7 +1103,14 @@
       out += '<text x="' + (L - 8) + '" y="' + (Number(yy) + 4) + '" text-anchor="end">' + fmtNum(v) + '</text>';
     }
     // x ticks: light vertical guides, short tick marks and labels that never overlap
-    var ticks = dateTicks(start, end, x1 - x0), lastRight = -1e9;
+    var ticks = tl.ticks, lastRight = -1e9;
+    tl.gaps.forEach(function (g) {
+      var gx = (g.x0 + g.x1) / 2, yb = H - B;
+      out += '<g class="gap"><title>' + e('No readings from ' + date(isoDay(g.from)) + ' to ' + date(isoDay(g.to))) + '</title>' +
+        '<rect x="' + g.x0.toFixed(1) + '" y="' + T + '" width="' + (g.x1 - g.x0).toFixed(1) + '" height="' + (H - B - T) + '"/>' +
+        '<line x1="' + (gx - 6).toFixed(1) + '" y1="' + (yb + 6) + '" x2="' + (gx - 1).toFixed(1) + '" y2="' + (yb - 6) + '"/>' +
+        '<line x1="' + (gx + 1).toFixed(1) + '" y1="' + (yb + 6) + '" x2="' + (gx + 6).toFixed(1) + '" y2="' + (yb - 6) + '"/></g>';
+    });
     ticks.forEach(function (tk) {
       var tx = x(tk[0]);
       out += '<line class="vg" x1="' + tx.toFixed(1) + '" x2="' + tx.toFixed(1) + '" y1="' + T + '" y2="' + (H - B) + '"/>' +
@@ -1116,7 +1124,18 @@
     m.keys.forEach(function (k, si) {
       var pts = m.rows.filter(function (r) { return r[k] != null; }).slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (r) { return [x(r.ms), y(r[k]), r]; });
       var rad = pts.length > 90 ? 2.6 : pts.length > 40 ? 3.6 : 5;
-      if (pts.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + pts.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+      // one line per stretch of readings; across a folded gap the two ends are joined by a dashed line
+      var runs = [], cur = [];
+      pts.forEach(function (p, i) {
+        if (i && tl.seg(p[2].ms) !== tl.seg(pts[i - 1][2].ms)) { runs.push(cur); cur = []; }
+        cur.push(p);
+      });
+      if (cur.length) runs.push(cur);
+      runs.forEach(function (run, ri) {
+        if (run.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + run.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+        var nx = runs[ri + 1];
+        if (nx) { var a = run[run.length - 1], b = nx[0]; out += '<line class="ln gapln s' + (si + 1) + '" x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '"/>'; }
+      });
       pts.forEach(function (p) {
         var tip = m.tip ? m.tip(p[2]) : dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
         out += '<g class="pg"' + (anim ? ' style="--d:' + Math.round(150 + 650 * (pIdx++ / pTotal)) + 'ms"' : '') + '><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
@@ -1124,6 +1143,62 @@
       });
     });
     return out + '</svg>';
+  }
+  function isoDay(ms) { var p = istParts(ms); return p.y + '-' + ('0' + (p.m + 1)).slice(-2) + '-' + ('0' + p.d).slice(-2); }
+  // The x axis of a chart: groups of readings keep their real spacing; an empty stretch longer than
+  // about a month (and an eighth of the period) between them, before the first or after the last, is
+  // shown as a narrow break instead. Without such a stretch the axis is the plain period, as before.
+  function timeline(m, start, end, x0, x1) {
+    var ms = [];
+    m.rows.forEach(function (r) { if (r.ms != null) ms.push(Math.min(end, Math.max(start, r.ms))); });
+    ms.sort(function (a, b) { return a - b; });
+    var span = end - start, G = Math.max(30 * DAY, span / 8), BW = 26, MINW = 70;
+    var plain = { x: function (t) { return x0 + (x1 - x0) * Math.min(1, Math.max(0, (t - start) / span)); }, gaps: [], seg: function () { return 0; } };
+    plain.ticks = dateTicks(start, end, x1 - x0);
+    if (!ms.length || span < 2 * G) return plain;
+    // stretches of readings
+    var cl = [[ms[0], ms[0]]];
+    for (var i = 1; i < ms.length; i++) { if (ms[i] - cl[cl.length - 1][1] > G) cl.push([ms[i], ms[i]]); else cl[cl.length - 1][1] = ms[i]; }
+    // the start and the end of the period belong to the first and last stretch unless far away
+    if (cl[0][0] - start <= G) cl[0][0] = start;
+    if (end - cl[cl.length - 1][1] <= G) cl[cl.length - 1][1] = end;
+    var folded = cl.length > 1 || cl[0][0] > start || cl[cl.length - 1][1] < end;
+    if (!folded) return plain;
+    // a little room either side of each stretch (never past the period)
+    var segs = cl.map(function (c) { var pad = Math.max(DAY, (c[1] - c[0]) * 0.04); return { a: c[0] === start ? start : Math.max(start, c[0] - pad), b: c[1] === end ? end : Math.min(end, c[1] + pad) }; });
+    var gaps = [];
+    if (segs[0].a > start) gaps.push({ from: start, to: segs[0].a, before: 0 });
+    for (var j = 1; j < segs.length; j++) gaps.push({ from: segs[j - 1].b, to: segs[j].a, before: j });
+    if (segs[segs.length - 1].b < end) gaps.push({ from: segs[segs.length - 1].b, to: end, before: segs.length });
+    // widths: each gap a fixed narrow band, the stretches share the rest by their length (at least MINW)
+    var avail = Math.max(MINW * segs.length, (x1 - x0) - BW * gaps.length), tot = 0;
+    segs.forEach(function (sg) { tot += sg.b - sg.a; });
+    var w = segs.map(function (sg) { return tot ? avail * (sg.b - sg.a) / tot : avail / segs.length; });
+    var small = w.map(function (v) { return v < MINW; }), fixed = 0, rest = 0;
+    w.forEach(function (v, k) { if (small[k]) fixed += MINW; else rest += v; });
+    w = w.map(function (v, k) { return small[k] ? MINW : rest ? v * (avail - fixed) / rest : MINW; });
+    // place everything left to right
+    var pos = x0, gi = 0;
+    var placeGaps = function (k) { while (gi < gaps.length && gaps[gi].before === k) { gaps[gi].x0 = pos; gaps[gi].x1 = pos + BW; pos += BW; gi++; } };
+    segs.forEach(function (sg, k) { placeGaps(k); sg.x0 = pos; sg.x1 = pos + w[k]; pos += w[k]; });
+    placeGaps(segs.length);
+    var segOf = function (t) { for (var k = 0; k < segs.length; k++) if (t <= segs[k].b) return k; return segs.length - 1; };
+    var xf = function (t) {
+      var k = segOf(t), sg = segs[k];
+      if (t < sg.a) { var g = gaps.filter(function (gg) { return t >= gg.from && t <= gg.to; })[0]; return g ? g.x0 + (g.x1 - g.x0) / 2 : sg.x0; }
+      return sg.b > sg.a ? sg.x0 + (sg.x1 - sg.x0) * (t - sg.a) / (sg.b - sg.a) : (sg.x0 + sg.x1) / 2;
+    };
+    // date labels per stretch; the first label of each stretch carries its year when the chart covers several
+    var years = istParts(start).y !== istParts(end).y, ticks = [];
+    segs.forEach(function (sg) {
+      var t = sg.b - sg.a < 2 * DAY ? [] : dateTicks(sg.a, sg.b, sg.x1 - sg.x0).filter(function (tk) { return tk[0] >= sg.a && tk[0] <= sg.b; });
+      // a label right at the break would collide with the one before it: start a little inside
+      if (t.length > 1) t = t.filter(function (tk) { return xf(tk[0]) - sg.x0 >= 26; });
+      if (!t.length) { var mid = sg.b > sg.a ? (sg.a + sg.b) / 2 : sg.a, p = istParts(mid); t = [[mid, p.d + ' ' + MON[p.m]]]; }
+      if (years) { var p0 = istParts(t[0][0]); if (t[0][1].indexOf(String(p0.y)) < 0) t[0] = [t[0][0], t[0][1] + ' ' + p0.y]; }
+      ticks = ticks.concat(t);
+    });
+    return { x: xf, ticks: ticks, gaps: gaps, seg: segOf };
   }
   function niceStep(span) {
     var raw = span / 4, p = Math.pow(10, Math.floor(Math.log(raw) / Math.LN10)), n = raw / p;
