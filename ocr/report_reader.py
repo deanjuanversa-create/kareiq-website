@@ -7,7 +7,7 @@
 Pipeline
   1. PDF with a real text layer: the text is taken as it is (pdftotext), page by page.
   2. Scanned PDF pages and photos: the page is rendered (pdftoppm, 300 dpi) or decoded, then
-     OpenCV prepares it for reading: grayscale, resize to a readable size, denoise, straighten
+     OpenCV prepares it for reading: grayscale, resize to a readable size, denoise (noisy pages only), straighten
      (deskew), even out lighting and binarise (adaptive threshold, with Otsu as a second try).
   3. Tesseract (LSTM engine) reads the prepared page. OpenCV only prepares the image; Tesseract
      does the text recognition.
@@ -21,8 +21,11 @@ import json, os, re, shutil, subprocess, sys, tempfile
 MAX_PAGES = 6
 TIMEOUT = 90  # seconds for each external step (slow servers need more)
 
+# one thread for Tesseract: on a small server with a CPU share, several threads only compete for it
+ENV = dict(os.environ, OMP_THREAD_LIMIT="1")
+
 def run(cmd, timeout=TIMEOUT):
-    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False)
+    return subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=timeout, check=False, env=ENV)
 
 def meaningful(text):
     return len(re.findall(r"[A-Za-z0-9]", text or ""))
@@ -42,6 +45,22 @@ def versions():
     out["poppler"] = bool(shutil.which("pdftotext") and shutil.which("pdftoppm"))
     return out
 
+NOISY = 4.0  # estimated noise level (grey levels) above which a page is denoised
+
+def noise_sigma(cv2, np, img):
+    """Fast estimate of the image noise (Immerkaer's method) on a copy at most 1000 px across."""
+    try:
+        g = img
+        s = 1000.0 / float(max(g.shape[1], 1))
+        if s < 1:
+            g = cv2.resize(g, None, fx=s, fy=s, interpolation=cv2.INTER_AREA)
+        k = np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]], np.float32)
+        c = cv2.filter2D(g.astype(np.float32), -1, k)
+        h, w = g.shape[:2]
+        return float(np.abs(c[1:-1, 1:-1]).sum() * (np.pi / 2) ** 0.5 / (6.0 * (w - 2) * (h - 2)))
+    except Exception:
+        return NOISY + 1  # unsure: denoise as before
+
 def prepare(cv2, np, img):
     """OpenCV preprocessing for one page; returns a list of candidate images to read (best first)."""
     if img is None:
@@ -55,7 +74,10 @@ def prepare(cv2, np, img):
     if scale > 1.15 or scale < 0.8:
         scale = max(0.35, min(scale, 3.0))
         img = cv2.resize(img, None, fx=scale, fy=scale, interpolation=cv2.INTER_CUBIC if scale > 1 else cv2.INTER_AREA)
-    img = cv2.fastNlMeansDenoising(img, None, h=10, templateWindowSize=7, searchWindowSize=21)
+    # denoising is by far the slowest step (about 90% of the time on a clean A4 page), so it only runs
+    # when the page is actually noisy (phone photos, poor scans); clean digital reports skip it
+    if noise_sigma(cv2, np, img) > NOISY:
+        img = cv2.fastNlMeansDenoising(img, None, h=10, templateWindowSize=7, searchWindowSize=21)
     # straighten slightly rotated pages (up to 15 degrees) using the angle of the text pixels
     try:
         inv = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)[1]
