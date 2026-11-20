@@ -1,0 +1,133 @@
+/* KareIQ app — refined look (20 Nov 2026).
+   A calmer, cleaner layer over app.css in the spirit of Apple's own apps: system typography with
+   tight large titles, a light grey canvas with white surfaces, hairline separators instead of heavy
+   borders, a frosted top bar, a quiet sidebar whose selected item is a soft accent pill, generous
+   rounding and soft depth. Colours that carry meaning (risk categories, statuses, brands) are kept.
+   Remove this one file (and its <link> in app/index.html) to return to the previous look. */
+
+body[data-brand="kareiq"]{
+  --ink:#1d1d1f; --ink-2:#424245; --muted:#6e6e73; --line:rgba(0,0,0,.08); --line-2:rgba(0,0,0,.14);
+  --bg:#ffffff; --wash:#f5f5f7; --wash-2:#ececf0;
+  --cream:#f5f5f7; --cream-2:rgba(0,0,0,.045); --hi:color-mix(in srgb,var(--accent) 13%,white);
+  --edge:rgba(0,0,0,.08);
+  --o-card:#ffffff; --o-edge:rgba(0,0,0,.07); --o-shadow:0 1px 1px rgba(0,0,0,.03),0 12px 28px -14px rgba(0,0,0,.18);
+  --r-lg:20px; --r:14px; --r-sm:12px;
+  --shadow:0 1px 1px rgba(0,0,0,.04),0 10px 30px -12px rgba(0,0,0,.16);
+  --f-body:-apple-system,BlinkMacSystemFont,"SF Pro Text","Inter","Segoe UI Variable Text","Segoe UI",system-ui,"Outfit",sans-serif;
+  --f-display:-apple-system,BlinkMacSystemFont,"SF Pro Display","Inter","Segoe UI Variable Display","Segoe UI",system-ui,"Outfit",sans-serif;
+  --slab:var(--f-display);
+  background:var(--wash);
+  font-feature-settings:"ss01","cv11";
+  letter-spacing:-.006em;
+}
+body[data-brand="kareiq"] .shell{background:var(--wash)}
+
+/* ---------- type: large titles, quiet secondary text */
+body[data-brand="kareiq"] .mn h1,body[data-brand="kareiq"] .mn h2,body[data-brand="kareiq"] .mn h3,body[data-brand="kareiq"] dialog h2,
+body[data-brand="kareiq"] .pagehead h1{font-family:var(--f-display);letter-spacing:-.022em;color:var(--ink)}
+body[data-brand="kareiq"] .mn .head h1,body[data-brand="kareiq"] .pagehead h1{font-size:clamp(1.75rem,3vw,2.35rem);font-weight:700;line-height:1.12}
+body[data-brand="kareiq"] .mn h2{font-weight:650}
+body[data-brand="kareiq"] .mn h3{font-weight:600;letter-spacing:-.012em}
+body[data-brand="kareiq"] .mn .sub,body[data-brand="kareiq"] .pagehead>p{font-size:1.02rem;color:var(--muted);letter-spacing:-.01em;margin-top:6px}
+body[data-brand="kareiq"] .eyebrow{letter-spacing:.06em;font-weight:600;font-size:.74rem}
+
+/* ---------- frosted top bar */
+body[data-brand="kareiq"] .tb{background:rgba(245,245,247,.72);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.07)}
+body[data-brand="kareiq"] .tb-role{background:rgba(0,0,0,.05);border:0;color:var(--ink-2);letter-spacing:.04em}
+body[data-brand="kareiq"] .tb .me>button .av{background:linear-gradient(135deg,#d9dde3,#c4cad2);color:#1d1d1f}
+body[data-brand="kareiq"] .tb .me>button:hover{background:rgba(0,0,0,.05)}
+body[data-brand="kareiq"] .tb-k{background:rgba(0,0,0,.045);border-color:transparent}
+body[data-brand="kareiq"] .tb-k:hover{background:#fff;border-color:rgba(0,0,0,.08)}
+
+/* ---------- sidebar: quiet list, the selected page is a soft accent pill */
+body[data-brand="kareiq"] .sb{background:var(--wash);border-right:1px solid rgba(0,0,0,.06)}
+body[data-brand="kareiq"] .sb-in{gap:2px;padding:20px 12px 14px}
+body[data-brand="kareiq"] .sb a,body[data-brand="kareiq"] .sbg-btn{border-radius:10px;min-height:40px;font-size:.95rem;font-weight:500;color:var(--ink)}
+body[data-brand="kareiq"] .sb a svg,body[data-brand="kareiq"] .sbg-btn>svg{opacity:.62}
+body[data-brand="kareiq"] .sb a::before,body[data-brand="kareiq"] .sbg-btn::before{background:rgba(0,0,0,.05)}
+body[data-brand="kareiq"] .sb a[aria-current="page"]{background:var(--hi);color:var(--accent-d);font-weight:600}
+body[data-brand="kareiq"] .sb a[aria-current="page"] svg{opacity:1;color:var(--accent-d)}
+body[data-brand="kareiq"] .sbg.here>.sbg-btn{color:var(--ink);font-weight:600}
+body[data-brand="kareiq"] .sb-foot{border-top:1px solid rgba(0,0,0,.07)}
+body[data-brand="kareiq"] .sb-foot a{color:var(--ink-2)}
+body[data-brand="kareiq"] .sb .count{background:#ff3b30;font-weight:600;box-shadow:0 2px 6px -2px rgba(255,59,48,.6)}
+body[data-brand="kareiq"] .sb-h{letter-spacing:.06em}
+
+/* ---------- surfaces: white, hairline, soft depth */
+body[data-brand="kareiq"] .panel,body[data-brand="kareiq"] .vfacts>div,body[data-brand="kareiq"] .rof,body[data-brand="kareiq"] .pkgsum>div{border-color:rgba(0,0,0,.06);box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14)}
+body[data-brand="kareiq"] .panel{border-radius:20px}
+body[data-brand="kareiq"] .bcard{background:#fff;border:1px solid rgba(0,0,0,.06);border-bottom:1px solid rgba(0,0,0,.06);border-radius:20px;box-shadow:0 1px 1px rgba(0,0,0,.03),0 8px 24px -16px rgba(0,0,0,.18)}
+body[data-brand="kareiq"] .bcard:hover,body[data-brand="kareiq"] .mypkg:hover{transform:translateY(-3px);box-shadow:0 2px 4px rgba(0,0,0,.03),0 22px 40px -20px rgba(0,0,0,.28)}
+body[data-brand="kareiq"] .ncard,body[data-brand="kareiq"] .nkpi,body[data-brand="kareiq"] .okpi,body[data-brand="kareiq"] .vcard2,body[data-brand="kareiq"] .gotile{border-radius:18px;border-color:rgba(0,0,0,.06);box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14)}
+body[data-brand="kareiq"] .gotile{background:#fff}
+body[data-brand="kareiq"] .gt-i{border-radius:12px}
+body[data-brand="kareiq"] .empty{background:#fff;border:1px dashed rgba(0,0,0,.1);border-radius:20px}
+
+/* ---------- controls */
+body[data-brand="kareiq"] .btn{min-height:42px;font-weight:600;letter-spacing:-.01em;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+body[data-brand="kareiq"] .btn.sm{min-height:34px}
+body[data-brand="kareiq"] .btn.ghost{background:#fff;border:1px solid rgba(0,0,0,.12);color:var(--ink);box-shadow:none}
+body[data-brand="kareiq"] .btn.ghost:hover{background:#fff;border-color:rgba(0,0,0,.22)}
+body[data-brand="kareiq"] .btn.quiet{box-shadow:none}
+body[data-brand="kareiq"] .in{border:1px solid rgba(0,0,0,.13);border-radius:12px;background:#fff;min-height:44px}
+body[data-brand="kareiq"] .in:hover{border-color:rgba(0,0,0,.22)}
+body[data-brand="kareiq"] .in:focus{border-color:var(--accent);box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 18%,transparent);outline:none}
+body[data-brand="kareiq"] .field>span,body[data-brand="kareiq"] label.field>span{font-weight:550;font-size:.9rem;color:var(--ink-2)}
+body[data-brand="kareiq"] select.in{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
+/* segmented controls (period filters, tabs, chips) */
+body[data-brand="kareiq"] .chips button,body[data-brand="kareiq"] .ntabs a,body[data-brand="kareiq"] .polnav a{border-radius:999px}
+body[data-brand="kareiq"] .polnav a{background:#fff;border-color:rgba(0,0,0,.1)}
+body[data-brand="kareiq"] .polnav a[aria-current=page]{box-shadow:0 4px 12px -6px color-mix(in srgb,var(--accent) 70%,transparent)}
+
+/* ---------- dialogs: big radius, frosted backdrop */
+body[data-brand="kareiq"] dialog{border-radius:24px;box-shadow:0 0 0 1px rgba(0,0,0,.04),0 40px 100px -30px rgba(0,0,0,.45)}
+body[data-brand="kareiq"] dialog::backdrop{background:rgba(20,20,24,.32);-webkit-backdrop-filter:blur(8px) saturate(140%);backdrop-filter:blur(8px) saturate(140%)}
+
+/* ---------- tables and lists: hairlines, comfortable rows */
+body[data-brand="kareiq"] table th{font-weight:600;color:var(--muted);font-size:.8rem;letter-spacing:.02em}
+body[data-brand="kareiq"] table td,body[data-brand="kareiq"] table th{border-color:rgba(0,0,0,.06)}
+body[data-brand="kareiq"] .rlist>li{border-color:rgba(0,0,0,.06)}
+body[data-brand="kareiq"] tbody tr{transition:background-color .15s}
+body[data-brand="kareiq"] tbody tr:hover{background:rgba(0,0,0,.018)}
+
+/* ---------- pills and tags: softer */
+body[data-brand="kareiq"] .pill{font-weight:600;letter-spacing:-.005em}
+body[data-brand="kareiq"] .tagb{font-weight:600;letter-spacing:-.005em;border-radius:999px}
+
+/* ---------- notes and person bar */
+body[data-brand="kareiq"] .note{background:rgba(0,0,0,.03);border:0;border-radius:14px}
+body[data-brand="kareiq"] .pp select,body[data-brand="kareiq"] .pp.one{letter-spacing:.01em}
+
+/* ---------- scrollbars: thin and quiet */
+body[data-brand="kareiq"] *{scrollbar-width:thin;scrollbar-color:rgba(0,0,0,.22) transparent}
+body[data-brand="kareiq"] ::-webkit-scrollbar{width:10px;height:10px}
+body[data-brand="kareiq"] ::-webkit-scrollbar-thumb{background:rgba(0,0,0,.18);border-radius:10px;border:3px solid transparent;background-clip:content-box}
+body[data-brand="kareiq"] ::-webkit-scrollbar-thumb:hover{background-color:rgba(0,0,0,.3)}
+
+/* ---------- phones: a bottom-sheet feel for dialogs, larger tap targets */
+@media (max-width:640px){
+  body[data-brand="kareiq"] dialog{border-radius:24px 24px 0 0;margin:auto auto 0;width:100vw;max-width:100vw;max-height:92vh}
+  body[data-brand="kareiq"] dialog[open]{animation:kq-sheet .38s cubic-bezier(.22,1,.36,1)}
+  body[data-brand="kareiq"] .sb a,body[data-brand="kareiq"] .sbg-btn{min-height:46px}
+  body[data-brand="kareiq"] .mn .head h1,body[data-brand="kareiq"] .pagehead h1{font-size:1.7rem}
+}
+@keyframes kq-sheet{from{transform:translateY(40px);opacity:0}}
+@media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] dialog[open]{animation:none}}
+
+/* ---------- filter areas: white surfaces; iOS-style segmented control for periods */
+body[data-brand="kareiq"] .trends,body[data-brand="kareiq"] .hsec{background:#fff;border-radius:20px;border:1px solid rgba(0,0,0,.06);box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14)}
+body[data-brand="kareiq"] .thead .chips,body[data-brand="kareiq"] .pchips{background:rgba(118,118,128,.12);border-radius:11px;padding:3px;gap:2px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none;max-width:100%}
+body[data-brand="kareiq"] .thead .chips::-webkit-scrollbar,body[data-brand="kareiq"] .pchips::-webkit-scrollbar{display:none}
+body[data-brand="kareiq"] .thead .chips button,body[data-brand="kareiq"] .pchips button{border-radius:8px;padding:7px 14px;font-size:.92rem;font-weight:500;white-space:nowrap;color:var(--ink);transition:background-color .2s,box-shadow .2s,color .2s}
+body[data-brand="kareiq"] .thead .chips button[aria-pressed="true"],body[data-brand="kareiq"] .pchips button[aria-pressed="true"]{background:#fff;color:var(--ink);font-weight:600;box-shadow:0 3px 8px rgba(0,0,0,.12),0 3px 1px rgba(0,0,0,.04)}
+body[data-brand="kareiq"] .thead .chips .cal,body[data-brand="kareiq"] .pchips .cal{border-radius:8px;height:34px;width:38px;flex:none}
+body[data-brand="kareiq"] .note{padding:10px 14px}
+body[data-brand="kareiq"] .calwrap,body[data-brand="kareiq"] .obd{background:#f5f5f7}
+/* the coral action button and the package summary: same family as the rest */
+body[data-brand="kareiq"] .btn.pink{background:var(--accent);color:#fff;border-radius:999px;text-transform:none;letter-spacing:-.01em;min-height:42px;padding:0 22px}
+body[data-brand="kareiq"] .btn.pink:hover{background:var(--accent-d)}
+body[data-brand="kareiq"] .pkgsum{border:1px solid rgba(0,0,0,.06);border-radius:20px;padding:18px 22px;box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14)}
+body[data-brand="kareiq"] .pkgsum>div{border:0;box-shadow:none}
+body[data-brand="kareiq"] .pkgsum span{color:var(--muted);font-size:.86rem}
+body[data-brand="kareiq"] .avgbar{border-radius:16px}
+body[data-brand="kareiq"] .rh,body[data-brand="kareiq"] .rhero{border-radius:16px}
