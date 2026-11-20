@@ -1875,3 +1875,46 @@ a.ocust:hover b{text-decoration:underline}
 .onbcard .rogrid.sm .rof{padding:6px 0}
 .ncard .nc-top>.nc-ob{margin-left:auto}.ncard .nc-ob .pill{white-space:nowrap;text-decoration:none}
 @media (max-width:640px){.ncard .nc-top{flex-wrap:wrap}.ncard .nc-top>.nc-ob{margin-left:0}}
+
+/* ================================================================ motion for the lifecycle screens (20 Nov) */
+/* cards arrive one after another */
+.ncards>.ncard{animation:kq-rise .45s cubic-bezier(.22,1,.36,1) backwards}
+.ncards>.ncard:nth-child(2){animation-delay:.06s}.ncards>.ncard:nth-child(3){animation-delay:.12s}.ncards>.ncard:nth-child(4){animation-delay:.18s}.ncards>.ncard:nth-child(n+5){animation-delay:.24s}
+/* "Ready for onboarding" / pending: a soft glow that draws the eye without nagging */
+.onbcard .pill.pending i,.nc-ob .pill.pending i,.lcbox .pill.pending i{animation:breathe 2.2s ease-in-out infinite}
+.nc-ob a.pill{transition:transform .2s cubic-bezier(.34,1.56,.64,1),box-shadow .2s}.nc-ob a.pill:hover{transform:translateY(-1px);box-shadow:0 6px 12px -8px rgba(20,40,60,.5)}
+/* the menu item and its number */
+.sb a b.count.bump{animation:kq-bump .5s cubic-bezier(.34,1.56,.64,1)}
+/* just onboarded: the badge pops in with a tick */
+.pill.celebrate{animation:kq-hi .7s cubic-bezier(.34,1.56,.64,1)}
+.pill.celebrate i{animation:kq-tick .5s cubic-bezier(.34,1.56,.64,1) .15s backwards}
+/* office: the request's steps fill in from left to right; the next step waits with a dashed outline */
+.lcsteps li{animation:kq-rise .4s cubic-bezier(.22,1,.36,1) backwards}
+.lcsteps li:nth-child(2){animation-delay:.06s}.lcsteps li:nth-child(3){animation-delay:.12s}.lcsteps li:nth-child(4){animation-delay:.18s}.lcsteps li:nth-child(5){animation-delay:.24s}
+.lcsteps li.done i svg{animation:kq-tick .45s cubic-bezier(.34,1.56,.64,1) .2s backwards}
+.lcsteps li.next{animation:kq-rise .4s cubic-bezier(.22,1,.36,1) backwards .24s,lc-next 2.4s ease-in-out .8s infinite}
+@keyframes lc-next{50%{outline-color:transparent}}
+.ogen output.tick{animation:kq-hi .45s cubic-bezier(.34,1.56,.64,1)}
+.ogen.dirty button[type=submit]{box-shadow:0 0 0 3px rgba(26,160,140,.25)}
+.dirtyflag{margin-left:10px;font-size:13px;color:#9a6200;animation:kq-rise .3s ease both}
+.osub.lcbox,.ogen{animation:kq-rise .4s cubic-bezier(.22,1,.36,1) backwards}
+/* nurse submissions: a row whose status just moved on is highlighted for a moment */
+tr.flash td{animation:row-flash 1.6s ease}
+@keyframes row-flash{0%,30%{background:#e5f5ec}100%{background:transparent}}
+/* upload: a friendly drop zone that shows the chosen file */
+.dropz{border:1.5px dashed var(--line-2,#c9d3dc);border-radius:14px;padding:12px 14px;transition:border-color .2s,background-color .2s}
+.dropz.over{border-color:var(--accent,#1aa08c);background:rgba(26,160,140,.06)}
+.dropz.has{border-style:solid;border-color:#9fd8c8}
+.dropz-pick{display:flex;align-items:center;gap:8px;margin-top:8px;animation:kq-rise .3s ease both}.dropz-pick svg{width:18px;height:18px}
+/* policies: the chosen category's text fades in; the filter pills spring */
+.ppage>.polbody,.ppage>.empty,.ppage>.poledit,.ppage>.polupd{animation:kq-rise .42s cubic-bezier(.22,1,.36,1) backwards}
+.ppage>.polupd{animation-delay:.08s}
+.polnav a{transition:transform .2s cubic-bezier(.34,1.56,.64,1),background-color .2s,border-color .2s,color .2s}
+.polnav a:hover{transform:translateY(-2px)}.polnav a:active{transform:scale(.96)}
+/* onboarding form: locked fields settle in, and the section opens smoothly */
+.onb-locked{animation:kq-rise .35s ease backwards}
+.ck-sec[open]>.ck-body{animation:kq-rise .35s cubic-bezier(.22,1,.36,1) both}
+@media (prefers-reduced-motion:reduce){
+  .ncards>.ncard,.onbcard .pill.pending i,.nc-ob .pill.pending i,.lcbox .pill.pending i,.sb a b.count.bump,.pill.celebrate,.pill.celebrate i,.lcsteps li,.lcsteps li.done i svg,.lcsteps li.next,.ogen output.tick,.dirtyflag,.osub.lcbox,.ogen,tr.flash td,.dropz-pick,.ppage>.polbody,.ppage>.empty,.ppage>.poledit,.ppage>.polupd,.onb-locked,.ck-sec[open]>.ck-body{animation:none!important}
+  .nc-ob a.pill,.polnav a,.dropz{transition:none}.nc-ob a.pill:hover,.polnav a:hover{transform:none}
+}

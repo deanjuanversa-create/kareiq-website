@@ -180,8 +180,10 @@
       api('GET', 'nurse/customers/' + encodeURIComponent(pick.id)).then(function (d) {
         if (!d.ok) return fail(d);
         S.cache.ncard = d.customer; S.cache.nopen = {};
+        var fresh = S.cache.justOnboarded === pick.id; S.cache.justOnboarded = null;
         $('#mn').innerHTML = '<div class="npage">' + head('Assigned customers', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.', '<a class="btn sm ghost" href="#/nurse/customers">' + icon('left') + 'All assigned customers</a>') + selectBar(list, pick) +
           cardHtml(d.customer) + '</div>';
+        if (fresh) { var pl = $('.ngrid .panel-h .pill.active'); if (pl) pl.classList.add('celebrate'); }
       });
     }, fail);
   }
@@ -316,7 +318,7 @@
       var form = '<section class="panel nsec"><h2>New document</h2>' + (list.length ? '<form data-form="n-upload" novalidate><div class="alert bad" data-msg hidden></div>' +
         '<label class="field"><span>Customer</span><select class="in" name="personId" required><option value="">Choose a customer</option>' + list.map(function (c) { return '<option value="' + e(c.id) + '"' + (pre && pre.id === c.id ? ' selected' : '') + '>' + e(c.name + ' (' + c.customerId + ')') + '</option>'; }).join('') + '</select><em class="err" data-err="personId"></em></label>' +
         '<div class="row2">' + K.field('name', 'Document name', 'maxlength="80" placeholder="e.g. Blood test report" required') + '<label class="field"><span>Category</span><select class="in" name="category">' + Object.keys(CATS).map(function (k) { return '<option value="' + k + '"' + (k === 'general' ? ' selected' : '') + '>' + CATS[k] + '</option>'; }).join('') + '</select></label></div>' +
-        '<label class="field"><span>File</span><input class="in" type="file" name="file" accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment" required><small>PDF or photo, up to 5 MB. On a phone you can take a photo of the document.</small><em class="err" data-err="file"></em></label>' +
+        '<label class="field dropz" data-drop><span>File</span><input class="in" type="file" name="file" data-act="n-file" accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment" required><small>PDF or photo, up to 5 MB. Drop it here, or on a phone take a photo of the document.</small><span class="dropz-pick" data-pick hidden></span><em class="err" data-err="file"></em></label>' +
         '<div class="upstate" data-upstate role="status" aria-live="polite" hidden></div>' +
         '<button class="btn" type="submit">' + icon('upload') + 'Submit document</button></form>' : '<p class="muted">No customers are assigned to you yet.</p>') + '</section>';
       $('#mn').innerHTML = '<div class="npage">' + head('Upload', UP_SUB, '<a class="btn sm ghost" href="#/nurse/submissions">' + icon('file') + 'Your Submissions</a>') + '<div class="nup">' + form + '</div>' +
@@ -330,9 +332,13 @@
       var list = x[0], subs = x[1];
       if (!subs.ok) return fail(subs);
       var names = {}; list.forEach(function (c) { names[c.id] = c.name; });
+      var prev = S.cache.subPrev || {}, now = {};
+      subs.rows.forEach(function (s) { now[s.customerId + '|' + s.documentName + '|' + s.submittedAt] = s.status; });
+      S.cache.subPrev = now;
+      var changed = function (s) { var k = s.customerId + '|' + s.documentName + '|' + s.submittedAt; return prev[k] && prev[k] !== s.status; };
       var receipts = '<section class="panel nsec"><div class="panel-h"><h2>Submitted documents</h2><span class="muted small">' + subs.rows.length + ' sent</span></div>' +
         (subs.rows.length ? '<div class="tw"><table class="stackable rtable"><thead><tr><th>Customer</th><th>Document</th><th>Category</th><th>Submitted</th><th>Processing status</th></tr></thead><tbody>' + subs.rows.map(function (s) {
-          return '<tr><td data-l="Customer"><b>' + e(names[s.customerId] || s.customerId) + '</b><br><span class="muted small">' + e(s.customerId) + '</span></td><td data-l="Document">' + e(s.documentName) + '</td><td data-l="Category">' + e(CATS[s.category] || s.category || '') + '</td><td data-l="Submitted">' + e(K.dt(s.submittedAt)) + '</td><td data-l="Status"><span class="pchip ' + e(s.processing || (s.status === 'Submitted' ? 'completed' : 'failed')) + '">' + (s.processing === 'uploaded' || s.processing === 'processing' ? '<span class="spin" aria-hidden="true"></span>' : '') + e(s.status) + '</span></td></tr>';
+          return '<tr' + (changed(s) ? ' class="flash"' : '') + '><td data-l="Customer"><b>' + e(names[s.customerId] || s.customerId) + '</b><br><span class="muted small">' + e(s.customerId) + '</span></td><td data-l="Document">' + e(s.documentName) + '</td><td data-l="Category">' + e(CATS[s.category] || s.category || '') + '</td><td data-l="Submitted">' + e(K.dt(s.submittedAt)) + '</td><td data-l="Status"><span class="pchip ' + e(s.processing || (s.status === 'Submitted' ? 'completed' : 'failed')) + '">' + (s.processing === 'uploaded' || s.processing === 'processing' ? '<span class="spin" aria-hidden="true"></span>' : '') + e(s.status) + '</span></td></tr>';
         }).join('') + '</tbody></table></div>' : '<p class="muted">Documents you send appear here as receipts. <a href="#/nurse/upload">Upload a document</a></p>') + '</section>';
       $('#mn').innerHTML = '<div class="npage">' + head('Your Submissions', sub, '<a class="btn sm" href="#/nurse/upload">' + icon('upload') + 'Upload</a>') + receipts + '</div>';
       // the status moves on as documents are read: refresh while any is still being read
@@ -364,6 +370,7 @@
             (c.status === 'completed' ? '<p class="muted small">Completed on ' + e(K.dt(c.completedAt)) + ' by ' + e(c.completedBy) + '.</p>' : '') +
             '<div class="nc-acts"><a class="btn sm' + (c.status === 'completed' ? ' ghost' : '') + '" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon(c.status === 'completed' ? 'eye' : 'check') + (c.status === 'completed' ? 'View onboarding' : 'Start onboarding') + '</a><a class="btn sm ghost" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('people') + 'In Assigned customers</a></div></article>';
         }).join('') + '</div>' : '<div class="empty"><b>No customer is ready for onboarding</b>A customer appears here once the office has approved their package and the payment is confirmed.</div>') + '</div>';
+      countUp();
     }, fail);
   }
   K.FORMS['n-upload'] = function (f, v) {
@@ -386,7 +393,7 @@
         K.openDialog('Document submitted', '<div class="co-done"><div class="co-ic">' + icon('check') + '</div><p>The document was sent. Keep this receipt.</p><dl class="kv">' +
           '<dt>Customer ID</dt><dd>' + e(rc.customerId) + '</dd><dt>Document</dt><dd>' + e(rc.documentName) + '</dd><dt>Submitted</dt><dd>' + e(K.dt(rc.submittedAt)) + '</dd><dt>Status</dt><dd>' + e(rc.status) + '</dd></dl></div>',
           '<button class="btn ghost" data-act="close">Upload another</button><a class="btn" href="#/nurse/submissions" data-act="close-go">Your Submissions</a>');
-        f.reset();
+        f.reset(); filePicked($('[name=file]', f));
       });
   };
 
@@ -442,8 +449,19 @@
       if (!d.ok) return d; K.closeDialog(); K.toast('Visit completed. Thank you.', 'ok'); K.render();
     });
   };
+  // the chosen file, shown with its size; a file dragged over the field highlights it
+  function filePicked(input) {
+    var f = input.files && input.files[0], box = input.closest('[data-drop]'), out = box && $('[data-pick]', box);
+    if (!out) return;
+    if (!f) { out.hidden = true; box.classList.remove('has'); return; }
+    out.hidden = false; box.classList.add('has');
+    out.innerHTML = icon('file') + '<b>' + e(f.name) + '</b><span class="muted small">' + (f.size > 1048576 ? (f.size / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(f.size / 1024)) + ' KB') + '</span>';
+  }
+  ['dragenter', 'dragover'].forEach(function (n) { document.addEventListener(n, function (ev) { var z = ev.target.closest && ev.target.closest('[data-drop]'); if (z) z.classList.add('over'); }); });
+  ['dragleave', 'drop'].forEach(function (n) { document.addEventListener(n, function (ev) { var z = ev.target.closest && ev.target.closest('[data-drop]'); if (z) z.classList.remove('over'); }); });
   document.addEventListener('change', function (ev) {
     var t = ev.target, act = t.getAttribute && t.getAttribute('data-act');
+    if (act === 'n-file') filePicked(t);
     if (act === 'nc-pick') K.go('#/nurse/customer?p=' + encodeURIComponent(t.value));
     if (act === 'ns-show') { var r = K.route(); K.go('#/nurse/schedule' + K.queryOf(r, { show: t.value })); }
   });
@@ -467,7 +485,8 @@
       var after = $('a[href^="#/nurse/customers"]', sb);
       if (after) after.insertAdjacentHTML('afterend', '<a href="#/nurse/onboarding" class="arrive">' + icon('check') + '<span>Customer Onboarding</span><b class="count">' + n + '</b></a>');
     } else if (n && link && n !== was) {
-      var b = $('b.count', link); if (b) b.textContent = n; else link.insertAdjacentHTML('beforeend', '<b class="count">' + n + '</b>');
+      var b = $('b.count', link); if (b) b.textContent = n; else { link.insertAdjacentHTML('beforeend', '<b class="count">' + n + '</b>'); b = $('b.count', link); }
+      if (b) { b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump'); }
     }
   }
   function onbRefresh() {

@@ -665,6 +665,8 @@
   };
   K.FORMS['o-lc-approve'] = function (f, v, sub) {
     var go = (sub && sub.value) || (document.activeElement && document.activeElement.value) || 'approve';
+    if (go === 'reject' && (v.note || '').trim().length < 3) return Promise.resolve({ ok: false, errors: { note: 'Say why the request is declined.' } });
+    if (!confirm(go === 'approve' ? 'Approve this package? The customer will be asked for the payment.' : 'Decline this request? The customer sees it as declined.')) return Promise.resolve();
     return api('POST', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/' + go, { note: v.note, amount: v.amount }).then(function (d) {
       if (!d.ok) return d; K.toast(go === 'approve' ? 'Package approved. Order ' + d.order + ' now waits for the payment.' : 'Request declined.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id'));
     });
@@ -1091,6 +1093,19 @@
       t.disabled = true;
       api('POST', 'admin/contact-audit/' + enc(id) + '/revoke', {}).then(function (d) { K.toast(d.ok ? 'Access revoked.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     }
+  });
+  // General Information: Age follows the date of birth as it is typed; unsaved changes are flagged
+  function ageOf(dob) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dob || '')) return null;
+    var t = K.todayIST(), a = Number(t.slice(0, 4)) - Number(dob.slice(0, 4));
+    if (t.slice(5) < dob.slice(5)) a--;
+    return a >= 0 && a < 130 ? a : null;
+  }
+  document.addEventListener('input', function (ev) {
+    var f = ev.target.closest && ev.target.closest('form[data-form=o-general]');
+    if (!f) return;
+    if (ev.target.getAttribute('data-act') === 'o-dob') { var o = $('[data-age]', f), a = ageOf(ev.target.value); if (o) { o.textContent = a != null ? a + ' years' : 'From the date of birth'; o.classList.remove('tick'); void o.offsetWidth; o.classList.add('tick'); } }
+    if (!f.classList.contains('dirty')) { f.classList.add('dirty'); var b = $('button[type=submit]', f); if (b) b.insertAdjacentHTML('afterend', '<span class="dirtyflag">Unsaved changes</span>'); }
   });
   document.addEventListener('change', function (ev) {
     var t = ev.target, act = t.getAttribute && t.getAttribute('data-act');
