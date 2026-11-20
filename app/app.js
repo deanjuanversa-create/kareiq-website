@@ -2245,23 +2245,45 @@
     var u = S.me.user;
     if (u.role !== 'family') return go('#/', true);
     var mine = S.me.products, first = !mine.length;
-    // same sidebar layout as every other page; plain cards (no full-photo tiles)
-    var cards = ['karehome', 'karenest'].map(function (id) {
-      var b = BRANDS[id], has = mine.filter(function (x) { return x.id === id; })[0];
-      var text = id === 'karehome' ? 'Preventive care at home: caregivers and nurses visit, check vitals and keep the family updated.' : 'A caring community to live in or visit for the day. Resident packages include a Kare@Home check-up plan.';
-      return '<article class="bcard brandcard ' + id + '"><div class="bc-top"><span class="tagb ' + id + '">' + e(b.tag) + '</span>' +
+    // every brand that sells packages, as a summary card; choosing one opens Other packages filtered to it
+    var ORDER = ['karehome', 'karenest', 'karebalance', 'karemind', 'bystander'];
+    var TAGS = { karehome: 'Care at home', karenest: 'Community living', karebalance: 'Fall prevention', karemind: 'Mental wellness', bystander: 'Caregiver stay' };
+    var ICONS = { karebalance: 'walk', karemind: 'smile', bystander: 'people' };
+    var cards = ORDER.map(function (id) {
+      var b = PKG_BRANDS.filter(function (x) { return x.k === id; })[0]; if (!b) return '';
+      var has = mine.filter(function (x) { return x.id === id; })[0];
+      var logo = BRANDS[id] ? (BRANDS[id].logo ? '<img src="' + BRANDS[id].logo + '" alt="' + e(b.name) + '">' : '<img class="mk" src="' + BRANDS[id].mark + '" alt=""><b>' + e(b.name) + '</b>')
+        : '<span class="bc-mark ' + id + '" aria-hidden="true">' + icon(ICONS[id]) + '</span><b>' + e(b.name) + '</b>';
+      return '<article class="bcard brandcard ' + id + '"><div class="bc-top"><span class="tagb ' + id + '">' + e(TAGS[id]) + '</span>' +
         (has ? '<span class="pill active"><i></i>' + (has.includedWith ? 'Included with ' + e(has.includedWith) : 'You have this') + '</span>' : '') + '</div>' +
-        '<div class="bc-logo">' + (b.logo ? '<img src="' + b.logo + '" alt="' + e(b.name) + '">' : '<img class="mk" src="' + b.mark + '" alt=""><b>' + e(b.name) + '</b>') + '</div>' +
-        '<p class="muted small">' + text + '</p>' +
-        '<button class="btn sm" data-act="choose-plan" data-id="' + id + '">See ' + e(b.name) + ' packages' + icon('arrow') + '</button></article>';
+        '<div class="bc-logo">' + logo + '</div>' +
+        '<p class="muted small">' + e(b.text) + '</p>' +
+        '<button class="btn sm" data-act="see-brand" data-id="' + id + '">See ' + e(b.name) + ' packages' + icon('arrow') + '</button></article>';
     }).join('');
     shell('plans', '<div class="pagehead"><h1>' + (first ? 'Welcome, ' + e(first_(u.name)) + '. What would you like to set up?' : 'Add a plan or booking') + '</h1>' +
       '<p class="muted">Choose a package for your loved one. Our team calls you to confirm the details and payment before anything starts.</p></div>' +
       '<div class="cards3 brandcards">' + cards + '</div>' +
       '<section class="panel claimbox"><div><b>Already booked on our website?</b><p class="muted small">Add your booking reference to see it here.</p></div><button class="btn ghost sm" data-act="claim">Add your booking</button></section>' +
-      '<p class="muted small" style="margin-top:18px">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing between Kare@Home and KareNest.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
-    // coming from a package on the website: open that package's request form once
-    if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; planDialog(r.q.brand, r.q.plan, r.q.months); }
+      '<p class="muted small" style="margin-top:18px">Not sure which is right? <a href="' + waLink('Hello, I would like help choosing a KareIQ package.') + '" target="_blank" rel="noopener">WhatsApp us</a> or call <a href="tel:+918129345178">' + PHONE + '</a>.</p>');
+    // coming from a package on the website: show that package (Other packages), once
+    if (r && r.q && BRANDS[r.q.brand] && S.autoPlan !== location.hash) { S.autoPlan = location.hash; seeBrand(r.q.brand, r.q.plan, r.q.months); }
+  }
+  // the people this login buys for (from the session); none yet means a first purchase
+  function myPeople() {
+    var seen = {}, out = [];
+    (S.me.products || []).forEach(function (pr) { (pr.people || []).forEach(function (p) { if (!seen[p.id]) { seen[p.id] = 1; out.push(p); } }); });
+    return out;
+  }
+  // Add a plan or booking -> Other packages, filtered to the brand (or the one package) chosen.
+  // Someone with no relative on file yet first adds who the care is for (the request form does that).
+  function seeBrand(id, plan, months) {
+    var people = myPeople();
+    if (!people.length) {
+      var prod = id === 'karenest' || id === 'karemind' ? 'karenest' : 'karehome';
+      return planDialog(prod, plan || null, months);
+    }
+    var pid = (S.pid && people.some(function (p) { return p.id === S.pid; })) ? S.pid : people[0].id;
+    go('#/packages?p=' + encodeURIComponent(pid) + (plan ? '&pkg=' + encodeURIComponent(plan) : '&brand=' + encodeURIComponent(id)));
   }
   function first_(n) { return first(n); }
   // ---------------------------------------------------------------- package prices and details
@@ -3054,6 +3076,7 @@
       case 'print': window.print(); break;
       case 'ask': askDialog(t.getAttribute('data-kind')); break;
       case 'choose-plan': planDialog(id); break;
+      case 'see-brand': seeBrand(id); break;
       case 'claim': claimDialog(); break;
       case 'close': ev.preventDefault(); closeDialog(); break;
       case 'close-go': closeDialog(); break;

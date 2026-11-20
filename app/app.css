@@ -1982,3 +1982,15 @@ kbd{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
   .tb-k,.cmdk-l li>svg{transition:none}.tb-k:hover{transform:none}.ncard::after,.gotile::after,.bcard::after,.mypkg::after,.okpi::after,.nkpi::after,.vcard2::after,.risk::after,.pkc::after{display:none}
 }
 @media print{.topbar,.cmdk,.netbar,.tb-k{display:none!important}}
+/* Add a plan or booking: the brands without a logo get a coloured mark */
+.brandcard .bc-mark{display:grid;place-items:center;width:46px;height:46px;border-radius:14px;flex:none;color:#fff;background:#6250d6;box-shadow:0 10px 18px -12px rgba(30,30,80,.6)}
+.brandcard .bc-mark svg{width:24px;height:24px}
+.brandcard .bc-mark.karebalance{background:linear-gradient(135deg,#1baf7a,#0b7a55)}
+.brandcard .bc-mark.karemind{background:linear-gradient(135deg,#7a6be0,#4b3cb8)}
+.brandcard .bc-mark.bystander{background:linear-gradient(135deg,#eb8a3a,#c4601a)}
+.brandcard.karebalance .bc-logo b{color:#0b7a55}.brandcard.karemind .bc-logo b{color:#4b3cb8}.brandcard.bystander .bc-logo b{color:#b4561a}
+.brandcards>.brandcard{animation:kq-rise .45s cubic-bezier(.22,1,.36,1) backwards}
+.brandcards>.brandcard:nth-child(2){animation-delay:.05s}.brandcards>.brandcard:nth-child(3){animation-delay:.1s}.brandcards>.brandcard:nth-child(4){animation-delay:.15s}.brandcards>.brandcard:nth-child(5){animation-delay:.2s}
+.brandcard .bc-mark{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}.brandcard:hover .bc-mark{transform:rotate(-6deg) scale(1.06)}
+@media (prefers-reduced-motion:reduce){.brandcards>.brandcard{animation:none}.brandcard .bc-mark{transition:none}.brandcard:hover .bc-mark{transform:none}}
+.tagb.karebalance{background:#e3f5ec;color:#0b7a55}.tagb.karemind{background:#efecfb;color:#4b3cb8}.tagb.bystander{background:#fdf0e4;color:#a24f12}
