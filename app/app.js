@@ -1574,15 +1574,19 @@
       var html;
       if (!d.ok) html = '<p class="alert bad">' + e(d.message || 'Not available.') + '</p>';
       else {
-        var SV = { accepted: 'Added to the records', needs_review: 'Waiting for a check by the KareIQ team', duplicate: 'Already in the records', rejected: 'Not used' };
+        var SV = { accepted: 'Added to the records', stored: 'Saved', captured: 'Saved as written', needs_review: 'Waiting for a check by the KareIQ team', duplicate: 'Already in the records', rejected: 'Not used' };
+        var row = function (v) {
+          return '<tr><td>' + e(v.name) + (v.context ? ' <span class="muted small">(' + e(GLUCOSE[v.context] || v.context) + ')</span>' : '') + (v.notes && v.notes.length ? '<br><span class="muted small">' + e(v.notes.join(' ')) + '</span>' : '') + '</td>' +
+            '<td><b>' + e(v.value) + '</b> ' + e(v.unit || '') + (v.flag ? ' <span class="muted small">(' + e(v.flag) + ')</span>' : '') + (v.refRange ? '<br><span class="muted small">Reference ' + e(v.refRange) + '</span>' : '') + '</td><td><span class="vst ' + e(v.status) + '">' + e(SV[v.status] || v.status) + '</span></td></tr>';
+        };
+        var mainV = d.values.filter(function (v) { return !v.other; }), otherV = d.values.filter(function (v) { return v.other; });
         html = '<p><span class="pchip ' + e(d.status) + '">' + e(d.label) + '</span>' + (d.docType ? ' <span class="muted small">' + e(d.docType) + '</span>' : '') + '</p>' +
           '<dl class="kv"><dt>Test date</dt><dd>' + (d.dates && d.dates.test ? e(date(d.dates.test)) : '<span class="muted">' + e((d.dates && d.dates.testNote) || 'Not found') + '</span>') + '</dd>' +
           (d.dates && d.dates.report ? '<dt>Report date</dt><dd>' + e(date(d.dates.report)) + '</dd>' : '') + '</dl>' +
           (d.error ? '<p class="alert bad small">' + e(d.error) + '</p>' : '') + (d.note ? '<p class="muted small">' + e(d.note) + '</p>' : '') +
-          (d.values.length ? '<div class="tw"><table class="otable"><thead><tr><th>Measurement</th><th>Value</th><th>Status</th></tr></thead><tbody>' + d.values.map(function (v) {
-            return '<tr><td>' + e(v.name) + (v.context ? ' <span class="muted small">(' + e(GLUCOSE[v.context] || v.context) + ')</span>' : '') + (v.notes && v.notes.length ? '<br><span class="muted small">' + e(v.notes.join(' ')) + '</span>' : '') + '</td><td><b>' + e(v.value) + '</b> ' + e(v.unit || '') + '</td><td><span class="vst ' + e(v.status) + '">' + e(SV[v.status] || v.status) + '</span></td></tr>';
-          }).join('') + '</tbody></table></div>' : '') +
-          '<p class="muted small">Values with a readable number, a known unit and the test date are added automatically. Values that cannot be stored safely (no test date, a number outside what is possible, "less than" values) are checked by the KareIQ team.</p>';
+          (mainV.length ? '<h4 class="exh">Vitals and health checks</h4><div class="tw"><table class="otable"><thead><tr><th>Measurement</th><th>Value</th><th>Status</th></tr></thead><tbody>' + mainV.map(row).join('') + '</tbody></table></div>' : '') +
+          (otherV.length ? '<h4 class="exh">Other results in this report</h4><p class="muted small">Saved with the medical records. They are not shown in Vitals.</p><div class="tw"><table class="otable"><thead><tr><th>Test</th><th>Result</th><th>Status</th></tr></thead><tbody>' + otherV.map(row).join('') + '</tbody></table></div>' : '') +
+          '<p class="muted small">Everything read from the report is saved straight away. Anything unusual (a value outside the usual range, a "less than" value, a missing unit or date) is saved with a note.</p>';
       }
       var slot = box.querySelector('.dlg-b'); if (slot) slot.innerHTML = html;
     });

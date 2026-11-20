@@ -83,6 +83,14 @@ png("degraded.png", ["Sample Collected On: " + dmy(D["d8"]), "HDL Cholesterol  5
 # K. an old report (before the customer registered), with a two-digit year
 pdf("old_report.pdf", ["#CITY DIAGNOSTICS LABORATORY", "Sample Collected: " + D["d9"].strftime("%d-%b-%y"), "Fasting Blood Sugar   98   mg/dL   70 - 100",
     "Pittsburgh Sleep Quality Index (PSQI) Global Score: 4"])
+# K. a general health check: tests KareIQ stores as readings and many it only keeps (CBC, thyroid, urine)
+pdf("general.pdf", ["#CITY DIAGNOSTICS - GENERAL HEALTH CHECKUP", "Patient: Test Patient   Age/Sex: 70 Y / F   Reg. No: 55821",
+    "Sample Collected On: " + mon(D["d10"]), "", "#COMPLETE BLOOD COUNT", "Test                  Result     Unit           Reference Range",
+    "Haemoglobin           11.2  L    g/dL           12.0 - 15.5", "Total WBC Count       7800       /cumm          4000 - 11000",
+    "#LIPID PROFILE", "Triglycerides         178  H    mg/dL          < 150", "LDL Cholesterol       138        mg/dL          < 100",
+    "HDL Cholesterol       44         mg/dL          > 40", "#THYROID PROFILE", "TSH                   3.42       uIU/mL         0.27 - 4.2",
+    "#URINE ROUTINE", "Urine Sugar           Nil", "Pus Cells             2-3        /hpf           0 - 5", "",
+    "#INTERPRETATION (ADA guidelines)", "Normal        70 - 100", "Diabetes      > 126", "Page 1 of 1"])
 # J. a PDF that cannot be read
 with open(os.path.join(out, "broken.pdf"), "wb") as f:
     f.write(b"%PDF-1.4\n%this is not a real PDF body\n" + bytes(range(256)) * 4)

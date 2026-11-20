@@ -6,12 +6,15 @@
 //   extract(pages)         every supported value: field, value, unit, page, line, section, confidence
 //   validate(items, dates) accept automatically, or send to human review (with the reasons)
 //
-// Only fields KareIQ already stores are extracted: the vitals (app_readings metrics) and the risk
-// engine's inputs (riskrules.INPUTS). Values are converted only with fixed unit factors (for
-// example mmol/L glucose x 18.016, lakhs/cumm platelets x 100, the workbook's own ACR factor);
-// anything else (non-linear conversions, missing units, "<" values, plain CRP instead of hs-CRP,
-// sugar without fasting/after-meal, low confidence, no test date) goes to review. Nothing here
-// calculates risk; the risk engine does that from the stored readings.
+// Every value in the document is captured. Fields KareIQ already stores (the vitals, app_readings
+// metrics, and the risk engine's inputs, riskrules.INPUTS) become readings; every other test result
+// (LDL, haemoglobin, TSH, urine findings, ...) is kept as a captured result of the document and is not
+// shown in Vitals. Values are converted only with fixed unit factors (for example mmol/L glucose
+// x 18.016, lakhs/cumm platelets x 100, the workbook's own ACR factor). The owner asked for no review:
+// values outside the usual range, "<" values, missing units, low confidence or an unclear date are
+// stored with a note saying so. A value that has no fixed conversion to the unit KareIQ uses (HbA1c in
+// mmol/mol) or is a different test (plain CRP is not hs-CRP) is captured as written but not used as
+// that reading. Nothing here calculates risk; the risk engine does that from the stored readings.
 
 const { candidates } = require('./reportdate');
 const R = require('./riskrules');
@@ -222,39 +225,129 @@ function extract(pages) {
 const round2 = (v) => Math.round(v * 100) / 100;
 const round4 = (v) => Math.round(v * 10000) / 10000;
 
-// ---------------------------------------------------------------- checks: accept, or review (with reasons)
-function validate(items, dates) {
+// ---------------------------------------------------------------- the date the values are stored on
+// The test / collection date when the document shows one. Otherwise (the owner asked for no review):
+// the latest of several test dates, else the report date, else another date printed on it, else the
+// day it was uploaded. Each fallback is noted on the values.
+function useDate(dates, uploadDay) {
+  const latest = (list) => (list || []).filter(Boolean).sort().slice(-1)[0] || null;
+  if (dates.measured) return { date: dates.measured, basis: 'test', note: dates.note || null };
+  if (dates.test && dates.test.ambiguous) { const d = latest(dates.test.values); return { date: d, basis: 'test', note: 'The document shows more than one test date (' + dates.test.values.join(', ') + '); stored on the latest, ' + d + '.' }; }
+  const rep = dates.report && (dates.report.date || latest(dates.report.values));
+  if (rep) return { date: rep, basis: 'report', note: 'No test or collection date in the document; stored on the report date.' };
+  const other = (dates.issue && (dates.issue.date || latest(dates.issue.values))) || latest((dates.all || []).map((c) => c.date));
+  if (other) return { date: other, basis: 'printed', note: 'No test or collection date in the document; stored on the date printed on it.' };
+  return { date: uploadDay || null, basis: 'upload', note: 'No date in the document; stored on the day it was uploaded.' };
+}
+
+// ---------------------------------------------------------------- checks (the owner asked for no review)
+// status: 'accepted'  stored as a reading (Vitals / risk engine), with notes on anything unusual
+//         'captured'  kept as written on the document, but not used as that reading (see the header)
+function validate(items, dates, when) {
+  const use = when || useDate(dates, null);
   const byField = {};
   for (const it of items) { it._k = it.field + (it.context ? ':' + it.context : ''); (byField[it._k] = byField[it._k] || []).push(it); }
-  for (const it of items) it.notes = it.notes || [];
+  for (const it of items) { it.notes = it.notes || []; it.reasons = []; }
   for (const it of items) {
-    const f = BY_FIELD[it.field], r = it.reasons;
+    const f = BY_FIELD[it.field], n = it.notes;
+    let keepOnly = null;
     if (it.field === 'bp') {
       const [ls, hs] = vitals.LIMITS.systolic, [ld, hd] = vitals.LIMITS.diastolic;
-      if (it.systolic < ls || it.systolic > hs || it.diastolic < ld || it.diastolic > hd) r.push(`Outside the possible range for blood pressure (${ls}–${hs} / ${ld}–${hd})`);
-      if (it.systolic <= it.diastolic) r.push('The first number should be higher than the second');
+      if (it.systolic < ls || it.systolic > hs || it.diastolic < ld || it.diastolic > hd) n.push(`Outside the usual possible range for blood pressure (${ls}–${hs} / ${ld}–${hd}); stored as written`);
+      if (it.systolic <= it.diastolic) n.push('The first number is not higher than the second; stored as written');
     } else {
-      if (it.value == null) r.push('The value could not be read as a number');
-      else if (f.limits && it.conversion !== 'none' && (it.value < f.limits[0] || it.value > f.limits[1])) r.push(`Outside the possible range for ${f.name} (${f.limits[0]}–${f.limits[1]} ${f.native})`);
-      if (f.integer && it.value != null && !Number.isInteger(it.value)) r.push('Expected a whole number');
-      if (it.qualifier) r.push(`Reported as "${it.qualifier} ${it.rawValue.replace(/^[<>≤≥=]+/, '')}", not an exact value`);
-      if (it.unitMissing) r.push('No unit shown next to the value');
-      if (it.conversion === 'none') r.push(`Unit ${it.rawUnit} has no fixed conversion to ${f.native}`);
-      if (it.plainCrp) r.push('Reported as CRP, not stated as high-sensitivity CRP (the risk rules use hs-CRP)');
-      if (f.context && !it.context) { it.context = 'random'; it.notes.push('Timing not stated in the document (fasting / after a meal), so it is stored as random'); }
+      if (it.value == null) keepOnly = 'The value could not be read as a number';
+      else if (f.limits && it.conversion !== 'none' && (it.value < f.limits[0] || it.value > f.limits[1])) n.push(`Outside the usual possible range for ${f.name} (${f.limits[0]}–${f.limits[1]} ${f.native}); stored as written`);
+      if (f.integer && it.value != null && !Number.isInteger(it.value)) n.push('A whole number was expected; stored as written');
+      if (it.qualifier) n.push(`Reported as "${it.qualifier} ${it.rawValue.replace(/^[<>≤≥=]+/, '')}"; stored as ${it.value}`);
+      if (it.unitMissing) n.push(`No unit shown next to the value; stored as ${f.native || 'the scale'}`);
+      if (it.conversion === 'none') keepOnly = `Unit ${it.rawUnit} has no fixed conversion to ${f.native}, so it is kept as written and not used as ${f.name}`;
+      if (it.plainCrp) keepOnly = 'Reported as CRP, not high-sensitivity CRP (the risk rules use hs-CRP), so it is kept as written';
+      if (f.context && !it.context) { it.context = 'random'; n.push('Timing not stated in the document (fasting / after a meal), so it is stored as random'); }
     }
     const same = byField[it._k];
-    if (same.length > 1 && new Set(same.map((x) => x.field === 'bp' ? x.rawValue : x.value)).size > 1) r.push('The document shows different values for this test');
-    if (it.confidence < AUTO_ACCEPT) r.push(`Reading confidence too low to trust the number (${Math.round(it.confidence * 100)}%)`);
-    else if (it.confidence < NOTE_BELOW) it.notes.push(`Stored with a lower reading confidence (${Math.round(it.confidence * 100)}%)`);
-    if (dates.note) it.notes.push(dates.note);
-    if (!dates.measured) r.push(dates.reason || 'The test date is not known');
-    it.measuredDate = dates.measured;
-    it.status = r.length ? 'needs_review' : 'accepted';
+    if (same.length > 1 && new Set(same.map((x) => x.field === 'bp' ? x.rawValue : x.value)).size > 1) n.push('The document shows more than one value for this test; each is stored');
+    if (it.confidence < NOTE_BELOW) n.push(`Read with ${it.confidence < AUTO_ACCEPT ? 'a low' : 'a lower'} confidence (${Math.round(it.confidence * 100)}%)`);
+    if (use.note) n.push(use.note);
+    it.measuredDate = use.date;
+    if (!use.date) keepOnly = keepOnly || 'No date for this value';
+    if (keepOnly) { n.unshift(keepOnly); it.status = 'captured'; } else it.status = 'accepted';
   }
   // the same value written twice in one document is one measurement
   const seen = new Set();
   return items.filter((it) => { const k = [it.field, it.context || '', it.field === 'bp' ? it.rawValue : it.value, it.unit].join('|'); if (seen.has(k)) return false; seen.add(k); return true; });
 }
 
-module.exports = { FIELDS, BY_FIELD, AUTO_ACCEPT, NOTE_BELOW, classify, findDates, extract, validate };
+// ---------------------------------------------------------------- every other result in the document
+// Lab-style lines "Test name   value   [unit]   [reference]" (and qualitative results such as
+// "Urine sugar  Nil") that are not one of the fields above. Patient details, dates, phone numbers,
+// page numbers and the interpretation tables printed under a result (Normal 70-140, ...) are skipped.
+const NOT_A_TEST = /^(?:mr|mrs|ms|miss|dr|master|baby|name|patient|age|sex|gender|age\s*\/\s*sex|dob|date|time|reg(?:istration|d)?|registered|collected|received|reported|printed|sample|specimen|barcode|lab|ref(?:erred)?|referred\s*by|consultant|doctor|uhid|mrn|id|no|ph|phone|mobile|tel|fax|email|page|website|address|pin|work\s*timings|bill|invoice|visit|status|normal|pre[\s-]*diabet\w*|diabet\w*|desirable|borderline|optimal|near\s*optimal|high|very\s*high|low|deficien\w*|insufficien\w*|sufficien\w*|toxic\w*|risk|interpretation|method|note|comment|remarks?|test|investigation|parameter|result|value|unit|reference|biological|range|end\s*of\s*report)\b/i;
+const QUAL_WORDS = 'non[\\s-]*reactive|reactive|negative|positive|nil|absent|present|trace|normal|abnormal|clear|slightly\\s*turbid|turbid|hazy|pale\\s*yellow|straw|yellow|amber|not\\s*detected|detected|not\\s*seen|seen|occasional|few|plenty';
+const QUAL_LINE = new RegExp("^([A-Za-z][A-Za-z0-9 ().,'+\\-\\/&]{1,58}?)\\s*[:\\-=]?\\s+(" + QUAL_WORDS + ")\\b\\s*(.*)$", 'i');
+const UNIT_TOKEN = /^(?:%|[a-zµμ][a-zµμ0-9.^*×]*(?:\s*\/\s*[a-zµμ0-9.^*×]+)*|(?:x\s*)?10\s*\^?\s*\d+\s*\/\s*[a-zµμ]+|\/\s*(?:cumm|hpf|lpf|µl|ul|mm3|cu\.?\s*mm))/i;
+const NOT_UNIT = /^(?:to|and|or|of|in|on|at|am|pm|yrs?|years?|months?|days?|h|l|high|low|for|the|is|are|was|be|by|per|than|mg\s*\/\s*dl\s*\()$/i;
+function slug(name) { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60); }
+function extractOther(pages, known) {
+  const used = new Set((known || []).map((it) => it.page + ':' + it.line));
+  const out = [];
+  for (const pg of pages || []) {
+    const lines = (pg.lines && pg.lines.length ? pg.lines : String(pg.text || '').split('\n').map((t) => ({ text: t, conf: pg.source === 'text' ? 100 : 0 })));
+    let section = null, guide = false;
+    lines.forEach((ln, i) => {
+      const text = String(ln.text || '').replace(/[–—]/g, '-').replace(/ /g, ' ').replace(/\s+/g, ' ').trim();
+      if (!text) { guide = false; return; }
+      if (SECTION.test(text) && !/\d/.test(text)) { section = text; guide = false; return; }
+      // an interpretation table or guideline under a result: nothing in it is a result
+      if (/\b(?:according\s*to|guidelines?|reference\s*values?|interpretation|as\s*per|criteria|classification)\b/i.test(text)) { guide = true; return; }
+      if (guide || used.has(pg.page + ':' + (i + 1)) || text.length > 110) return;
+      // test name, then the result
+      const m = /^([A-Za-z][A-Za-z0-9 ().,'+\-\/&]{1,58}?)\s*[:\-=]?\s+([<>≤≥]=?\s*)?(\d+(?:[.,]\d+)?)(?![\d\/:.])\s*(.*)$/.exec(text);
+      const q = m ? null : QUAL_LINE.exec(text);
+      if (m) {
+        const name = m[1].replace(/[\s:.\-=]+$/, '').trim();
+        if (name.split(' ').length > 7 || NOT_A_TEST.test(name) || /\b(?:date|time|on|no\.?|number)\s*$/i.test(name) || /\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4}/.test(text) ||
+          /\b\d{1,2}(?:st|nd|rd|th)?[\s\-\/.,]*(?:jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*[\s\-\/.,]*\d{2,4}\b/i.test(text)) return;
+        let rest = m[4] || '';
+        let span = null;
+        const rm = /^-\s*(\d+(?:\.\d+)?)\s*(.*)$/.exec(rest);
+        if (rm) {
+          // "Pus cells 2-3 /hpf 0-5" is a result given as a range; "Normal 70 - 140" is a reference row
+          const um0 = UNIT_TOKEN.exec(rm[2]);
+          if (!um0 || NOT_UNIT.test(um0[0].trim())) return;
+          span = m[3] + '-' + rm[1]; rest = rm[2];
+        }
+        const flagM = /^\(?\s*(h|l|high|low|\*)\s*\)?(?=\s|$)/i.exec(rest);
+        const flag = flagM ? (/^h/i.test(flagM[1]) ? 'High' : /^l/i.test(flagM[1]) ? 'Low' : null) : null;
+        if (flagM) rest = rest.slice(flagM[0].length).trim();
+        let unit = null;
+        const um = UNIT_TOKEN.exec(rest);
+        if (um && !NOT_UNIT.test(um[0].trim()) && um[0].length <= 18) { unit = um[0].trim(); rest = rest.slice(um[0].length).trim(); }
+        const ref = /(\d+(?:\.\d+)?\s*-\s*\d+(?:\.\d+)?|[<>≤≥]=?\s*\d+(?:\.\d+)?)/.exec(rest);
+        // a bare "word number" line with neither a unit nor a reference range is not trusted as a result
+        if (!unit && !ref && pg.source !== 'text') return;
+        if (!unit && !ref && name.split(' ').length > 4) return;
+        if (!/[A-Za-z]{3}/.test(name)) return;
+        const at = text.indexOf(m[3], m[1].length);
+        const conf = Math.min(1, wordsConf(Object.assign({}, ln, { text }), at, at + m[3].length) / 100);
+        // OCR noise (logos, stamps, signatures) reads as random words and numbers: only clear lines count
+        if (pg.source !== 'text' && (conf < 0.6 || (ln.conf != null && ln.conf < 65))) return;
+        const value = span ? null : Number(m[3].replace(',', '.'));
+        out.push({ field: 'other:' + slug(name), kind: 'other', name, label: name, value, text: span, rawValue: span || (m[2] || '').replace(/\s/g, '') + m[3], unit, rawUnit: unit, qualifier: m[2] ? m[2].trim() : null,
+          refRange: ref ? ref[0].replace(/\s+/g, ' ') : null, flag, page: pg.page, line: i + 1, section, source: pg.source || null, rawLine: text.slice(0, 200), confidence: round2(pg.source === 'text' ? 1 : conf) });
+      } else if (q) {
+        const name = q[1].replace(/[\s:.\-=]+$/, '').trim();
+        if (name.split(' ').length > 6 || NOT_A_TEST.test(name)) return;
+        if (!/[A-Za-z]{3}/.test(name) || (pg.source !== 'text' && ln.conf != null && ln.conf < 65)) return;
+        const val = q[2].replace(/\s+/g, ' ');
+        out.push({ field: 'other:' + slug(name), kind: 'other', name, label: name, value: null, text: val, rawValue: val, unit: null, rawUnit: null, qualifier: null, refRange: null, flag: null,
+          page: pg.page, line: i + 1, section, source: pg.source || null, rawLine: text.slice(0, 200), confidence: round2(pg.source === 'text' ? 1 : Math.min(1, (ln.conf || 0) / 100)) });
+      }
+    });
+  }
+  // the same result written twice is one result
+  const seen = new Set();
+  return out.filter((it) => { const k = it.field + '|' + (it.value != null ? it.value : it.text) + '|' + (it.unit || ''); if (seen.has(k)) return false; seen.add(k); return true; });
+}
+
+module.exports = { FIELDS, BY_FIELD, AUTO_ACCEPT, NOTE_BELOW, classify, findDates, useDate, extract, extractOther, validate };

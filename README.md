@@ -394,16 +394,18 @@ questions. `/faq#q-3` opens question 3. Old links to `#faq` on a home page open 
 ## Medical document intelligence (nurse and customer uploads)
 
 Every medical document uploaded from the nurse portal (Upload documents) or a customer's Medical records goes through one pipeline (`src/app/docintel.js`):
-`Uploaded → Processing → Extracted → Completed | Needs Review | Failed`.
+`Uploaded → Processing → Extracted → Completed | Failed` (Needs Review only for documents from before 20 Nov 2026).
 
 1. **Check:** the file type is checked by its content (PDF, JPEG, PNG or WebP, at most 5 MB). A SHA-256 fingerprint is stored, so the same file for the same person is one document, even if it is sent twice at once. The fingerprint is checked again before the file is read.
 2. **Read:** `ocr/report_reader.py` takes the PDF text layer when there is one. Otherwise it reads the page with OpenCV preparation and Tesseract 5's pretrained LSTM neural-network OCR, keeping each word's confidence.
-3. **Extract:** `src/app/docextract.js` classifies the document and keeps the test or collection date apart from the report date and the printed date. The upload date is never used. It extracts only the values KareIQ stores (vitals and the risk engine's inputs), with their unit, page, line, section and confidence. Units are converted only by fixed factors.
-4. **Validate and store:** a value is stored automatically as a reading (`source: 'document'`, linked to the document and the extraction) when the number can be read (reading confidence at least 60%), its unit is known, it is within the possible range, it is an exact value and the document shows the test date.
-   - Kept as notes, not blockers: a confidence of 60–85%, a two-digit year (e.g. "28-May-16" is read as 2016) and blood sugar without a fasting or after-meal label (stored as random).
-   - Sent to review in Office › Customer management › Document review: no test date (the upload date is never used instead), two different test dates, a number outside what is possible, "<" or ">" values, a unit without a fixed conversion, a missing unit, and plain CRP (the rules use hs-CRP).
-   - The same measurement is never stored twice.
-   - Documents left waiting under the older, stricter rules are read again automatically when the server starts.
+3. **Extract:** `src/app/docextract.js` classifies the document and keeps the test or collection date apart from the report date and the printed date. It reads **every result** in the report: the values KareIQ stores (vitals and the risk engine's inputs) and every other test (CBC, triglycerides, LDL, thyroid, urine findings and so on), with unit, flag, reference range, page, line, section and confidence. Units are converted only by fixed factors. Patient details, dates, phone numbers and the interpretation tables printed under a result are not results.
+4. **Store (no review, the owner's decision of 20 Nov 2026):**
+   - Vitals and risk inputs become readings (`source: 'document'`, linked to the document and the extraction), even when unusual. A value outside the usual possible range, a "<" or ">" value (stored as the number), a missing unit (the usual unit is assumed), a two-digit year, sugar without a fasting or after-meal label (stored as random) or a lower reading confidence is stored with a note saying so.
+   - Date: the test or collection date; otherwise the latest of several test dates, the report date, another date printed on the report, or the upload day, in that order. The note says which was used.
+   - Kept as written but not used as that reading: plain CRP (the rules use hs-CRP) and a unit with no fixed conversion (HbA1c in mmol/mol).
+   - Every other result is saved with the document and the person (`app_extractions`, `kind: 'other'`, status `stored`). It is not shown in Vitals and not used by the risk engine. Families and the office see it in "What was read".
+   - The same measurement or result is never stored twice.
+   - Documents left waiting for review under earlier rules are read again automatically when the server starts. The office's review screen stays for those.
 5. **Risk:** the existing risk engine recalculates from the stored readings. Extraction never calculates risk.
 
 Failures that may pass are retried automatically (3 attempts); the office can also process a document again. Nurses see only the processing status. They never see the values read or any risk result; the server enforces this. Reports dated before a customer's registration are shown too: health history starts at the registration date or at the oldest record, whichever is earlier (Vitals period "All"). The risk engine uses them like any other reading.

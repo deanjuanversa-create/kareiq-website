@@ -17,7 +17,7 @@ const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } }
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const istDay = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(d);
 const daysAgo = (n) => istDay(new Date(Date.now() - n * 86400000));
-const D = { d9: '2019-03-15', d1: daysAgo(7), d1r: daysAgo(6), d2: daysAgo(5), d3: daysAgo(9), d4: daysAgo(11), d5: daysAgo(10), d6: daysAgo(8), d7: daysAgo(4), d8: daysAgo(3) };
+const D = { d9: '2019-03-15', d1: daysAgo(7), d1r: daysAgo(6), d2: daysAgo(5), d3: daysAgo(9), d4: daysAgo(11), d5: daysAgo(10), d6: daysAgo(8), d7: daysAgo(4), d8: daysAgo(3), d10: daysAgo(2) };
 
 const DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'kq-docs-'));
 execFileSync('python3', [path.join(__dirname, 'fixtures', 'make_docs.py'), DIR, JSON.stringify(D)]);
@@ -172,9 +172,9 @@ async function partTwo(URL0) {
   ok(doc.record.dates.measured === D.d2, 'visit date read from the scan: ' + doc.record.dates.measured);
   const bp = ocr.find((x) => x.field === 'bp');
   ok(bp && bp.systolic === 134 && bp.diastolic === 86 && ocr.some((x) => x.field === 'hr' && x.value === 78), 'blood pressure 134/86 and pulse 78 read from the image');
-  ok(ocr.every((x) => x.confidence < 0.6 ? x.status === 'needs_review' : x.status !== 'needs_review' || x.reasons.length), 'OCR values: below 60% confidence never stored; above it stored automatically');
-  ok(ocr.filter((x) => x.confidence >= 0.6 && x.confidence < 0.85 && x.status === 'accepted').every((x) => x.notes.some((n) => /lower reading confidence/.test(n))), 'values stored with 60–85% confidence carry a note');
-  ok(['completed', 'needs_review'].includes(doc.record.status.status) && (doc.record.status.status === 'completed') === !ocr.some((x) => x.status === 'needs_review'), 'scan status follows its values (' + doc.record.status.status + ')');
+  ok(ocr.every((x) => x.status === 'accepted' || x.status === 'duplicate' || x.status === 'captured'), 'OCR values: all stored, none waiting for review');
+  ok(ocr.filter((x) => x.confidence < 0.85 && x.status === 'accepted').every((x) => x.notes.some((n) => /confidence/.test(n))), 'values read with less than 85% confidence carry a note');
+  ok(doc.record.status.status === 'completed', 'scan Completed (' + doc.record.status.status + ')');
   const after2 = await readingsOf(NP);
   if (bp.status === 'accepted') ok(after2.series.find((m) => m.metric === 'bp').rows.some((x) => x.systolic === 134 && istDay(new Date(x.at)) === D.d2), 'Vitals: blood pressure from the scan on ' + D.d2);
   const tempx = ocr.find((x) => x.field === 'temp');
@@ -191,48 +191,46 @@ async function partTwo(URL0) {
   ok(rep && rep.status === 'duplicate' && rep.readingId, 'the same measurement in another document is linked, not stored twice');
   ok(doc.record.status.status === 'completed', 'a document whose values are all already stored is Completed');
 
-  // ---- dates: missing, report date only, two collection dates
+  // ---- dates: missing, report date only, two collection dates (the owner asked for no review: fallbacks, noted)
   await upload(nurse, NP, 'no_date.pdf');
   doc = await settled(NP, 'no_date.pdf');
-  ok(doc.record.status.status === 'needs_review' && doc.record.dates.measured === null && doc.record.dates.measuredStatus === 'unknown', 'no date in the document: test date unknown, Needs Review');
-  ok(doc.extractions.every((x) => x.status === 'needs_review' && !x.readingId && x.reasons.some((y) => /date/i.test(y))), 'nothing stored without a test date; the reason is given');
+  const upDay = istDay(new Date());
+  ok(doc.record.status.status === 'completed' && doc.record.dates.measured === upDay && doc.record.dates.measuredBasis === 'upload', 'no date in the document: stored on the upload day, Completed (' + doc.record.dates.measured + ')');
+  ok(doc.extractions.every((x) => x.status === 'accepted' && x.readingId && x.notes.some((y) => /uploaded/.test(y))), 'each value says it was stored on the upload day');
   await upload(nurse, NP, 'report_only.pdf');
   doc = await settled(NP, 'report_only.pdf');
-  ok(doc.record.dates.measured === null && doc.record.dates.report.date === D.d3 && /report date/i.test(doc.record.dates.measuredNote), 'only a report date: it is kept as the report date and not used as the test date');
-  ok(doc.extractions.every((x) => !x.readingId), 'nothing stored from it');
+  ok(doc.record.dates.measured === D.d3 && doc.record.dates.measuredBasis === 'report' && doc.extractions.every((x) => x.readingId && x.notes.some((y) => /report date/.test(y))), 'only a report date: values stored on the report date, with a note');
   await upload(nurse, NP, 'two_dates.pdf');
   doc = await settled(NP, 'two_dates.pdf');
-  ok(doc.record.dates.measuredStatus === 'ambiguous' && doc.record.dates.test.values.length === 2 && doc.extractions.every((x) => x.status === 'needs_review'), 'two different collection dates: ambiguous, flagged for review');
+  ok(doc.record.dates.measuredStatus === 'ambiguous' && doc.record.dates.measured === [D.d4, D.d5].sort()[1] && doc.extractions.every((x) => x.status === 'accepted' && x.notes.some((y) => /more than one test date/.test(y))), 'two collection dates: stored on the latest, with a note');
 
-  // ---- invalid values
+  // ---- unusual values: stored with a note; values that are not that reading are kept as written
   await upload(nurse, NP, 'invalid.pdf');
   doc = await settled(NP, 'invalid.pdf');
   const inv = Object.fromEntries(doc.extractions.map((x) => [x.field, x]));
-  ok(inv.hdl && /possible range/.test(inv.hdl.reasons.join()) && inv.plt && /No unit/.test(inv.plt.reasons.join()) && inv.crp && /high-sensitivity/.test(inv.crp.reasons.join())
-    && inv.hba1c && /no fixed conversion/.test(inv.hba1c.reasons.join()) && inv.egfr && /not an exact value/.test(inv.egfr.reasons.join()), 'out of range, missing unit, plain CRP, unknown unit and "<" values flagged');
-  ok(doc.extractions.filter((x) => x.field !== 'glucose').every((x) => x.status === 'needs_review' && !x.readingId), 'none of those stored');
+  ok(inv.hdl && inv.hdl.status === 'accepted' && inv.hdl.readingId && inv.hdl.notes.some((n) => /usual possible range/.test(n)), 'out of range (HDL 900): stored, with a note');
+  ok(inv.plt && inv.plt.status === 'accepted' && inv.plt.notes.some((n) => /No unit/.test(n)), 'missing unit: stored in the usual unit, with a note');
+  ok(inv.egfr && inv.egfr.status === 'accepted' && inv.egfr.value === 15 && inv.egfr.notes.some((n) => /Reported as "</.test(n)), '"<15" eGFR: stored as 15, with a note');
+  ok(inv.crp && inv.crp.status === 'captured' && !inv.crp.readingId && inv.hba1c && inv.hba1c.status === 'captured' && !inv.hba1c.readingId, 'plain CRP and HbA1c in mmol/mol: kept as written, not used as hs-CRP / HbA1c %');
   ok(inv.glucose && inv.glucose.status === 'accepted' && inv.glucose.context === 'random' && inv.glucose.notes.some((n) => /Timing not stated/.test(n)), 'sugar without timing stored automatically as random, with a note');
+  ok(doc.record.status.status === 'completed' && !doc.extractions.some((x) => x.status === 'needs_review'), 'nothing waits for review; Completed');
+  ok((await office('POST', 'admin/documents/' + doc.record.id + '/retry', {})).status === 409, 'a Completed document is not read again');
 
-  // ---- review by the office
-  r = await office('POST', 'admin/extractions/' + inv.crp.id, { action: 'reject' });
-  ok(r.status === 400, 'rejecting needs a reason');
-  r = await office('POST', 'admin/extractions/' + inv.hdl.id, { action: 'accept', value: 60, date: D.d6, note: 'Typo in report: 60 confirmed with the lab' });
-  ok(r.status === 200, 'office accepts a value with a correction');
-  const hdlAcc = (await office('GET', 'admin/documents/' + doc.record.id)).body.extractions.find((x) => x.id === inv.hdl.id);
-  ok(hdlAcc.status === 'accepted' && hdlAcc.corrected && hdlAcc.corrected.value.from === 900 && hdlAcc.corrected.value.to === 60 && hdlAcc.reviewedBy, 'the correction is recorded (900 → 60) with the reviewer');
-  ok((await nurse('POST', 'admin/extractions/' + inv.plt.id, { action: 'accept', value: 210 })).status === 403 && (await fam('POST', 'admin/extractions/' + inv.plt.id, { action: 'accept', value: 210 })).status === 403, 'only the office reviews values');
-  for (const x of doc.extractions.filter((y) => y.id !== inv.hdl.id && y.status === 'needs_review')) await office('POST', 'admin/extractions/' + x.id, { action: 'reject', note: 'Not usable as written' });
-  doc = (await office('GET', 'admin/documents/' + doc.record.id)).body;
-  ok(doc.record.status.status === 'completed', 'Completed once every value is accepted or rejected');
-
-  // ---- read again: a document waiting for review can be read again by the office (still no date: still waiting)
-  const nd = (await findDoc(NP, 'no_date.pdf'))[0];
-  r = await office('POST', 'admin/documents/' + nd.id + '/retry', {});
-  ok(r.status === 202, 'the office can read a waiting document again');
-  await sleep(2500);
-  doc = await settled(NP, 'no_date.pdf');
-  const live = doc.extractions;
-  ok(doc.record.status.status === 'needs_review' && live.length === 1 && live[0].status === 'needs_review', 'read again: one current value, still waiting (earlier values kept, marked superseded)');
+  // ---- a general health check: every result captured; only KareIQ's own fields reach Vitals
+  await upload(nurse, NP, 'general.pdf');
+  doc = await settled(NP, 'general.pdf');
+  const gen = doc.extractions, other = gen.filter((x) => x.kind === 'other');
+  const g = (n) => other.find((x) => x.name.toLowerCase() === n);
+  ok(gen.some((x) => x.field === 'hdl' && x.value === 44 && x.status === 'accepted' && x.readingId), 'HDL stored as a reading (risk engine input)');
+  ok(g('haemoglobin') && g('haemoglobin').value === 11.2 && g('haemoglobin').unit === 'g/dL' && g('haemoglobin').flag === 'Low' && g('haemoglobin').refRange === '12.0 - 15.5', 'haemoglobin kept with unit, flag and reference range');
+  ok(g('triglycerides') && g('triglycerides').value === 178 && g('triglycerides').flag === 'High' && g('ldl cholesterol') && g('ldl cholesterol').value === 138 && g('tsh') && g('tsh').value === 3.42 && g('total wbc count') && g('total wbc count').value === 7800, 'triglycerides, LDL, TSH and WBC kept');
+  ok(g('urine sugar') && g('urine sugar').text === 'Nil' && g('pus cells') && g('pus cells').text === '2-3', 'qualitative and range results kept (Urine sugar Nil, Pus cells 2-3 /hpf)');
+  ok(other.every((x) => x.status === 'stored' && !x.readingId && x.measuredDate === D.d10) && !other.some((x) => /^(normal|diabetes|page|patient|age|reg)/i.test(x.name)), 'other results saved on the collection date; interpretation rows and patient details are not results (' + other.map((x) => x.name).join(', ') + ')');
+  const dash = await readingsOf(NP);
+  ok(!dash.series.some((m) => /other|haemoglobin|triglycer|tsh/i.test(m.metric)), 'other results are not in Vitals');
+  ok(doc.record.status.status === 'completed', 'general health check Completed');
+  const famView = (await fam('GET', 'people/' + FP + '/records')).status;
+  ok([200].includes(famView), 'family records list still works');
 
   // ---- a document that cannot be read
   await upload(nurse, NP, 'broken.pdf');

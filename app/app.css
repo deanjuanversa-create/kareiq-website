@@ -1848,3 +1848,5 @@ a.ocust:hover b{text-decoration:underline}
 .docv-f{margin-top:12px;padding-top:12px;border-top:1px solid #f1dcb1}
 .docv-f .row3{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,180px),1fr));gap:0 12px}
 .docv-n{margin:6px 0 0;padding-left:18px;color:var(--ink-2);font-size:.85rem}
+.exh{margin:14px 0 6px;font-size:14px}
+.vst.stored,.vst.captured{background:#eef3f8;color:#3c4f66}

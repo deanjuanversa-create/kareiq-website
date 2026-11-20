@@ -414,7 +414,7 @@
   // test date and a confident reading are stored straight away; the others wait here. The office
   // accepts (correcting the value or date if needed) or rejects each one; nothing is stored until then.
   var DST = { uploaded: 'Uploaded', processing: 'Processing', extracted: 'Extracted', needs_review: 'Needs Review', completed: 'Completed', failed: 'Failed', not_processed: 'Not processed' };
-  var EXST = { accepted: 'Stored', needs_review: 'Needs review', duplicate: 'Already stored', rejected: 'Rejected' };
+  var EXST = { accepted: 'Stored', stored: 'Saved (other result)', captured: 'Saved as written', needs_review: 'Needs review', duplicate: 'Already stored', rejected: 'Rejected' };
   function docsPage(r) {
     var id = r.q.id;
     if (id) return docPage(id);
@@ -456,7 +456,7 @@
         '<div class="oacts">' + (pr.status === 'failed' || pr.status === 'uploaded' || pr.status === 'needs_review' || !pr.status ? '<button class="btn sm" data-act="o-doc-retry" data-id="' + e(rec.id) + '">' + icon('route') + 'Read again</button>' : '') +
           (pr.status === 'needs_review' && !d.extractions.some(function (x) { return x.status === 'needs_review'; }) ? '<button class="btn sm ghost" data-act="o-doc-close" data-id="' + e(rec.id) + '">Mark reviewed (no values to store)</button>' : '') + '</div></section>';
       var rows = d.extractions.length ? '<section class="panel"><h2>Values read</h2><div class="docx">' + d.extractions.map(function (x) {
-        var val = x.field === 'bp' ? x.systolic + '/' + x.diastolic : x.value;
+        var val = x.field === 'bp' ? x.systolic + '/' + x.diastolic : x.value != null ? x.value : x.text;
         var raw = x.rawValue + (x.rawUnit ? ' ' + x.rawUnit : '');
         var review = x.status === 'needs_review';
         return '<article class="docv ' + e(x.status) + '"><div class="docv-h"><div><b>' + e(x.name) + '</b>' + (x.context ? ' <span class="muted small">(' + e(d.glucose[x.context] || x.context) + ')</span>' : '') +

@@ -25,7 +25,7 @@ const STATUS = { uploaded: 'Uploaded', processing: 'Processing', extracted: 'Ext
 const RETRY_DELAYS = [30e3, 120e3, 600e3];
 const MAX_ATTEMPTS = 3;
 // the extraction rules a document was processed with; documents waiting for review under older rules are read again
-const RULES = 'auto-store-2';
+const RULES = 'capture-all-1'; // every result captured, nothing waits for review (owner's decision, 20 Nov 2026)
 const IST = '+05:30';
 const sha256 = (buf) => crypto.createHash('sha256').update(buf).digest('hex');
 
@@ -91,9 +91,9 @@ function create(ctx) {
       if (!read.ok) return fail(read.error || 'The document could not be read.', read.retryable !== false);
       let pages = read.pages || [];
       let items = X.extract(pages);
-      if (!items.length && pages.some((p) => p.source === 'ocr')) {
+      if (!items.length && !X.extractOther(pages, []).length && pages.some((p) => p.source === 'ocr')) {
         const deep = await reader.readPages(buf, rec.mime, { deep: true });
-        if (deep.ok) { const more = X.extract(deep.pages); if (more.length) { pages = deep.pages; items = more; } }
+        if (deep.ok) { const more = X.extract(deep.pages); if (more.length || X.extractOther(deep.pages, []).length) { pages = deep.pages; items = more; } }
       }
       // nothing readable at all (blank, damaged or unreadable file): a failure, never "Completed"
       const textChars = pages.reduce((n, p) => n + (String(p.text || '').match(/[A-Za-z0-9]/g) || []).length, 0);
@@ -102,13 +102,20 @@ function create(ctx) {
       const ocrQuality = ocrLines.length ? Math.round(ocrLines.reduce((n, l) => n + (Number(l.conf) || 0), 0) / ocrLines.length) : null;
       const kind = X.classify(pages);
       const dates = X.findDates(pages);
-      items = X.validate(items, dates);
+      // the date the values are stored on (the test date, else a fallback that is noted on each value)
+      const uploadDay = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(new Date(rec.uploadedAt || rec.createdAt || Date.now()));
+      const use = X.useDate(dates, uploadDay);
+      items = X.validate(items, dates, use);
+      // every other result in the document (not shown in Vitals): kept with the document
+      const others = X.extractOther(pages, items).map((o) => ({ ...o, measuredDate: use.date, notes: use.note ? [use.note] : [], reasons: [] }));
       const engine = read.engine ? { opencv: read.engine.opencv || null, tesseract: read.engine.tesseract || null, sources: [...new Set(pages.map((p) => p.source))] } : null;
       // the record's own date (Medical records list): the report date, else the test date; never the upload date
-      const shown = (dates.report && dates.report.date) || dates.measured || null;
-      await docs.update('app_records', id, { docType: kind.type, docTypeLabel: kind.label, sections: [...new Set(items.map((i) => i.section).filter(Boolean))], dates: { measured: dates.measured, measuredStatus: dates.status, measuredNote: dates.reason || dates.note || null, test: dates.test, report: dates.report, issue: dates.issue, all: dates.all },
-        date: shown, dateStatus: shown ? 'detected' : 'review', dateLabel: shown ? (dates.report && dates.report.date ? 'Report date' : 'Test date') : null, dateNote: shown ? null : dates.reason, dateReadAt: now(), dateEngine: engine });
-      await setProc(id, { status: 'extracted', extractedAt: now(), engine, pages: pages.length, found: items.length, ocrQuality });
+      // the record's own date (Medical records list): the report date, else the date the values are stored on
+      const shown = (dates.report && dates.report.date) || use.date || null;
+      const shownLabel = dates.report && dates.report.date ? 'Report date' : use.basis === 'test' ? 'Test date' : use.basis === 'upload' ? 'Upload date' : 'Date on the report';
+      await docs.update('app_records', id, { docType: kind.type, docTypeLabel: kind.label, sections: [...new Set(items.concat(others).map((i) => i.section).filter(Boolean))], dates: { measured: use.date, measuredBasis: use.basis, measuredStatus: dates.status, measuredNote: use.note || dates.reason || null, test: dates.test, report: dates.report, issue: dates.issue, all: dates.all },
+        date: shown, dateStatus: shown ? 'detected' : 'review', dateLabel: shown ? shownLabel : null, dateNote: shown ? null : dates.reason, dateReadAt: now(), dateEngine: engine });
+      await setProc(id, { status: 'extracted', extractedAt: now(), engine, pages: pages.length, found: items.length + others.length, ocrQuality });
 
       // 3. store each value: accepted ones become readings (never twice), the rest wait for review.
       // Values still waiting from an earlier reading of this document are replaced (kept, marked superseded).
@@ -128,12 +135,25 @@ function create(ctx) {
         }
         await docs.insert('app_extractions', row);
       }
+      // other results: kept with the document and the person (latest per test), never in Vitals or the risk engine
+      let kept = 0;
+      const earlier = await docs.find('app_extractions', { personId: rec.personId, kind: 'other', status: 'stored' });
+      for (const o of others) {
+        n++;
+        const row = { id: 'ex-' + id + '-a' + attempts + '-' + n, recordId: id, personId: rec.personId, field: o.field, kind: 'other', name: o.name, label: o.label, value: o.value, text: o.text || null, context: null,
+          unit: o.unit, rawValue: o.rawValue, rawUnit: o.rawUnit, conversion: null, qualifier: o.qualifier || null, refRange: o.refRange || null, flag: o.flag || null,
+          page: o.page, line: o.line, section: o.section || null, source: o.source, rawLine: o.rawLine, confidence: o.confidence,
+          measuredDate: o.measuredDate || null, dateText: dates.test ? dates.test.raw : null, status: 'stored', reasons: [], notes: o.notes || [], readingId: null, createdAt: now(), uploadedBy: rec.uploadedBy };
+        const dup = earlier.find((x) => x.field === row.field && x.measuredDate === row.measuredDate && String(x.value != null ? x.value : x.text) === String(row.value != null ? row.value : row.text) && (x.unit || '') === (row.unit || ''));
+        if (dup) { row.status = 'duplicate'; row.reasons = ['This result is already stored (same test, date and value)']; } else kept++;
+        await docs.insert('app_extractions', row);
+      }
       if (wrote) await risk.recalc(rec.personId, 'document', rec.uploadedBy);
       const pending = items.filter((i) => i.status === 'needs_review').length;
-      const final = !items.length ? 'needs_review' : pending ? 'needs_review' : 'completed';
-      const note = !items.length ? 'No supported measurements were found in this document.' + (ocrQuality != null && ocrQuality < 50 ? ' The scan or photo is of poor quality (average reading confidence ' + ocrQuality + '%).' : '') : null;
-      await setProc(id, { status: final, finishedAt: now(), stored: wrote, pending, note, rules: RULES });
-      await audit(null, 'document.processed', rec.personId, { record: id, status: final, found: items.length, stored: wrote, pending });
+      const final = pending ? 'needs_review' : 'completed';
+      const note = !items.length && !others.length ? 'No test results were found in this document.' + (ocrQuality != null && ocrQuality < 50 ? ' The scan or photo is of poor quality (average reading confidence ' + ocrQuality + '%).' : '') : null;
+      await setProc(id, { status: final, finishedAt: now(), stored: wrote, kept, pending, note, rules: RULES });
+      await audit(null, 'document.processed', rec.personId, { record: id, status: final, found: items.length + others.length, stored: wrote, kept, pending });
       return { status: final };
     } catch (e) {
       console.error('[documents] processing failed:', e.message);
@@ -242,8 +262,8 @@ function create(ctx) {
     const rows = (await docs.find('app_extractions', { recordId: rec.id }, { sort: { createdAt: 1 } })).filter((x) => x.status !== 'superseded');
     const c = (s) => rows.filter((x) => x.status === s).length;
     return { ...statusOf(rec), docType: rec.docTypeLabel || null, dates: rec.dates ? { test: rec.dates.measured, testStatus: rec.dates.measuredStatus, testNote: rec.dates.measuredNote, report: rec.dates.report ? rec.dates.report.date : null } : null,
-      counts: { stored: c('accepted'), review: c('needs_review'), duplicate: c('duplicate'), rejected: c('rejected') }, note: rec.processing ? rec.processing.note || null : null, error: rec.processing && rec.processing.status === 'failed' ? rec.processing.lastError : null,
-      values: rows.map((x) => ({ name: x.name, value: x.field === 'bp' ? x.systolic + '/' + x.diastolic : x.value, unit: x.unit, context: x.context, date: x.measuredDate, status: x.status, notes: x.notes || [] })) };
+      counts: { stored: c('accepted'), kept: c('stored') + c('captured'), review: c('needs_review'), duplicate: c('duplicate'), rejected: c('rejected') }, note: rec.processing ? rec.processing.note || null : null, error: rec.processing && rec.processing.status === 'failed' ? rec.processing.lastError : null,
+      values: rows.map((x) => ({ name: x.name, value: x.field === 'bp' ? x.systolic + '/' + x.diastolic : x.value != null ? x.value : x.text, unit: x.unit, context: x.context, refRange: x.refRange || null, flag: x.flag || null, other: x.kind === 'other', date: x.measuredDate, status: x.status, notes: x.notes || [] })) };
   }
 
   // ---------------------------------------------------------------- after a restart
