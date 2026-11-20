@@ -243,7 +243,20 @@ async function seedOperations(ids, pdf, day0) {
   };
   await pay('demo-p-P-DEMO01-karehome', 1, 'upi', 70);
   await pay('demo-p-P-DEMO02-karenest', 0.5, 'bank', 110);
-  await pay('demo-p-P-DEMO05-karenest', 1, 'card', 55);
+  await pay('demo-p-P-DEMO04-karehome', 1, 'card', 38);
+  // the office approved these packages (the lifecycle: request -> general information -> approval -> payment);
+  // with the payment confirmed, Lakshmi and Kamala are ready for nurse onboarding. Gopal's payment is only
+  // part paid and Mohan's is not recorded yet, so they are not; Saraswathi's request still waits in the
+  // Enquiry database.
+  for (const id of ['P-DEMO01', 'P-DEMO02', 'P-DEMO04', 'P-DEMO05']) {
+    const pl = (await docs.find('app_plans', { personId: id })).find((x) => x.status === 'active');
+    if (pl) await docs.update('app_plans', pl.id, { approval: { status: 'approved', by: ids.admin, byName: 'Office Admin (demo)', at: day0(80), via: 'demo' } });
+  }
+  const sara = (await docs.find('app_plans', { personId: 'P-DEMO03' }))[0];
+  if (sara) {
+    const r = await store.add('enquiries', 'KQ', { name: 'Rahul Menon (demo)', phone: '+919800000002', email: '', interest: 'app-plan-request', interestName: 'New plan from the app', message: 'Plan: Kare@Home HomeStart\nPayment plan: Quarterly (3 months)', source: 'app', product: 'karehome', package: 'homestart', billing: '3', userId: ids.rahul, accountUserId: ids.rahul, personId: 'P-DEMO03', personName: 'Saraswathi Menon', relation: 'Mother', appPlanId: sara.id, kind: 'plan-request', createdAt: day0(2) });
+    await docs.update('app_plans', sara.id, { bookingRef: r.reference });
+  }
 
   // website enquiries and bookings (demo names), so lead management has something to show
   const leads = [

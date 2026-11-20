@@ -274,6 +274,43 @@ the browser stays on the demo address. That service:
 A different Render address: `DEMO_BACKEND=https://name.onrender.com node tools/demo/build.js ../kareiq-demo`.
 `DEMO_BACKEND=vercel` builds the old all-in-Vercel demo (no report reading, nothing kept without a database).
 
+## Customer lifecycle: package request to nurse onboarding (20 Nov 2026)
+
+Enforced on the server (`src/app/lifecycle.js`); the screens only reflect it.
+
+1. **Request.** A customer's "Request this package" creates an order with status `awaiting_approval`
+   (`app_orders`) and an enquiry (`kind: 'order'`) in Office › Lead management › Enquiry database. A plan
+   request from "Add a plan or booking" (`kind: 'plan-request'`, a pending `app_plans` row) is handled the same way.
+2. **General Information.** In the enquiry, the Operations Team (office logins) fills Name, Date of Birth,
+   Age (worked out from the date of birth, never typed), Gender, Blood Group, Qualifications, Languages Spoken,
+   Address, Email, Primary and Secondary Contact Number. It is saved in the customer's own details record
+   (`app_details`), never a new customer, with a version in `app_details_versions` (`source: 'operations'`,
+   the enquiry reference) and a line in the enquiry history.
+3. **Approval.** "Approve package" works only after step 2. The order moves to `awaiting_payment`; for a plan
+   request an order is created from the published price, or the agreed amount for packages priced on call.
+   "Decline request" needs a reason.
+4. **Payment.** Settings › Requests and orders › record the payment (full amount only). The package becomes
+   active, carrying the approval. A package activated directly by the office (Activate) counts as approved,
+   and its payment is confirmed once the invoice is fully paid.
+5. **Eligibility.** A customer is ready for onboarding only with an active package that was approved and whose
+   payment is confirmed. The assigned nurses get a notification. Nurse › Customer Onboarding lists only those
+   customers (Pending) and the ones already onboarded (Completed). The onboarding API refuses everyone else.
+6. **Onboarding.** As before: once only (atomic insert), read only afterwards. The General Information from
+   step 2 is shown read only and is added to the record on the server (nurses never see full numbers).
+   Customer Profiles then shows the onboarding as completed.
+
+**Contact numbers.** The customer's Primary and Secondary Contact Number and email are masked for nurses
+everywhere (API and screens). Request Access names the details and the reason. The office approves (all or
+some of the requested details, for a set time) or rejects it, in Office › Contact access audit, and can revoke
+an approval. An approval opens only those details, for that customer and that nurse. Emergency and doctor
+numbers keep the contact policy (visit, approval or emergency).
+
+**Navigation.** Nurse: Customer Profiles, Customer Onboarding (its own section), Assessment › Regular Checkup,
+Upload Documents › Upload and Your Submissions. Customers and the office: KareIQ Policies is one section, with
+the seven categories as filters inside it.
+
+Tests: `node tools/check-lifecycle.js http://localhost:3000` on a fresh demo server.
+
 ## Older setup: everything on Vercel
 
 The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and JS from Vercel's CDN, and sends `/api/*` and `/admin` to one serverless function (`api/index.js`, which runs the same code as `server.js`).

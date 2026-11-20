@@ -6,9 +6,11 @@
 // verified by the KareIQ office (the team sends a secure payment link or takes a bank transfer, then
 // records the payment reference and amount here). A gateway can be added in verifyPayment() later.
 //
-// Statuses: awaiting_payment -> paid (package active) | failed | cancelled
+// A purchase starts as a request: the office captures the customer's general information and approves
+// the package (src/app/lifecycle.js) before a payment is asked for.
+// Statuses: awaiting_approval -> awaiting_payment (approved) -> paid (package active) | failed | cancelled | rejected
 
-const ORDER_STATUS = { awaiting_payment: 'Awaiting payment', paid: 'Paid, package active', failed: 'Payment failed', cancelled: 'Cancelled' };
+const ORDER_STATUS = { awaiting_approval: 'Waiting for approval', awaiting_payment: 'Approved, awaiting payment', paid: 'Paid, package active', failed: 'Payment failed', cancelled: 'Cancelled', rejected: 'Declined by the office' };
 const METHODS = { upi: 'UPI', card: 'Card', netbanking: 'Net banking', bank: 'Bank transfer', cash: 'Cash', cheque: 'Cheque' };
 const PAYMENT_MODE = process.env.PAYMENT_PROVIDER || 'manual';
 
@@ -33,7 +35,8 @@ function view(o, extra) {
   return {
     id: o.id, reference: o.reference, personId: o.personId, planId: o.planId, product: o.product, name: o.name, months: o.months || null, billing: o.billing,
     amount: o.amount, amountText: o.amountText, gst: o.gst || null, status: o.status, statusName: ORDER_STATUS[o.status] || o.status,
-    createdAt: o.createdAt, updatedAt: o.updatedAt || null, paidAt: o.paidAt || null, failedNote: o.failedNote || null, ...(extra || {})
+    createdAt: o.createdAt, updatedAt: o.updatedAt || null, paidAt: o.paidAt || null, failedNote: o.failedNote || null, enquiryRef: o.enquiryRef || null,
+    approvedAt: o.approval ? o.approval.at : null, rejectedNote: o.rejectedNote || null, ...(extra || {})
   };
 }
 

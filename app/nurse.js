@@ -10,9 +10,10 @@
     ['nurse/visits', 'My visits', 'route'],
     ['nurse/schedule', 'Scheduler', 'cal'],
     ['nurse/customers', 'Assigned customers', 'people'],
-    ['nurse/customer', 'Customer information', 'idcard'],
-    { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse'], ['assess/onboarding', 'Onboarding Customer', 'idcard']] },
-    ['nurse/upload', 'Upload documents', 'upload'],
+    ['nurse/customer', 'Customer Profiles', 'idcard'],
+    ['nurse/onboarding', 'Customer Onboarding', 'check'],
+    { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse']] },
+    { k: 'upl', label: 'Upload Documents', icon: 'upload', sub: [['nurse/upload', 'Upload', 'upload'], ['nurse/submissions', 'Your Submissions', 'file']] },
     ['nurse/notifications', 'Notifications', 'bell']
   ];
   var STATUS = { awaiting_assignment: 'Awaiting assignment', assigned: 'Assigned to you', accepted: 'Accepted', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled' };
@@ -161,7 +162,7 @@
         (rows.length ? '<div class="ncards">' + rows.map(function (c) {
           return '<article class="ncard" data-find="' + e((c.name + ' ' + c.customerId).toLowerCase()) + '"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div></div>' +
             '<p class="nc-next">' + icon('clock') + (c.next ? '<span>Next visit: <b>' + e(rel(c.next.date)) + ', ' + e(c.next.start ? K.hm12(c.next.start) : SLOT[c.next.slot]) + '</b> · ' + e(c.next.serviceName) + '</span>' : '<span class="muted">No visit scheduled</span>') + '</p>' +
-            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess/regular?p=' + e(c.id) + '">' + icon('pulse') + 'Regular Checkup</a><a class="btn sm ghost" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon('idcard') + 'Onboarding</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
+            '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess/regular?p=' + e(c.id) + '">' + icon('pulse') + 'Regular Checkup</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
         }).join('') + '</div><p class="empty" data-none hidden><b>No customer matches</b>Try another name or ID.</p>' : '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers, and new visits appear under My visits.</div>') +
         '<p class="note">' + icon('shield') + '<span>For privacy, nurses do not see health history, medical records or risk results. Record visits under Assessment and upload reports: they are read automatically and the family and the office see the results. Phone numbers stay hidden until you need them for a visit or an emergency.</span></p></div>';
     }, fail);
@@ -169,16 +170,16 @@
 
   // ================================================================ Customer information (restricted)
   function customerPage(r) {
-    shell('nurse/customer', head('Customer information', '') + K.loading(120) + K.loading(300));
+    shell('nurse/customer', head('Customer Profiles', '') + K.loading(120) + K.loading(300));
     customers().then(function (list) {
-      if (!list.length) { $('#mn').innerHTML = '<div class="npage">' + head('Customer information', '') + '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers to you.</div></div>'; return; }
+      if (!list.length) { $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', '') + '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers to you.</div></div>'; return; }
       var pick = list.filter(function (x) { return x.id === r.q.p; })[0] || list.filter(function (x) { return x.id === S.pid; })[0] || list[0];
       S.pid = pick.id;
       if (r.q.p !== pick.id) history.replaceState(null, '', '#/nurse/customer?p=' + encodeURIComponent(pick.id));
       api('GET', 'nurse/customers/' + encodeURIComponent(pick.id)).then(function (d) {
         if (!d.ok) return fail(d);
         S.cache.ncard = d.customer; S.cache.nopen = {};
-        $('#mn').innerHTML = '<div class="npage">' + head('Customer information', 'What you need for a visit. Numbers stay hidden until you need them.') + selectBar(list, pick) +
+        $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.') + selectBar(list, pick) +
           cardHtml(d.customer) + '</div>';
       });
     }, fail);
@@ -193,17 +194,50 @@
   }
   function accessBtn(c, cat) {
     var st = c.access[cat];
+    if (st.approvalOnly) {
+      var out = '';
+      if (st.open) out += '<button class="btn sm quiet" data-act="nc-access" data-cat="' + cat + '">' + icon('eye') + 'Show approved details</button>';
+      if (st.pending) return out + '<span class="pill pending"><i></i>Waiting for office approval</span>';
+      var left = ['phone1', 'phone2', 'email'].filter(function (k) { return (st.fields || []).indexOf(k) === -1 && c.general[k]; });
+      return out + (left.length ? '<button class="btn sm ghost" data-act="nc-request" data-cat="' + cat + '">' + icon('lock') + 'Request Access</button>' : '');
+    }
     if (st.open) return '<button class="btn sm quiet" data-act="nc-access" data-cat="' + cat + '">' + icon('eye') + 'Show contact information</button>';
     if (st.pending) return '<span class="pill pending"><i></i>Waiting for office approval</span>';
     return '<button class="btn sm ghost" data-act="nc-access" data-cat="' + cat + '">' + icon('lock') + 'Access contact information</button>';
   }
+  // Request Access: the nurse chooses which of the customer's details, and says why; the office decides
+  function requestDialog(cat) {
+    var c = S.cache.ncard, g = c.general, st = c.access[cat];
+    var opts = [['phone1', 'Primary Contact Number'], ['phone2', 'Secondary Contact Number'], ['email', 'Email']].filter(function (x) { return g[x[0]] && (st.fields || []).indexOf(x[0]) === -1; });
+    K.openDialog('Request Access', '<form data-form="n-request" data-cat="' + e(cat) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+      '<p class="muted" style="margin-bottom:12px">The office approves or rejects each request. Only the details they approve are shown to you, for ' + e(c.name) + ' only, and only for a limited time.</p>' +
+      '<fieldset class="ckset"><legend>Which details do you need?</legend>' + opts.map(function (x) { return '<label class="ck"><input type="checkbox" name="fields" value="' + x[0] + '"' + (x[0] === 'phone1' ? ' checked' : '') + '><span>' + e(x[1]) + ' <span class="muted small">' + e(g[x[0]]) + '</span></span></label>'; }).join('') + '</fieldset><em class="err" data-err="fields"></em>' +
+      '<label class="field"><span>Why do you need it?</span><textarea class="in" name="reason" maxlength="300" required placeholder="e.g. To confirm tomorrow\'s visit time with the customer"></textarea><em class="err" data-err="reason"></em></label>' +
+      '<p class="dl-period">' + icon('shield') + '<span>The office sees your name, the customer, the time and this reason. Every view of an approved number is recorded.</span></p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send request</button>');
+  }
+  K.FORMS['n-request'] = function (f, v) {
+    var fields = $$('input[name=fields]', f).filter(function (x) { return x.checked; }).map(function (x) { return x.value; });
+    var errs = {};
+    if (!fields.length) errs.fields = 'Choose at least one';
+    if ((v.reason || '').trim().length < 5) errs.reason = 'Say why you need it.';
+    if (Object.keys(errs).length) return Promise.resolve({ ok: false, errors: errs });
+    var c = S.cache.ncard;
+    return api('POST', 'nurse/contact-access', { personId: c.id, category: f.getAttribute('data-cat'), fields: fields, reason: v.reason, request: true }).then(function (d) {
+      if (!d.ok) return d;
+      K.closeDialog(); K.toast(d.message || 'Sent to the office.'); c.access[f.getAttribute('data-cat')].pending = true; rerender();
+    });
+  };
   function cardHtml(c) {
     var g = c.general;
     var facts = [g.age != null ? g.age + ' years' : '', g.gender].filter(Boolean).join(' · ');
-    var gen = '<section class="panel nsec"><div class="panel-h"><h2>General information</h2></div><dl class="rogrid">' +
-      ro('Customer ID', c.customerId) + ro('Age', g.age != null ? g.age + ' years' : '') + ro('Gender', g.gender) + ro('Blood group', g.bloodGroup) + ro('Languages', g.languages) + ro('Address', g.address, true) + '</dl></section>';
+    var onb = c.onboarding || {};
+    var gen = '<section class="panel nsec"><div class="panel-h"><h2>General information</h2>' + (onb.status === 'completed' ? '<span class="pill active"><i></i>Onboarded</span>' : '<span class="pill pending"><i></i>Onboarding not completed</span>') + '</div><dl class="rogrid">' +
+      ro('Customer ID', c.customerId) + ro('Name', g.name) + ro('Date of Birth', g.dob ? K.date(g.dob) : '') + ro('Age', g.age != null ? g.age + ' years' : '') + ro('Gender', g.gender) + ro('Blood Group', g.bloodGroup) + ro('Qualifications', g.qualification) + ro('Languages Spoken', g.languages) + ro('Address', g.address, true) + '</dl>' +
+      (onb.status === 'completed' ? '<p class="muted small">Onboarding completed on ' + e(K.dt(onb.completedAt)) + ' by ' + e(onb.completedBy) + '. <a href="#/assess/onboarding?p=' + e(c.id) + '">Open the onboarding record</a></p>' : '') + '</section>';
     var contact = '<section class="panel nsec"><div class="panel-h"><h2>' + icon('phone') + 'Customer contact</h2>' + accessBtn(c, 'customer') + '</div><dl class="mlist">' +
-      (masked('customer', 'phone1', g.phone1, 'Mobile') + masked('customer', 'phone2', g.phone2, 'Other number') + masked('customer', 'email', g.email, 'Email') || '<p class="muted">No contact number is on file.</p>') + '</dl></section>';
+      (masked('customer', 'phone1', g.phone1, 'Primary Contact Number') + masked('customer', 'phone2', g.phone2, 'Secondary Contact Number') + masked('customer', 'email', g.email, 'Email') || '<p class="muted">No contact number is on file.</p>') + '</dl>' +
+      (c.access.customer.approvalOnly ? '<p class="muted small">Masked by default. Use Request Access: the office approves each request, and only the details they approve are shown.</p>' : '') + '</section>';
     var emerg = '<section class="panel nsec"><div class="panel-h"><h2>' + icon('shield') + 'Emergency contacts</h2>' + (c.emergency.length ? accessBtn(c, 'emergency') : '') + '</div>' +
       (c.emergency.length ? c.emergency.map(function (x, i) {
         return '<div class="ecard"><b>' + e(x.name || 'Emergency contact ' + (i + 1)) + '</b><span class="muted small">' + e([x.relation, x.gender, x.languages].filter(Boolean).join(' · ')) + '</span><dl class="mlist">' +
@@ -217,7 +251,7 @@
     var up = '<section class="panel nsec"><h2>Your visits with ' + e(K.first(c.name)) + '</h2>' + (c.upcoming.length ? '<ul class="rlist">' + c.upcoming.map(function (v) {
       return '<li><span><b>' + e(rel(v.date)) + ', ' + e(v.start ? K.hm12(v.start) : SLOT[v.slot]) + '</b><br><span class="muted small">' + e(v.serviceName) + ' · ' + e(v.reference) + '</span></span>' + pill(v.status) + '</li>';
     }).join('') + '</ul>' : '<p class="muted">No upcoming visit.</p>') + '</section>';
-    var pol = '<p class="note">' + icon('lock') + '<span>Contact numbers: ' + e(c.access.policyText) + '. ' + (c.access.visitNow ? '<b>Your visit ' + e(c.access.visitNow.reference) + ' is on now, so numbers open without a reason.</b> ' : '') + 'Every time you open a number it is recorded for the office.</span></p>';
+    var pol = '<p class="note">' + icon('lock') + '<span>The customer\'s own numbers open only after the office approves your request. Emergency and doctor numbers: ' + e(c.access.policyText) + '. ' + (c.access.visitNow ? '<b>Your visit ' + e(c.access.visitNow.reference) + ' is on now, so those numbers open without a reason.</b> ' : '') + 'Every time you open a number it is recorded for the office.</span></p>';
     return '<section class="phead ncard-h"><div class="avatar">' + (c.photo ? '<img src="/api/app/people/' + encodeURIComponent(c.id) + '/photo?v=' + encodeURIComponent(c.photo) + '" alt="Photo of ' + e(c.name) + '" width="112" height="112">' : '<span class="ph" role="img" aria-label="No photo">' + icon('user') + '</span>') + '</div>' +
       '<div class="phead-t"><h2>' + e(c.name) + '</h2><p class="muted">' + e(facts) + '</p><div class="ptags" style="margin-top:8px">' + brandTags(c.brands) + '</div></div></section>' +
       pol + '<div class="ngrid">' + gen + contact + emerg + docs + up + '</div>';
@@ -255,7 +289,7 @@
     var ms = Math.min(Date.parse(until) - Date.now(), 6 * 3600000);
     setTimeout(function () { if (S.cache.ncard && S.cache.nopen[cat]) { S.cache.nopen[cat] = false; var rr = K.route(); if (rr.parts.join('/') === 'nurse/customer') K.render(); } }, Math.max(1000, ms));
   }
-  function rerender() { var c = S.cache.ncard; if (!c) return; var list = S.cache.ncust || []; $('#mn').innerHTML = '<div class="npage">' + head('Customer information', 'What you need for a visit. Numbers stay hidden until you need them.') + selectBar(list, list.filter(function (x) { return x.id === c.id; })[0] || c) + cardHtml(c) + '</div>'; }
+  function rerender() { var c = S.cache.ncard; if (!c) return; var list = S.cache.ncust || []; $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.') + selectBar(list, list.filter(function (x) { return x.id === c.id; })[0] || c) + cardHtml(c) + '</div>'; }
   function emergencyDialog(cat, msg) {
     var pol = S.cache.ncard.access.policy;
     var approval = pol === 'approval';
@@ -272,26 +306,61 @@
     return askAccess(f.getAttribute('data-cat'), { reason: v.reason, emergency: em });
   };
 
-  // ================================================================ Upload documents (submit only)
+  // ================================================================ Upload Documents (submit only): Upload, Your Submissions
+  var UP_SUB = 'Send a report or prescription for a customer. It is read automatically and the results go into the customer\'s health records.';
   function uploadPage(r) {
-    shell('nurse/upload', head('Upload documents', 'Send a report or prescription for a customer. It is read automatically: measurements with a clear test date go into the customer\'s health records, and the rest is checked by the office.') + K.loading(300));
-    Promise.all([customers(), api('GET', 'nurse/submissions')]).then(function (x) {
-      var list = x[0], subs = x[1];
-      if (!subs.ok) return fail(subs);
+    shell('nurse/upload', head('Upload', UP_SUB) + K.loading(300));
+    customers().then(function (list) {
       var pre = list.filter(function (c) { return c.id === r.q.p; })[0];
-      var names = {}; list.forEach(function (c) { names[c.id] = c.name; });
       var form = '<section class="panel nsec"><h2>New document</h2>' + (list.length ? '<form data-form="n-upload" novalidate><div class="alert bad" data-msg hidden></div>' +
         '<label class="field"><span>Customer</span><select class="in" name="personId" required><option value="">Choose a customer</option>' + list.map(function (c) { return '<option value="' + e(c.id) + '"' + (pre && pre.id === c.id ? ' selected' : '') + '>' + e(c.name + ' (' + c.customerId + ')') + '</option>'; }).join('') + '</select><em class="err" data-err="personId"></em></label>' +
         '<div class="row2">' + K.field('name', 'Document name', 'maxlength="80" placeholder="e.g. Blood test report" required') + '<label class="field"><span>Category</span><select class="in" name="category">' + Object.keys(CATS).map(function (k) { return '<option value="' + k + '"' + (k === 'general' ? ' selected' : '') + '>' + CATS[k] + '</option>'; }).join('') + '</select></label></div>' +
         '<label class="field"><span>File</span><input class="in" type="file" name="file" accept="application/pdf,image/jpeg,image/png,image/webp" capture="environment" required><small>PDF or photo, up to 5 MB. On a phone you can take a photo of the document.</small><em class="err" data-err="file"></em></label>' +
         '<div class="upstate" data-upstate role="status" aria-live="polite" hidden></div>' +
         '<button class="btn" type="submit">' + icon('upload') + 'Submit document</button></form>' : '<p class="muted">No customers are assigned to you yet.</p>') + '</section>';
-      var receipts = '<section class="panel nsec"><div class="panel-h"><h2>Your submissions</h2><span class="muted small">' + subs.rows.length + ' sent</span></div>' +
+      $('#mn').innerHTML = '<div class="npage">' + head('Upload', UP_SUB, '<a class="btn sm ghost" href="#/nurse/submissions">' + icon('file') + 'Your Submissions</a>') + '<div class="nup">' + form + '</div>' +
+        '<p class="note">' + icon('lock') + '<span>For privacy, a document cannot be opened, downloaded, replaced or deleted after you submit it. If you sent the wrong file, tell the office.</span></p></div>';
+    }, fail);
+  }
+  function submissionsPage() {
+    var sub = 'Receipts for the documents you sent, with where each one is in being read. You never see the values read from them.';
+    shell('nurse/submissions', head('Your Submissions', sub) + K.loading(300));
+    Promise.all([customers(), api('GET', 'nurse/submissions')]).then(function (x) {
+      var list = x[0], subs = x[1];
+      if (!subs.ok) return fail(subs);
+      var names = {}; list.forEach(function (c) { names[c.id] = c.name; });
+      var receipts = '<section class="panel nsec"><div class="panel-h"><h2>Submitted documents</h2><span class="muted small">' + subs.rows.length + ' sent</span></div>' +
         (subs.rows.length ? '<div class="tw"><table class="stackable rtable"><thead><tr><th>Customer</th><th>Document</th><th>Category</th><th>Submitted</th><th>Processing status</th></tr></thead><tbody>' + subs.rows.map(function (s) {
           return '<tr><td data-l="Customer"><b>' + e(names[s.customerId] || s.customerId) + '</b><br><span class="muted small">' + e(s.customerId) + '</span></td><td data-l="Document">' + e(s.documentName) + '</td><td data-l="Category">' + e(CATS[s.category] || s.category || '') + '</td><td data-l="Submitted">' + e(K.dt(s.submittedAt)) + '</td><td data-l="Status"><span class="pchip ' + e(s.processing || (s.status === 'Submitted' ? 'completed' : 'failed')) + '">' + (s.processing === 'uploaded' || s.processing === 'processing' ? '<span class="spin" aria-hidden="true"></span>' : '') + e(s.status) + '</span></td></tr>';
-        }).join('') + '</tbody></table></div>' : '<p class="muted">Documents you send appear here as receipts.</p>') + '</section>';
-      $('#mn').innerHTML = '<div class="npage">' + head('Upload documents', 'Send a report or prescription for a customer. It is read automatically: measurements with a clear test date go into the customer\'s health records, and the rest is checked by the office.') +
-        '<div class="ngrid2">' + form + receipts + '</div><p class="note">' + icon('lock') + '<span>For privacy, a document cannot be opened, downloaded, replaced or deleted after you submit it. If you sent the wrong file, tell the office.</span></p></div>';
+        }).join('') + '</tbody></table></div>' : '<p class="muted">Documents you send appear here as receipts. <a href="#/nurse/upload">Upload a document</a></p>') + '</section>';
+      $('#mn').innerHTML = '<div class="npage">' + head('Your Submissions', sub, '<a class="btn sm" href="#/nurse/upload">' + icon('upload') + 'Upload</a>') + receipts + '</div>';
+      // the status moves on as documents are read: refresh while any is still being read
+      if (subs.rows.some(function (r) { return r.processing === 'uploaded' || r.processing === 'processing'; })) {
+        clearTimeout(S.cache.subTick);
+        S.cache.subTick = setTimeout(function () { if (location.hash.indexOf('nurse/submissions') > -1 && !$('dialog[open]')) submissionsPage(); }, 5000);
+      }
+    }, fail);
+  }
+
+  // ================================================================ Customer Onboarding
+  // Only the assigned customers whose package the office approved and whose payment is confirmed; the
+  // server decides who appears and refuses an onboarding for anyone else.
+  function onboardingPage() {
+    var sub = 'Customers whose package is approved and paid. Complete the one-time onboarding at the first visit; it cannot be changed afterwards.';
+    shell('nurse/onboarding', head('Customer Onboarding', sub) + K.loading(260));
+    api('GET', 'nurse/onboarding').then(function (d) {
+      if (!d.ok) return fail(d);
+      var pend = d.rows.filter(function (x) { return x.status === 'pending'; }).length;
+      $('#mn').innerHTML = '<div class="npage">' + head('Customer Onboarding', sub) +
+        '<div class="nkpis">' + nk('Pending', pend, 'clock', pend ? 'to onboard' : 'none waiting') + nk('Completed', d.rows.length - pend, 'check', 'onboarded') + '</div>' +
+        (d.rows.length ? '<div class="ncards">' + d.rows.map(function (c) {
+          var g = c.general;
+          return '<article class="ncard onbcard"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div>' +
+              '<span class="pill ' + (c.status === 'completed' ? 'active' : 'pending') + '"><i></i>' + (c.status === 'completed' ? 'Completed' : 'Pending') + '</span></div>' +
+            '<dl class="rogrid sm">' + ro('Package', c.package ? c.package.name : '') + ro('Age', g.age != null ? g.age + ' years' : '') + ro('Gender', g.gender) + ro('Blood Group', g.bloodGroup) + ro('Languages Spoken', g.languages) + ro('Primary Contact Number', g.phone1) + ro('Address', g.address, true) + '</dl>' +
+            (c.status === 'completed' ? '<p class="muted small">Completed on ' + e(K.dt(c.completedAt)) + ' by ' + e(c.completedBy) + '.</p>' : '') +
+            '<div class="nc-acts"><a class="btn sm' + (c.status === 'completed' ? ' ghost' : '') + '" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon(c.status === 'completed' ? 'eye' : 'check') + (c.status === 'completed' ? 'View onboarding' : 'Start onboarding') + '</a><a class="btn sm ghost" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer profile</a></div></article>';
+        }).join('') + '</div>' : '<div class="empty"><b>No customer is ready for onboarding</b>A customer appears here once the office has approved their package and the payment is confirmed.</div>') + '</div>';
     }, fail);
   }
   K.FORMS['n-upload'] = function (f, v) {
@@ -313,11 +382,8 @@
         var rc = d.receipt || {};
         K.openDialog('Document submitted', '<div class="co-done"><div class="co-ic">' + icon('check') + '</div><p>The document was sent. Keep this receipt.</p><dl class="kv">' +
           '<dt>Customer ID</dt><dd>' + e(rc.customerId) + '</dd><dt>Document</dt><dd>' + e(rc.documentName) + '</dd><dt>Submitted</dt><dd>' + e(K.dt(rc.submittedAt)) + '</dd><dt>Status</dt><dd>' + e(rc.status) + '</dd></dl></div>',
-          '<button class="btn" data-act="close">Done</button>');
-        K.render();
-        // the status moves on as the document is read: refresh the list a few times
-        var tries = 0, tick = function () { if (tries++ > 12 || !$('#mn') || location.hash.indexOf('nurse/upload') === -1) return; api('GET', 'nurse/submissions').then(function (x) { if (x.ok && x.rows.some(function (r) { return r.processing === 'uploaded' || r.processing === 'processing'; })) setTimeout(tick, 4000); else if (!$('dialog[open]')) K.render(); }); };
-        setTimeout(tick, 4000);
+          '<button class="btn ghost" data-act="close">Upload another</button><a class="btn" href="#/nurse/submissions" data-act="close-go">Your Submissions</a>');
+        f.reset();
       });
   };
 
@@ -361,6 +427,8 @@
         K.toast(s === 'accepted' ? 'Visit accepted.' : 'Visit started. Record the readings when you are done.', 'ok');
         K.render();
       });
+    } else if (act === 'nc-request') {
+      requestDialog(t.getAttribute('data-cat'));
     } else if (act === 'nc-access') {
       var cat = t.getAttribute('data-cat');
       t.disabled = true; askAccess(cat).then(function () { if (document.body.contains(t)) t.disabled = false; });
@@ -396,6 +464,8 @@
       else if (page === 'customers') customersPage(r);
       else if (page === 'customer') customerPage(r);
       else if (page === 'upload') uploadPage(r);
+      else if (page === 'submissions') submissionsPage(r);
+      else if (page === 'onboarding') onboardingPage(r);
       else if (page === 'notifications') notificationsPage(r);
       else K.go('#/nurse/visits', true);
       return true;

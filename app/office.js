@@ -12,7 +12,7 @@
     { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/finance/due', 'Payment due', 'clock']] },
     { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard']] },
     { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/scheduler/nurses', 'Nurses and hours', 'clock'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
-    { k: 'pol', label: 'KareIQ Policies', icon: 'shield', sub: K.POLICIES.map(function (x) { return ['policies/' + x[0], x[1], 'file']; }) },
+    ['policies', 'KareIQ Policies', 'shield'],
     ['office/contact-audit', 'Contact access audit', 'lock'],
     { k: 'set', label: 'Settings', icon: 'sliders', sub: [['admin', 'Requests and orders', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock'], ['office/risk-rules', 'Risk rules', 'gauge'], ['/admin/', 'Website text and prices', 'globe']] }
   ];
@@ -610,15 +610,65 @@
       K.openDialog('Enquiry ' + l.enquiryId,
         '<dl class="kv okv"><dt>Received</dt><dd>' + e(K.dt(l.createdAt)) + '</dd><dt>Name</dt><dd>' + e(l.name) + '</dd><dt>Phone</dt><dd>' + (l.phone ? '<a href="tel:' + e(l.phone) + '">' + e(K.phoneNice(l.phone) || l.phone) + '</a>' : '–') + '</dd><dt>Email</dt><dd>' + e(l.email || '–') + '</dd>' +
         '<dt>Interest</dt><dd>' + e(l.title) + '</dd><dt>Brand</dt><dd>' + e(l.brandName) + '</dd><dt>Package</dt><dd>' + e(l.packageName || 'Not chosen') + '</dd><dt>Source</dt><dd>' + e(l.sourceName) + '</dd>' + (l.message ? '<dt>Message</dt><dd style="white-space:pre-line">' + e(l.message) + '</dd>' : '') + '</dl>' +
+        lifecycleHtml(type, id, d) +
         '<form data-form="o-lead-status" data-type="' + e(type) + '" data-id="' + e(id) + '" class="osub" novalidate><div class="alert bad" data-msg hidden></div><h3>Status</h3><div class="row2"><label class="field"><span>Status</span><select class="in" name="status">' + Object.keys(d.statuses).map(function (k) { return '<option value="' + k + '"' + (k === l.status ? ' selected' : '') + '>' + e(d.statuses[k]) + '</option>'; }).join('') + '</select></label>' +
           '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300" placeholder="e.g. Called, will decide next week"></label></div><button class="btn sm" type="submit">Save status</button></form>' +
         '<form data-form="o-lead-assign" data-type="' + e(type) + '" data-id="' + e(id) + '" class="osub" novalidate><div class="alert bad" data-msg hidden></div><h3>Assigned to</h3><div class="row2"><label class="field"><span>Team member</span><select class="in" name="userId"><option value="">Choose</option>' + d.members.map(function (m) { return '<option value="' + e(m.id) + '"' + (m.id === l.assignedTo ? ' selected' : '') + '>' + e(m.name) + ' (' + m.open + ' open)</option>'; }).join('') + '</select><em class="err" data-err="userId"></em></label>' +
           '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300"></label></div><button class="btn sm" type="submit">' + (l.assignedTo ? 'Reassign' : 'Assign') + '</button></form>' +
         (d.duplicates.length ? '<h3 class="osub-h">Other enquiries from the same person</h3><ul class="rlist">' + d.duplicates.map(function (x) { return '<li><span><b>' + e(x.enquiryId) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.statusName) + '</span></span><button class="btn sm ghost" data-act="o-lead" data-type="' + e(x.type) + '" data-id="' + e(x.id) + '">Open</button></li>'; }).join('') + '</ul>' : '') +
-        '<h3 class="osub-h">History</h3>' + (l.history.length ? '<ol class="tl">' + l.history.slice().reverse().map(function (h) { return '<li><div class="t">' + e(h.action === 'status' ? 'Status: ' + (d.statuses[h.to] || h.to) : (h.action === 'reassigned' ? 'Reassigned to ' : 'Assigned to ') + h.to) + '</div><div class="m">' + e(K.dt(h.at)) + ' by ' + e(h.by) + '</div>' + (h.note ? '<div class="n">' + e(h.note) + '</div>' : '') + '</li>'; }).join('') + '</ol>' : '<p class="muted">No changes yet.</p>'),
+        '<h3 class="osub-h">History</h3>' + (l.history.length ? '<ol class="tl">' + l.history.slice().reverse().map(function (h) { return '<li><div class="t">' + e(HIST[h.action] || (h.action === 'status' ? 'Status: ' + (d.statuses[h.to] || h.to) : (h.action === 'reassigned' ? 'Reassigned to ' : 'Assigned to ') + h.to)) + '</div><div class="m">' + e(K.dt(h.at)) + ' by ' + e(h.by) + '</div>' + (h.note ? '<div class="n">' + e(h.note) + '</div>' : '') + '</li>'; }).join('') + '</ol>' : '<p class="muted">No changes yet.</p>'),
         '<button class="btn ghost" data-act="close">Close</button>');
     });
   }
+  var HIST = { general: 'General information saved', approved: 'Package approved', declined: 'Request declined' };
+  var STEPS = [['requested', 'Request received'], ['info', 'General information'], ['approved', 'Package approved'], ['active', 'Payment confirmed'], ['onboarded', 'Nurse onboarding']];
+  // the package request: where it stands, the customer's General Information, and the approval
+  function lifecycleHtml(type, id, d) {
+    var lc = d.lifecycle, g = d.general, out = '';
+    if (lc) {
+      var at = ['requested', 'info', 'approved', 'active', 'onboarded'].indexOf(lc.stage);
+      out += '<section class="osub lcbox"><h3>Package request</h3>' +
+        (lc.stage === 'rejected' || lc.stage === 'cancelled' ? '<p class="alert bad small">' + e(lc.stageName) + (lc.approval && lc.approval.note ? ': ' + e(lc.approval.note) : '') + '</p>' :
+          '<ol class="lcsteps">' + STEPS.map(function (s, i) { return '<li class="' + (i < at || (i === at && s[0] !== 'requested') ? 'done' : i === at ? 'now' : '') + (i === at + 1 ? ' next' : '') + '"><i>' + (i <= at ? icon('check') : i + 1) + '</i><span>' + e(s[1]) + '</span></li>'; }).join('') + '</ol>') +
+        '<dl class="kv okv">' + (lc.order ? '<dt>Order</dt><dd><b>' + e(lc.order.reference) + '</b> · ' + e(lc.order.name) + ' · ' + e(lc.order.amountText) + ' <span class="muted small">(' + e(lc.order.status.replace(/_/g, ' ')) + ')</span></dd>' : '') +
+          (lc.approval && lc.approval.status === 'approved' ? '<dt>Approved</dt><dd>' + e(K.dt(lc.approval.at)) + ' by ' + e(lc.approval.byName || 'the office') + '</dd>' : '') +
+          '<dt>Onboarding</dt><dd>' + (lc.stage === 'onboarded' ? 'Completed by the nurse' : lc.eligible ? '<b>Ready</b>: the assigned nurse sees the customer under Customer Onboarding' : '<span class="muted">' + e((lc.eligibilityReasons || [])[0] || 'Not yet') + '</span>') + '</dd></dl>' +
+        (lc.canApprove || lc.canReject ? '<form data-form="o-lc-approve" data-type="' + e(type) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+          (lc.canApprove ? '' : (lc.generalInfo ? '' : '<p class="note small">' + icon('clock') + '<span>Capture the General Information below before approving the package.</span></p>')) +
+          (lc.kind === 'plan-request' && lc.canApprove ? '<div class="row2">' + K.field('amount', 'Agreed amount (only for a package priced on call)', 'inputmode="decimal" placeholder="Leave empty to use the published price"') + '</div>' : '') +
+          K.field('note', 'Note (needed to decline)', 'maxlength="300"') +
+          '<div class="oacts">' + (lc.canApprove ? '<button class="btn sm" type="submit" name="go" value="approve">' + icon('check') + 'Approve package</button>' : '<button class="btn sm" type="button" disabled title="Capture the General Information first">' + icon('check') + 'Approve package</button>') +
+          (lc.canReject ? '<button class="btn sm ghost" type="submit" name="go" value="reject">Decline request</button>' : '') + '</div>' +
+          '<p class="muted small">Approving asks the customer for the payment (record it under Settings › Requests and orders once received). The customer becomes ready for nurse onboarding only when the payment is confirmed.</p></form>' : '') + '</section>';
+    }
+    if (g) {
+      var data = Object.keys(g.data).length ? g.data : (g.prefill || {});
+      out += '<form data-form="o-general" data-type="' + e(type) + '" data-id="' + e(id) + '" data-version="' + g.version + '" class="osub ogen" novalidate><div class="alert bad" data-msg hidden></div>' +
+        '<h3>General Information</h3><p class="muted small">Saved to customer ' + e(g.personId) + '\'s own record (no new customer is created) and shared with their assigned nurse, with contact numbers masked.</p><div class="row2">' +
+        g.fields.map(function (fd) {
+          var req = fd.required ? ' required' : '';
+          if (fd.type === 'computed') return '<div class="field"><span>' + e(fd.label) + '</span><output class="in ro" data-age>' + (g.age != null ? g.age + ' years' : 'From the date of birth') + '</output></div>';
+          if (fd.type === 'select') return '<label class="field"><span>' + e(fd.label) + '</span><select class="in" name="' + fd.k + '"><option value="">Choose</option>' + fd.options.map(function (o) { return '<option' + (data[fd.k] === o ? ' selected' : '') + '>' + e(o) + '</option>'; }).join('') + '</select><em class="err" data-err="' + fd.k + '"></em></label>';
+          if (fd.type === 'textarea') return '<label class="field wide"><span>' + e(fd.label) + '</span><textarea class="in" name="' + fd.k + '" maxlength="' + (fd.max || 500) + '">' + e(data[fd.k] || '') + '</textarea><em class="err" data-err="' + fd.k + '"></em></label>';
+          var t = fd.type === 'date' ? 'date' : fd.format === 'email' ? 'email' : fd.format === 'phone' ? 'tel' : 'text';
+          return '<label class="field"><span>' + e(fd.label) + (fd.required ? ' *' : '') + '</span><input class="in" type="' + t + '" name="' + fd.k + '" value="' + e(data[fd.k] || '') + '"' + (t === 'date' ? ' max="' + K.todayIST() + '" data-act="o-dob"' : ' maxlength="' + (fd.max || 200) + '"') + req + '><em class="err" data-err="' + fd.k + '"></em></label>';
+        }).join('') + '</div><button class="btn sm" type="submit">' + icon('check') + 'Save General Information</button>' +
+        (g.history.length ? '<details class="ohist"><summary>Update history</summary><ul class="rlist">' + g.history.map(function (h) { return '<li><span>Version ' + h.version + ' · ' + e(K.dt(h.at)) + ' · ' + e(h.by) + '<br><span class="muted small">' + e(h.source === 'operations' ? 'Operations Team' + (h.enquiryRef ? ' (enquiry ' + h.enquiryRef + ')' : '') : h.source === 'onboarding' ? 'Nurse onboarding' : h.byRole === 'caregiver' ? 'Nurse' : 'Office') + ' · ' + h.fields + ' field' + (h.fields === 1 ? '' : 's') + '</span></span></li>'; }).join('') + '</ul></details>' : '') + '</form>';
+    } else if (lc || d.lead.type === 'enquiry') out += '<p class="note small">' + icon('people') + '<span>General Information is captured once the enquiry belongs to a customer record (a request from the app, or a website enquiry converted with Activate).</span></p>';
+    return out;
+  }
+  K.FORMS['o-general'] = function (f, v) {
+    var data = {}; ['name', 'dob', 'gender', 'bloodGroup', 'qualification', 'languages', 'address', 'email', 'phone1', 'phone2'].forEach(function (k) { if (f.elements[k] && f.elements[k].value.trim()) data[k] = f.elements[k].value.trim(); });
+    return api('POST', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/general', { data: data, version: Number(f.getAttribute('data-version')) }).then(function (d) {
+      if (!d.ok) return d; K.toast(d.changed ? 'General Information saved. The assigned nurse sees it.' : 'No changes to save.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id'));
+    });
+  };
+  K.FORMS['o-lc-approve'] = function (f, v, sub) {
+    var go = (sub && sub.value) || (document.activeElement && document.activeElement.value) || 'approve';
+    return api('POST', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/' + go, { note: v.note, amount: v.amount }).then(function (d) {
+      if (!d.ok) return d; K.toast(go === 'approve' ? 'Package approved. Order ' + d.order + ' now waits for the payment.' : 'Request declined.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id'));
+    });
+  };
   K.FORMS['o-lead-status'] = function (f, v) {
     return api('PATCH', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')), { status: v.status, note: v.note }).then(function (d) { if (!d.ok) return d; K.toast('Status saved.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id')); });
   };
@@ -931,14 +981,15 @@
 
   // ================================================================ Contact access audit
   function auditPage(r) {
-    page('office/contact-audit', 'Contact access audit', 'Every time a nurse opens a customer, emergency or doctor number: who, when, why and the result. The numbers themselves are never stored here.', '', K.loading(160) + K.loading(380));
+    page('office/contact-audit', 'Contact access audit', 'Requests to see a customer\'s contact numbers, and every time a nurse opens a customer, emergency or doctor number: who, when, why and the result. The numbers themselves are never stored here.', '', K.loading(160) + K.loading(380));
     Promise.all([api('GET', 'admin/contact-audit' + qs(r)), api('GET', 'admin/contact-audit?approval=pending&size=50')]).then(function (x) {
       var d = x[0], p = x[1];
       if (!d.ok) return fail(d);
       var nurses = {}; d.nurses.forEach(function (n) { nurses[n.id] = n.name; });
       var policy = '<section class="panel"><h2>Policy</h2><form data-form="o-policy" novalidate><div class="pick">' + Object.keys(d.policies).map(function (k) { return '<label><input type="radio" name="policy" value="' + k + '"' + (k === d.policy ? ' checked' : '') + '><span><b>' + e(d.policies[k]) + '</b>' + (k === 'visit' ? '<em>Recommended</em>' : '') + '</span></label>'; }).join('') + '</div><button class="btn sm" type="submit" style="margin-top:12px">Save policy</button></form></section>';
       var pend = '<section class="panel' + (p.rows.length ? ' owait' : '') + '"><h2>Waiting for approval</h2>' + (p.rows.length ? '<ul class="rlist">' + p.rows.map(function (a) {
-        return '<li><span><b>' + e(a.nurseName) + '</b> asks for the ' + e((d.categories[a.category] || a.category).toLowerCase()) + ' of <b>' + e(a.customerName) + '</b><br><span class="muted small">' + e(K.dt(a.at)) + ' · ' + e(a.eventId) + (a.reason ? ' · "' + e(a.reason) + '"' : '') + '</span></span>' +
+        var fl = a.fields && a.fields.length ? '<span class="cafields">' + a.fields.map(function (k) { return '<label class="ck sm"><input type="checkbox" data-caf="' + e(a.id) + '" value="' + e(k) + '" checked><span>' + e((d.fieldNames || {})[k] || k) + '</span></label>'; }).join('') + '</span>' : '';
+        return '<li><span><b>' + e(a.nurseName) + '</b> asks for the ' + e((d.categories[a.category] || a.category).toLowerCase()) + ' of <b>' + e(a.customerName) + '</b><br><span class="muted small">' + e(K.dt(a.at)) + ' · ' + e(a.eventId) + (a.reason ? ' · "' + e(a.reason) + '"' : '') + '</span>' + fl + '</span>' +
           '<span class="oacts"><select class="in sm" data-min="' + e(a.id) + '" aria-label="For how long"><option value="60">1 hour</option><option value="120" selected>2 hours</option><option value="480">8 hours</option><option value="1440">24 hours</option></select><button class="btn sm" data-act="o-decide" data-id="' + e(a.id) + '" data-ok="1">Approve</button><button class="btn sm ghost" data-act="o-decide" data-id="' + e(a.id) + '">Decline</button></span></li>';
       }).join('') + '</ul>' : '<p class="muted">No requests are waiting.</p>') + '</section>';
       var BASIS = { visit: 'During a visit', emergency: 'Emergency', approval: 'Approved by the office' };
@@ -948,7 +999,10 @@
           return '<tr><td data-l="Event"><b>' + e(a.eventId) + '</b><br><span class="muted small">' + e(K.dt(a.at)) + '</span></td><td data-l="Nurse">' + e(a.nurseName) + '<br><span class="muted small">' + e(a.employeeId || '') + '</span></td>' +
             '<td data-l="Customer"><a href="#/office/customer?p=' + e(a.personId) + '">' + e(a.customerName) + '</a><br><span class="muted small">' + e(a.personId) + '</span></td><td data-l="Contact">' + e(d.categories[a.category] || a.category) + '</td>' +
             '<td data-l="Basis">' + e(BASIS[a.basis] || (a.approvalStatus === 'pending' ? 'Asked the office' : '–')) + (a.visitRef ? '<br><span class="muted small">Visit ' + e(a.visitRef) + '</span>' : '') + (a.reason ? '<br><span class="small">"' + e(a.reason) + '"</span>' : '') + (a.deniedWhy ? '<br><span class="muted small">' + e(a.deniedWhy) + '</span>' : '') + '</td>' +
-            '<td data-l="Result"><span class="apill ' + e(a.result) + '">' + e(RES[a.result] || a.result) + '</span>' + (a.approvalStatus && a.approvalStatus !== 'not_required' ? '<br><span class="muted small">' + e({ pending: 'Waiting for approval', approved: 'Approved', rejected: 'Declined' }[a.approvalStatus]) + (a.decidedByName ? ' by ' + e(a.decidedByName) : '') + '</span>' : '') + (a.expiresAt && a.result === 'granted' ? '<br><span class="muted small">until ' + e(K.dt(a.expiresAt)) + '</span>' : '') + '</td></tr>';
+            '<td data-l="Result"><span class="apill ' + e(a.revokedAt ? 'denied' : a.result) + '">' + e(a.revokedAt ? 'Revoked' : RES[a.result] || a.result) + '</span>' + (a.fields && a.fields.length ? '<br><span class="small">' + e(a.fields.map(function (k) { return (d.fieldNames || {})[k] || k; }).join(', ')) + '</span>' : '') +
+              (a.approvalStatus && a.approvalStatus !== 'not_required' ? '<br><span class="muted small">' + e({ pending: 'Waiting for approval', approved: 'Approved', rejected: 'Declined' }[a.approvalStatus]) + (a.decidedByName ? ' by ' + e(a.decidedByName) + ', ' + e(K.dt(a.decidedAt)) : '') + '</span>' : '') +
+              (a.revokedAt ? '<br><span class="muted small">Revoked ' + e(K.dt(a.revokedAt)) + ' by ' + e(a.revokedByName || 'the office') + '</span>' : a.expiresAt && (a.result === 'granted' || a.approvalStatus === 'approved') ? '<br><span class="muted small">until ' + e(K.dt(a.expiresAt)) + '</span>' : '') +
+              (!a.revokedAt && a.expiresAt && a.expiresAt > new Date().toISOString() && (a.result === 'granted' || a.approvalStatus === 'approved') ? '<br><button class="btn sm ghost" data-act="o-revoke" data-id="' + e(a.id) + '">Revoke</button>' : '') + '</td></tr>';
         }).join('') + '</tbody></table></section>' + pager(d, r) : '<div class="empty"><b>No contact access yet</b>Each time a nurse opens a number, it is listed here.</div>') +
         '<p class="note">' + icon('lock') + '<span>This record cannot be changed by nurses, and phone numbers are never written into it.</span></p>');
     });
@@ -1029,7 +1083,13 @@
     } else if (act === 'o-decide') {
       var ok = t.getAttribute('data-ok') === '1', mins = $('[data-min="' + id + '"]');
       t.disabled = true;
-      api('POST', 'admin/contact-audit/' + enc(id) + '/decide', { approve: ok, minutes: mins ? Number(mins.value) : 120 }).then(function (d) { K.toast(d.ok ? (ok ? 'Approved. The nurse has been told.' : 'Declined.') : d.message, d.ok ? 'ok' : 'bad'); S.cache.countsAt = 0; K.render(); });
+      var picked = $$('[data-caf="' + id + '"]'), fields = picked.length ? picked.filter(function (c) { return c.checked; }).map(function (c) { return c.value; }) : undefined;
+      if (ok && fields && !fields.length) { t.disabled = false; K.toast('Tick at least one of the requested details to approve.', 'bad'); return; }
+      api('POST', 'admin/contact-audit/' + enc(id) + '/decide', { approve: ok, minutes: mins ? Number(mins.value) : 120, fields: fields }).then(function (d) { K.toast(d.ok ? (ok ? 'Approved. The nurse has been told.' : 'Declined.') : d.message, d.ok ? 'ok' : 'bad'); S.cache.countsAt = 0; K.render(); });
+    } else if (act === 'o-revoke') {
+      if (!confirm('End this access now? The nurse is told, and the numbers are hidden again.')) return;
+      t.disabled = true;
+      api('POST', 'admin/contact-audit/' + enc(id) + '/revoke', {}).then(function (d) { K.toast(d.ok ? 'Access revoked.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     }
   });
   document.addEventListener('change', function (ev) {

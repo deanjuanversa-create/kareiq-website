@@ -125,7 +125,8 @@ async function server() {
   const of = (await nurse('GET', 'forms/onboarding')).body;
   ok(of.ok && of.sections.length === 6 && of.source === 'Copy of Data Collection - Caregiver First Visit.xlsx', 'Onboarding form from the workbook');
   r = await nurse('GET', 'people/' + A + '/onboarding');
-  ok(r.body.status === 'not_started' && r.body.canSubmit, 'not started; the assigned nurse can submit');
+  ok(r.body.status === 'pending' && r.body.eligible && r.body.canSubmit, 'eligible (approved and paid), pending; the assigned nurse can submit');
+  const lockedA = r.body.general || {};
   ok((await nurse('POST', 'people/' + A + '/onboarding', { data: { name: 'x' } })).status === 400, 'confirmation required');
   ok((await nurse('POST', 'people/' + A + '/onboarding', { confirm: true, data: {} })).status === 400, 'an empty onboarding is refused');
   ok((await nurse('POST', 'people/' + A + '/onboarding', { confirm: true, data: { gender: 'Other' } })).status === 400, 'an option outside the workbook is refused');
@@ -149,7 +150,7 @@ async function server() {
   ok((await nurse('PUT', 'people/' + A + '/onboarding', { data: { name: 'Edited' } })).status === 405 && (await office('DELETE', 'people/' + A + '/onboarding')).status === 405 && (await nurse('PATCH', 'people/' + A + '/onboarding', { data: {} })).status === 405, 'a completed onboarding cannot be edited or deleted (405), by a nurse or the office');
   r = await nurse('GET', 'people/' + A + '/onboarding');
   const rec = r.body.record;
-  ok(r.body.status === 'completed' && !r.body.canSubmit && rec.completedAt && rec.completedBy && rec.data.name === 'Onboarding Test', 'read only afterwards, with completion date and nurse');
+  ok(r.body.status === 'completed' && !r.body.canSubmit && rec.completedAt && rec.completedBy && rec.data.name === (lockedA.name || 'Onboarding Test'), 'read only afterwards, with completion date and nurse (general information from the Operations Team kept)');
   ok(rec.data.ec1Phone !== '9876543210' && /X/.test(rec.data.ec1Phone) && /^XXXX /.test(rec.data.kycIdNumber), 'nurse view masks phone numbers and the ID number');
   ok(onboarding.FIELDS.filter((x) => x.type === 'multi').every((x) => JSON.stringify(rec.data[x.k]) === JSON.stringify(x.options)), 'every multi-choice option saved and read back');
   const ro = (await office('GET', 'people/' + A + '/onboarding')).body.record;

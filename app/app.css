@@ -1850,3 +1850,26 @@ a.ocust:hover b{text-decoration:underline}
 .docv-n{margin:6px 0 0;padding-left:18px;color:var(--ink-2);font-size:.85rem}
 .exh{margin:14px 0 6px;font-size:14px}
 .vst.stored,.vst.captured{background:#eef3f8;color:#3c4f66}
+/* ---- package request lifecycle (office enquiry) */
+.lcsteps{list-style:none;display:flex;flex-wrap:wrap;gap:6px 4px;margin:6px 0 12px;padding:0;counter-reset:lc}
+.lcsteps li{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);padding:4px 10px 4px 4px;border-radius:999px;background:var(--soft,#f2f4f7)}
+.lcsteps li i{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:#fff;border:1px solid var(--line);font-style:normal;font-size:12px;font-weight:600}
+.lcsteps li i svg{width:13px;height:13px}
+.lcsteps li.done{color:#0b5d3b;background:#e5f5ec}.lcsteps li.done i{background:#1baf7a;border-color:#1baf7a;color:#fff}
+.lcsteps li.next{color:var(--ink);outline:1px dashed #9fb3c8}
+.ogen .row2{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}.ogen .field.wide{grid-column:1/-1}
+.ogen output.ro{display:block;background:var(--soft,#f6f7f9);color:var(--muted)}
+.ohist{margin-top:12px}.ohist summary{cursor:pointer;font-weight:600;font-size:14px}
+/* ---- onboarding: general information captured by the Operations Team */
+.onb-locked{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--soft,#f6f7f9)}
+.onb-locked .lab{font-size:13px;color:var(--muted)}.onb-locked .val{font-weight:600;min-height:1.2em;word-break:break-word}
+.onb-lnote{margin:0 0 12px}
+.onb-why{margin:8px 0;padding-left:18px;text-align:left}.onb-empty{text-align:left}
+/* ---- nurse: customer onboarding cards, request access, upload */
+.onbcard .nc-top{align-items:flex-start}.onbcard .nc-top>.pill{margin-left:auto;white-space:nowrap}
+.rogrid.sm{margin:10px 0;gap:8px 14px}.rogrid.sm dd{font-size:14px}
+.cafields{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px}.ck.sm span{font-size:13px}
+.nup{max-width:760px}
+@media (max-width:640px){.lcsteps li span{font-size:12px}.onbcard .nc-top{flex-wrap:wrap}.onbcard .nc-top>.pill{margin-left:0}}
+.onbcard .rogrid.sm{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}.onbcard .rogrid.sm .rof.wide{grid-column:1/-1}
+.onbcard .rogrid.sm .rof{padding:6px 0}

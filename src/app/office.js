@@ -2,6 +2,8 @@
 // and the contact access audit. Admin-only; every figure comes from stored records.
 const { PRODUCTS, planName } = require('./products');
 const packinfo = require('./packinfo');
+const lifecycleMod = require('./lifecycle');
+const firstvisit = require('./firstvisit');
 const { SLOTS, STATUS, ACTIVE, DAYS } = require('./scheduler');
 const { KYC_KINDS, DEPARTMENTS, UNITS } = require('./staff');
 const { BRAND_OF, BRAND_NAMES } = require('./finance');
@@ -106,7 +108,7 @@ function create(ctx) {
   // ---------------------------------------------------------------- leads (website bookings and enquiries, app plan requests)
   async function leadRows() {
     const [bookings, enquiries, plans, users] = await Promise.all([store.readAll('bookings'), store.readAll('enquiries'), docs.find('app_plans'), docs.find('app_users')]);
-    const rows = [...bookings.map((r) => ({ type: 'booking', r })), ...enquiries.filter((r) => !r.kind || r.kind === 'plan-request' || r.kind === 'enquiry').map((r) => ({ type: 'enquiry', r }))];
+    const rows = [...bookings.map((r) => ({ type: 'booking', r })), ...enquiries.filter((r) => !r.kind || r.kind === 'plan-request' || r.kind === 'order' || r.kind === 'enquiry').map((r) => ({ type: 'enquiry', r }))];
     return rows.map(({ type, r }) => {
       const plan = r.appPlanId ? plans.find((p) => p.id === r.appPlanId) : null;
       const derived = r.leadStatus || (plan && plan.status === 'active' ? 'converted' : r.status === 'contacted' ? 'contacted' : r.status === 'scheduled' ? 'follow_up' : r.status === 'closed' ? 'lost' : 'new');
@@ -117,7 +119,8 @@ function create(ctx) {
         package: r.package && r.package !== 'undecided' ? r.package : null, packageName: r.package && r.package !== 'undecided' ? planName(r.package) : '', message: r.notes || r.message || '',
         title: type === 'booking' ? (r.serviceName || 'Booking') : (r.interestName || 'Enquiry'), source: r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq'),
         sourceName: SOURCES[r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq')] || r.source || 'Website', status: derived, statusName: LEAD_STATUS[derived],
-        assignedTo: r.assignedTo || null, assignedName: who ? who.name : null, assignedAt: r.assignedAt || null, createdAt: r.createdAt, history: r.leadHistory || [], personId: r.personId || null
+        assignedTo: r.assignedTo || null, assignedName: who ? who.name : null, assignedAt: r.assignedAt || null, createdAt: r.createdAt, history: r.leadHistory || [], personId: r.personId || null,
+        requestKind: r.kind === 'order' || r.kind === 'plan-request' ? r.kind : null, generalInfoAt: r.generalInfo ? r.generalInfo.at : null
       };
     }).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
@@ -177,9 +180,99 @@ function create(ctx) {
       const all = await leadRows();
       const lead = all.find((l) => l.type === parts[1] && l.id === parts[2]);
       if (!lead) throw notFound();
+      const raw = (await store.readAll(col)).find((r) => r.id === lead.id);
+      // ---- the package request lifecycle: general information, approval (src/app/lifecycle.js)
+      if (parts[3] === 'general' && parts.length === 4 && req.method === 'POST') {
+        if (!lead.personId) return json(res, 409, { ok: false, message: 'This enquiry is not linked to a customer record yet. A package request from the app is; for a website enquiry, convert it to a customer first (Settings > Requests and orders > Activate).' });
+        const person = await docs.findOne('app_people', { id: lead.personId });
+        if (!person) throw notFound();
+        const v = lifecycleMod.validateGeneral(body.data);
+        if (v.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: v.errors });
+        const id = 'det-' + person.id;
+        const det = await docs.findOne('app_details', { id });
+        const current = det ? det.version : 0;
+        if (body.version != null && Number(body.version) !== current) return json(res, 409, { ok: false, message: 'These details were changed by someone else while you were editing. Open the enquiry again to see the latest version.' });
+        const before = det ? det.data || {} : {};
+        const merged = { ...before };
+        for (const k of lifecycleMod.GENERAL_KEYS) { if (v.data[k] != null) merged[k] = v.data[k]; else delete merged[k]; }
+        const changed = firstvisit.changed(before, merged);
+        const at = now(), version = current + 1;
+        if (changed.length || !det) {
+          const rec = { personId: person.id, data: merged, version, status: det ? det.status : 'draft', updatedAt: at, updatedBy: admin.id, updatedByRole: admin.role };
+          if (det) await docs.update('app_details', id, rec); else await docs.insert('app_details', { id, ...rec, createdAt: at });
+          await docs.insert('app_details_versions', { id: uid(), personId: person.id, version, at, by: admin.id, byRole: admin.role, status: rec.status, changed, data: merged, source: 'operations', enquiryRef: lead.enquiryId });
+          const sync = {};
+          if (merged.name && merged.name !== person.name) sync.name = merged.name;
+          if (merged.dob) sync.birthYear = Number(merged.dob.slice(0, 4));
+          if (merged.gender === 'Male' || merged.gender === 'Female') sync.sex = merged.gender.toLowerCase();
+          if (Object.keys(sync).length) await docs.update('app_people', person.id, sync);
+          if (ctx.risk && (sync.birthYear || sync.sex)) await ctx.risk.recalc(person.id, 'details changed', admin.id);
+        }
+        await store.update(col, lead.id, { generalInfo: { at, by: admin.id, byName: admin.name, version: changed.length || !det ? version : current },
+          leadHistory: [...((raw && raw.leadHistory) || []), { at, by: admin.name, action: 'general', note: changed.length ? changed.length + ' field' + (changed.length === 1 ? '' : 's') + ' saved' : 'Checked, no change' }] });
+        await audit(admin.id, 'general.save', person.id, { enquiry: lead.enquiryId, fields: changed.length });
+        return json(res, 200, { ok: true, version: changed.length || !det ? version : current, changed: changed.length });
+      }
+      if ((parts[3] === 'approve' || parts[3] === 'reject') && parts.length === 4 && req.method === 'POST') {
+        const st = await ctx.lifecycle.requestState(raw);
+        if (!st || !lead.requestKind) return json(res, 409, { ok: false, message: 'Only a package request can be approved or declined.' });
+        const at = now();
+        if (parts[3] === 'reject') {
+          if (!st.canReject) return json(res, 409, { ok: false, message: 'This request is no longer waiting for a decision (' + st.stageName + ').' });
+          const note = clean(body.note, 300);
+          if (note.length < 3) return json(res, 400, { ok: false, message: 'Say why the request is declined.', errors: { note: 'Required' } });
+          const rej = { status: 'rejected', by: admin.id, byName: admin.name, at, note };
+          if (st.order) await docs.update('app_orders', st.order.id, { status: 'rejected', rejectedNote: note, approval: rej, updatedAt: at });
+          else await docs.update('app_plans', st.plan.id, { status: 'ended', endDate: todayIST(), endedReason: 'Request declined: ' + note, approval: rej, updatedAt: at });
+          await store.update(col, lead.id, { leadStatus: 'lost', status: 'closed', leadHistory: [...((raw && raw.leadHistory) || []), { at, by: admin.name, action: 'declined', note }] });
+          await audit(admin.id, 'package.declined', lead.personId, { enquiry: lead.enquiryId });
+          return json(res, 200, { ok: true });
+        }
+        if (!raw.generalInfo) return json(res, 409, { ok: false, message: 'Capture the customer\'s general information on this enquiry before approving the package.', errors: { general: 'Required first' } });
+        if (!st.canApprove) return json(res, 409, { ok: false, message: 'This request is not waiting for approval (' + st.stageName + ').' });
+        const appr = { status: 'approved', by: admin.id, byName: admin.name, at, note: clean(body.note, 300) || null };
+        let orderRef;
+        if (st.order) {
+          await docs.update('app_orders', st.order.id, { status: 'awaiting_payment', approval: appr, updatedAt: at });
+          orderRef = st.order.reference;
+        } else {
+          // a plan request: the order (price from the published prices) is made now and waits for the payment
+          const plan = await docs.findOne('app_plans', { id: st.plan.id });
+          const planId = plan.planId || clean(body.planId, 40);
+          const pk = planId ? await packinfo.byId(planId) : null;
+          if (!pk || !PRODUCTS[plan.product] || !PRODUCTS[plan.product].plans.includes(pk.id)) return json(res, 400, { ok: false, message: 'Choose the package the customer is buying.', errors: { planId: 'Required' } });
+          const months = packinfo.durationOf(pk) ? (plan.months || (pk.model === 'tiers' ? 12 : 1)) : null;
+          const charge = packinfo.priceOf(pk, months);
+          const amount = charge.amount || Number(String(body.amount || '').replace(/[^0-9.]/g, ''));
+          if (!(amount > 0)) return json(res, 400, { ok: false, message: pk.name + ' is priced on call. Enter the agreed amount.', errors: { amount: 'Required' } });
+          const order = { id: uid(), reference: store.makeReference('KO'), personId: plan.personId, userId: raw.userId || raw.accountUserId || null, planId: pk.id, product: pk.product, name: pk.name,
+            months, billing: months ? packinfo.PERIOD[months] : pk.length || '', amount, amountText: require('./care').fmt(amount), gst: charge.gst || null,
+            status: 'awaiting_payment', payment: { mode: require('./orders').PAYMENT_MODE }, approval: appr, requestPlanId: plan.id, enquiryRef: lead.enquiryId, enquiryId: lead.id, createdAt: at };
+          await docs.insert('app_orders', order);
+          await docs.update('app_plans', plan.id, { planId: pk.id, months, approval: appr, orderId: order.id, updatedAt: at });
+          await store.update(col, lead.id, { orderId: order.id });
+          orderRef = order.reference;
+        }
+        const fresh = (await store.readAll(col)).find((r) => r.id === lead.id);
+        await store.update(col, lead.id, { leadStatus: lead.status === 'new' ? 'contacted' : lead.status, leadHistory: [...((fresh && fresh.leadHistory) || []), { at, by: admin.name, action: 'approved', note: 'Order ' + orderRef + ' waits for the payment' + (appr.note ? ': ' + appr.note : '') }] });
+        await audit(admin.id, 'package.approved', lead.personId, { enquiry: lead.enquiryId, order: orderRef });
+        return json(res, 200, { ok: true, order: orderRef });
+      }
       if (parts.length === 3 && req.method === 'GET') {
         const dup = dupesOf(all)(lead).map((id) => all.find((l) => l.id === id)).filter(Boolean).map((l) => ({ type: l.type, id: l.id, enquiryId: l.enquiryId, name: l.name, title: l.title, createdAt: l.createdAt, statusName: l.statusName }));
-        return json(res, 200, { ok: true, lead, duplicates: dup, members: await members(), statuses: LEAD_STATUS });
+        // the request's lifecycle and the customer's General Information (the office sees full contact details)
+        let general = null;
+        if (lead.personId) {
+          const det = await docs.findOne('app_details', { id: 'det-' + lead.personId });
+          const person = await docs.findOne('app_people', { id: lead.personId });
+          const data = Object.fromEntries(lifecycleMod.GENERAL_KEYS.filter((k) => det && det.data && det.data[k] != null).map((k) => [k, det.data[k]]));
+          const prefill = det ? null : { name: (person && person.name) || '', gender: person && person.sex === 'male' ? 'Male' : person && person.sex === 'female' ? 'Female' : '', phone1: lead.phone || '', email: lead.email || '' };
+          const versions = await docs.find('app_details_versions', { personId: lead.personId }, { sort: { version: -1 }, limit: 8 });
+          const names = await namesFor(versions.map((x) => x.by));
+          general = { personId: lead.personId, data, prefill, version: det ? det.version : 0, age: firstvisit.ageFrom(data.dob), fields: lifecycleMod.generalFields(),
+            history: versions.map((x) => ({ version: x.version, at: x.at, by: names[x.by] || 'KareIQ', byRole: x.byRole, source: x.source || (x.byRole === 'caregiver' ? 'nurse' : 'office'), enquiryRef: x.enquiryRef || null, fields: (x.changed || []).length })) };
+        }
+        return json(res, 200, { ok: true, lead, duplicates: dup, members: await members(), statuses: LEAD_STATUS, lifecycle: lead.requestKind ? await ctx.lifecycle.requestState(raw) : null, general, stages: lifecycleMod.STAGES });
       }
       if (parts.length === 3 && req.method === 'PATCH') {
         if (!LEAD_STATUS[body.status]) throw bad('Choose a status.');
@@ -263,6 +356,7 @@ function create(ctx) {
       if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
       if (await docs.findOne('app_payments', { ref, kind: 'payment' })) return json(res, 409, { ok: false, message: 'This transaction number is already recorded.', errors: { ref: 'Already used' } });
       await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, amount, method, ref, receivedAt: now(), recordedBy: admin.id });
+      if (ctx.lifecycle) await ctx.lifecycle.announce(inv.personId);
       await audit(admin.id, 'payment.recorded', inv.personId, { invoice: inv.number, amount });
       return json(res, 201, { ok: true });
     }
@@ -471,16 +565,35 @@ function create(ctx) {
         (!isDate(from) || ymd(r.at) >= from) && (!isDate(to) || ymd(r.at) <= to) && (!appr || r.approvalStatus === appr) && (!result || r.result === result));
       const pol = ((await docs.findOne('app_settings', { id: 'contact-policy' })) || {}).policy || 'visit';
       const nurses = (await docs.find('app_users', { role: 'caregiver' })).map((u) => ({ id: u.id, name: u.name }));
-      return json(res, 200, { ok: true, ...paginate(rows, url), policy: pol, policies: POLICIES, categories: CATEGORIES, nurses, pending: rows.filter((r) => r.approvalStatus === 'pending').length });
+      return json(res, 200, { ok: true, ...paginate(rows, url), policy: pol, policies: POLICIES, categories: CATEGORIES, fieldNames: require('./nursing').FIELD_NAMES, nurses, pending: rows.filter((r) => r.approvalStatus === 'pending').length });
     }
     if (parts[0] === 'contact-audit' && parts[2] === 'decide' && parts.length === 3 && req.method === 'POST') {
       const r = await docs.findOne('app_contact_access', { id: parts[1] });
       if (!r) throw notFound();
       if (r.approvalStatus !== 'pending') return json(res, 409, { ok: false, message: 'This request has already been decided.' });
       const approve = body.approve === true, minutes = Math.max(15, Math.min(24 * 60, Number(body.minutes) || 120));
-      await docs.update('app_contact_access', r.id, { approvalStatus: approve ? 'approved' : 'rejected', result: approve ? 'pending' : 'denied', decidedBy: admin.id, decidedByName: admin.name, decidedAt: now(), expiresAt: approve ? new Date(Date.now() + minutes * 60000).toISOString() : null });
+      // the office may approve fewer of the details than were asked for, never more
+      const asked = r.fields || null;
+      const fields = approve && asked && Array.isArray(body.fields) ? body.fields.map(String).filter((k) => asked.includes(k)) : asked;
+      if (approve && asked && !fields.length) return json(res, 400, { ok: false, message: 'Choose at least one of the requested details to approve.' });
+      const reason = clean(body.note, 300);
+      await docs.update('app_contact_access', r.id, { approvalStatus: approve ? 'approved' : 'rejected', result: approve ? 'pending' : 'denied', decidedBy: admin.id, decidedByName: admin.name, decidedAt: now(), decisionNote: reason || null,
+        expiresAt: approve ? new Date(Date.now() + minutes * 60000).toISOString() : null, ...(asked ? { fields: approve ? fields : asked, requestedFields: asked } : {}) });
       await scheduler.notify([r.nurseId], { kind: 'contact-decided', title: approve ? 'Contact access approved' : 'Contact access declined', body: `${CATEGORIES[r.category]} for ${r.customerName}` + (approve ? `: open it from the customer's page within ${minutes} minutes.` : '.'), link: '#/nurse/customer?p=' + r.personId });
       await audit(admin.id, 'contact.' + (approve ? 'approved' : 'rejected'), r.personId, { event: r.eventId });
+      return json(res, 200, { ok: true });
+    }
+    // the office ends an approved access before it expires
+    if (parts[0] === 'contact-audit' && parts[2] === 'revoke' && parts.length === 3 && req.method === 'POST') {
+      const r = await docs.findOne('app_contact_access', { id: parts[1] });
+      if (!r) throw notFound();
+      if (!(r.approvalStatus === 'approved' || r.result === 'granted') || r.revokedAt || !r.expiresAt || r.expiresAt <= now()) return json(res, 409, { ok: false, message: 'This access is not open, so there is nothing to revoke.' });
+      const at = now();
+      await docs.update('app_contact_access', r.id, { revokedAt: at, revokedBy: admin.id, revokedByName: admin.name, expiresAt: at });
+      // the same opening recorded again when the nurse viewed it ends too
+      for (const g of await docs.find('app_contact_access', { nurseId: r.nurseId, personId: r.personId, category: r.category })) if (g.id !== r.id && g.expiresAt && g.expiresAt > at && !g.revokedAt) await docs.update('app_contact_access', g.id, { revokedAt: at, revokedBy: admin.id, revokedByName: admin.name, expiresAt: at });
+      await scheduler.notify([r.nurseId], { kind: 'contact-revoked', title: 'Contact access ended', body: `${CATEGORIES[r.category]} for ${r.customerName}: the office ended your access.`, link: '#/nurse/customer?p=' + r.personId });
+      await audit(admin.id, 'contact.revoked', r.personId, { event: r.eventId });
       return json(res, 200, { ok: true });
     }
     if (p === 'settings/contact-policy' && req.method === 'POST') {

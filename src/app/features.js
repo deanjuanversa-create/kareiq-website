@@ -10,6 +10,7 @@ const checkup = require('./checkup');
 const onboarding = require('./onboarding');
 const firstvisit = require('./firstvisit');
 const nursing = require('./nursing');
+const lifecycleMod = require('./lifecycle');
 const { ACTIVE } = require('./scheduler');
 
 // ---------------------------------------------------------------- KareIQ Policies (the seven, in order)
@@ -303,21 +304,39 @@ function create(ctx) {
         }
         return { status: 'completed', completedAt: rec.completedAt, completedBy: rec.completedByName, completedByMe: rec.completedBy === user.id, data, age: firstvisit.ageFrom(rec.data.dob), masked: user.role === 'caregiver' };
       };
+      // General Information captured by the KareIQ Operations Team on the enquiry: shown, not typed again
+      // (nurses see the contact numbers masked; the full values are added to the record on the server)
+      const det0 = await docs.findOne('app_details', { id: 'det-' + person.id });
+      const general = Object.fromEntries(lifecycleMod.GENERAL_KEYS.filter((k) => det0 && det0.data && det0.data[k] != null && det0.data[k] !== '').map((k) => [k, det0.data[k]]));
       if (req.method === 'GET') {
         const rec = await docs.findOne('app_onboarding', { id });
-        return json(res, 200, { ok: true, person: { id: person.id, name: person.name }, record: await view(rec), status: rec ? 'completed' : 'not_started',
-          canSubmit: !rec && user.role === 'caregiver' && (await canRecord(user, person.id)),
+        const el = rec ? { eligible: true, reasons: [] } : await ctx.lifecycle.eligibility(person.id);
+        const shownGeneral = { ...general };
+        if (user.role === 'caregiver') { for (const k of ['phone1', 'phone2']) if (shownGeneral[k]) shownGeneral[k] = nursing.maskPhone(shownGeneral[k]); if (shownGeneral.email) shownGeneral.email = nursing.maskEmail(shownGeneral.email); }
+        return json(res, 200, { ok: true, person: { id: person.id, name: person.name }, record: await view(rec), status: rec ? 'completed' : el.eligible ? 'pending' : 'not_eligible',
+          eligible: el.eligible, eligibilityReasons: el.reasons, package: el.plan ? { planId: el.plan.planId, name: planName(el.plan.planId), product: el.plan.product, startDate: el.plan.startDate || null } : null,
+          canSubmit: !rec && el.eligible && user.role === 'caregiver' && (await canRecord(user, person.id)),
+          general: shownGeneral, lockedKeys: Object.keys(general), generalAge: firstvisit.ageFrom(general.dob),
           prefill: rec ? null : { name: person.name || '', gender: person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : '' } });
       }
       if (req.method !== 'POST') return json(res, 405, { ok: false, message: 'A completed onboarding record cannot be changed or deleted.' });
       if (user.role !== 'caregiver') throw forbidden(); // onboarding is done by the nurse at the first visit; the office views it
       if (!(await canRecord(user, person.id))) throw forbidden();
       const done = await docs.findOne('app_onboarding', { id });
+      // only after the package is approved by the office and its payment is confirmed (src/app/lifecycle.js)
+      if (!done) {
+        const el = await ctx.lifecycle.eligibility(person.id);
+        if (!el.eligible) return json(res, 403, { ok: false, message: person.name + ' is not ready for onboarding yet. ' + el.reasons.join(' '), reasons: el.reasons });
+      }
       if (done) return json(res, 409, { ok: false, message: 'Onboarding for ' + person.name + ' was already completed on ' + new Date(done.completedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' }) + ' by ' + done.completedByName + '. It cannot be submitted again.' });
       if (body.confirm !== true) return json(res, 400, { ok: false, message: 'Please confirm the onboarding is complete.', errors: { confirm: 'Tick to confirm: the record cannot be changed after it is submitted' } });
-      const v = onboarding.validate(body.data);
+      // the General Information the Operations Team captured is kept as it is (the nurse cannot see the full numbers to retype them)
+      const sent = { ...(body.data && typeof body.data === 'object' ? body.data : {}) };
+      for (const k of Object.keys(general)) delete sent[k];
+      const v = onboarding.validate(sent);
       if (v.errors) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: v.errors });
       if (!Object.keys(v.data).length) return json(res, 400, { ok: false, message: 'The onboarding form is empty.', errors: { form: 'Fill in the onboarding details before submitting' } });
+      Object.assign(v.data, general);
       const at = now();
       const rec = { id, personId: person.id, data: v.data, status: 'completed', completedAt: at, completedBy: user.id, completedByName: user.name, source: onboarding.definitions().source, createdAt: at, history: [{ at, by: user.id, action: 'submitted' }] };
       // atomic: a second submission (even at the same moment) finds the record there and is refused

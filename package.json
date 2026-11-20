@@ -10,6 +10,7 @@
     "check:app": "node tools/check-app.js http://localhost:3000",
     "check:assess": "node tools/check-assess.js http://localhost:3000",
     "check:docs": "node tools/check-docs.js http://localhost:3000",
+    "check:lifecycle": "node tools/check-lifecycle.js http://localhost:3000",
     "check:roles": "node tools/check-roles.js http://localhost:3000",
     "check:risk": "node tools/check-risk.js",
     "check:scheduler": "node tools/check-scheduler.js",

@@ -191,6 +191,8 @@ shared.finance = financeMod.create(shared);
 shared.risk = riskEngineMod.create(shared);
 // document intelligence: every uploaded medical document (nurse or customer) goes through this one pipeline
 shared.documents = require('./docintel').create({ ...shared, audit, risk: shared.risk });
+// the package request -> approval -> payment -> onboarding lifecycle (src/app/lifecycle.js)
+shared.lifecycle = require('./lifecycle').create(shared);
 // a nurse may see a customer they are linked to, or one they have an active visit with
 async function nurseVisit(userId, personId) {
   const since = dayIST(-1);
@@ -223,7 +225,10 @@ async function canRecord(user, personId, product) {
   if (user.role === 'admin') return true;
   if (user.role !== 'caregiver') return false;
   if (await nurseVisit(user.id, personId)) return true;
-  const plan = bestPlan(await docs.find('app_plans', { personId }), product);
+  const plans = await docs.find('app_plans', { personId });
+  // no brand given (onboarding, checkups): any active package of the customer counts
+  if (!product) return plans.some((p) => p.status === 'active');
+  const plan = bestPlan(plans, product);
   return Boolean(plan && plan.status === 'active');
 }
 
@@ -1246,24 +1251,28 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (mine.some((pl) => pl.planId === pk.id && pl.status === 'active' && (!pl.endDate || pl.endDate >= todayIST()))) {
         return json(res, 409, { ok: false, message: `${person.name} already has ${pk.name}, and it is active. To renew it when it ends, message us on WhatsApp.` });
       }
-      const open = (await docs.find('app_orders', { personId: person.id, planId: pk.id, status: 'awaiting_payment' }))[0];
-      if (open) return json(res, 409, { ok: false, message: `An order for ${pk.name} is already waiting for payment (${open.reference}). You can see it under My package.`, order: orders.view(open) });
+      const open = (await docs.find('app_orders', { personId: person.id, planId: pk.id })).find((o) => ['awaiting_approval', 'awaiting_payment'].includes(o.status));
+      if (open) return json(res, 409, { ok: false, message: `A request for ${pk.name} is already ${open.status === 'awaiting_approval' ? 'waiting for approval' : 'waiting for payment'} (${open.reference}). You can see it under My package.`, order: orders.view(open) });
       if (limited(req, 'app-order')) return json(res, 429, { ok: false, message: 'You have placed several orders just now. Please wait a few minutes, or message us on WhatsApp.' });
       const charge = packinfo.priceOf(pk, months);
       if (!charge.amount) return json(res, 400, { ok: false, message: 'The price for this package could not be worked out. Please message us on WhatsApp.' });
       const order = {
         id: uid(), reference: store.makeReference('KO'), personId: person.id, userId: user.id, planId: pk.id, product: pk.product, name: pk.name,
         months, billing: months ? packinfo.PERIOD[months] : pk.length || '', amount: charge.amount, amountText: care.fmt(charge.amount), gst: charge.gst || null,
-        status: 'awaiting_payment', payment: { mode: orders.PAYMENT_MODE }, idem, createdAt: now()
+        // a package purchase request: the office captures the customer's general information and approves
+        // the package before any payment is asked for (src/app/lifecycle.js)
+        status: 'awaiting_approval', payment: { mode: orders.PAYMENT_MODE }, idem, createdAt: now()
       };
       await docs.insert('app_orders', order);
-      // the office sees it with the other requests, and is told by email when email is set up
-      await store.add('enquiries', 'KQ', {
-        name: user.name, phone: user.phone || '', email: user.email || '', interest: 'app-order', interestName: 'Package bought in the app (awaiting payment)',
-        message: [`Order ${order.reference}: ${pk.name}`, months ? `Payment plan: ${packinfo.PERIOD[months]} (${months === 1 ? '1 month' : months + ' months'})` : (pk.length ? `Length: ${pk.length}` : ''),
-          `Amount: Rs ${Number(charge.amount).toLocaleString('en-IN')}` + (charge.gst ? ` (${charge.gst.replace(/\.$/, '')})` : ''), 'Send a payment link, then record the payment under Orders.'].filter(Boolean).join('\n'),
+      // the request goes to the office's Enquiry database, and the office is told by email when email is set up
+      const enq = await store.add('enquiries', 'KQ', {
+        name: user.name, phone: user.phone || '', email: user.email || '', interest: 'app-order', interestName: 'Package purchase request',
+        message: [`Request ${order.reference}: ${pk.name}`, months ? `Payment plan: ${packinfo.PERIOD[months]} (${months === 1 ? '1 month' : months + ' months'})` : (pk.length ? `Length: ${pk.length}` : ''),
+          `Amount: Rs ${Number(charge.amount).toLocaleString('en-IN')}` + (charge.gst ? ` (${charge.gst.replace(/\.$/, '')})` : ''), 'Capture the general information, approve the package, then send a payment link.'].filter(Boolean).join('\n'),
         source: 'app', product: pk.product, package: pk.id, billing: months ? String(months) : null, userId: user.id, accountUserId: user.id, personId: person.id, personName: person.name, kind: 'order', orderId: order.id
       });
+      await docs.update('app_orders', order.id, { enquiryRef: enq.reference, enquiryId: enq.id });
+      order.enquiryRef = enq.reference;
       await audit(user.id, 'order.placed', person.id, { reference: order.reference, planId: pk.id, amount: charge.amount });
       return json(res, 201, { ok: true, order: orders.view(order) });
     }
@@ -1272,7 +1281,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (!o) throw notFound();
       await visiblePerson(user, o.personId);
       if (user.role !== 'family' && user.role !== 'admin') throw forbidden();
-      if (o.status !== 'awaiting_payment') return json(res, 409, { ok: false, message: 'Only an order that is waiting for payment can be cancelled.' });
+      if (!['awaiting_approval', 'awaiting_payment'].includes(o.status)) return json(res, 409, { ok: false, message: 'Only a request waiting for approval or payment can be cancelled.' });
       await docs.update('app_orders', o.id, { status: 'cancelled', cancelledBy: user.id, updatedAt: now() });
       await audit(user.id, 'order.cancelled', o.personId, { reference: o.reference });
       return json(res, 200, { ok: true });
@@ -1381,7 +1390,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (parts[0] === 'orders' && parts.length === 3 && req.method === 'POST') {
       const o = await docs.findOne('app_orders', { id: String(parts[1]) });
       if (!o) throw notFound();
-      if (o.status !== 'awaiting_payment') return json(res, 409, { ok: false, message: `This order is already ${orders.ORDER_STATUS[o.status].toLowerCase()}.` });
+      if (o.status === 'awaiting_approval' && parts[2] === 'verify') return json(res, 409, { ok: false, message: 'Approve the package first (Enquiry database), then record the payment.' });
+      if (o.status !== 'awaiting_payment' && !(o.status === 'awaiting_approval' && parts[2] !== 'verify')) return json(res, 409, { ok: false, message: `This order is already ${orders.ORDER_STATUS[o.status].toLowerCase()}.` });
       if (parts[2] === 'verify') {
         const errors = {};
         const method = orders.METHODS[body.method] ? body.method : null;
@@ -1402,11 +1412,20 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         for (const pl of await docs.find('app_plans', { personId: o.personId, product: o.product, status: 'active' })) {
           if (pl.planId && await groupOf(pl.planId) === pk.group) await docs.update('app_plans', pl.id, { status: 'ended', endDate: startDate, endedReason: 'Replaced by order ' + o.reference, updatedAt: now() });
         }
-        const plan = { id: uid(), personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, activatedBy: admin.id, createdAt: now() };
-        await docs.insert('app_plans', plan);
+        const approval = o.approval || null;
+        let plan;
+        const waiting = o.requestPlanId ? await docs.findOne('app_plans', { id: o.requestPlanId }) : null;
+        if (waiting && waiting.status === 'pending') {
+          // the plan the customer asked for (a plan request) becomes the active package
+          plan = await docs.update('app_plans', waiting.id, { planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, updatedAt: now() });
+        } else {
+          plan = { id: uid(), personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, createdAt: now() };
+          await docs.insert('app_plans', plan);
+        }
         await docs.update('app_orders', o.id, { status: 'paid', paidAt: now(), updatedAt: now(), planRowId: plan.id, payment: { mode: 'manual', method, ref, amount: received, verifiedBy: admin.id, verifiedAt: now() } });
         await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: plan.id, personId: o.personId, orderId: o.id, invoiceNo: financeMod.invoiceNo(plan), amount: received, method, ref, receivedAt: now(), recordedBy: admin.id });
         await audit(admin.id, 'order.paid', o.personId, { reference: o.reference, method, amount: received });
+        await shared.lifecycle.announce(o.personId);
         return json(res, 200, { ok: true, plan: planView(plan) });
       }
       if (parts[2] === 'fail' || parts[2] === 'cancel') {
@@ -1507,9 +1526,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         || (await docs.find('app_plans', { personId: person.id, product: prod, status: 'pending' }))[0];
       let plan;
       if (waiting) {
-        plan = await docs.update('app_plans', waiting.id, { product: prod, planId, status: 'active', startDate, endDate, months, activatedBy: admin.id, updatedAt: now() });
+        plan = await docs.update('app_plans', waiting.id, { product: prod, planId, status: 'active', startDate, endDate, months, activatedBy: admin.id, approval: { status: 'approved', by: admin.id, byName: admin.name, at: now(), via: 'activation' }, updatedAt: now() });
       } else {
-        plan = { id: uid(), personId: person.id, product: prod, planId, status: 'active', startDate, endDate, months, bookingRef: reqRow ? reqRow.reference : null, activatedBy: admin.id, createdAt: now() };
+        plan = { id: uid(), personId: person.id, product: prod, planId, status: 'active', startDate, endDate, months, bookingRef: reqRow ? reqRow.reference : null, activatedBy: admin.id, approval: { status: 'approved', by: admin.id, byName: admin.name, at: now(), via: 'activation' }, createdAt: now() };
         await docs.insert('app_plans', plan);
       }
       if (body.caregiverId) {

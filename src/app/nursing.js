@@ -9,6 +9,11 @@
 //   emergency - only as an emergency, with a reason, every time
 // Every click is recorded (who, which customer, which kind of contact, when, why, the result), and
 // the numbers themselves are never written into those records.
+//
+// The customer's own Primary and Secondary Contact Numbers (and email) are always behind an office
+// approval, whatever the policy: the nurse uses Request Access, names which of them and why, and the
+// office approves or rejects. An approval opens only the numbers approved, for that one customer, until
+// it expires or the office revokes it.
 
 const { SLOTS, ACTIVE } = require('./scheduler');
 const firstvisit = require('./firstvisit');
@@ -16,6 +21,8 @@ const firstvisit = require('./firstvisit');
 const POLICIES = { visit: 'During an assigned visit, or in an emergency with a reason', approval: 'Only after the office approves', emergency: 'Only in an emergency, with a reason' };
 const CATEGORIES = { customer: 'Customer', emergency: 'Emergency contact', doctor: "Doctor's contact" };
 const FIELDS = { customer: ['phone1', 'phone2', 'email'], emergency: ['ec1Phone', 'ec2Phone', 'ec1Email', 'ec2Email'], doctor: ['fdPhone', 'sdPhone', 'sdHospitalPhone'] };
+const FIELD_NAMES = { phone1: 'Primary Contact Number', phone2: 'Secondary Contact Number', email: 'Email' };
+const APPROVAL_ONLY = ['customer']; // categories that always need the office's approval
 
 // +91 XXXXX 12345 (the real number with the first five digits hidden)
 function maskPhone(v) {
@@ -71,26 +78,35 @@ function create(ctx) {
     const plans = (await docs.find('app_plans', { personId })).filter((p) => p.status === 'active' || p.status === 'paused');
     const pol = await policy();
     const live = await liveVisit(user, personId);
-    const grants = (await docs.find('app_contact_access', { nurseId: user.id, personId })).filter((g) => g.result === 'granted' && g.expiresAt && g.expiresAt > now());
+    const grants = (await docs.find('app_contact_access', { nurseId: user.id, personId })).filter((g) => live_(g) && (!APPROVAL_ONLY.includes(g.category) || g.approvalStatus === 'approved'));
     const pend = (await docs.find('app_contact_access', { nurseId: user.id, personId, approvalStatus: 'pending' }));
+    const onb = await docs.findOne('app_onboarding', { id: 'onb-' + personId });
     const upcoming = (await visitsOf(user.id, todayIST())).filter((v) => v.personId === personId && v.status !== 'cancelled').slice(0, 5)
       .map((v) => ({ id: v.id, reference: v.reference, date: v.date, slot: v.slot, start: v.start, serviceName: v.serviceName, status: v.status }));
-    const state = (cat) => ({ open: grants.some((g) => g.category === cat), until: (grants.filter((g) => g.category === cat).sort((a, b) => (a.expiresAt < b.expiresAt ? 1 : -1))[0] || {}).expiresAt || null, pending: pend.some((g) => g.category === cat) });
+    const state = (cat) => {
+      const mine = grants.filter((g) => g.category === cat).sort((a, b) => (a.expiresAt < b.expiresAt ? 1 : -1));
+      return { open: mine.length > 0, until: (mine[0] || {}).expiresAt || null, pending: pend.some((g) => g.category === cat), approvalOnly: APPROVAL_ONLY.includes(cat),
+        fields: APPROVAL_ONLY.includes(cat) ? [...new Set(mine.flatMap((g) => g.fields || FIELDS[cat]))] : FIELDS[cat],
+        pendingFields: [...new Set(pend.filter((g) => g.category === cat).flatMap((g) => g.fields || FIELDS[cat]))] };
+    };
     return {
       id: person.id, customerId: person.id, name: d.name || person.name, photo: person.photoAt || null, brands: [...new Set(plans.map((p) => p.product))],
-      general: { age: firstvisit.ageFrom(d.dob) ?? (person.birthYear ? new Date().getFullYear() - person.birthYear : null), gender: d.gender || (person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : ''), bloodGroup: d.bloodGroup || '', languages: [].concat(d.languages || []).join(', '), address: d.address || '',
+      general: { name: d.name || person.name, dob: d.dob || '', age: firstvisit.ageFrom(d.dob) ?? (person.birthYear ? new Date().getFullYear() - person.birthYear : null), gender: d.gender || (person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : ''), bloodGroup: d.bloodGroup || '', qualification: d.qualification || '', languages: [].concat(d.languages || []).join(', '), address: d.address || '',
         phone1: maskPhone(d.phone1), phone2: maskPhone(d.phone2), email: maskEmail(d.email) },
+      onboarding: onb ? { status: 'completed', completedAt: onb.completedAt, completedBy: onb.completedByName } : { status: 'not_completed' },
+      updatedAt: det.updatedAt || null,
       emergency: [1, 2].map((n) => ({ name: d['ec' + n + 'Name'] || '', relation: d['ec' + n + 'Relation'] || '', gender: d['ec' + n + 'Gender'] || '', languages: [].concat(d['ec' + n + 'Languages'] || []).join(', '), phone: maskPhone(d['ec' + n + 'Phone']), email: maskEmail(d['ec' + n + 'Email']) })).filter((x) => x.name || x.phone),
       doctors: [{ name: d.fdName || '', address: d.fdAddress || '', phone: maskPhone(d.fdPhone) }, { name: d.sdName || '', address: d.sdAddress || '', hospital: d.sdHospital || '', phone: maskPhone(d.sdPhone), hospitalPhone: maskPhone(d.sdHospitalPhone) }].filter((x) => x.name || x.phone || x.hospitalPhone),
       access: { policy: pol, policyText: POLICIES[pol], visitNow: live ? { id: live.id, reference: live.reference, slot: live.slot } : null, customer: state('customer'), emergency: state('emergency'), doctor: state('doctor') },
       upcoming
     };
   }
-  function revealed(d, cat) {
+  function revealed(d, cat, only) {
     const out = {};
-    for (const k of FIELDS[cat]) if (d[k]) out[k] = d[k];
+    for (const k of FIELDS[cat]) if (d[k] && (!only || only.includes(k))) out[k] = d[k];
     return out;
   }
+  function live_(g) { return (g.result === 'granted' || g.approvalStatus === 'approved') && !g.revokedAt && g.expiresAt && g.expiresAt > now(); }
 
   // POST nurse/contact-access { personId, category, emergency, reason }
   async function contactAccess(user, body) {
@@ -105,17 +121,35 @@ function create(ctx) {
     const reason = clean(body.reason, 300);
     const base = { id: uid(), eventId: store.makeReference('CA'), at: now(), nurseId: user.id, nurseName: user.name, employeeId: prof.employeeId, personId, customerName: person ? person.name : personId, category, policy: pol, visitId: live ? live.id : null, visitRef: live ? live.reference : null, reason: reason || null };
     const det = (await docs.findOne('app_details', { id: 'det-' + personId })) || { data: {} };
-    const grant = async (basis, until, approval) => {
-      await docs.insert('app_contact_access', { ...base, basis, approvalStatus: approval || 'not_required', result: 'granted', expiresAt: until });
+    const grant = async (basis, until, approval, fields) => {
+      await docs.insert('app_contact_access', { ...base, basis, approvalStatus: approval || 'not_required', result: 'granted', expiresAt: until, fields: fields || null });
       await audit(user.id, 'contact.access', personId, { category, basis });
-      return { status: 200, body: { ok: true, result: 'granted', basis, expiresAt: until, values: revealed(det.data || {}, category) } };
+      return { status: 200, body: { ok: true, result: 'granted', basis, expiresAt: until, fields: fields || FIELDS[category], values: revealed(det.data || {}, category, fields) } };
     };
+    // the customer's own numbers: always Request Access -> the office approves or rejects
+    if (APPROVAL_ONLY.includes(category)) {
+      const approved = (await docs.find('app_contact_access', { nurseId: user.id, personId, category, approvalStatus: 'approved' })).filter(live_);
+      if (approved.length && !body.request) {
+        const fields = [...new Set(approved.flatMap((g) => g.fields || FIELDS[category]))];
+        const until = approved.map((g) => g.expiresAt).sort().slice(-1)[0];
+        return grant('approval', until, 'approved', fields);
+      }
+      const waiting = (await docs.find('app_contact_access', { nurseId: user.id, personId, category, approvalStatus: 'pending' }))[0];
+      if (waiting) return { status: 200, body: { ok: true, result: 'pending', message: 'Your request is waiting for the office to approve it.' } };
+      const asked = Array.isArray(body.fields) ? body.fields.map(String).filter((k) => FIELDS[category].includes(k)) : [];
+      if (!asked.length) return { status: 400, body: { ok: false, message: 'Choose which contact details you need.', errors: { fields: 'Choose at least one' } } };
+      if (reason.length < 5) return { status: 400, body: { ok: false, message: 'Say why you need this (the office sees it).', errors: { reason: 'Required' } } };
+      await docs.insert('app_contact_access', { ...base, basis: 'approval', approvalStatus: 'pending', result: 'pending', expiresAt: null, fields: [...new Set(asked)] });
+      await audit(user.id, 'contact.requested', personId, { category, fields: asked });
+      await scheduler.notify(await scheduler.admins(), { kind: 'contact-request', title: 'Contact access request', body: `${user.name} asks for ${asked.map((k) => FIELD_NAMES[k] || k).join(' and ')} of ${base.customerName}.`, link: '#/office/contact-audit?approval=pending' });
+      return { status: 200, body: { ok: true, result: 'pending', message: 'Sent to the office. The details stay hidden until they approve it.' } };
+    }
     const deny = async (why, needsEmergency) => {
       await docs.insert('app_contact_access', { ...base, basis: null, approvalStatus: 'not_required', result: 'denied', expiresAt: null, deniedWhy: why });
       return { status: 200, body: { ok: true, result: 'denied', message: why, needsEmergency: Boolean(needsEmergency) } };
     };
     // already open (approved by the office, an emergency, or this visit) and not yet expired: shown again, and recorded again
-    const valid = (await docs.find('app_contact_access', { nurseId: user.id, personId, category })).filter((g) => (g.approvalStatus === 'approved' || g.result === 'granted') && g.expiresAt && g.expiresAt > now())
+    const valid = (await docs.find('app_contact_access', { nurseId: user.id, personId, category })).filter(live_)
       .sort((a, b) => (a.expiresAt < b.expiresAt ? 1 : -1))[0];
     if (valid) return grant(valid.basis || 'approval', valid.expiresAt, valid.approvalStatus === 'approved' ? 'approved' : undefined);
     if (pol === 'approval') {
@@ -161,6 +195,28 @@ function create(ctx) {
           next: next ? { date: next.date, slot: next.slot, start: next.start, serviceName: next.serviceName } : null };
       }).sort((a, b) => a.name.localeCompare(b.name)) });
     }
+    // Customer Onboarding: the assigned customers whose package the office approved and whose payment is
+    // confirmed (pending), and those already onboarded (completed). No one else appears here.
+    if (p === 'nurse/onboarding' && req.method === 'GET') {
+      const ids = await assignedIds(user);
+      const people = ids.length ? (await docs.find('app_people', { id: { $in: ids } })).filter((x) => x.active !== false) : [];
+      const rows = [];
+      for (const x of people) {
+        const onb = await docs.findOne('app_onboarding', { id: 'onb-' + x.id });
+        const el = onb ? null : await ctx.lifecycle.eligibility(x.id);
+        if (!onb && !el.eligible) continue;
+        const det = (await docs.findOne('app_details', { id: 'det-' + x.id })) || { data: {} };
+        const d = det.data || {};
+        const plans = (await docs.find('app_plans', { personId: x.id })).filter((pl) => pl.status === 'active' && pl.planId && !pl.included);
+        const pkg = el && el.plan ? el.plan : plans[0] || null;
+        rows.push({ id: x.id, customerId: x.id, name: d.name || x.name, photo: x.photoAt || null, brands: [...new Set(plans.map((pl) => pl.product))],
+          package: pkg ? { name: require('./products').planName(pkg.planId), product: pkg.product, startDate: pkg.startDate || null } : null,
+          general: { age: firstvisit.ageFrom(d.dob) ?? null, gender: d.gender || '', bloodGroup: d.bloodGroup || '', languages: [].concat(d.languages || []).join(', '), address: d.address || '', phone1: maskPhone(d.phone1), phone2: maskPhone(d.phone2) },
+          status: onb ? 'completed' : 'pending', completedAt: onb ? onb.completedAt : null, completedBy: onb ? onb.completedByName : null });
+      }
+      rows.sort((a, b) => (a.status === b.status ? a.name.localeCompare(b.name) : a.status === 'pending' ? -1 : 1));
+      return json(res, 200, { ok: true, rows });
+    }
     if (parts[1] === 'customers' && parts.length === 3 && req.method === 'GET') {
       if (!(await mayAccess(user, parts[2]))) throw notFound();
       return json(res, 200, { ok: true, customer: await customerCard(user, parts[2]), categories: CATEGORIES });
@@ -191,7 +247,7 @@ function create(ctx) {
     return undefined;
   }
 
-  return { handle, assignedIds, mayAccess, maskPhone, maskEmail, POLICIES, CATEGORIES };
+  return { handle, assignedIds, mayAccess, maskPhone, maskEmail, POLICIES, CATEGORIES, FIELDS, FIELD_NAMES };
 }
 
-module.exports = { create, maskPhone, maskEmail, POLICIES, CATEGORIES };
+module.exports = { create, maskPhone, maskEmail, POLICIES, CATEGORIES, FIELDS, FIELD_NAMES, APPROVAL_ONLY };
