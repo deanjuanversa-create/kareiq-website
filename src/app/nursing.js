@@ -49,10 +49,16 @@ function create(ctx) {
   async function policy() { return ((await docs.findOne('app_settings', { id: 'contact-policy' })) || {}).policy || 'visit'; }
 
   // Customers this nurse may see: linked by the office, or with an active visit of theirs
+  // (only customers who have bought a package: one that is active today. A customer who has only asked
+  // for a package, or whose package has ended, is not shown to any nurse, even if a link or visit exists.)
   async function assignedIds(user) {
     const links = await docs.find('app_links', { userId: user.id, kind: 'caregiver' });
     const visits = await visitsOf(user.id, todayIST(-1));
-    return [...new Set([...links.map((l) => l.personId), ...visits.filter((v) => v.personId && ACTIVE.includes(v.status)).map((v) => v.personId)])];
+    const ids = [...new Set([...links.map((l) => l.personId), ...visits.filter((v) => v.personId && ACTIVE.includes(v.status)).map((v) => v.personId)])];
+    if (!ids.length) return ids;
+    const today = todayIST();
+    const plans = await docs.find('app_plans', { personId: { $in: ids } });
+    return ids.filter((id) => plans.some((p) => p.personId === id && p.status === 'active' && (!p.endDate || p.endDate >= today)));
   }
   async function visitsOf(nurseId, from, to) {
     const q = { nurseId };
@@ -189,11 +195,16 @@ function create(ctx) {
       const people = ids.length ? await docs.find('app_people', { id: { $in: ids } }) : [];
       const visits = await visitsOf(user.id, todayIST());
       const plans = ids.length ? await docs.find('app_plans', { personId: { $in: ids } }) : [];
-      return json(res, 200, { ok: true, rows: people.filter((x) => x.active !== false).map((x) => {
+      const onbs = ids.length ? await docs.find('app_onboarding', { personId: { $in: ids } }) : [];
+      const rows = [];
+      for (const x of people.filter((y) => y.active !== false)) {
         const next = visits.find((v) => v.personId === x.id && ACTIVE.includes(v.status));
-        return { id: x.id, customerId: x.id, name: x.name, photo: x.photoAt || null, brands: [...new Set(plans.filter((pl) => pl.personId === x.id && (pl.status === 'active' || pl.status === 'paused')).map((pl) => pl.product))],
-          next: next ? { date: next.date, slot: next.slot, start: next.start, serviceName: next.serviceName } : null };
-      }).sort((a, b) => a.name.localeCompare(b.name)) });
+        // onboarding: completed, ready (approved and paid), or not yet possible
+        const onboarding = onbs.some((o) => o.personId === x.id) ? 'completed' : (await ctx.lifecycle.eligibility(x.id)).eligible ? 'pending' : null;
+        rows.push({ id: x.id, customerId: x.id, name: x.name, photo: x.photoAt || null, brands: [...new Set(plans.filter((pl) => pl.personId === x.id && (pl.status === 'active' || pl.status === 'paused')).map((pl) => pl.product))],
+          next: next ? { date: next.date, slot: next.slot, start: next.start, serviceName: next.serviceName } : null, onboarding });
+      }
+      return json(res, 200, { ok: true, rows: rows.sort((a, b) => a.name.localeCompare(b.name)) });
     }
     // Customer Onboarding: the assigned customers whose package the office approved and whose payment is
     // confirmed (pending), and those already onboarded (completed). No one else appears here.

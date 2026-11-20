@@ -2711,6 +2711,8 @@
           return;
         }
         try { localStorage.removeItem('kq.onb.' + id); } catch (x) {}
+        // nurses go straight to the customer under Assigned customers, where the completed details now show
+        if (S.me.user.role === 'caregiver') { S.cache.ncust = null; toast('Onboarding submitted. The details are now in Assigned customers.'); go('#/nurse/customer?p=' + encodeURIComponent(id)); return; }
         toast('Onboarding submitted. It is now read only.');
         render();
       });

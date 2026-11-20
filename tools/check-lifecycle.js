@@ -33,7 +33,7 @@ async function login(id) {
 (async () => {
   const office = await login('admin@demo.kareiq'), nurse = await login('nurse@demo.kareiq'), nest = await login('nest@demo.kareiq');
   const rahul = await login('rahul@demo.kareiq'), fam = await login('family@demo.kareiq');
-  const P = 'P-DEMO03'; // Saraswathi Menon: Rahul's mother, assigned to the Kare@Home nurse, no active package yet
+  const P = 'P-DEMO03'; // Saraswathi Menon: Rahul's mother, no package bought yet, so no nurse assigned
   const PHONE1 = '9812300011', PHONE2 = '9812300022';
 
   // ---------------------------------------------------------------- 1. a package request creates an enquiry
@@ -46,6 +46,12 @@ async function login(id) {
   ok(lead && lead.requestKind === 'order' && lead.personId === P && lead.packageName, '1. the request is in the Admin Enquiry database, linked to the customer (' + (lead && lead.title) + ')');
   ok((await rahul('POST', 'people/' + P + '/orders', { planId: 'homeplus', months: '3', agree: true, idem: 'chk-lifecycle-0002' })).status === 409, '1. a second open request for the same package is refused');
   const peopleBefore = (await office('GET', 'admin/customers?size=200')).body.total;
+
+  // ---------------------------------------------------------------- no package bought: no nurse
+  const NURSE = 'demo-u-nurse';
+  r = await office('POST', 'admin/links', { userId: NURSE, personId: P });
+  ok(r.status === 409, 'a nurse cannot be assigned to a customer who has not bought a package (' + r.status + ')');
+  ok(!(await nurse('GET', 'nurse/customers')).body.rows.some((x) => x.id === P), 'the customer is not in any nurse\'s Assigned customers');
 
   // ---------------------------------------------------------------- 5. a pending enquiry gives no onboarding eligibility
   r = await nurse('GET', 'nurse/onboarding');
@@ -92,6 +98,9 @@ async function login(id) {
   ok(r.status === 200 && r.body.plan && r.body.plan.status === 'active', '7. payment verified, package active');
   r = await office('GET', 'admin/leads/enquiry/' + id);
   ok(r.body.lifecycle.stage === 'active' && r.body.lifecycle.eligible, '7. lifecycle: paid and eligible');
+  ok(!(await nurse('GET', 'nurse/onboarding')).body.rows.some((x) => x.id === P), '7. paid but no nurse assigned yet: in nobody\'s list');
+  r = await office('POST', 'admin/links', { userId: NURSE, personId: P });
+  ok(r.status === 201, '7. once the package is bought, the office assigns the nurse (' + r.status + ')');
   r = await nurse('GET', 'nurse/onboarding');
   const row = r.body.rows.find((x) => x.id === P);
   ok(row && row.status === 'pending' && row.package && /HomePlus/i.test(row.package.name), '7. the customer appears in Customer Onboarding as Pending with the approved package (' + (row && row.package && row.package.name) + ')');
@@ -121,7 +130,8 @@ async function login(id) {
   const rec = (await office('GET', 'people/' + P + '/onboarding')).body.record;
   ok(rec.data.name === general.name && rec.data.phone1 === PHONE1 && rec.data.ec1Name === 'Rahul Menon', '9. the record keeps the Operations Team\'s General Information (the nurse cannot overwrite it) plus the nurse\'s entries');
   r = await nurse('GET', 'nurse/customers/' + P);
-  ok(r.body.customer.onboarding.status === 'completed' && r.body.customer.onboarding.completedAt && r.body.customer.emergency.some((x) => x.name === 'Rahul Menon' && /XXXXX/.test(x.phone)), '9. Customer Profiles shows the onboarding as completed, with the new details (numbers masked)');
+  ok(r.body.customer.onboarding.status === 'completed' && r.body.customer.onboarding.completedAt && r.body.customer.emergency.some((x) => x.name === 'Rahul Menon' && /XXXXX/.test(x.phone)), '9. the customer\'s page under Assigned customers shows the onboarding as completed, with the new details (numbers masked)');
+  ok((await nurse('GET', 'nurse/customers')).body.rows.find((x) => x.id === P).onboarding === 'completed', '9. Assigned customers marks the customer as onboarded');
   r = await nurse('GET', 'nurse/onboarding');
   ok(r.body.rows.find((x) => x.id === P).status === 'completed', '9. Customer Onboarding shows Completed');
   r = await office('GET', 'admin/leads/enquiry/' + id);
@@ -202,6 +212,8 @@ async function login(id) {
   ok(grp('Upload Documents') && grp('Upload Documents').sub.map((x) => x[1]).join('|') === 'Upload|Your Submissions', '15. Upload Documents is a dropdown with exactly Upload and Your Submissions');
   ok(grp('Assessment') && grp('Assessment').sub.map((x) => x[1]).join('|') === 'Regular Checkup', '15. Assessment contains only Regular Checkup');
   ok(MENU.some((m) => Array.isArray(m) && m[1] === 'Customer Onboarding') && !grp('Assessment').sub.some((x) => /onboard/i.test(x[1])), '15. Customer Onboarding is its own main section, not under Assessment');
+  ok(!MENU.some((m) => Array.isArray(m) && /Customer Profiles/.test(m[1])) && MENU.some((m) => Array.isArray(m) && m[1] === 'Assigned customers'), '15. no separate Customer Profiles section: customer details live under Assigned customers');
+  ok(/caregiver'\) \{ S\.cache\.ncust = null;[^\n]*go\('#\/nurse\/customer\?p=/.test(appJs), '15. after onboarding the nurse is taken to the customer under Assigned customers');
   ok(/page === 'submissions'\) submissionsPage/.test(nurseJs) && /page === 'upload'\) uploadPage/.test(nurseJs), '15. Upload and Your Submissions open separate pages');
   ok((await nurse('GET', 'nurse/submissions')).status === 200, '15. Your Submissions data still served');
 

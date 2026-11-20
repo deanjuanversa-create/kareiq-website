@@ -10,7 +10,6 @@
     ['nurse/visits', 'My visits', 'route'],
     ['nurse/schedule', 'Scheduler', 'cal'],
     ['nurse/customers', 'Assigned customers', 'people'],
-    ['nurse/customer', 'Customer Profiles', 'idcard'],
     ['nurse/onboarding', 'Customer Onboarding', 'check'],
     { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse']] },
     { k: 'upl', label: 'Upload Documents', icon: 'upload', sub: [['nurse/upload', 'Upload', 'upload'], ['nurse/submissions', 'Your Submissions', 'file']] },
@@ -160,7 +159,8 @@
     customers(true).then(function (rows) {
       $('#mn').innerHTML = '<div class="npage">' + head('Assigned customers', 'The customers you look after. Open one for the details you need for a visit.', '<label class="nsearch">' + icon('eye') + '<input class="in" type="search" data-act="n-filter" placeholder="Search by name or customer ID" aria-label="Search customers"></label>') +
         (rows.length ? '<div class="ncards">' + rows.map(function (c) {
-          return '<article class="ncard" data-find="' + e((c.name + ' ' + c.customerId).toLowerCase()) + '"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div></div>' +
+          var ob = c.onboarding === 'completed' ? '<span class="pill active"><i></i>Onboarded</span>' : c.onboarding === 'pending' ? '<a class="pill pending" href="#/assess/onboarding?p=' + e(c.id) + '"><i></i>Ready for onboarding</a>' : '';
+          return '<article class="ncard" data-find="' + e((c.name + ' ' + c.customerId).toLowerCase()) + '"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div>' + (ob ? '<span class="nc-ob">' + ob + '</span>' : '') + '</div>' +
             '<p class="nc-next">' + icon('clock') + (c.next ? '<span>Next visit: <b>' + e(rel(c.next.date)) + ', ' + e(c.next.start ? K.hm12(c.next.start) : SLOT[c.next.slot]) + '</b> · ' + e(c.next.serviceName) + '</span>' : '<span class="muted">No visit scheduled</span>') + '</p>' +
             '<div class="nc-acts"><a class="btn sm" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer information</a><a class="btn sm ghost" href="#/assess/regular?p=' + e(c.id) + '">' + icon('pulse') + 'Regular Checkup</a><a class="btn sm ghost" href="#/nurse/upload?p=' + e(c.id) + '">' + icon('upload') + 'Upload</a></div></article>';
         }).join('') + '</div><p class="empty" data-none hidden><b>No customer matches</b>Try another name or ID.</p>' : '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers, and new visits appear under My visits.</div>') +
@@ -170,16 +170,16 @@
 
   // ================================================================ Customer information (restricted)
   function customerPage(r) {
-    shell('nurse/customer', head('Customer Profiles', '') + K.loading(120) + K.loading(300));
+    shell('nurse/customers', head('Assigned customers', '') + K.loading(120) + K.loading(300));
     customers().then(function (list) {
-      if (!list.length) { $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', '') + '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers to you.</div></div>'; return; }
+      if (!list.length) { $('#mn').innerHTML = '<div class="npage">' + head('Assigned customers', '') + '<div class="empty"><b>No customers are assigned to you yet</b>The office assigns customers to you.</div></div>'; return; }
       var pick = list.filter(function (x) { return x.id === r.q.p; })[0] || list.filter(function (x) { return x.id === S.pid; })[0] || list[0];
       S.pid = pick.id;
       if (r.q.p !== pick.id) history.replaceState(null, '', '#/nurse/customer?p=' + encodeURIComponent(pick.id));
       api('GET', 'nurse/customers/' + encodeURIComponent(pick.id)).then(function (d) {
         if (!d.ok) return fail(d);
         S.cache.ncard = d.customer; S.cache.nopen = {};
-        $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.') + selectBar(list, pick) +
+        $('#mn').innerHTML = '<div class="npage">' + head('Assigned customers', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.', '<a class="btn sm ghost" href="#/nurse/customers">' + icon('left') + 'All assigned customers</a>') + selectBar(list, pick) +
           cardHtml(d.customer) + '</div>';
       });
     }, fail);
@@ -289,7 +289,7 @@
     var ms = Math.min(Date.parse(until) - Date.now(), 6 * 3600000);
     setTimeout(function () { if (S.cache.ncard && S.cache.nopen[cat]) { S.cache.nopen[cat] = false; var rr = K.route(); if (rr.parts.join('/') === 'nurse/customer') K.render(); } }, Math.max(1000, ms));
   }
-  function rerender() { var c = S.cache.ncard; if (!c) return; var list = S.cache.ncust || []; $('#mn').innerHTML = '<div class="npage">' + head('Customer Profiles', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.') + selectBar(list, list.filter(function (x) { return x.id === c.id; })[0] || c) + cardHtml(c) + '</div>'; }
+  function rerender() { var c = S.cache.ncard; if (!c) return; var list = S.cache.ncust || []; $('#mn').innerHTML = '<div class="npage">' + head('Assigned customers', 'The customer\'s general and onboarding information. Contact numbers stay masked; use Request Access when you need one.', '<a class="btn sm ghost" href="#/nurse/customers">' + icon('left') + 'All assigned customers</a>') + selectBar(list, list.filter(function (x) { return x.id === c.id; })[0] || c) + cardHtml(c) + '</div>'; }
   function emergencyDialog(cat, msg) {
     var pol = S.cache.ncard.access.policy;
     var approval = pol === 'approval';
@@ -346,7 +346,7 @@
   // Only the assigned customers whose package the office approved and whose payment is confirmed; the
   // server decides who appears and refuses an onboarding for anyone else.
   function onboardingPage() {
-    var sub = 'Customers whose package is approved and paid. Complete the one-time onboarding at the first visit; it cannot be changed afterwards.';
+    var sub = 'Customers whose package is approved and paid. Complete the one-time onboarding at the first visit; it cannot be changed afterwards. The completed details then show under Assigned customers.';
     shell('nurse/onboarding', head('Customer Onboarding', sub) + K.loading(260));
     api('GET', 'nurse/onboarding').then(function (d) {
       if (!d.ok) return fail(d);
@@ -359,7 +359,7 @@
               '<span class="pill ' + (c.status === 'completed' ? 'active' : 'pending') + '"><i></i>' + (c.status === 'completed' ? 'Completed' : 'Pending') + '</span></div>' +
             '<dl class="rogrid sm">' + ro('Package', c.package ? c.package.name : '') + ro('Age', g.age != null ? g.age + ' years' : '') + ro('Gender', g.gender) + ro('Blood Group', g.bloodGroup) + ro('Languages Spoken', g.languages) + ro('Primary Contact Number', g.phone1) + ro('Address', g.address, true) + '</dl>' +
             (c.status === 'completed' ? '<p class="muted small">Completed on ' + e(K.dt(c.completedAt)) + ' by ' + e(c.completedBy) + '.</p>' : '') +
-            '<div class="nc-acts"><a class="btn sm' + (c.status === 'completed' ? ' ghost' : '') + '" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon(c.status === 'completed' ? 'eye' : 'check') + (c.status === 'completed' ? 'View onboarding' : 'Start onboarding') + '</a><a class="btn sm ghost" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('idcard') + 'Customer profile</a></div></article>';
+            '<div class="nc-acts"><a class="btn sm' + (c.status === 'completed' ? ' ghost' : '') + '" href="#/assess/onboarding?p=' + e(c.id) + '">' + icon(c.status === 'completed' ? 'eye' : 'check') + (c.status === 'completed' ? 'View onboarding' : 'Start onboarding') + '</a><a class="btn sm ghost" href="#/nurse/customer?p=' + e(c.id) + '">' + icon('people') + 'In Assigned customers</a></div></article>';
         }).join('') + '</div>' : '<div class="empty"><b>No customer is ready for onboarding</b>A customer appears here once the office has approved their package and the payment is confirmed.</div>') + '</div>';
     }, fail);
   }

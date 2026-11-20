@@ -1672,8 +1672,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (user.role === 'admin') throw bad('Office admins already see everyone.');
       const kind = user.role === 'caregiver' ? 'caregiver' : 'family';
       if (await docs.findOne('app_links', { userId: user.id, personId: person.id, kind })) return json(res, 200, { ok: true, already: true });
+      // a nurse is assigned only to a customer who has bought a package (active: approved and paid, or activated by the office)
+      if (kind === 'caregiver' && !(await docs.find('app_plans', { personId: person.id })).some((pl) => pl.status === 'active' && (!pl.endDate || pl.endDate >= todayIST()))) {
+        return json(res, 409, { ok: false, message: person.name + ' has not bought a package yet. Assign a nurse once the package is approved and paid.' });
+      }
       await docs.insert('app_links', { id: uid(), userId: user.id, personId: person.id, kind, relation: kind === 'family' ? (clean(body.relation, RELATIONS_MAX) || null) : null, createdAt: now() });
       await audit(admin.id, kind === 'caregiver' ? 'caregiver.assign' : 'family.link', person.id, { name: user.name });
+      if (kind === 'caregiver') await shared.lifecycle.announce(person.id); // tells the new nurse if the customer is ready for onboarding
       return json(res, 201, { ok: true });
     }
     if (parts[0] === 'links' && parts[2] === 'remove' && req.method === 'POST') {

@@ -292,12 +292,16 @@ Enforced on the server (`src/app/lifecycle.js`); the screens only reflect it.
 4. **Payment.** Settings › Requests and orders › record the payment (full amount only). The package becomes
    active, carrying the approval. A package activated directly by the office (Activate) counts as approved,
    and its payment is confirmed once the invoice is fully paid.
-5. **Eligibility.** A customer is ready for onboarding only with an active package that was approved and whose
+5. **Nurse assignment.** A nurse is assigned only to a customer who has bought a package (an active package).
+   Before that the office cannot assign one, and a customer without an active package never appears in any
+   nurse's Assigned customers, even with an older link or visit.
+6. **Eligibility.** A customer is ready for onboarding only with an active package that was approved and whose
    payment is confirmed. The assigned nurses get a notification. Nurse › Customer Onboarding lists only those
    customers (Pending) and the ones already onboarded (Completed). The onboarding API refuses everyone else.
-6. **Onboarding.** As before: once only (atomic insert), read only afterwards. The General Information from
+7. **Onboarding.** As before: once only (atomic insert), read only afterwards. The General Information from
    step 2 is shown read only and is added to the record on the server (nurses never see full numbers).
-   Customer Profiles then shows the onboarding as completed.
+   The nurse is taken to the customer under Assigned customers, which shows the completed details
+   (there is no separate Customer Profiles section).
 
 **Contact numbers.** The customer's Primary and Secondary Contact Number and email are masked for nurses
 everywhere (API and screens). Request Access names the details and the reason. The office approves (all or
@@ -305,7 +309,7 @@ some of the requested details, for a set time) or rejects it, in Office › Cont
 an approval. An approval opens only those details, for that customer and that nurse. Emergency and doctor
 numbers keep the contact policy (visit, approval or emergency).
 
-**Navigation.** Nurse: Customer Profiles, Customer Onboarding (its own section), Assessment › Regular Checkup,
+**Navigation.** Nurse: Assigned customers (each customer's details, after onboarding too), Customer Onboarding (its own section), Assessment › Regular Checkup,
 Upload Documents › Upload and Your Submissions. Customers and the office: KareIQ Policies is one section, with
 the seven categories as filters inside it.
 

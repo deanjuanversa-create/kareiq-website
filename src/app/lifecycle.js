@@ -9,8 +9,8 @@
 //   4. the payment is verified (the existing order payment check, or a payment recorded on the invoice)
 //      and the package is active
 //   5. only then is the customer eligible for onboarding by an assigned nurse
-//   6. the nurse submits the one-time onboarding (features.js); the nurse's Customer Profiles page
-//      shows the completed details
+//   6. the nurse submits the one-time onboarding (features.js); the customer's page under the nurse's
+//      Assigned customers shows the completed details
 //
 // Nothing here trusts the screens: eligibility is worked out from the stored plan, its approval and
 // the payments recorded against its invoice.

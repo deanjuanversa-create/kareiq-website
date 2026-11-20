@@ -49,7 +49,7 @@ async function seed() {
   await link('nurse', 'P-DEMO04', 'caregiver');
   await link('nest', 'P-DEMO05', 'caregiver');
   await link('nurse', 'P-DEMO01', 'caregiver');
-  await link('nurse', 'P-DEMO03', 'caregiver');
+  // Saraswathi has only asked for a package: no nurse is assigned until it is approved and paid
   await link('nest', 'P-DEMO02', 'caregiver');
 
   const day = (n) => new Date(now.getTime() - n * 86400000).toISOString().slice(0, 10);

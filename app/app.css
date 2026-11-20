@@ -1873,3 +1873,5 @@ a.ocust:hover b{text-decoration:underline}
 @media (max-width:640px){.lcsteps li span{font-size:12px}.onbcard .nc-top{flex-wrap:wrap}.onbcard .nc-top>.pill{margin-left:0}}
 .onbcard .rogrid.sm{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px}.onbcard .rogrid.sm .rof.wide{grid-column:1/-1}
 .onbcard .rogrid.sm .rof{padding:6px 0}
+.ncard .nc-top>.nc-ob{margin-left:auto}.ncard .nc-ob .pill{white-space:nowrap;text-decoration:none}
+@media (max-width:640px){.ncard .nc-top{flex-wrap:wrap}.ncard .nc-top>.nc-ob{margin-left:0}}
