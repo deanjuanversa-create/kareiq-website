@@ -6,11 +6,12 @@
   'use strict';
   var K = window.KQ, S = K.S, e = K.e, $ = K.$, $$ = K.$$, icon = K.icon, api = K.api;
 
+  var ONB_ITEM = ['nurse/onboarding', 'Customer Onboarding', 'check'];
   var MENU = [
     ['nurse/visits', 'My visits', 'route'],
     ['nurse/schedule', 'Scheduler', 'cal'],
     ['nurse/customers', 'Assigned customers', 'people'],
-    ['nurse/onboarding', 'Customer Onboarding', 'check'],
+    ONB_ITEM,
     { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse']] },
     { k: 'upl', label: 'Upload Documents', icon: 'upload', sub: [['nurse/upload', 'Upload', 'upload'], ['nurse/submissions', 'Your Submissions', 'file']] },
     ['nurse/notifications', 'Notifications', 'bell']
@@ -346,13 +347,15 @@
   // Only the assigned customers whose package the office approved and whose payment is confirmed; the
   // server decides who appears and refuses an onboarding for anyone else.
   function onboardingPage() {
-    var sub = 'Customers whose package is approved and paid. Complete the one-time onboarding at the first visit; it cannot be changed afterwards. The completed details then show under Assigned customers.';
+    var sub = 'Customers waiting for onboarding: their package is approved and paid. Complete the one-time onboarding at the first visit. Once done, the customer leaves this list and the details show under Assigned customers.';
     shell('nurse/onboarding', head('Customer Onboarding', sub) + K.loading(260));
     api('GET', 'nurse/onboarding').then(function (d) {
       if (!d.ok) return fail(d);
-      var pend = d.rows.filter(function (x) { return x.status === 'pending'; }).length;
+      onbSet(d.rows.length);
+      if (!d.rows.length) { K.toast('No customer is waiting for onboarding.'); K.go('#/nurse/customers', true); return; }
+      var pend = d.rows.length;
       $('#mn').innerHTML = '<div class="npage">' + head('Customer Onboarding', sub) +
-        '<div class="nkpis">' + nk('Pending', pend, 'clock', pend ? 'to onboard' : 'none waiting') + nk('Completed', d.rows.length - pend, 'check', 'onboarded') + '</div>' +
+        '<div class="nkpis">' + nk('Waiting for onboarding', pend, 'clock', 'approved and paid') + '</div>' +
         (d.rows.length ? '<div class="ncards">' + d.rows.map(function (c) {
           var g = c.general;
           return '<article class="ncard onbcard"><div class="nc-top">' + avatar(c) + '<div><h2 class="nch">' + e(c.name) + '</h2><span class="muted small">' + e(c.customerId) + '</span><div class="ptags">' + brandTags(c.brands) + '</div></div>' +
@@ -451,9 +454,35 @@
     var none = $('[data-none]'); if (none) none.hidden = shown > 0;
   });
 
+  // Customer Onboarding shows in the menu only while this nurse has a customer waiting to be onboarded
+  // (approved, paid, assigned), with the number waiting; it goes away once they are all done.
+  function onbSet(n) {
+    var was = S.cache.onbPending || 0;
+    S.cache.onbPending = n; S.cache.onbAt = Date.now();
+    S.counts = S.counts || {}; S.counts['nurse/onboarding'] = n;
+    var sb = $('#sb .sb-in'); if (!sb) return;
+    var link = $('a[href^="#/nurse/onboarding"]', sb);
+    if (!n && link) { link.remove(); return; }
+    if (n && !link) {
+      var after = $('a[href^="#/nurse/customers"]', sb);
+      if (after) after.insertAdjacentHTML('afterend', '<a href="#/nurse/onboarding" class="arrive">' + icon('check') + '<span>Customer Onboarding</span><b class="count">' + n + '</b></a>');
+    } else if (n && link && n !== was) {
+      var b = $('b.count', link); if (b) b.textContent = n; else link.insertAdjacentHTML('beforeend', '<b class="count">' + n + '</b>');
+    }
+  }
+  function onbRefresh() {
+    if (S.cache.onbBusy || (S.cache.onbAt && Date.now() - S.cache.onbAt < 30000)) return;
+    S.cache.onbBusy = true;
+    api('GET', 'nurse/onboarding').then(function (d) { S.cache.onbBusy = false; if (d.ok) onbSet(d.rows.length); }, function () { S.cache.onbBusy = false; });
+  }
+  function menuNow() {
+    setTimeout(onbRefresh, 0);
+    return MENU.filter(function (m) { return m !== ONB_ITEM || (S.cache.onbPending || 0) > 0; });
+  }
+
   K.register('nurse', {
     label: 'Nurse portal',
-    menu: MENU,
+    menu: menuNow,
     personPages: ['nurse/customer', 'nurse/upload', 'assess', 'assess/regular', 'assess/onboarding'],
     notifPage: '#/nurse/notifications',
     route: function (r, top) {

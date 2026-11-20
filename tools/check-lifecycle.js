@@ -133,7 +133,7 @@ async function login(id) {
   ok(r.body.customer.onboarding.status === 'completed' && r.body.customer.onboarding.completedAt && r.body.customer.emergency.some((x) => x.name === 'Rahul Menon' && /XXXXX/.test(x.phone)), '9. the customer\'s page under Assigned customers shows the onboarding as completed, with the new details (numbers masked)');
   ok((await nurse('GET', 'nurse/customers')).body.rows.find((x) => x.id === P).onboarding === 'completed', '9. Assigned customers marks the customer as onboarded');
   r = await nurse('GET', 'nurse/onboarding');
-  ok(r.body.rows.find((x) => x.id === P).status === 'completed', '9. Customer Onboarding shows Completed');
+  ok(!r.body.rows.some((x) => x.id === P), '9. once onboarded, the customer leaves Customer Onboarding');
   r = await office('GET', 'admin/leads/enquiry/' + id);
   ok(r.body.lifecycle.stage === 'onboarded', '9. the enquiry shows the whole lifecycle completed');
 
@@ -207,11 +207,12 @@ async function login(id) {
   // ---------------------------------------------------------------- 15. nurse navigation
   const nurseJs = fs.readFileSync(path.join(__dirname, '..', 'app', 'nurse.js'), 'utf8');
   const menuSrc = nurseJs.slice(nurseJs.indexOf('var MENU = ['), nurseJs.indexOf('];', nurseJs.indexOf('var MENU = [')) + 2);
-  const MENU = Function('return ' + menuSrc.replace(/^var MENU = /, '').replace(/;$/, ''))();
+  const MENU = Function('ONB_ITEM', 'return ' + menuSrc.replace(/^var MENU = /, '').replace(/;$/, ''))('ONB_ITEM');
   const grp = (label) => MENU.find((m) => !Array.isArray(m) && m.label === label);
   ok(grp('Upload Documents') && grp('Upload Documents').sub.map((x) => x[1]).join('|') === 'Upload|Your Submissions', '15. Upload Documents is a dropdown with exactly Upload and Your Submissions');
   ok(grp('Assessment') && grp('Assessment').sub.map((x) => x[1]).join('|') === 'Regular Checkup', '15. Assessment contains only Regular Checkup');
-  ok(MENU.some((m) => Array.isArray(m) && m[1] === 'Customer Onboarding') && !grp('Assessment').sub.some((x) => /onboard/i.test(x[1])), '15. Customer Onboarding is its own main section, not under Assessment');
+  ok(/var ONB_ITEM = \['nurse\/onboarding', 'Customer Onboarding'/.test(nurseJs) && MENU.includes('ONB_ITEM') && !grp('Assessment').sub.some((x) => /onboard/i.test(x[1])), '15. Customer Onboarding is its own main section, not under Assessment');
+  ok(/m !== ONB_ITEM \|\| \(S\.cache\.onbPending \|\| 0\) > 0/.test(nurseJs), '15. Customer Onboarding shows in the menu only while a customer is waiting for onboarding');
   ok(!MENU.some((m) => Array.isArray(m) && /Customer Profiles/.test(m[1])) && MENU.some((m) => Array.isArray(m) && m[1] === 'Assigned customers'), '15. no separate Customer Profiles section: customer details live under Assigned customers');
   ok(/caregiver'\) \{ S\.cache\.ncust = null;[^\n]*go\('#\/nurse\/customer\?p=/.test(appJs), '15. after onboarding the nurse is taken to the customer under Assigned customers');
   ok(/page === 'submissions'\) submissionsPage/.test(nurseJs) && /page === 'upload'\) uploadPage/.test(nurseJs), '15. Upload and Your Submissions open separate pages');

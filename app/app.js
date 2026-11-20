@@ -497,7 +497,7 @@
     setBrand('kareiq');
     var u = S.me.user, role = u.role;
     var mod = modOf(role);
-    var items = (mod && mod.menu) || MENUS[role] || MENUS.family;
+    var items = (mod && (typeof mod.menu === 'function' ? mod.menu() : mod.menu)) || MENUS[role] || MENUS.family;
     var arrived = S.sbActive !== active; S.sbActive = active; // a new page: its menu item animates in
     var pp = PERSON_PAGES.concat((mod && mod.personPages) || []);
     var withP = function (k) { return S.pid && pp.indexOf(k) > -1 ? '?p=' + encodeURIComponent(S.pid) : ''; };
@@ -2712,7 +2712,7 @@
         }
         try { localStorage.removeItem('kq.onb.' + id); } catch (x) {}
         // nurses go straight to the customer under Assigned customers, where the completed details now show
-        if (S.me.user.role === 'caregiver') { S.cache.ncust = null; toast('Onboarding submitted. The details are now in Assigned customers.'); go('#/nurse/customer?p=' + encodeURIComponent(id)); return; }
+        if (S.me.user.role === 'caregiver') { S.cache.ncust = null; S.cache.onbAt = 0; toast('Onboarding submitted. The details are now in Assigned customers.'); go('#/nurse/customer?p=' + encodeURIComponent(id)); return; }
         toast('Onboarding submitted. It is now read only.');
         render();
       });

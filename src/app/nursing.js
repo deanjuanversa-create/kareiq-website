@@ -206,16 +206,17 @@ function create(ctx) {
       }
       return json(res, 200, { ok: true, rows: rows.sort((a, b) => a.name.localeCompare(b.name)) });
     }
-    // Customer Onboarding: the assigned customers whose package the office approved and whose payment is
-    // confirmed (pending), and those already onboarded (completed). No one else appears here.
+    // Customer Onboarding: only the assigned customers waiting to be onboarded (package approved, payment
+    // confirmed, onboarding not done). Once onboarded they leave this list (Assigned customers shows them).
     if (p === 'nurse/onboarding' && req.method === 'GET') {
       const ids = await assignedIds(user);
       const people = ids.length ? (await docs.find('app_people', { id: { $in: ids } })).filter((x) => x.active !== false) : [];
       const rows = [];
       for (const x of people) {
         const onb = await docs.findOne('app_onboarding', { id: 'onb-' + x.id });
-        const el = onb ? null : await ctx.lifecycle.eligibility(x.id);
-        if (!onb && !el.eligible) continue;
+        if (onb) continue;
+        const el = await ctx.lifecycle.eligibility(x.id);
+        if (!el.eligible) continue;
         const det = (await docs.findOne('app_details', { id: 'det-' + x.id })) || { data: {} };
         const d = det.data || {};
         const plans = (await docs.find('app_plans', { personId: x.id })).filter((pl) => pl.status === 'active' && pl.planId && !pl.included);
