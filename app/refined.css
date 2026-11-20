@@ -149,3 +149,56 @@ body[data-brand="kareiq"] .brandfilter button.karehome[aria-pressed="true"],
 body[data-brand="kareiq"] .brandfilter button.karenest[aria-pressed="true"],
 body[data-brand="kareiq"] .seg3 a[aria-pressed="true"]{background:#fff;color:var(--accent-d);border:2px solid var(--accent);font-weight:600;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
 body[data-brand="kareiq"] .polnav a:hover,body[data-brand="kareiq"] .pkchips button:hover{border-color:color-mix(in srgb,var(--accent) 55%,white)}
+
+/* ---------- welcome: date line, "At a glance" cards, staggered tiles */
+body[data-brand="kareiq"] .pagehead.wel .eyebrow{color:var(--muted);letter-spacing:.06em;font-weight:600;margin-bottom:2px}
+body[data-brand="kareiq"] .glance{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,240px),1fr));gap:14px;margin-bottom:30px}
+body[data-brand="kareiq"] .gl{position:relative;display:flex;flex-direction:column;gap:4px;min-height:150px;padding:18px 20px 16px;background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:20px;color:var(--ink);text-decoration:none;box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14);--tc:var(--accent);transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s;animation:kq-rise .5s cubic-bezier(.22,1,.36,1) both}
+body[data-brand="kareiq"] .gl:nth-child(2){animation-delay:.06s}
+body[data-brand="kareiq"] .gl:nth-child(3){animation-delay:.12s}
+body[data-brand="kareiq"] .gl.skel{border:0;box-shadow:none;animation:sk 1.2s linear infinite}
+body[data-brand="kareiq"] a.gl:hover{transform:translateY(-3px);box-shadow:0 1px 1px rgba(0,0,0,.03),0 20px 34px -22px rgba(0,0,0,.35)}
+body[data-brand="kareiq"] a.gl:active{transform:scale(.985)}
+body[data-brand="kareiq"] a.gl:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+body[data-brand="kareiq"] .gl.good{--tc:var(--c-good)}
+body[data-brand="kareiq"] .gl.warn{--tc:var(--c-warn)}
+body[data-brand="kareiq"] .gl.bad{--tc:var(--c-bad)}
+body[data-brand="kareiq"] .gl-h{display:flex;align-items:center;gap:8px;font-size:.82rem;font-weight:600;color:var(--tc);text-transform:uppercase;letter-spacing:.05em}
+body[data-brand="kareiq"] .gl-h svg{width:16px;height:16px}
+body[data-brand="kareiq"] .gl-v{font-size:1.32rem;font-weight:650;letter-spacing:-.02em;line-height:1.25;margin-top:6px;padding-right:56px}
+body[data-brand="kareiq"] .gl-s{color:var(--muted);font-size:.92rem}
+body[data-brand="kareiq"] .gl-go{margin-top:auto;padding-top:12px;display:inline-flex;align-items:center;gap:6px;font-size:.9rem;font-weight:600;color:var(--accent-d)}
+body[data-brand="kareiq"] .gl-go svg{width:15px;height:15px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+body[data-brand="kareiq"] a.gl:hover .gl-go svg{transform:translateX(4px)}
+/* how far through the package year: a small ring, Apple Fitness style */
+body[data-brand="kareiq"] .gl-ring{position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;background:conic-gradient(var(--tc) calc(var(--p)*1%),rgba(118,118,128,.14) 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px));mask:radial-gradient(farthest-side,transparent calc(100% - 6px),#000 calc(100% - 5px))}
+body[data-brand="kareiq"] .gotile.wide{grid-column:1/-1;padding-top:12px;padding-bottom:12px}
+body[data-brand="kareiq"] .gotile.wide .gt-i{width:38px;height:38px}
+body[data-brand="kareiq"] .gotile{animation:kq-rise .5s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(.15s + var(--i,0)*.04s)}
+@keyframes kq-rise{from{opacity:0;transform:translateY(10px)}}
+
+/* ---------- phones: native-style tab bar for families; compact two-column tiles */
+body[data-brand="kareiq"] .tabbar{display:none}
+@media (max-width:760px){
+  body[data-brand="kareiq"] .tabbar{display:grid;grid-template-columns:repeat(5,1fr);position:fixed;left:0;right:0;bottom:0;z-index:30;padding:6px 6px calc(6px + env(safe-area-inset-bottom));background:rgba(255,255,255,.82);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-top:1px solid rgba(0,0,0,.08)}
+  body[data-brand="kareiq"] .tabbar a,body[data-brand="kareiq"] .tabbar button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 0 4px;border:0;background:none;font:inherit;font-size:.7rem;font-weight:500;color:#8e8e93;text-decoration:none;border-radius:12px;-webkit-tap-highlight-color:transparent;transition:color .2s,transform .2s}
+  body[data-brand="kareiq"] .tabbar svg{width:24px;height:24px}
+  body[data-brand="kareiq"] .tabbar [aria-current=page]{color:var(--accent-d)}
+  body[data-brand="kareiq"] .tabbar a:active,body[data-brand="kareiq"] .tabbar button:active{transform:scale(.92)}
+  body[data-brand="kareiq"] .has-tabs .mn{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
+  body[data-brand="kareiq"] .has-tabs .tb-menu{display:none}
+  body[data-brand="kareiq"] .has-tabs .sb{bottom:calc(64px + env(safe-area-inset-bottom))}
+  body[data-brand="kareiq"] .glance{grid-template-columns:1fr;gap:10px}
+  body[data-brand="kareiq"] .gl{min-height:0;padding:14px 18px;gap:2px}
+  body[data-brand="kareiq"] .gl-v{font-size:1.18rem;margin-top:4px}
+  body[data-brand="kareiq"] .gl-go{display:none}
+  body[data-brand="kareiq"] .gl-ring{top:50%;margin-top:-19px;width:38px;height:38px}
+  body[data-brand="kareiq"]:has(.has-tabs) .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+  body[data-brand="kareiq"] .gotiles{grid-template-columns:1fr 1fr;gap:10px}
+  body[data-brand="kareiq"] .gotile{flex-direction:column;align-items:flex-start;gap:10px;padding:14px}
+  body[data-brand="kareiq"] .gotile>svg,body[data-brand="kareiq"] .gotile .gt-t .muted{display:none}
+  body[data-brand="kareiq"] .gotile .gt-t b{font-size:.98rem}
+  body[data-brand="kareiq"] .gotile.wide{flex-direction:row;align-items:center}
+  body[data-brand="kareiq"] .gotile.wide>svg{display:block}
+}
+@media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .gl,body[data-brand="kareiq"] .gotile{animation:none}}

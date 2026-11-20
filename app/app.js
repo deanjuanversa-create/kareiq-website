@@ -561,7 +561,16 @@
     var top = '<header class="tb"><button class="tb-menu" data-act="drawer" aria-controls="sb" aria-expanded="false" aria-label="Menu">' + icon('menu') + '</button>' +
       '<a class="tb-logo" href="#/"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>' +
       (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<span class="sp"></span><button type="button" class="tb-k" data-act="cmdk" aria-label="Search and jump to a page (Ctrl K)">' + icon('search') + '<span>Search</span><kbd>' + (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') + ' K</kbd></button>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
-    root.innerHTML = '<div class="shell' + (mod ? ' role-' + MOD_OF[role] : '') + '">' + top + side + '<div class="sb-scrim" data-act="drawer-close"></div><main class="mn" id="mn">' + inner + '</main></div>';
+    // phones: a tab bar for families, like a native app (the full menu stays one tap away)
+    var tabs = '';
+    if (role === 'family') {
+      var pq = S.pid ? '?p=' + encodeURIComponent(S.pid) : '';
+      var on = function (t) { return t === 'home' ? active === 'welcome' : t === 'health' ? /^health\//.test(active) : t === 'records' ? active === 'records' : /^(package|packages|invoices|plans)$/.test(active); };
+      tabs = '<nav class="tabbar" aria-label="Quick">' + [['home', '#/welcome' + pq, 'home', 'Home'], ['health', '#/health/vitals' + pq, 'heart', 'Health'], ['records', '#/records' + pq, 'file', 'Records'], ['package', '#/package' + pq, 'box', 'Package']].map(function (t) {
+        return '<a href="' + t[1] + '"' + (on(t[0]) ? ' aria-current="page"' : '') + '>' + icon(t[2]) + '<span>' + t[3] + '</span></a>';
+      }).join('') + '<button type="button" data-act="drawer" aria-controls="sb" aria-expanded="false">' + icon('menu') + '<span>More</span></button></nav>';
+    }
+    root.innerHTML = '<div class="shell' + (mod ? ' role-' + MOD_OF[role] : '') + (tabs ? ' has-tabs' : '') + '">' + top + side + '<div class="sb-scrim" data-act="drawer-close"></div><main class="mn" id="mn">' + inner + '</main>' + tabs + '</div>';
     if (role !== 'family') refreshBell();
   }
 
@@ -661,21 +670,76 @@
       try { localStorage.setItem('kq.pid', cur.id); } catch (x) {}
       var q = '?p=' + encodeURIComponent(cur.id);
       var u = S.me.user;
+      // most used first; the person's package and payments sit above in "At a glance"
       var tiles = [
-        ['#/profile/personal' + q, 'user', 'Profile', 'Personal details, contacts, health conditions and allergies'],
-        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals, body composition, wellbeing checks, risk trends and notes'],
-        ['#/policies/' + POLICIES[0][0], 'shield', 'KareIQ Policies', 'Policies, charters and forms, always the latest version'],
+        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals, body composition, wellbeing, risk trends and notes'],
         ['#/records' + q, 'file', 'Medical records', 'Lab reports, scans and prescriptions'],
         ['#/package' + q, 'box', 'My package', 'What is included, and booking services'],
-        ['#/packages' + q, 'layers', 'Other packages', 'Every Kare@Home, KareNest, KareBalance and KareMind package'],
-        ['#/invoices' + q, 'receipt', 'Invoices', 'Charges for your packages']
+        ['#/profile/personal' + q, 'user', 'Profile', 'Personal details, contacts, conditions and allergies'],
+        ['#/invoices' + q, 'receipt', 'Invoices', 'Charges and payments for your packages'],
+        ['#/packages' + q, 'layers', 'Other packages', 'Kare@Home, KareNest, KareBalance, KareMind and Bystander'],
+        ['#/policies/' + POLICIES[0][0], 'shield', 'KareIQ Policies', 'Policies, charters and forms, always the latest version']
       ];
+      var today = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
       // the same "PERSON NAME ▾" selector as every other page (relationship and package tags included)
-      $('#mn').innerHTML = '<div id="pv">' + personBar(cur, people) + '<div class="pagehead"><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Welcome to My KareIQ. Choose who and what you would like to see.</p></div>' +
-        '<section aria-labelledby="h-go"><h2 class="sec" id="h-go">Where would you like to go?</h2><nav class="gotiles" aria-label="Sections">' + tiles.map(function (t) {
-          return '<a class="gotile" href="' + t[0] + '"><span class="gt-i" aria-hidden="true">' + icon(t[1]) + '</span><span class="gt-t"><b>' + e(t[2]) + '</b><span class="muted small">' + e(t[3]) + '</span></span>' + icon('arrow') + '</a>';
+      $('#mn').innerHTML = '<div id="pv">' + personBar(cur, people) + '<div class="pagehead wel"><p class="eyebrow">' + e(today) + '</p><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Here is where things stand for ' + e(first(cur.name)) + '.</p></div>' +
+        '<section aria-labelledby="h-glance"><h2 class="sec" id="h-glance">At a glance</h2><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
+        '<section aria-labelledby="h-go"><h2 class="sec" id="h-go">Where would you like to go?</h2><nav class="gotiles" aria-label="Sections">' + tiles.map(function (t, i) {
+          return '<a class="gotile' + (t[1] === 'shield' ? ' wide' : '') + '" style="--i:' + i + '" href="' + t[0] + '"><span class="gt-i" aria-hidden="true">' + icon(t[1]) + '</span><span class="gt-t"><b>' + e(t[2]) + '</b><span class="muted small">' + e(t[3]) + '</span></span>' + icon('arrow') + '</a>';
         }).join('') + '</nav></section>' +
         '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team.</span></p></div>';
+      glance(cur, q);
+    });
+  }
+
+  // "At a glance": the package, payments and what happens next for one person. No health readings
+  // here (the welcome page never opens health data by itself); each card links to its page.
+  function glance(p, q) {
+    var pid = encodeURIComponent(p.id);
+    var safe = function (path) { return api('GET', path).catch(function () { return { ok: false }; }); };
+    Promise.all([safe('people/' + pid + '/package'), safe('people/' + pid + '/invoices'), safe('people/' + pid + '/orders'), safe('people/' + pid + '/services')]).then(function (x) {
+      var box = $('#glance'); if (!box || S.pid !== p.id) return;
+      var pk = x[0].ok ? x[0] : { plans: [] }, inv = x[1].ok ? x[1] : { rows: [] }, ord = x[2].ok ? x[2] : { rows: [] }, sv = x[3].ok ? x[3] : {};
+      var today = todayIST(), cards = [];
+      var card = function (o) {
+        return '<a class="gl ' + (o.tone || '') + '" href="' + o.href + '"><span class="gl-h">' + icon(o.icon) + '<span>' + e(o.label) + '</span></span>' +
+          (o.ring != null ? '<span class="gl-ring" style="--p:' + Math.round(o.ring * 100) + '" aria-hidden="true"></span>' : '') +
+          '<b class="gl-v">' + e(o.value) + '</b><span class="gl-s">' + e(o.sub || '') + '</span><span class="gl-go">' + e(o.go) + icon('arrow') + '</span></a>';
+      };
+      // 1. the package and how far through it they are
+      var plans = (pk.plans || []).filter(function (x) { return !x.included; });
+      var act = plans.filter(function (x) { return x.status === 'active'; })[0];
+      var pend = plans.filter(function (x) { return x.status === 'pending'; })[0];
+      if (act) {
+        var left = act.endDate ? Math.round((new Date(act.endDate + 'T12:00:00+05:30') - new Date(today + 'T12:00:00+05:30')) / 864e5) : null;
+        var span = act.startDate && act.endDate ? (new Date(act.endDate) - new Date(act.startDate)) / 864e5 : null;
+        cards.push({ icon: 'box', label: act.productName, value: act.name, href: '#/package' + q, go: 'View package', tone: left != null && left <= 30 ? 'warn' : '',
+          sub: left == null ? 'Active' : left <= 0 ? 'Ended on ' + date(act.endDate) : left <= 30 ? 'Renews in ' + left + ' day' + (left === 1 ? '' : 's') + ', on ' + date(act.endDate) : 'Active until ' + date(act.endDate),
+          ring: span && left != null ? Math.min(1, Math.max(0, 1 - left / span)) : null });
+      } else if (pend) {
+        cards.push({ icon: 'box', label: pend.productName, value: pend.name || 'Package requested', sub: 'Our team is setting it up', href: '#/package' + q, go: 'View package', tone: 'info' });
+      } else {
+        cards.push({ icon: 'box', label: 'Package', value: 'No package yet', sub: 'See what KareIQ can do for ' + first(p.name), href: '#/packages' + q, go: 'Explore packages', tone: 'info' });
+      }
+      // 2. payments
+      var due = (inv.rows || []).filter(function (r) { return r.outstanding > 0; });
+      if (due.length) {
+        var sum = due.reduce(function (a, r) { return a + r.outstanding; }, 0);
+        var over = due.filter(function (r) { return r.overdueDays > 0; })[0];
+        cards.push({ icon: 'receipt', label: 'Payments', value: 'Rs ' + sum.toLocaleString('en-IN') + ' due', sub: over ? 'Overdue by ' + over.overdueDays + ' day' + (over.overdueDays === 1 ? '' : 's') : 'Due by ' + date(due[0].dueDate), href: '#/invoices' + q, go: 'View invoices', tone: over ? 'bad' : 'warn' });
+      } else if ((inv.rows || []).length) {
+        cards.push({ icon: 'check', label: 'Payments', value: 'All paid', sub: 'Nothing to pay right now', href: '#/invoices' + q, go: 'View invoices', tone: 'good' });
+      }
+      // 3. what happens next: a request in progress, else the next booked service, else booking
+      var open = (ord.rows || []).filter(function (o) { return o.status === 'awaiting_approval' || o.status === 'awaiting_payment'; })[0];
+      var next = (sv.bookings || []).filter(function (b) { return b.status !== 'closed' && (!b.date || b.date >= today); }).sort(function (a, b) { return String(a.date || '9').localeCompare(String(b.date || '9')); })[0];
+      if (open) cards.push({ icon: 'clock', label: 'Your request', value: open.name, sub: open.statusName, href: '#/package' + q, go: 'See details', tone: open.status === 'awaiting_payment' ? 'warn' : 'info' });
+      else if (next) cards.push({ icon: 'cal', label: 'Next booking', value: next.name, sub: next.date ? date(next.date) + (next.time ? ', ' + next.time : '') : 'Our team will confirm the date', href: '#/package' + q, go: 'View bookings' });
+      else if (act && sv.canBook) cards.push({ icon: 'cal', label: 'Services', value: 'Book a service', sub: 'Physiotherapy, bystander and more', href: '#/package' + q, go: 'Book now' });
+      else cards.push({ icon: 'wa', label: 'Need a hand?', value: 'Talk to our team', sub: 'We usually reply within minutes', href: waLink(), go: 'WhatsApp us' });
+      box.innerHTML = cards.map(card).join('');
+      box.removeAttribute('aria-busy');
+      $$('a.gl', box).forEach(function (a) { if (/^https?:/.test(a.getAttribute('href'))) { a.target = '_blank'; a.rel = 'noopener'; } });
     });
   }
 
