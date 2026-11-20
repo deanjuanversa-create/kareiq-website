@@ -1918,3 +1918,67 @@ tr.flash td{animation:row-flash 1.6s ease}
   .ncards>.ncard,.onbcard .pill.pending i,.nc-ob .pill.pending i,.lcbox .pill.pending i,.sb a b.count.bump,.pill.celebrate,.pill.celebrate i,.lcsteps li,.lcsteps li.done i svg,.lcsteps li.next,.ogen output.tick,.dirtyflag,.osub.lcbox,.ogen,tr.flash td,.dropz-pick,.ppage>.polbody,.ppage>.empty,.ppage>.poledit,.ppage>.polupd,.onb-locked,.ck-sec[open]>.ck-body{animation:none!important}
   .nc-ob a.pill,.polnav a,.dropz{transition:none}.nc-ob a.pill:hover,.polnav a:hover{transform:none}
 }
+
+/* ================================================================ premium layer (20 Nov) */
+::selection{background:color-mix(in srgb,var(--accent,#1aa08c) 22%,white);color:inherit}
+/* page transitions: the menu and top bar stay put; the page fades and rises */
+.tb{view-transition-name:kq-tb}.sb{view-transition-name:kq-sb}.mn{view-transition-name:kq-main}
+::view-transition-old(kq-main){animation:kq-vt-out .16s ease both}
+::view-transition-new(kq-main){animation:kq-vt-in .32s cubic-bezier(.22,1,.36,1) both}
+::view-transition-old(root),::view-transition-new(root){animation-duration:.18s}
+@keyframes kq-vt-out{to{opacity:0;transform:translateY(-4px)}}
+@keyframes kq-vt-in{from{opacity:0;transform:translateY(8px)}}
+/* top progress line while the server answers */
+.topbar{position:fixed;left:0;top:0;height:3px;width:100%;z-index:300;pointer-events:none;transform-origin:left;transform:scaleX(0);opacity:0;
+  background:linear-gradient(90deg,var(--accent,#1aa08c),#5cc8b4 60%,#9ee6d6);box-shadow:0 0 10px rgba(26,160,140,.55)}
+.topbar.run{opacity:1;animation:kq-bar 8s cubic-bezier(.08,.6,.2,1) forwards}
+.topbar.done{opacity:0;transform:scaleX(1);transition:transform .2s ease,opacity .35s ease .15s}
+@keyframes kq-bar{0%{transform:scaleX(0)}20%{transform:scaleX(.45)}60%{transform:scaleX(.78)}100%{transform:scaleX(.94)}}
+/* toasts: icon, a line that shows the time left (pauses while pointed at) */
+.toast{display:flex;align-items:center;gap:10px;padding:11px 18px 13px 12px;overflow:hidden}
+.toast .t-ic{display:grid;place-items:center;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.14);flex:none;animation:kq-tick .45s cubic-bezier(.34,1.56,.64,1) .08s backwards}
+.toast .t-ic svg{width:14px;height:14px}
+.toast.ok .t-ic{background:#1baf7a}.toast.bad .t-ic{background:#e34948}
+.toast .t-bar{position:absolute;left:14px;right:14px;bottom:5px;height:2px;border-radius:2px;background:rgba(255,255,255,.35);transform-origin:left;animation:kq-left 4.2s linear forwards}
+.toast.hold .t-bar{animation-play-state:paused}
+@keyframes kq-left{to{transform:scaleX(0)}}
+/* quick search */
+.tb-k{display:inline-flex;align-items:center;gap:8px;height:38px;padding:0 10px 0 12px;margin-right:10px;border:1px solid var(--line,#dde3ea);border-radius:999px;background:var(--bg,#fff);color:var(--muted,#5b6b7c);font:inherit;font-size:14px;cursor:pointer;transition:border-color .2s,box-shadow .2s,transform .2s cubic-bezier(.34,1.56,.64,1)}
+.tb-k:hover{border-color:var(--accent,#1aa08c);box-shadow:0 6px 16px -10px rgba(20,40,60,.45);transform:translateY(-1px)}
+.tb-k svg{width:16px;height:16px}
+kbd{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;border-radius:6px;border:1px solid var(--line,#dde3ea);border-bottom-width:2px;background:var(--soft,#f5f7f9);color:var(--muted,#5b6b7c)}
+@media (max-width:760px){.tb-k{width:38px;padding:0;justify-content:center;margin-right:6px}.tb-k span,.tb-k kbd{display:none}}
+.cmdk{position:fixed;inset:0;z-index:400;display:flex;justify-content:center;align-items:flex-start;padding:12vh 16px 16px;background:rgba(14,28,44,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);animation:kq-fade .18s ease}
+.cmdk.out{animation:kq-fade .16s ease reverse forwards}
+@keyframes kq-fade{from{opacity:0}}
+.cmdk-p{width:min(640px,100%);background:var(--bg,#fff);border-radius:18px;box-shadow:0 30px 80px -20px rgba(10,30,50,.45),0 0 0 1px rgba(20,40,60,.06);overflow:hidden;animation:kq-cmdk .26s cubic-bezier(.22,1,.36,1)}
+@keyframes kq-cmdk{from{opacity:0;transform:translateY(-10px) scale(.98)}}
+.cmdk-in{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line,#e3e8ee)}
+.cmdk-in svg{width:20px;height:20px;color:var(--muted,#5b6b7c)}
+.cmdk-in input{flex:1;border:0;outline:0;font:inherit;font-size:17px;background:transparent;color:inherit;min-width:0}
+.cmdk-in input::-webkit-search-cancel-button{display:none}
+.cmdk-l{list-style:none;margin:0;padding:6px;max-height:min(52vh,440px);overflow:auto}
+.cmdk-l li[data-i]{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;cursor:pointer;transition:background-color .12s}
+.cmdk-l li[aria-selected=true]{background:color-mix(in srgb,var(--accent,#1aa08c) 10%,white)}
+.cmdk-l li>svg{width:16px;height:16px;margin-left:auto;opacity:0;transform:translateX(-4px);transition:opacity .15s,transform .2s}
+.cmdk-l li[aria-selected=true]>svg{opacity:.7;transform:none}
+.cmdk-l .ci{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;background:var(--soft,#f2f5f7);flex:none}.cmdk-l .ci svg{width:16px;height:16px}
+.cmdk-l .ct{display:flex;flex-direction:column;min-width:0}.cmdk-l .ct b{font-weight:600}.cmdk-l .ct small{color:var(--muted,#6b7a8a);font-size:12.5px}
+.cmdk-none{padding:18px;text-align:center;color:var(--muted,#6b7a8a)}
+.cmdk-f{display:flex;gap:16px;justify-content:flex-end;margin:0;padding:10px 16px;border-top:1px solid var(--line,#e3e8ee);font-size:12px;color:var(--muted,#6b7a8a)}
+.cmdk-f kbd{margin-right:3px}
+@media (max-width:640px){.cmdk{padding-top:8vh}.cmdk-f{display:none}}
+/* a soft light that follows the pointer over cards */
+.ncard,.gotile,.bcard,.mypkg,.okpi,.nkpi,.vcard2,.risk,.pkc,.onbcard{position:relative}
+.ncard::after,.gotile::after,.bcard::after,.mypkg::after,.okpi::after,.nkpi::after,.vcard2::after,.risk::after,.pkc::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .3s ease;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),rgba(26,160,140,.10),transparent 65%)}
+.ncard:hover::after,.gotile:hover::after,.bcard:hover::after,.mypkg:hover::after,.okpi:hover::after,.nkpi:hover::after,.vcard2:hover::after,.risk:hover::after,.pkc:hover::after{opacity:1}
+/* offline */
+.netbar{position:fixed;left:50%;top:14px;translate:-50% 0;z-index:350;display:flex;align-items:center;gap:10px;max-width:calc(100vw - 32px);padding:10px 16px;border-radius:14px;background:#fff7e6;color:#6b4800;border:1px solid #f1d39a;box-shadow:0 14px 30px -18px rgba(60,40,0,.5);animation:kq-drop .3s cubic-bezier(.22,1,.36,1)}
+.netbar.out{animation:kq-drop .26s ease reverse forwards}.netbar svg{width:18px;height:18px;flex:none}
+@media (prefers-reduced-motion:reduce){
+  ::view-transition-old(*),::view-transition-new(*),::view-transition-group(*){animation:none!important}
+  .topbar.run{animation:none;transform:scaleX(.6)}.toast .t-ic,.toast .t-bar,.cmdk,.cmdk.out,.cmdk-p,.netbar,.netbar.out{animation:none!important}
+  .tb-k,.cmdk-l li>svg{transition:none}.tb-k:hover{transform:none}.ncard::after,.gotile::after,.bcard::after,.mypkg::after,.okpi::after,.nkpi::after,.vcard2::after,.risk::after,.pkc::after{display:none}
+}
+@media print{.topbar,.cmdk,.netbar,.tb-k{display:none!important}}

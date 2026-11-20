@@ -123,6 +123,7 @@
       upload: '<path d="M12 15V4.5M7.5 9 12 4.5 16.5 9"/><path d="M4.5 15v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V15"/>',
       download: '<path d="M12 4.5V15M7.5 10.5 12 15l4.5-4.5"/><path d="M4.5 15v3.5a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V15"/>',
       eye: '<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z"/><circle cx="12" cy="12" r="3"/>',
+      search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/>',
       trash: '<path d="M4.5 6.5h15M9.5 6.5V4h5v2.5M6.5 6.5l1 14h9l1-14"/>',
       arrow: '<path d="M5 12h14M13 6l6 6-6 6"/>',
       bell: '<path d="M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 2h-15Z"/><path d="M10 20.5a2.2 2.2 0 0 0 4 0"/>',
@@ -152,20 +153,45 @@
   }
   function toast(msg, kind) {
     var old = $('.toast'); if (old) old.remove();
-    var t = document.createElement('div'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.setAttribute('role', kind === 'bad' ? 'alert' : 'status'); t.textContent = msg;
+    var t = document.createElement('div'); t.className = 'toast' + (kind ? ' ' + kind : ''); t.setAttribute('role', kind === 'bad' ? 'alert' : 'status');
+    t.innerHTML = '<i class="t-ic" aria-hidden="true">' + icon(kind === 'bad' ? 'x' : kind === 'info' ? 'bell' : 'check') + '</i><span class="t-msg"></span><b class="t-bar" aria-hidden="true"></b>';
+    $('.t-msg', t).textContent = msg;
     document.body.appendChild(t);
-    setTimeout(function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 260); }, 3800);
+    // stays while pointed at (to finish reading), then leaves; good news gives a light tap on phones
+    var left = 4200, t0 = Date.now(), timer;
+    var leave = function () { t.classList.add('out'); setTimeout(function () { t.remove(); }, 260); };
+    var run = function () { t0 = Date.now(); timer = setTimeout(leave, left); };
+    t.addEventListener('mouseenter', function () { clearTimeout(timer); left = Math.max(1200, left - (Date.now() - t0)); t.classList.add('hold'); });
+    t.addEventListener('mouseleave', function () { t.classList.remove('hold'); run(); });
+    run();
+    if (kind === 'ok' && navigator.vibrate && matchMedia('(pointer:coarse)').matches) { try { navigator.vibrate(12); } catch (x) {} }
   }
   function setBrand(id) { document.body.setAttribute('data-brand', id || 'kareiq'); }
 
   // ---------------------------------------------------------------- server calls
+  // a thin progress line at the top while the server is answering (only when it takes a moment)
+  var inflight = 0, barT = null;
+  function busyStart() {
+    var bar = $('.topbar');
+    if (!bar) { bar = document.createElement('div'); bar.className = 'topbar'; bar.setAttribute('aria-hidden', 'true'); document.body.appendChild(bar); }
+    if (++inflight === 1) { clearTimeout(barT); barT = setTimeout(function () { if (inflight) bar.className = 'topbar run'; }, 140); }
+  }
+  function busyEnd() {
+    inflight = Math.max(0, inflight - 1);
+    if (inflight) return;
+    clearTimeout(barT);
+    var bar = $('.topbar');
+    if (bar && bar.classList.contains('run')) { bar.className = 'topbar done'; setTimeout(function () { if (!inflight) bar.className = 'topbar'; }, 480); }
+  }
   function api(method, path, body) {
     var tok = S.tok;
+    busyStart();
     var headers = { 'X-Requested-With': 'kareiq' };
     if (S.csrf) headers['X-CSRF'] = S.csrf;
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     return fetch('/api/app/' + path, { method: method, headers: headers, credentials: 'same-origin', body: body !== undefined ? JSON.stringify(body) : undefined })
       .then(function (r) {
+        busyEnd();
         return r.json().catch(function () { return { ok: false, message: 'The server sent something unexpected. Please try again.' }; }).then(function (data) {
           data.status = r.status;
           if (r.status === 401 && data.signedOut && !/^(login|link|forgot|start|session)/.test(path)) {
@@ -179,6 +205,7 @@
           return data;
         });
       }, function () {
+        busyEnd();
         return { ok: false, status: 0, message: 'Could not reach KareIQ. Check your internet connection and try again.' };
       });
   }
@@ -206,8 +233,11 @@
     if (i > -1) { h.slice(i + 1).split('&').forEach(function (kv) { var p = kv.split('='); if (p[0]) q[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || ''); }); h = h.slice(0, i); }
     return { parts: h.split('/').filter(Boolean), q: q };
   }
-  window.addEventListener('hashchange', render);
-  window.addEventListener('hashchange', render);
+  // a soft cross-fade between pages (browsers with view transitions); the menu and top bar stay put
+  window.addEventListener('hashchange', function () {
+    if (S.me && document.startViewTransition && !reducedMotion() && !$('dialog[open]')) { try { document.startViewTransition(function () { render(); }); return; } catch (x) {} }
+    render();
+  });
 
   // where each role lands after signing in: families get a neutral welcome page (no health data opens
   // by itself), the office its health pages for a person, caregivers the people they look after
@@ -530,7 +560,7 @@
       '</div></div></nav>';
     var top = '<header class="tb"><button class="tb-menu" data-act="drawer" aria-controls="sb" aria-expanded="false" aria-label="Menu">' + icon('menu') + '</button>' +
       '<a class="tb-logo" href="#/"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>' +
-      (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<span class="sp"></span>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
+      (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<span class="sp"></span><button type="button" class="tb-k" data-act="cmdk" aria-label="Search and jump to a page (Ctrl K)">' + icon('search') + '<span>Search</span><kbd>' + (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') + ' K</kbd></button>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
     root.innerHTML = '<div class="shell' + (mod ? ' role-' + MOD_OF[role] : '') + '">' + top + side + '<div class="sb-scrim" data-act="drawer-close"></div><main class="mn" id="mn">' + inner + '</main></div>';
     if (role !== 'family') refreshBell();
   }
@@ -3178,6 +3208,92 @@
     if (!card) return;
     [].forEach.call(document.querySelectorAll('[data-pkcard]'), function (c) { c.classList.toggle('sel', c === card); });
   });
+
+  // ================================================================ quick search (Ctrl/⌘ K): pages and people
+  // Everything listed comes from what this login can already open (its own menu, its own people); the
+  // server still decides what each page shows.
+  function cmdkItems() {
+    var out = [], seen = {};
+    $$('#sb a[href^="#/"]').forEach(function (a) {
+      var h = a.getAttribute('href').replace(/\?p=[^&]*$/, ''), t = ($('span', a) || a).textContent.trim();
+      var grp = a.closest('.sbg'); var sec = grp ? ($('.sbg-btn span', grp) || {}).textContent : '';
+      if (!t || seen[h]) return; seen[h] = 1;
+      out.push({ t: t, sub: sec || 'Page', h: h, ic: 'arrow' });
+    });
+    var role = S.me && S.me.user.role;
+    var people = role === 'caregiver' ? (S.cache.ncust || []) : (S.people || []);
+    people.forEach(function (p) {
+      var h = role === 'caregiver' ? '#/nurse/customer?p=' + encodeURIComponent(p.id) : role === 'admin' ? '#/office/customer?p=' + encodeURIComponent(p.id) : '#/health/vitals?p=' + encodeURIComponent(p.id);
+      out.push({ t: p.name, sub: (role === 'family' ? 'Health details' : 'Customer') + (p.customerId || p.id ? ' · ' + (p.customerId || p.id) : ''), h: h, ic: 'user' });
+    });
+    out.push({ t: 'Your account', sub: 'Settings', h: '#/account', ic: 'pen' });
+    return out;
+  }
+  function cmdkScore(q, it) {
+    if (!q) return 1;
+    var t = (it.t + ' ' + it.sub).toLowerCase(), i = t.indexOf(q);
+    if (i === 0) return 100; if (i > 0) return 60 - Math.min(i, 40);
+    var j = 0; for (var k = 0; k < t.length && j < q.length; k++) if (t[k] === q[j]) j++;
+    return j === q.length ? 10 : 0;
+  }
+  function cmdkOpen() {
+    if ($('.cmdk') || !S.me) return;
+    var all = cmdkItems(), sel = 0, list = all;
+    var box = document.createElement('div');
+    box.className = 'cmdk'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true'); box.setAttribute('aria-label', 'Search');
+    box.innerHTML = '<div class="cmdk-p"><label class="cmdk-in">' + icon('search') + '<input type="search" placeholder="Search pages and people…" aria-label="Search pages and people" aria-controls="cmdk-l" autocomplete="off"><kbd>Esc</kbd></label><ul class="cmdk-l" id="cmdk-l" role="listbox"></ul><p class="cmdk-f"><span><kbd>↑</kbd><kbd>↓</kbd> to move</span><span><kbd>Enter</kbd> to open</span></p></div>';
+    document.body.appendChild(box);
+    var input = $('input', box), ul = $('.cmdk-l', box), before = document.activeElement;
+    var draw = function () {
+      ul.innerHTML = list.length ? list.slice(0, 12).map(function (it, i) { return '<li role="option" id="cmdk-' + i + '" aria-selected="' + (i === sel) + '" data-i="' + i + '"><span class="ci">' + icon(it.ic) + '</span><span class="ct"><b>' + e(it.t) + '</b><small>' + e(it.sub) + '</small></span>' + icon('right') + '</li>'; }).join('') : '<li class="cmdk-none">Nothing matches. Try another word.</li>';
+      input.setAttribute('aria-activedescendant', list.length ? 'cmdk-' + sel : '');
+      var on = $('[aria-selected=true]', ul); if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest' });
+    };
+    var close = function () { box.classList.add('out'); setTimeout(function () { box.remove(); }, 160); if (before && before.focus) before.focus(); };
+    var open = function (it) { close(); if (it) location.hash = it.h; };
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      list = all.map(function (it) { return { it: it, s: cmdkScore(q, it) }; }).filter(function (x) { return x.s > 0; }).sort(function (a, b) { return b.s - a.s; }).map(function (x) { return x.it; });
+      sel = 0; draw();
+    });
+    box.addEventListener('keydown', function (ev) {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); sel = Math.min(sel + 1, Math.min(list.length, 12) - 1); draw(); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); sel = Math.max(sel - 1, 0); draw(); }
+      else if (ev.key === 'Enter') { ev.preventDefault(); open(list[sel]); }
+      else if (ev.key === 'Escape') { ev.preventDefault(); close(); }
+      else if (ev.key === 'Tab') { ev.preventDefault(); input.focus(); }
+    });
+    box.addEventListener('mousedown', function (ev) { if (ev.target === box) close(); });
+    ul.addEventListener('click', function (ev) { var li = ev.target.closest('li[data-i]'); if (li) open(list[Number(li.getAttribute('data-i'))]); });
+    ul.addEventListener('mousemove', function (ev) { var li = ev.target.closest('li[data-i]'); if (li && Number(li.getAttribute('data-i')) !== sel) { sel = Number(li.getAttribute('data-i')); $$('li[data-i]', ul).forEach(function (x) { x.setAttribute('aria-selected', String(Number(x.getAttribute('data-i')) === sel)); }); } });
+    draw(); input.focus();
+  }
+  document.addEventListener('keydown', function (ev) {
+    if ((ev.ctrlKey || ev.metaKey) && (ev.key === 'k' || ev.key === 'K')) { if (S.me) { ev.preventDefault(); if ($('.cmdk')) $('.cmdk input').focus(); else cmdkOpen(); } }
+  });
+  document.addEventListener('click', function (ev) { var b = ev.target.closest && ev.target.closest('[data-act=cmdk]'); if (b) cmdkOpen(); });
+
+  // ================================================================ a soft light that follows the pointer over cards
+  if (window.matchMedia && matchMedia('(hover:hover) and (pointer:fine)').matches) {
+    var glowSel = '.ncard,.gotile,.bcard,.mypkg,.okpi,.nkpi,.vcard2,.risk,.pkc,.onbcard';
+    document.addEventListener('pointermove', function (ev) {
+      var c = ev.target.closest && ev.target.closest(glowSel); if (!c) return;
+      var r = c.getBoundingClientRect();
+      c.style.setProperty('--mx', (ev.clientX - r.left) + 'px'); c.style.setProperty('--my', (ev.clientY - r.top) + 'px');
+    }, { passive: true });
+  }
+
+  // ================================================================ offline and back online
+  function netBanner(on) {
+    var b = $('.netbar');
+    if (on) { if (b) { b.classList.add('out'); setTimeout(function () { b.remove(); }, 260); toast('Back online.', 'ok'); } return; }
+    if (b) return;
+    b = document.createElement('div'); b.className = 'netbar'; b.setAttribute('role', 'status');
+    b.innerHTML = icon('globe') + '<span><b>You are offline.</b> Changes cannot be saved until the connection is back. Nothing you have typed is lost.</span>';
+    document.body.appendChild(b);
+  }
+  window.addEventListener('offline', function () { netBanner(false); });
+  window.addEventListener('online', function () { netBanner(true); });
 
   window.KQ = {
     S: S, api: api, e: e, $: $, $$: $$, icon: icon, date: date, dt: dt, ago: ago, hm12: hm12, toast: toast, openDialog: openDialog, closeDialog: closeDialog,
