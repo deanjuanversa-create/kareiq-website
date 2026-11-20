@@ -76,8 +76,6 @@ body[data-brand="kareiq"] .field>span,body[data-brand="kareiq"] label.field>span
 body[data-brand="kareiq"] select.in{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236e6e73' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px}
 /* segmented controls (period filters, tabs, chips) */
 body[data-brand="kareiq"] .chips button,body[data-brand="kareiq"] .ntabs a,body[data-brand="kareiq"] .polnav a{border-radius:999px}
-body[data-brand="kareiq"] .polnav a{background:#fff;border-color:rgba(0,0,0,.1)}
-body[data-brand="kareiq"] .polnav a[aria-current=page]{box-shadow:0 4px 12px -6px color-mix(in srgb,var(--accent) 70%,transparent)}
 
 /* ---------- dialogs: big radius, frosted backdrop */
 body[data-brand="kareiq"] dialog{border-radius:24px;box-shadow:0 0 0 1px rgba(0,0,0,.04),0 40px 100px -30px rgba(0,0,0,.45)}
@@ -131,3 +129,23 @@ body[data-brand="kareiq"] .pkgsum>div{border:0;box-shadow:none}
 body[data-brand="kareiq"] .pkgsum span{color:var(--muted);font-size:.86rem}
 body[data-brand="kareiq"] .avgbar{border-radius:16px}
 body[data-brand="kareiq"] .rh,body[data-brand="kareiq"] .rhero{border-radius:16px}
+
+/* ---------- selected filters: white, with a coloured border (never a dark fill) */
+/* vitals: the border takes the reading's own status colour; teal when there is none */
+body[data-brand="kareiq"] .vbtn{border:1.5px solid rgba(0,0,0,.12);--vc:var(--accent)}
+body[data-brand="kareiq"] .vbtn:has(.dot.good){--vc:var(--c-good)}
+body[data-brand="kareiq"] .vbtn:has(.dot.ok){--vc:var(--c-ok)}
+body[data-brand="kareiq"] .vbtn:has(.dot.warn){--vc:var(--c-warn)}
+body[data-brand="kareiq"] .vbtn:has(.dot.bad){--vc:var(--c-bad)}
+body[data-brand="kareiq"] .vbtn[aria-pressed="true"]{background:#fff;color:var(--ink);border:2px solid var(--vc);box-shadow:0 0 0 4px color-mix(in srgb,var(--vc) 16%,transparent),0 12px 22px -14px rgba(0,0,0,.35)}
+body[data-brand="kareiq"] .vbtn[aria-pressed="true"] small{color:var(--muted)}
+body[data-brand="kareiq"] .vbtn[aria-pressed="true"] .dot{box-shadow:none}
+/* policies, package brands, brand filters, week/month switches: white with a teal border */
+body[data-brand="kareiq"] .polnav a{background:#fff;border:1.5px solid rgba(0,0,0,.1);color:var(--ink-2)}
+body[data-brand="kareiq"] .polnav a[aria-current=page],
+body[data-brand="kareiq"] .pkchips button[aria-pressed=true],
+body[data-brand="kareiq"] .brandfilter button[aria-pressed="true"],
+body[data-brand="kareiq"] .brandfilter button.karehome[aria-pressed="true"],
+body[data-brand="kareiq"] .brandfilter button.karenest[aria-pressed="true"],
+body[data-brand="kareiq"] .seg3 a[aria-pressed="true"]{background:#fff;color:var(--accent-d);border:2px solid var(--accent);font-weight:600;box-shadow:0 0 0 4px color-mix(in srgb,var(--accent) 14%,transparent)}
+body[data-brand="kareiq"] .polnav a:hover,body[data-brand="kareiq"] .pkchips button:hover{border-color:color-mix(in srgb,var(--accent) 55%,white)}
