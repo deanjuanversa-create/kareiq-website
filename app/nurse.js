@@ -258,7 +258,9 @@
     var pol = '<p class="note">' + icon('lock') + '<span>The customer\'s own numbers open only after the office approves your request. Emergency and doctor numbers: ' + e(c.access.policyText) + '. ' + (c.access.visitNow ? '<b>Your visit ' + e(c.access.visitNow.reference) + ' is on now, so those numbers open without a reason.</b> ' : '') + 'Every time you open a number it is recorded for the office.</span></p>';
     return '<section class="phead ncard-h"><div class="avatar">' + (c.photo ? '<img src="/api/app/people/' + encodeURIComponent(c.id) + '/photo?v=' + encodeURIComponent(c.photo) + '" alt="Photo of ' + e(c.name) + '" width="112" height="112">' : '<span class="ph" role="img" aria-label="No photo">' + icon('user') + '</span>') + '</div>' +
       '<div class="phead-t"><h2>' + e(c.name) + '</h2><p class="muted">' + e(facts) + '</p><div class="ptags" style="margin-top:8px">' + brandTags(c.brands) + '</div>' +
-        '<div class="phctl"><button type="button" class="btn sm' + (c.photoDue && c.photoDue.due ? '' : ' ghost') + '" data-act="photo-cam" data-id="' + e(c.id) + '" data-name="' + e(c.name) + '">' + icon('camera') + (c.photo ? 'Take a new photo' : 'Take photo') + '</button>' + K.photoDueHtml(c.photoDue && (c.photoDue.required || c.photo) ? c.photoDue : null) + '</div></div></section>' +
+        // a photo is taken when there is none, then again when it is 6 months old (not before)
+        '<div class="phctl">' + (!c.photo || (c.photoDue && c.photoDue.due) ? '<button type="button" class="btn sm" data-act="photo-cam" data-id="' + e(c.id) + '" data-name="' + e(c.name) + '">' + icon('camera') + (c.photo ? 'Take a new photo' : 'Take photo') + '</button>' : '') +
+          K.photoDueHtml(c.photoDue && (c.photoDue.required || c.photo) ? c.photoDue : null) + '</div></div></section>' +
       pol + '<div class="ngrid">' + gen + contact + emerg + docs + up + '</div>';
   }
   function ro(label, v, wide) { return '<div class="rof' + (wide ? ' wide' : '') + '"><dt>' + e(label) + '</dt><dd>' + (v ? e(v) : '<span class="muted">Not given</span>') + '</dd></div>'; }

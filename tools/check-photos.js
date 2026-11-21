@@ -117,6 +117,19 @@ async function part1() {
   ok(!(await docs.findOne('app_files', { id: p1.cartoonId })) && !(await docs.findOne('app_people', { id: 'P1' })).cartoonId, 'removing the photo removes the cartoon');
   oa.srv.close();
 
+  // ---------------------------------------------------------------- photos saved while the AI step was off
+  ({ photos, docs } = moduleWith({}));
+  await docs.insert('app_files', { id: 'F9', personId: 'P9', kind: 'photo', mime: 'image/jpeg', data: JPEG.toString('base64') });
+  await docs.insert('app_people', { id: 'P9', name: 'Indira', photoId: 'F9' });
+  await photos.afterPhoto('P9');
+  ok((await docs.findOne('app_people', { id: 'P9' })).cartoonStatus === 'off', 'a photo saved with the AI step off is marked "off"');
+  const later = await mockServer((req, res) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ data: [{ b64_json: PNG.toString('base64') }] })); });
+  const docsBefore = docs;
+  ({ photos } = moduleWith({ CARTOON_PROVIDER: 'openai', OPENAI_API_KEY: 'sk-test', CARTOON_BASE_URL: later.url }));
+  const photos2 = require('../src/app/photos').create({ docs: docsBefore, uid: () => 'id' + (++seq), now: () => new Date().toISOString(), audit: async () => {}, scheduler: { notify: async () => {} } });
+  ok(await photos2.resume() === 1 && (await docsBefore.findOne('app_people', { id: 'P9' })).cartoonStatus === 'ready', 'once a provider is set, the existing photo gets its cartoon (no new photo needed)');
+  later.srv.close();
+
   // ---------------------------------------------------------------- failures are recorded and retried
   const bad = await mockServer((req, res, body, n) => {
     if (n === 1) { res.writeHead(400, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ error: { message: 'Your request was rejected by the safety system.' } })); }
@@ -197,7 +210,12 @@ async function part2() {
   ok(r.body.rows.find((x) => x.id === P).photoDue === false, 'with a fresh photo the flag goes away');
   r = await nurse('GET', 'nurse/customers/' + P);
   ok(r.body.customer.photoDue && r.body.customer.photoDue.due === false && r.body.customer.photoDue.dueOn, 'customer page shows the next due date');
-  r = await nurse('POST', 'people/' + P + '/photo', Buffer.from('not an image'), 'image/jpeg');
+  r = await nurse('POST', 'people/' + P + '/photo', JPEG, 'image/jpeg');
+  ok(r.status === 409 && /up to date/.test(r.body.message) && r.body.dueOn, 'the nurse cannot replace a photo before it is due (409, next due ' + r.body.dueOn + ')');
+  const office = await login('admin@demo.kareiq');
+  r = await office('POST', 'people/' + P + '/photo', JPEG, 'image/jpeg');
+  ok(r.status === 201, 'the office can still replace it (e.g. a photo saved by mistake)');
+  r = await office('POST', 'people/' + P + '/photo', Buffer.from('not an image'), 'image/jpeg');
   ok(r.status === 415, 'something that is not a photo is refused (415)');
   r = await nest('POST', 'people/' + P + '/photo', JPEG, 'image/jpeg');
   ok([403, 404].includes(r.status), 'a nurse not assigned to the customer cannot change the photo');

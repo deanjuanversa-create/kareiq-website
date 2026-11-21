@@ -1055,7 +1055,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         const label = (k) => (firstvisit.BY_KEY[k] || firstvisit.BY_KEY[k.replace(/Specify$/, '')] || { label: k }).label;
         const prefill = row ? null : { name: person.name || '', gender: person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : '' };
         return json(res, 200, {
-          ok: true, person: { id: person.id, name: person.name, photo: person.photoAt || null },
+          ok: true, person: { id: person.id, name: person.name, photo: person.photoAt || null, photoDue: shared.photos.due(person) },
           canEdit: user.role !== 'family',
           data: row ? row.data : {}, prefill,
           meta: row ? { version: row.version, status: row.status, updatedAt: row.updatedAt, updatedBy: users[row.updatedBy] || 'KareIQ', updatedByRole: row.updatedByRole, createdAt: row.createdAt } : { version: 0, status: 'new' },
@@ -1879,6 +1879,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true });
     }
     if (req.method !== 'POST') throw notFound();
+    // nurses take a new photo only when one is due (none yet, or 6 months old); the office may replace it any time
+    if (user.role === 'caregiver' && person.photoId) {
+      const pd = shared.photos.due(person);
+      if (!pd.due) return json(res, 409, { ok: false, message: 'This customer\'s photo is up to date. The next one is due on ' + pd.dueOn + '.', dueOn: pd.dueOn });
+    }
     if (failures.over('upload:' + user.id, 40)) return json(res, 429, { ok: false, message: 'You have uploaded many files just now. Please wait a few minutes.' });
     failures.add('upload:' + user.id);
     const buf = await readRaw(req);

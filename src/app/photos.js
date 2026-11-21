@@ -13,7 +13,8 @@
 //   CARTOON_MODEL    optional: default gpt-image-1.5 (openai) / gemini-3.1-flash-image (gemini)
 //   CARTOON_BASE_URL optional: another endpoint with the same API (used by the tests)
 // The latest cartoon is kept per person (app_files, kind "cartoon"); a new photo replaces it and removing
-// the photo removes it. Failures are recorded on the person and retried (up to 3 tries per photo).
+// the photo removes it. Failures are recorded on the person and retried (up to 3 tries per photo). Photos
+// saved while the AI step was off get their cartoon at the first hourly check after a provider is set.
 const fs = require('fs');
 const path = require('path');
 
@@ -142,7 +143,9 @@ function create(ctx) {
   // after a restart (or a failure): finish what is waiting, up to 3 tries per photo
   async function resume() {
     if (!provider()) return 0;
-    const rows = (await docs.find('app_people', {})).filter((p) => p.photoId && p.cartoonFor !== p.photoId && (p.cartoonStatus === 'pending' || p.cartoonStatus === 'failed') && (p.cartoonTries || 0) < 3);
+    // also photos saved while the AI step was switched off ("off", or before this feature): once a provider is
+    // set, every current photo gets its cartoon without waiting 6 months for the next photo
+    const rows = (await docs.find('app_people', {})).filter((p) => p.photoId && p.cartoonFor !== p.photoId && (p.cartoonStatus == null || p.cartoonStatus === 'off' || p.cartoonStatus === 'pending' || p.cartoonStatus === 'failed') && (p.cartoonTries || 0) < 3);
     for (const p of rows) await make(p.id).catch(() => null);
     return rows.length;
   }

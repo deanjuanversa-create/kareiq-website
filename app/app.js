@@ -1807,6 +1807,8 @@
     var facts = [d.age != null ? d.age + ' years' : '', data.gender || ''].filter(Boolean).join(' · ');
     var pic = src ? '<img src="' + e(src) + '" alt="Photo of ' + e(name) + '" width="112" height="112" decoding="async">'
       : '<span class="ph" role="img" aria-label="No photo yet">' + icon('user') + '</span>';
+    var nurseWait = S.me.user.role === 'caregiver' && src && !(d.person.photoDue && d.person.photoDue.due);
+    if (nurseWait) canEdit = false; // nurses: a new photo only when one is due
     var ctl = canEdit ? '<div class="phctl"><input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" data-act="photo-file" data-id="' + e(pid) + '" hidden aria-hidden="true" tabindex="-1">' +
       '<button type="button" class="btn sm" data-act="photo-cam" data-id="' + e(pid) + '" data-name="' + e(name) + '">' + icon('camera') + (src ? 'Take a new photo' : 'Take photo') + '</button>' +
       '<button type="button" class="btn sm ghost" data-act="photo-pick">' + icon('upload') + (src ? 'Replace from a file' : 'Upload a file') + '</button>' +
@@ -2464,8 +2466,8 @@
         var pd = d.photoDue || {}, ph = d.person && d.person.photo;
         var photoStep = nurse && (d.canSubmit || d.record) ? '<section class="onb-photo' + (pd.due ? ' due' : '') + '" aria-labelledby="h-onbph"><div class="avatar">' +
             (ph ? '<img src="/api/app/people/' + encodeURIComponent(p.id) + '/photo?v=' + encodeURIComponent(ph) + '" alt="Photo of ' + e(p.name) + '" width="88" height="88">' : '<span class="ph" role="img" aria-label="No photo yet">' + icon('user') + '</span>') +
-            '</div><div class="onb-photo-t"><h2 id="h-onbph">Customer photo</h2><p class="muted small">' + (ph ? 'Taken ' + e(date(ph)) + '. ' : 'Take a clear photo of ' + e(first(p.name)) + ' at this visit. ') + 'A new photo is needed every 6 months; you will get a reminder.</p>' + photoDueHtml(ph ? pd : null) + '</div>' +
-            '<button type="button" class="btn' + (ph && !pd.due ? ' ghost' : '') + '" data-act="photo-cam" data-id="' + e(p.id) + '" data-name="' + e(p.name) + '">' + icon('camera') + (ph ? 'Take a new photo' : 'Take photo') + '</button></section>' : '';
+            '</div><div class="onb-photo-t"><h2 id="h-onbph">Customer photo</h2><p class="muted small">' + (ph ? 'Taken ' + e(date(ph)) + '. ' : 'Take a clear photo of ' + e(first(p.name)) + ' at this visit. ') + 'A new photo is needed every 6 months; you will get a reminder and the button appears then.</p>' + photoDueHtml(ph ? pd : null) + '</div>' +
+            (!ph || pd.due ? '<button type="button" class="btn" data-act="photo-cam" data-id="' + e(p.id) + '" data-name="' + e(p.name) + '">' + icon('camera') + (ph ? 'Take a new photo' : 'Take photo') + '</button>' : '') + '</section>' : '';
         if (d.record) { fill(personBar(p, people) + head + photoStep + onbReadHtml(def, d.record)); return; }
         if (!d.canSubmit) {
           var why = !d.eligible ? '<b>Not ready for onboarding</b>' + (d.eligibilityReasons && d.eligibilityReasons.length ? '<ul class="onb-why">' + d.eligibilityReasons.map(function (x) { return '<li>' + e(x) + '</li>'; }).join('') + '</ul>' : '') + '<span class="muted small">A customer becomes ready once the office has approved the requested package and the payment is confirmed.</span>'
