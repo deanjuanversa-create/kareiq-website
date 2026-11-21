@@ -334,6 +334,7 @@
     if (top === 'health' && role !== 'caregiver') {
       if (['vitals', 'body', 'wellbeing', 'risks'].indexOf(r.parts[1]) > -1) return healthView(r, r.parts[1]);
       if (r.parts[1] === 'notes') return notesView(r);
+      if (r.parts[1] === 'insights') return insightsView(r);
       return go('#/health/vitals' + queryOf(r), true);
     }
     if (top === 'packages' && role === 'family') return otherPackagesView(r);
@@ -505,7 +506,7 @@
     family: [
       ['welcome', 'Home', 'home'],
       { k: 'profile', label: 'Profile', icon: 'user', sub: [['profile/personal', 'Personal details', 'idcard'], ['profile/conditions', 'Pre-existing health conditions', 'clip']] },
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/insights', 'Health insights', 'star'], ['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt'],
       ['policies', 'KareIQ Policies', 'shield']
     ],
@@ -515,13 +516,13 @@
       ['records', 'Medical records', 'file']
     ],
     admin: [
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/insights', 'Health insights', 'star'], ['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['invoices', 'Invoices', 'receipt'],
       ['clientinfo', 'Client information', 'clip']
     ]
   };
   // pages that belong to one person (the link keeps ?p= so the same person stays open)
-  var PERSON_PAGES = ['profile/personal', 'profile/conditions', 'health/vitals', 'health/body', 'health/wellbeing', 'health/risks', 'health/notes', 'records', 'package', 'packages', 'invoices', 'visit', 'assess', 'assess/regular', 'assess/onboarding', 'risktests'];
+  var PERSON_PAGES = ['profile/personal', 'profile/conditions', 'health/insights', 'health/vitals', 'health/body', 'health/wellbeing', 'health/risks', 'health/notes', 'records', 'package', 'packages', 'invoices', 'visit', 'assess', 'assess/regular', 'assess/onboarding', 'risktests'];
   var OFFICE = [['admin', 'Requests', 'inbox'], ['admin/people', 'People and plans', 'people'], ['admin/logins', 'Logins', 'key'], ['admin/activity', 'Activity', 'clock']];
 
   function shell(active, inner) {
@@ -715,7 +716,7 @@
   function homeData(p, q) {
     var pid = encodeURIComponent(p.id);
     var safe = function (path) { return api('GET', path).catch(function () { return { ok: false }; }); };
-    Promise.all([safe('people/' + pid + '/package'), safe('people/' + pid + '/services'), safe('people/' + pid + '/care'), safe('people/' + pid + '/dashboard?period=7d'), safe('people/' + pid + '/records')]).then(function (x) {
+    Promise.all([safe('people/' + pid + '/package'), safe('people/' + pid + '/services'), safe('people/' + pid + '/care'), safe('people/' + pid + '/dashboard?period=6m'), safe('people/' + pid + '/records')]).then(function (x) {
       if (S.pid !== p.id || !$('#glance')) return; // another person was chosen meanwhile
       var pk = x[0], sv = x[1], care = x[2], d = x[3];
       var today = todayIST();
@@ -727,7 +728,8 @@
 
       // ---- the greeting's status line: last health update and readings this week
       var stamps = dash ? (dash.latest || []).map(function (y) { return y.at; }).concat(dash.lastVisit ? [dash.lastVisit.at] : []).filter(Boolean).sort() : [];
-      var n7 = dash ? (dash.metrics || []).reduce(function (a, m) { return a + (m.count || 0); }, 0) : 0;
+      var wk = Date.now() - 7 * 864e5;
+      var n7 = dash ? (dash.series || []).reduce(function (a, m) { return a + (m.rows || []).filter(function (r) { return r.ms >= wk; }).length; }, 0) : 0;
       $('#hpill').innerHTML = !dash ? '<span>' + icon('cal') + 'Health updates appear after the first visit</span>'
         : '<span>' + icon('cal') + (stamps.length ? 'Last health update: <b>' + e(date(stamps[stamps.length - 1])) + '</b>' : 'No health updates yet') + '</span>' +
           '<span class="hpill-n"><i class="dot ' + (n7 ? 'good' : 'none') + '" aria-hidden="true"></i>' + n7 + ' reading' + (n7 === 1 ? '' : 's') + ' in the last 7 days</span>';
@@ -786,11 +788,12 @@
       var ins = $('#hins'); ins.removeAttribute('aria-busy');
       if (!d.ok) ins.innerHTML = retryHtml('the health insights');
       else {
-        var list = insightsOf(dash, q);
+        var list = window.KQInsights ? window.KQInsights.build(dash, { q: q }) : [];
+        S.cache.insights = { pid: p.id, list: list };
         ins.innerHTML = list.length
           ? '<ul class="insl">' + list.slice(0, 3).map(function (it) {
-              return '<li><a class="ins ' + it.tone + '" href="' + it.href + '"><span class="ins-i" aria-hidden="true">' + icon(it.tone === 'good' ? 'check' : it.tone === 'bad' ? 'info' : 'info') + '</span><span class="ins-t"><b>' + e(it.title) + '</b><span>' + e(it.text) + '</span></span>' + icon('right') + '</a></li>';
-            }).join('') + '</ul><a class="hcard-more c" href="#/health/vitals' + q + '">View All Health Details' + icon('arrow') + '</a>'
+              return '<li><a class="ins ' + it.tone + '" href="#/health/insights' + q + '&i=' + encodeURIComponent(it.id) + '"><span class="ins-i" aria-hidden="true">' + icon(it.tone === 'good' ? 'check' : 'info') + '</span><span class="ins-t"><b>' + e(it.title) + '</b><span>' + e(it.summary) + '</span></span>' + icon('right') + '</a></li>';
+            }).join('') + '</ul><a class="hcard-more c" href="#/health/insights' + q + '">View All Insights' + (list.length > 3 ? ' (' + list.length + ')' : '') + icon('arrow') + '</a>'
           : '<div class="hempty">' + icon('heart') + '<span><b>No insights yet</b>Insights appear here once the care team records ' + e(first(p.name)) + '\'s readings.</span></div>';
       }
 
@@ -811,27 +814,61 @@
     });
   }
 
-  // insights: attention first (risk category, readings outside range, wellbeing flags), then progress
-  // that the data itself shows. No reading, date or advice is made up; nothing → no insight.
-  function insightsOf(d, q) {
-    var out = [];
-    var rs = d.riskStatus;
-    if (rs && rs.category && rs.category !== 'none') {
-      var tone = rs.category === 'red' ? 'bad' : rs.category === 'amber' ? 'warn' : rs.category === 'green' ? 'good' : null;
-      if (tone) out.push({ rank: tone === 'bad' ? 0 : tone === 'warn' ? 1 : 5, tone: tone, title: 'Overall risk: ' + String(rs.categoryName || rs.category).split(/\s[–-]\s/)[0], text: rs.reason || 'Calculated from the recorded vitals and assessments.', href: '#/health/risks' + q });
-    }
-    var latest = d.latest || [];
-    latest.filter(function (x) { return x.level === 'bad' || x.level === 'warn'; }).sort(function (a, b) { return (a.level === 'bad' ? 0 : 1) - (b.level === 'bad' ? 0 : 1); }).forEach(function (x) {
-      out.push({ rank: x.level === 'bad' ? 0.5 : 1.5, tone: x.level, title: x.label + ': ' + (x.status || 'needs a look'),
-        text: 'Latest ' + x.value + (x.unit ? ' ' + x.unit : '') + ' on ' + date(x.at) + (x.range ? ' · ' + x.range : ''),
-        href: (x.group === 'body' ? '#/health/body' : '#/health/vitals') + q + '&m=' + encodeURIComponent(x.metric) });
+  // ================================================================ Health insights
+  // What the person's own records show (app/insights.js): the last 30 days against the 30 before,
+  // readings in and outside KareIQ's standard ranges, the overall risk category, gaps in monitoring and
+  // wellbeing flags. Each insight links to its full trend. Nothing is shown that the records do not support.
+  function insightsView(r) {
+    withPerson(r, 'health/insights', function (p, people) {
+      fill(personBar(p, people) + loading(110) + loading(200) + loading(300));
+      api('GET', 'people/' + encodeURIComponent(p.id) + '/dashboard?period=6m').then(function (d) {
+        if (!d.ok) return pageError(d);
+        var active = (d.plans || []).filter(function (x) { return x.status !== 'pending'; });
+        if (!active.length && (d.plans || []).length && S.me.user.role === 'family') { fill(personBar(p, people) + pendingHtml(p, d)); return; }
+        var q = '?p=' + encodeURIComponent(p.id);
+        var list = window.KQInsights ? window.KQInsights.build(d, { q: q }) : [];
+        var secs = window.KQInsights ? window.KQInsights.sections(list) : [];
+        var count = function (k) { var s = secs.filter(function (x) { return x.key === k; })[0]; return s ? s.items.length : 0; };
+        var stamps = (d.latest || []).map(function (y) { return y.at; }).filter(Boolean).sort();
+        var head = '<div class="pagehead"><span class="eyebrow">Health details</span><h1>Health insights</h1><p class="muted">What ' + e(first(p.name)) + '\'s own records show: the last 30 days compared with the 30 days before, using KareIQ\'s standard ranges.</p></div>';
+        if (!list.length) {
+          fill(personBar(p, people) + head + '<div class="empty ins-empty">' + icon('star') + '<b>No insights yet</b>Insights appear here once the care team records ' + e(first(p.name)) + '\'s readings and wellbeing checks.</div>');
+          return;
+        }
+        var tiles = [['attention', 'Need attention', 'bad'], ['watch', 'Worth watching', 'warn'], ['improving', 'Improving', 'good'], ['good', 'Going well', 'good']].map(function (t) {
+          var n = count(t[0]);
+          return '<a class="isum ' + t[2] + (n ? '' : ' zero') + '" href="#ins-' + t[0] + '" data-act="ins-jump" data-k="' + t[0] + '"><b>' + n + '</b><span>' + t[1] + '</span></a>';
+        }).join('');
+        var card = function (it) {
+          return '<article class="icard ' + it.tone + '" id="i-' + e(it.id) + '" tabindex="-1"><div class="icard-h"><span class="icard-i" aria-hidden="true">' + icon(it.tone === 'good' ? 'check' : it.kind === 'gap' ? 'clock' : it.kind === 'change' ? 'scale' : it.kind === 'wellbeing' ? 'smile' : it.kind === 'risk' ? 'gauge' : 'info') + '</span>' +
+            '<h3>' + e(it.title) + '</h3></div><p class="icard-s">' + e(it.summary) + '</p>' +
+            (it.facts && it.facts.length ? '<dl class="ifacts">' + it.facts.map(function (f) { return '<div><dt>' + e(f[0]) + '</dt><dd>' + e(f[1]) + '</dd></div>'; }).join('') + '</dl>' : '') +
+            (it.spark && it.spark.points.length > 1 ? sparkSvg(it.spark.points, it.title) : '') +
+            '<a class="icard-go" href="' + e(it.href) + '">' + (it.metric ? 'See the full trend' : it.kind === 'wellbeing' || it.id === 'wb-ok' ? 'Open wellbeing checks' : it.kind === 'risk' ? 'Open risk trends' : 'Open vitals') + icon('arrow') + '</a></article>';
+        };
+        fill(personBar(p, people) + head +
+          '<div class="isums">' + tiles + '</div>' +
+          (stamps.length ? '<p class="muted small ins-asof">' + icon('clock') + '<span>Latest reading ' + e(date(stamps[stamps.length - 1])) + (d.lastVisit && d.lastVisit.by ? ' · last visit by ' + e(d.lastVisit.by) + ', ' + e(date(d.lastVisit.at)) : '') + '</span></p>' : '') +
+          secs.map(function (s) {
+            return '<section class="isec" id="ins-' + s.key + '" aria-labelledby="h-ins-' + s.key + '"><h2 class="sec" id="h-ins-' + s.key + '">' + e(s.title) + ' <span class="muted">' + s.items.length + '</span></h2><div class="igrid">' + s.items.map(card).join('') + '</div></section>';
+          }).join('') +
+          '<p class="note">' + icon('shield') + '<span>Insights compare ' + e(first(p.name)) + '\'s readings with KareIQ\'s standard ranges and with the month before. They are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p>');
+        // opened from Home: go to that insight
+        var want = r.q && r.q.i ? $('#i-' + (window.CSS && CSS.escape ? CSS.escape(r.q.i) : r.q.i)) : null;
+        if (want) { want.scrollIntoView({ block: 'center', behavior: reducedMotion() ? 'auto' : 'smooth' }); want.classList.add('flash'); want.focus({ preventScroll: true }); }
+      });
     });
-    if (d.obs && d.obs.flags > 0) out.push({ rank: 2, tone: 'warn', title: 'Wellbeing: ' + d.obs.flags + ' item' + (d.obs.flags === 1 ? '' : 's') + ' to watch', text: 'From the check on ' + date(d.obs.at) + (d.obs.by ? ' by ' + d.obs.by : '') + '.', href: '#/health/wellbeing' + q });
-    var rated = latest.filter(function (x) { return x.level && x.level !== 'none'; });
-    if (rated.length && rated.every(function (x) { return x.level === 'good' || x.level === 'ok'; })) out.push({ rank: 4, tone: 'good', title: 'Readings within range', text: 'All ' + rated.length + ' latest readings are within KareIQ\'s standard ranges.', href: '#/health/vitals' + q });
-    var n7 = (d.metrics || []).reduce(function (a, m) { return a + (m.count || 0); }, 0);
-    if (n7) out.push({ rank: 4.5, tone: 'good', title: 'Good progress!', text: n7 + ' reading' + (n7 === 1 ? ' has' : 's have') + ' been recorded in the last 7 days' + (d.lastVisit && d.lastVisit.by ? ', most recently by ' + d.lastVisit.by + ' on ' + date(d.lastVisit.at) : '') + '.', href: '#/health/vitals' + q });
-    return out.sort(function (a, b) { return a.rank - b.rank; });
+  }
+  // a small line of the readings (first value for blood pressure), each dot in its range colour
+  function sparkSvg(points, label) {
+    var W = 260, H = 54, P = 6;
+    var vs = points.map(function (x) { return x.v; }), lo = Math.min.apply(null, vs), hi = Math.max.apply(null, vs);
+    if (hi === lo) { hi += 1; lo -= 1; }
+    var t0 = points[0].ms, t1 = points[points.length - 1].ms || t0 + 1;
+    var xy = points.map(function (x) { return [P + (W - 2 * P) * ((x.ms - t0) / ((t1 - t0) || 1)), H - P - (H - 2 * P) * ((x.v - lo) / (hi - lo)), x.level]; });
+    return '<svg class="ispark" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(label) + ': ' + points.length + ' readings in the last 60 days">' +
+      '<polyline points="' + xy.map(function (a) { return a[0].toFixed(1) + ',' + a[1].toFixed(1); }).join(' ') + '" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" opacity=".45"/>' +
+      xy.map(function (a) { return '<circle cx="' + a[0].toFixed(1) + '" cy="' + a[1].toFixed(1) + '" r="3.2" class="sp-' + (LV[a[2]] || 'none') + '"/>'; }).join('') + '</svg>';
   }
 
   // ================================================================ Health details: Vitals, Risk trends, Notes
@@ -3274,6 +3311,7 @@
       case 'det-reload': render(); break;
       case 'det-jump': { ev.preventDefault(); var tgt = document.getElementById(t.getAttribute('data-id')); if (tgt) { tgt.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var h = tgt.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } break; }
       case 'home-retry': render(); break;
+      case 'ins-jump': { ev.preventDefault(); var sec = $('#ins-' + t.getAttribute('data-k')); if (sec) sec.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }); break; }
       case 'jump': case 'vsel': {
         // show only the chosen vital's chart
         var k2 = t.getAttribute('data-k'), dd2 = S.cache.dash; if (!dd2) break;

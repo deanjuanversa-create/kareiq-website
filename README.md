@@ -347,6 +347,19 @@ It is **off** until you add, in Render → Environment (kareiq-api, and kareiq-d
 The provider bills each picture. Customers' photos are sent to that provider, so check its data terms.
 Checks: `npm run check:photos` (the cartoon requests are tested against local stand-ins, no real key needed).
 
+## Health insights (21 Nov 2026)
+
+**Health details → Health insights** (`#/health/insights`) explains what a person's own records show, and Home's
+"Your Health Insights" card shows the top three (each opens the page at that insight). The insights come from
+`app/insights.js`, which reads the person's 6-month dashboard and only counts, averages and compares what is
+recorded, using the levels KareIQ's standard ranges already gave each reading (no new clinical calculation):
+the overall risk category with its reason; each measure's last 30 days against the 30 days before (readings
+outside the range, average higher / lower / about the same, more readings in range = improving; "slightly
+outside" such as Overweight is "worth watching"); an old result with nothing newer; a measure checked at every
+visit but not for 14+ days; a clear weight change; wellbeing items flagged at the latest check or more than
+once; and how many readings were recorded. Sections: Needs attention, Worth watching, Improving, Going well.
+No data gives no insight. Checks: `npm run check:insights`.
+
 ## Older setup: everything on Vercel
 
 The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and JS from Vercel's CDN, and sends `/api/*` and `/admin` to one serverless function (`api/index.js`, which runs the same code as `server.js`).
