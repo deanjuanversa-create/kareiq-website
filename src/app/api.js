@@ -581,7 +581,7 @@ async function servicesData(user, person) {
 }
 
 // "Nurse Anjali (demo)" -> "Anjali": the name a family would use, without a title or note
-const firstName = (name) => String(name || '').replace(/\(.*?\)/g, ' ').replace(/^\s*(nurse|sister|sr|dr|mr|mrs|ms)\.?\s+/i, '').trim().split(/\s+/)[0] || null;
+const firstName = (name) => String(name || '').replace(/\(.*?\)/g, ' ').replace(/^\s*(nurse|sister|sr|dr|mr|mrs|ms)\.?\s+/i, '').trim().split(/[\s,;]+/)[0] || null;
 
 async function careData(person) {
   const links = await docs.find('app_links', { personId: person.id, kind: 'caregiver' });

@@ -330,7 +330,7 @@ photo is 182 days old. Their assigned nurses get one notification per due photo 
 and from an hourly check), the customer shows "Photo needed" / "New photo due" in Assigned customers, and
 the onboarding and customer pages show the next due date. A new photo clears it.
 
-**The cartoon (family Home).** Home's greeting shows the default illustration (`public/img/home-hero.webp`).
+**The cartoon (family Home).** Home's greeting shows the default illustration (`app/img/home-hero.webp`).
 Once a customer has a photo, and an AI image service is set up, KareIQ sends the photo and Nestu
 (`public/karenest/images/mascot.webp`) to the service and shows the returned animated picture of the
 customer with Nestu side-hugging them. It is made in the background after each new photo, replaces the

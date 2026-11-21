@@ -49,6 +49,8 @@ async function login(id) {
   const waiting = c.upcoming.find((v) => v.status === 'awaiting_assignment');
   ok(waiting && waiting.confirmed === false && waiting.nurse === null, 'a visit still waiting for a nurse is not confirmed');
 
+  r = await fam('GET', 'people/P-DEMO02/care');
+  ok(r.status === 200 && r.body.upcoming.filter((v) => v.nurse).every((v) => /^[A-Za-z]+$/.test(v.nurse)), 'a nurse named "Joseph, KareNest care team" shows as "Joseph" (no comma): ' + r.body.upcoming.map((v) => v.nurse).filter(Boolean).join(', '));
   r = await meena('GET', 'people/P-DEMO05/care');
   ok(r.status === 200 && r.body.upcoming.every((v) => v.routine), 'Meena\'s father: only routine visits, so Home shows "No upcoming booking"');
 

@@ -691,7 +691,7 @@
       $('#mn').innerHTML = '<div id="pv" class="home">' + personBar(cur, people) +
         '<section class="hhero" aria-labelledby="h-hi"><div class="hhero-t"><p class="eyebrow">' + e(today) + '</p><h1 id="h-hi">Good ' + greeting() + ', ' + e(first(u.name)) + '!</h1>' +
           '<p class="hhero-s">' + e(first(cur.name)) + '\'s health journey, at a glance.</p><p class="hpill" id="hpill" aria-live="polite"><span class="skel" style="width:220px;height:18px;display:inline-block"></span></p></div>' +
-          '<div class="hhero-img" id="hheroImg"><img src="/img/home-hero.webp" alt="" width="751" height="262" decoding="async"></div></section>' +
+          '<div class="hhero-img" id="hheroImg"><img src="/app/img/home-hero.webp" alt="" width="751" height="262" decoding="async"></div></section>' +
         '<section aria-labelledby="h-glance"><h2 class="sec" id="h-glance">At a glance</h2><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
         '<div class="hgrid">' +
           '<section class="hnavs" aria-label="Health sections">' +
@@ -705,7 +705,7 @@
           '<section class="hcard hteam" aria-labelledby="h-team"><div class="hcard-h"><h2 id="h-team">' + icon('people') + '<span>Your KareIQ Care Team</span></h2></div><p class="muted small">Stay connected with your care team.</p><div id="hteam" aria-busy="true">' + sk(1, 44) + '</div>' +
             '<div class="hteam-act"><a class="btn hbtn" href="' + e(waLink()) + '" target="_blank" rel="noopener">' + icon('wa') + '<span>Contact Your Care Team</span>' + icon('arrow') + '</a><a class="hcall" href="tel:+918129345178">' + icon('phone') + '<span>' + PHONE + '</span></a></div>' +
             '<img class="hteam-img" src="/img/karehome-hero.jpg" alt="" width="1168" height="850" loading="lazy" decoding="async"></section>' +
-          '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/img/home-explore.webp" alt="" width="368" height="360" loading="lazy" decoding="async"></a>' +
+          '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/app/img/home-explore.webp" alt="" width="368" height="360" loading="lazy" decoding="async"></a>' +
         '</div>' +
         '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team. Insights compare readings with KareIQ\'s standard ranges; they are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p></div>';
       homeData(cur, q);
