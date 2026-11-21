@@ -89,11 +89,11 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
+          "value": "camera=(self), microphone=(), geolocation=()"
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; form-action 'self'; base-uri 'self'; frame-ancestors 'self'"
+          "value": "default-src 'self'; script-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self' https://kareiq-api.onrender.com https://api.karenest.co.in; form-action 'self'; base-uri 'self'; frame-ancestors 'self'"
         }
       ]
     },

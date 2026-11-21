@@ -97,6 +97,7 @@ function create(ctx) {
     };
     return {
       id: person.id, customerId: person.id, name: d.name || person.name, photo: person.photoAt || null, brands: [...new Set(plans.map((p) => p.product))],
+      photoDue: ctx.photos ? { ...ctx.photos.due(person), required: Boolean(onb) } : null,
       general: { name: d.name || person.name, dob: d.dob || '', age: firstvisit.ageFrom(d.dob) ?? (person.birthYear ? new Date().getFullYear() - person.birthYear : null), gender: d.gender || (person.sex === 'male' ? 'Male' : person.sex === 'female' ? 'Female' : ''), bloodGroup: d.bloodGroup || '', qualification: d.qualification || '', languages: [].concat(d.languages || []).join(', '), address: d.address || '',
         phone1: maskPhone(d.phone1), phone2: maskPhone(d.phone2), email: maskEmail(d.email) },
       onboarding: onb ? { status: 'completed', completedAt: onb.completedAt, completedBy: onb.completedByName } : { status: 'not_completed' },
@@ -180,6 +181,7 @@ function create(ctx) {
   async function handle(req, res, p, parts, url, user, body) {
     // notifications: every signed-in role
     if (p === 'notifications' && req.method === 'GET') {
+      if (user.role === 'caregiver' && ctx.photos) await ctx.photos.remind(user.id);
       const rows = await docs.find('app_notifications', { userId: user.id }, { sort: { createdAt: -1 }, limit: 50 });
       return json(res, 200, { ok: true, unread: rows.filter((n) => !n.readAt).length, rows });
     }
@@ -191,6 +193,7 @@ function create(ctx) {
     if (parts[0] !== 'nurse') return undefined;
     if (user.role !== 'caregiver') throw forbidden();
     if (p === 'nurse/customers' && req.method === 'GET') {
+      if (ctx.photos) await ctx.photos.remind(user.id); // photos missing or older than 6 months
       const ids = await assignedIds(user);
       const people = ids.length ? await docs.find('app_people', { id: { $in: ids } }) : [];
       const visits = await visitsOf(user.id, todayIST());
@@ -201,7 +204,7 @@ function create(ctx) {
         const next = visits.find((v) => v.personId === x.id && ACTIVE.includes(v.status));
         // onboarding: completed, ready (approved and paid), or not yet possible
         const onboarding = onbs.some((o) => o.personId === x.id) ? 'completed' : (await ctx.lifecycle.eligibility(x.id)).eligible ? 'pending' : null;
-        rows.push({ id: x.id, customerId: x.id, name: x.name, photo: x.photoAt || null, brands: [...new Set(plans.filter((pl) => pl.personId === x.id && (pl.status === 'active' || pl.status === 'paused')).map((pl) => pl.product))],
+        rows.push({ id: x.id, customerId: x.id, name: x.name, photo: x.photoAt || null, photoDue: onboarding === 'completed' && ctx.photos ? ctx.photos.due(x).due : false, brands: [...new Set(plans.filter((pl) => pl.personId === x.id && (pl.status === 'active' || pl.status === 'paused')).map((pl) => pl.product))],
           next: next ? { date: next.date, slot: next.slot, start: next.start, serviceName: next.serviceName } : null, onboarding });
       }
       return json(res, 200, { ok: true, rows: rows.sort((a, b) => a.name.localeCompare(b.name)) });

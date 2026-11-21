@@ -76,13 +76,14 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'X-Frame-Options': 'SAMEORIGIN',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
+  // the camera is allowed for KareIQ's own pages only: nurses take the customer's photo in the app
+  'Permissions-Policy': 'camera=(self), microphone=(), geolocation=()',
   'Content-Security-Policy': [
     "default-src 'self'",
     "script-src 'self'",
     "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
     "font-src 'self' https://fonts.gstatic.com",
-    "img-src 'self' data:",
+    "img-src 'self' data: blob:",
     "connect-src 'self'",
     "form-action 'self'",
     "base-uri 'self'",

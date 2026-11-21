@@ -1994,3 +1994,33 @@ kbd{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
 .brandcard .bc-mark{transition:transform .35s cubic-bezier(.34,1.56,.64,1)}.brandcard:hover .bc-mark{transform:rotate(-6deg) scale(1.06)}
 @media (prefers-reduced-motion:reduce){.brandcards>.brandcard{animation:none}.brandcard .bc-mark{transition:none}.brandcard:hover .bc-mark{transform:none}}
 .tagb.karebalance{background:#e3f5ec;color:#0b7a55}.tagb.karemind{background:#efecfb;color:#4b3cb8}.tagb.bystander{background:#fdf0e4;color:#a24f12}
+
+/* ---------- customer photo: camera dialog (take, retake, save) and "photo due" flags */
+.cam{display:grid;gap:10px}
+.cam-view{position:relative;aspect-ratio:3/4;max-height:min(62vh,560px);width:100%;margin:0 auto;border-radius:18px;overflow:hidden;background:#111}
+.cam-view video,.cam-view img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.cam-guide{position:absolute;left:50%;top:44%;width:56%;aspect-ratio:3/4;translate:-50% -50%;border:2px dashed rgba(255,255,255,.75);border-radius:50%;box-shadow:0 0 0 999px rgba(0,0,0,.22);pointer-events:none;transition:opacity .2s}
+.cam[data-state=review] .cam-guide,.cam[data-state=fallback] .cam-guide{opacity:0}
+.cam-wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;gap:8px;color:#fff;margin:0}
+.cam-wait svg{width:20px;height:20px}
+.cam[data-state=fallback] .cam-view{background:#f3f4f6;aspect-ratio:auto;min-height:150px}
+.cam-msg{margin:0;font-size:.92rem;color:var(--ink-2,#444);min-height:1.2em}
+.cam-msg.bad{color:var(--c-bad,#b42318)}
+.cam-tips{margin:0;padding-left:18px}
+.dlg-f [data-cam] svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+.phdue{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;font-size:.84rem;font-weight:600;background:#fff4e5;color:#8a4b00}
+.phdue.ok{background:#e9f7f1;color:#0e6b54;font-weight:500}
+.phdue svg{width:14px;height:14px}
+.phead .phctl{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+.nc-photo{margin:8px 0 0}
+.phdue-btn{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 12px;border-radius:12px;border:1px solid #f3c78a;background:#fff8ec;color:#6b3d00;font:inherit;font-size:.9rem;cursor:pointer;transition:background-color .2s,transform .2s}
+.phdue-btn:hover{background:#fff1d9}
+.phdue-btn:active{transform:scale(.99)}
+.phdue-btn svg{flex:none;width:18px;height:18px}
+.onb-photo{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding:16px 18px;margin:0 0 16px;border-radius:18px;background:#fff;border:1px solid rgba(0,0,0,.08)}
+.onb-photo.due{border-color:#f3c78a;background:#fffaf2}
+.onb-photo .avatar{width:88px;height:88px;flex:none}
+.onb-photo .avatar img,.onb-photo .avatar .ph{width:88px;height:88px;border-radius:50%;object-fit:cover}
+.onb-photo-t{flex:1;min-width:200px;display:grid;gap:4px;justify-items:start}
+.onb-photo-t h2{font-size:1.05rem;margin:0}
+.onb-photo .btn svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}

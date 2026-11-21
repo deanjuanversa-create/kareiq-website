@@ -687,7 +687,7 @@
       $('#mn').innerHTML = '<div id="pv" class="home">' + personBar(cur, people) +
         '<section class="hhero" aria-labelledby="h-hi"><div class="hhero-t"><p class="eyebrow">' + e(today) + '</p><h1 id="h-hi">Good ' + greeting() + ', ' + e(first(u.name)) + '!</h1>' +
           '<p class="hhero-s">' + e(first(cur.name)) + '\'s health journey, at a glance.</p><p class="hpill" id="hpill" aria-live="polite"><span class="skel" style="width:220px;height:18px;display:inline-block"></span></p></div>' +
-          '<div class="hhero-img" aria-hidden="true"><img src="/img/hero.jpg" alt="" width="1048" height="728" decoding="async"></div></section>' +
+          '<div class="hhero-img" id="hheroImg"><img src="/img/home-hero.webp" alt="" width="751" height="262" decoding="async"></div></section>' +
         '<section aria-labelledby="h-glance"><h2 class="sec" id="h-glance">At a glance</h2><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
         '<div class="hgrid">' +
           '<section class="hnavs" aria-label="Health sections">' +
@@ -708,7 +708,6 @@
     });
   }
 
-  function hm12(hm) { if (!hm) return ''; var p = String(hm).split(':'), h = Number(p[0]); return (h % 12 || 12) + ':' + p[1] + ' ' + (h < 12 ? 'AM' : 'PM'); }
   function dayShort(iso) { return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso + 'T12:00:00+05:30')); }
   function retryHtml(what) { return '<div class="hempty">' + icon('info') + '<span>We could not load ' + e(what) + ' just now. <button type="button" class="linkbtn" data-act="home-retry">Try again</button></span></div>'; }
 
@@ -732,6 +731,15 @@
       $('#hpill').innerHTML = !dash ? '<span>' + icon('cal') + 'Health updates appear after the first visit</span>'
         : '<span>' + icon('cal') + (stamps.length ? 'Last health update: <b>' + e(date(stamps[stamps.length - 1])) + '</b>' : 'No health updates yet') + '</span>' +
           '<span class="hpill-n"><i class="dot ' + (n7 ? 'good' : 'none') + '" aria-hidden="true"></i>' + n7 + ' reading' + (n7 === 1 ? '' : 's') + ' in the last 7 days</span>';
+
+      // ---- the hero picture: the customer as an animated character with Nestu, once it has been made
+      var cz = care.ok && care.cartoon;
+      if (cz && cz.status === 'ready') {
+        var hi = $('#hheroImg');
+        var im2 = new Image();
+        im2.onload = function () { if (S.pid !== p.id || !hi) return; im2.alt = first(p.name) + ' with Nestu'; hi.classList.add('own'); hi.innerHTML = ''; hi.appendChild(im2); };
+        im2.src = '/api/app/people/' + encodeURIComponent(p.id) + '/cartoon?v=' + encodeURIComponent(cz.at || '');
+      }
 
       // ---- At a glance: profile, package, next booking
       var cards = [];
@@ -1591,7 +1599,8 @@
     var pic = src ? '<img src="' + e(src) + '" alt="Photo of ' + e(name) + '" width="112" height="112" decoding="async">'
       : '<span class="ph" role="img" aria-label="No photo yet">' + icon('user') + '</span>';
     var ctl = canEdit ? '<div class="phctl"><input type="file" id="photoIn" accept="image/jpeg,image/png,image/webp" data-act="photo-file" data-id="' + e(pid) + '" hidden aria-hidden="true" tabindex="-1">' +
-      '<button type="button" class="btn sm ghost" data-act="photo-pick">' + icon('camera') + (src ? 'Replace photo' : 'Upload photo') + '</button>' +
+      '<button type="button" class="btn sm" data-act="photo-cam" data-id="' + e(pid) + '" data-name="' + e(name) + '">' + icon('camera') + (src ? 'Take a new photo' : 'Take photo') + '</button>' +
+      '<button type="button" class="btn sm ghost" data-act="photo-pick">' + icon('upload') + (src ? 'Replace from a file' : 'Upload a file') + '</button>' +
       (src ? '<button type="button" class="btn sm ghost" data-act="photo-remove" data-id="' + e(pid) + '">' + icon('trash') + 'Remove photo</button>' : '') +
       '<span class="muted small">JPG, PNG or WEBP, up to 2 MB</span><span class="phmsg" id="photoMsg" role="status" aria-live="polite"></span></div>' : '';
     return '<section class="phead" aria-label="Photo and name"><div class="avatar">' + pic + '</div><div class="phead-t"><h2>' + e(name) + '</h2>' +
@@ -2242,7 +2251,13 @@
         var nurse = S.me.user.role === 'caregiver';
         var head = '<div class="head"><div><span class="eyebrow">Customer Onboarding</span><h1>Onboarding ' + e(first(p.name)) + '</h1><p class="sub">' + e(p.name) + (d.package ? ' · ' + e(d.package.name) : '') + '. The sections follow the workbook "Data Collection - Caregiver First Visit". Onboarding is done once per customer.</p></div>' +
           (nurse ? '<a class="btn sm ghost" href="#/nurse/onboarding">' + icon('left') + 'All onboarding customers</a>' : '') + '</div>';
-        if (d.record) { fill(personBar(p, people) + head + onbReadHtml(def, d.record)); return; }
+        // the customer's photo, taken by the nurse at onboarding and again every 6 months
+        var pd = d.photoDue || {}, ph = d.person && d.person.photo;
+        var photoStep = nurse && (d.canSubmit || d.record) ? '<section class="onb-photo' + (pd.due ? ' due' : '') + '" aria-labelledby="h-onbph"><div class="avatar">' +
+            (ph ? '<img src="/api/app/people/' + encodeURIComponent(p.id) + '/photo?v=' + encodeURIComponent(ph) + '" alt="Photo of ' + e(p.name) + '" width="88" height="88">' : '<span class="ph" role="img" aria-label="No photo yet">' + icon('user') + '</span>') +
+            '</div><div class="onb-photo-t"><h2 id="h-onbph">Customer photo</h2><p class="muted small">' + (ph ? 'Taken ' + e(date(ph)) + '. ' : 'Take a clear photo of ' + e(first(p.name)) + ' at this visit. ') + 'A new photo is needed every 6 months; you will get a reminder.</p>' + photoDueHtml(ph ? pd : null) + '</div>' +
+            '<button type="button" class="btn' + (ph && !pd.due ? ' ghost' : '') + '" data-act="photo-cam" data-id="' + e(p.id) + '" data-name="' + e(p.name) + '">' + icon('camera') + (ph ? 'Take a new photo' : 'Take photo') + '</button></section>' : '';
+        if (d.record) { fill(personBar(p, people) + head + photoStep + onbReadHtml(def, d.record)); return; }
         if (!d.canSubmit) {
           var why = !d.eligible ? '<b>Not ready for onboarding</b>' + (d.eligibilityReasons && d.eligibilityReasons.length ? '<ul class="onb-why">' + d.eligibilityReasons.map(function (x) { return '<li>' + e(x) + '</li>'; }).join('') + '</ul>' : '') + '<span class="muted small">A customer becomes ready once the office has approved the requested package and the payment is confirmed.</span>'
             : (S.me.user.role === 'admin' ? 'The nurse completes the onboarding at the first visit. It will appear here, read only.' : 'Only a nurse assigned to this customer can onboard them.');
@@ -2257,7 +2272,7 @@
           var v = fd.type === 'computed' ? (d.generalAge != null ? d.generalAge + ' years' : '') : gen[fd.k];
           return '<div class="det-f onb-locked" data-k="' + e(fd.k) + '"><span class="lab">' + e(fd.label) + '</span><span class="val">' + e(Array.isArray(v) ? v.join(', ') : v || '') + '</span></div>';
         };
-        fill(personBar(p, people) + head +
+        fill(personBar(p, people) + head + photoStep +
           '<div class="onb-status pending" role="status">' + icon('clock') + '<span><b>Not completed</b> · Submit once, when every section is checked. After submission the record is permanent and read only.' + (draft ? ' <button type="button" class="link" data-act="onb-clear">Clear the draft on this device</button>' : '') + '</span></div>' +
           '<form data-form="onboarding" data-id="' + e(p.id) + '" class="detform onbform" novalidate><div class="alert bad" data-msg hidden></div>' +
             def.sections.map(function (sc, i) {
@@ -2767,6 +2782,100 @@
   }
   function closeDialog() { var d = $('dialog[open]'); if (d) d.close(); }
 
+  // ================================================================ customer photo: camera, retake or save
+  // The nurse (or the office) takes the customer's photo with the device camera. A live preview, then the
+  // shot to check: Retake, or Save. Saved photos are resized to a JPEG under 2 MB. Where the browser cannot
+  // open the camera here (permission refused, an older phone), the phone's own camera app opens instead.
+  function cameraDialog(pid, name, onSaved) {
+    var stream = null, shot = null, facing = 'environment';
+    openDialog('Photo of ' + first(name),
+      '<div class="cam" data-state="live"><div class="cam-view"><video playsinline muted autoplay aria-label="Camera preview"></video><img alt="The photo just taken" hidden><span class="cam-guide" aria-hidden="true"></span>' +
+        '<p class="cam-wait" role="status">' + icon('camera') + '<span>Opening the camera…</span></p></div>' +
+        '<p class="cam-msg" role="status" aria-live="polite"></p>' +
+        '<ul class="cam-tips muted small"><li>Face in the oval, in good light, looking at the camera</li><li>No sunglasses or mask; plain background if possible</li></ul>' +
+        '<input type="file" accept="image/*" capture="environment" hidden data-cam-file></div>',
+      '<button type="button" class="btn ghost" data-cam="flip" hidden>' + icon('route') + 'Switch camera</button>' +
+      '<button type="button" class="btn ghost" data-cam="retake" hidden>Retake</button>' +
+      '<button type="button" class="btn" data-cam="snap" disabled>' + icon('camera') + 'Take photo</button>' +
+      '<button type="button" class="btn" data-cam="save" hidden>' + icon('check') + 'Save photo</button>');
+    var dlg = $('dialog[open]'), box = $('.cam', dlg), video = $('video', dlg), img = $('.cam-view img', dlg), msg = $('.cam-msg', dlg), wait = $('.cam-wait', dlg), file = $('[data-cam-file]', dlg);
+    var btn = function (k) { return $('[data-cam="' + k + '"]', dlg); };
+    var say = function (t, bad) { msg.textContent = t || ''; msg.className = 'cam-msg' + (bad ? ' bad' : ''); };
+    var stop = function () { if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; } };
+    var mode = function (m) { // live | review | fallback
+      box.setAttribute('data-state', m);
+      video.hidden = m !== 'live'; img.hidden = m !== 'review';
+      btn('snap').hidden = m === 'review'; btn('retake').hidden = m !== 'review'; btn('save').hidden = m !== 'review';
+      btn('flip').hidden = m !== 'live' || !stream;
+      if (m === 'fallback') { btn('snap').disabled = false; btn('snap').innerHTML = icon('camera') + 'Open the camera'; }
+    };
+    var start = function () {
+      stop(); say(''); wait.hidden = false; btn('snap').disabled = true;
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { wait.hidden = true; mode('fallback'); say('This browser opens the phone\'s camera app instead.'); return; }
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: facing }, width: { ideal: 1280 }, height: { ideal: 1280 } }, audio: false }).then(function (s) {
+        if (!dlg.open) { s.getTracks().forEach(function (t) { t.stop(); }); return; }
+        stream = s; video.srcObject = s; mode('live');
+        // enable the shutter once the first frame is there (some phones need play() called)
+        var ready = function () { if (video.videoWidth) { wait.hidden = true; btn('snap').disabled = false; } };
+        video.onloadeddata = ready; video.onplaying = ready;
+        var pl = video.play(); if (pl && pl.catch) pl.catch(function () {});
+      }).catch(function (err) {
+        wait.hidden = true; mode('fallback');
+        say(err && err.name === 'NotAllowedError' ? 'Camera permission was refused. Allow the camera for this site, or use the phone\'s camera app.' : 'The camera could not be opened here. Use the phone\'s camera app instead.', true);
+      });
+    };
+    // draw onto a canvas (longest side 1280 px) and keep the JPEG under 2 MB
+    var toJpeg = function (source, w, h) {
+      var k = Math.min(1, 1280 / Math.max(w, h)), c = document.createElement('canvas');
+      c.width = Math.round(w * k); c.height = Math.round(h * k);
+      c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
+      var q = [0.88, 0.8, 0.7, 0.6];
+      return new Promise(function (ok) {
+        (function next(i) { c.toBlob(function (b) { if (b && b.size > 1900000 && i < q.length - 1) return next(i + 1); ok(b); }, 'image/jpeg', q[i]); })(0);
+      });
+    };
+    var review = function (blob) {
+      if (!blob) return say('That photo could not be read. Please try again.', true);
+      shot = blob; img.src = URL.createObjectURL(blob); mode('review'); say('Check the photo: is the face clear and well lit?');
+      stop(); btn('save').focus();
+    };
+    btn('snap').addEventListener('click', function () {
+      if (box.getAttribute('data-state') === 'fallback') { file.click(); return; }
+      if (!video.videoWidth) return say('The camera is still starting. Try again in a moment.');
+      toJpeg(video, video.videoWidth, video.videoHeight).then(review);
+    });
+    file.addEventListener('change', function () {
+      var f = file.files && file.files[0]; file.value = '';
+      if (!f) return;
+      if (!/^image\//.test(f.type)) return say('Please take a photo (JPG, PNG or WEBP).', true);
+      var im = new Image(); im.onload = function () { toJpeg(im, im.naturalWidth, im.naturalHeight).then(review); URL.revokeObjectURL(im.src); };
+      im.onerror = function () { say('That photo could not be read. Please try again.', true); };
+      im.src = URL.createObjectURL(f);
+    });
+    btn('retake').addEventListener('click', function () { shot = null; if (img.src) URL.revokeObjectURL(img.src); img.removeAttribute('src'); if (box.getAttribute('data-state') === 'review' && !navigator.mediaDevices) { mode('fallback'); file.click(); return; } start(); });
+    btn('flip').addEventListener('click', function () { facing = facing === 'environment' ? 'user' : 'environment'; start(); });
+    btn('save').addEventListener('click', function () {
+      if (!shot) return;
+      var b = btn('save'); b.disabled = true; btn('retake').disabled = true; say('Saving…');
+      fetch('/api/app/people/' + encodeURIComponent(pid) + '/photo', { method: 'POST', credentials: 'same-origin', body: shot, headers: { 'Content-Type': 'image/jpeg', 'X-Requested-With': 'kareiq', 'X-CSRF': S.csrf } })
+        .then(function (res) { return res.json().catch(function () { return { ok: false }; }); })
+        .then(function (x) {
+          b.disabled = false; btn('retake').disabled = false;
+          if (!x.ok) return say(x.message || 'The photo could not be saved. Please try again.', true);
+          closeDialog(); toast('Photo saved.' + (x.next ? ' The next one is due on ' + date(x.next) + '.' : ''));
+          if (onSaved) onSaved(x); else render();
+        })
+        .catch(function () { b.disabled = false; btn('retake').disabled = false; say('The photo could not be saved. Check the connection and try again.', true); });
+    });
+    dlg.addEventListener('close', function () { stop(); if (img.src) URL.revokeObjectURL(img.src); });
+    start();
+  }
+  // "Photo due" line for the care team: none yet, or older than 6 months
+  function photoDueHtml(pd) {
+    if (!pd || !pd.due) return pd && pd.dueOn ? '<span class="phdue ok">' + icon('check') + 'Next photo due ' + e(date(pd.dueOn)) + '</span>' : '';
+    return '<span class="phdue">' + icon('clock') + (pd.reason === 'missing' ? 'No photo yet' : 'Photo older than 6 months') + '</span>';
+  }
+
   // ================================================================ forms
   function formData(form) {
     var o = {};
@@ -3190,6 +3299,8 @@
         break;
       }
       case 'photo-pick': { var pin = $('#photoIn'); if (pin) pin.click(); break; }
+      case 'photo-cam': { var onbf = $('form[data-form="onboarding"]'); if (onbf) onbDraft(onbf); } // keep what is typed: the page reloads after the photo
+        cameraDialog(t.getAttribute('data-id'), t.getAttribute('data-name') || '', function () { S.cache.ncust = null; render(); }); break;
       case 'photo-remove':
         openDialog('Remove the photo', '<form data-form="photoremove" data-id="' + e(t.getAttribute('data-id')) + '" novalidate><div class="alert bad" data-msg hidden></div><p>Remove this photo? A plain placeholder will show instead until a new photo is added.</p></form>',
           '<button class="btn ghost" data-act="close">Keep it</button><button class="btn" data-act="submit-dialog">Remove photo</button>');
@@ -3476,7 +3587,7 @@
     shell: shell, go: go, route: route, render: render, loading: loading, pageError: pageError, FORMS: FORMS, todayIST: todayIST, first: first, initials: initials,
     queryOf: queryOf, reducedMotion: reducedMotion, phoneNice: phoneNice, field: field, busy: busy, showErrors: showErrors, formData: formData, withPerson: withPerson,
     personBar: personBar, fill: fill, loadPeople: loadPeople, rs: rs, BRANDS: BRANDS, waLink: waLink, refreshBell: refreshBell, ACTIONS: ACTIONS, METRICS: METRICS,
-    riskHero: riskHeroHtml, CAT_ICON: CAT_ICON, POLICIES: POLICIES, swapPanel: swapPanel,
+    riskHero: riskHeroHtml, CAT_ICON: CAT_ICON, POLICIES: POLICIES, swapPanel: swapPanel, cameraDialog: cameraDialog, photoDueHtml: photoDueHtml,
     register: function (name, mod) { MODS[name] = mod; }
   };
   render();

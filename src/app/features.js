@@ -313,7 +313,7 @@ function create(ctx) {
         const el = rec ? { eligible: true, reasons: [] } : await ctx.lifecycle.eligibility(person.id);
         const shownGeneral = { ...general };
         if (user.role === 'caregiver') { for (const k of ['phone1', 'phone2']) if (shownGeneral[k]) shownGeneral[k] = nursing.maskPhone(shownGeneral[k]); if (shownGeneral.email) shownGeneral.email = nursing.maskEmail(shownGeneral.email); }
-        return json(res, 200, { ok: true, person: { id: person.id, name: person.name }, record: await view(rec), status: rec ? 'completed' : el.eligible ? 'pending' : 'not_eligible',
+        return json(res, 200, { ok: true, person: { id: person.id, name: person.name, photo: person.photoAt || null }, photoDue: ctx.photos ? ctx.photos.due(person) : null, record: await view(rec), status: rec ? 'completed' : el.eligible ? 'pending' : 'not_eligible',
           eligible: el.eligible, eligibilityReasons: el.reasons, package: el.plan ? { planId: el.plan.planId, name: planName(el.plan.planId), product: el.plan.product, startDate: el.plan.startDate || null } : null,
           canSubmit: !rec && el.eligible && user.role === 'caregiver' && (await canRecord(user, person.id)),
           general: shownGeneral, lockedKeys: Object.keys(general), generalAge: firstvisit.ageFrom(general.dob),

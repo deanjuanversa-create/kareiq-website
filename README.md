@@ -315,6 +315,38 @@ the seven categories as filters inside it.
 
 Tests: `node tools/check-lifecycle.js http://localhost:3000` on a fresh demo server.
 
+## Customer photos and the cartoon with Nestu (21 Nov 2026)
+
+**Taking the photo.** Nurses take the customer's photo with the device camera: on the onboarding page
+("Customer photo"), on the customer page ("Take photo" / "Take a new photo"), or from the "Photo needed"
+line in Assigned customers. The camera opens with a face guide; after the shot the nurse checks it and
+chooses **Retake** or **Save**. Saved photos are JPEGs under 2 MB. If the browser cannot open the camera
+(permission refused, older phone), the phone's camera app opens instead and the same Retake / Save step
+follows. The office can also take or upload a photo from Profile. Families see the photo but cannot change it.
+The camera needs `Permissions-Policy: camera=(self)` (server.js and vercel.json); microphone and location stay off.
+
+**Every 6 months.** A photo is due when an onboarded customer with an active package has no photo, or the
+photo is 182 days old. Their assigned nurses get one notification per due photo (when they open the portal,
+and from an hourly check), the customer shows "Photo needed" / "New photo due" in Assigned customers, and
+the onboarding and customer pages show the next due date. A new photo clears it.
+
+**The cartoon (family Home).** Home's greeting shows the default illustration (`public/img/home-hero.webp`).
+Once a customer has a photo, and an AI image service is set up, KareIQ sends the photo and Nestu
+(`public/karenest/images/mascot.webp`) to the service and shows the returned animated picture of the
+customer with Nestu side-hugging them. It is made in the background after each new photo, replaces the
+previous one, is removed with the photo, and is retried up to 3 times if the service fails (`src/app/photos.js`).
+It is **off** until you add, in Render → Environment (kareiq-api, and kareiq-demo if wanted):
+
+| Setting | Value |
+| --- | --- |
+| `CARTOON_PROVIDER` | `openai` or `gemini` |
+| `OPENAI_API_KEY` | your OpenAI key (for `openai`) |
+| `GEMINI_API_KEY` | your Google AI Studio key (for `gemini`) |
+| `CARTOON_MODEL` | optional: default `gpt-image-1.5` (OpenAI) or `gemini-3.1-flash-image` (Gemini) |
+
+The provider bills each picture. Customers' photos are sent to that provider, so check its data terms.
+Checks: `npm run check:photos` (the cartoon requests are tested against local stand-ins, no real key needed).
+
 ## Older setup: everything on Vercel
 
 The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and JS from Vercel's CDN, and sends `/api/*` and `/admin` to one serverless function (`api/index.js`, which runs the same code as `server.js`).

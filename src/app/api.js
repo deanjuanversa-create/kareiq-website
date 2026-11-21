@@ -193,6 +193,8 @@ shared.risk = riskEngineMod.create(shared);
 shared.documents = require('./docintel').create({ ...shared, audit, risk: shared.risk });
 // the package request -> approval -> payment -> onboarding lifecycle (src/app/lifecycle.js)
 shared.lifecycle = require('./lifecycle').create(shared);
+// customer photos: the 6-month rule, nurse reminders and the "with Nestu" cartoon (src/app/photos.js)
+shared.photos = require('./photos').create({ ...shared, audit });
 // a nurse may see a customer they are linked to, or one they have an active visit with
 async function nurseVisit(userId, personId) {
   const since = dayIST(-1);
@@ -596,7 +598,7 @@ async function careData(person) {
       routine: v.service === 'home-visit' || v.service === 'first-visit', confirmed: schedulerMod.ACTIVE.includes(v.status), status: v.status, statusName: schedulerMod.STATUS[v.status] || v.status,
       nurse: v.nurseId ? firstName(names[v.nurseId]) : null };
   });
-  return { person: { id: person.id, name: person.name }, team, upcoming };
+  return { person: { id: person.id, name: person.name }, team, upcoming, photo: Boolean(person.photoId), cartoon: shared.photos.view(person) };
 }
 
 async function invoicesData(person) {
@@ -1872,6 +1874,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (req.method === 'DELETE') {
       if (person.photoId) await docs.remove('app_files', person.photoId);
       await docs.update('app_people', person.id, { photoId: null, photoAt: null });
+      await shared.photos.afterRemove(person.id);
       await audit(user.id, 'photo.remove', person.id, null);
       return json(res, 200, { ok: true });
     }
@@ -1887,8 +1890,20 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     await docs.insert('app_files', { id: fileId, personId: person.id, kind: 'photo', mime, data: buf.toString('base64'), createdAt: at });
     if (person.photoId) await docs.remove('app_files', person.photoId);
     await docs.update('app_people', person.id, { photoId: fileId, photoAt: at });
-    await audit(user.id, 'photo.set', person.id, { size: buf.length });
-    return json(res, 201, { ok: true, photo: at });
+    await audit(user.id, 'photo.set', person.id, { size: buf.length, by: user.role });
+    await shared.photos.afterPhoto(person.id);
+    return json(res, 201, { ok: true, photo: at, next: shared.photos.due({ photoAt: at }).dueOn });
+  }
+  // the animated picture of the customer with Nestu (made from the latest photo), for the family Home
+  async function cartoonRoute(req, res, personId, user) {
+    if (req.method !== 'GET') throw notFound();
+    const person = await visiblePerson(user, personId);
+    const f = person.cartoonId && person.cartoonFor === person.photoId ? await docs.findOne('app_files', { id: person.cartoonId }) : null;
+    if (!f) throw notFound();
+    const buf = Buffer.from(f.data, 'base64');
+    res.writeHead(200, { 'Content-Type': f.mime || sniff(buf) || 'image/png', 'Content-Length': buf.length, 'Cache-Control': 'private, max-age=86400', 'X-Content-Type-Options': 'nosniff' });
+    res.end(buf);
+    return true;
   }
 
   const oauth = createOAuth({ json, isHttps, signIn, audit, uid, now });
@@ -1906,6 +1921,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     global.__kqRiskTimer = true;
     const tick = () => ensureReady().then(() => shared.risk.refreshStale()).catch((e) => console.error('[risk] refresh failed:', e.message));
     setTimeout(tick, 15000).unref();
+    setInterval(tick, 3600000).unref();
+  }
+  if (!global.__kqPhotoTimer && process.env.APP_STATELESS !== 'true') {
+    global.__kqPhotoTimer = true;
+    const tick = () => ensureReady().then(async () => { await shared.photos.remindAll(); await shared.photos.resume(); }).catch((e) => console.error('[photos] check failed:', e.message));
+    setTimeout(tick, 20000).unref();
     setInterval(tick, 3600000).unref();
   }
 
@@ -1947,6 +1968,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'POST') return await uploadRecord(req, res, parts[1], signed.user);
       if (parts[0] === 'records' && parts[2] === 'file' && req.method === 'GET') return await downloadRecord(req, res, parts[1], signed.user, url);
       if (parts[0] === 'people' && parts[2] === 'photo' && parts.length === 3) return await photoRoute(req, res, parts[1], signed.user);
+      if (parts[0] === 'people' && parts[2] === 'cartoon' && parts.length === 3) return await cartoonRoute(req, res, parts[1], signed.user);
       // employee KYC documents are raw files too (office only)
       if (parts[0] === 'admin' && parts[1] === 'employees' && parts[3] === 'kyc' && parts.length === 4 && req.method === 'POST') {
         if (signed.user.role !== 'admin') throw forbidden();
