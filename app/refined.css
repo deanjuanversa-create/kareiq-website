@@ -533,3 +533,51 @@ body[data-brand="kareiq"] .vsum .avgbar>div span{display:block}
 body[data-brand="kareiq"] .vsum .avgbar>div b{display:block}
 body[data-brand="kareiq"] .vsum .avgbar .ast{margin-bottom:3px}
 body[data-brand="kareiq"] .vc-sp.none em{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 4px)}
+
+/* ---------- chart tooltip: guide line, rings and a card that glides between readings */
+body[data-brand="kareiq"] .cwrap{position:relative}
+body[data-brand="kareiq"] .chart2{outline:none;touch-action:pan-y}
+body[data-brand="kareiq"] .chart2:focus-visible{outline:3px solid var(--accent);outline-offset:4px;border-radius:12px}
+body[data-brand="kareiq"] .chart2 .hitarea{fill:transparent;cursor:crosshair}
+body[data-brand="kareiq"] .chart2 .hov{opacity:0;transition:opacity .18s ease;pointer-events:none}
+body[data-brand="kareiq"] .chart2 .hov.on{opacity:1}
+body[data-brand="kareiq"] .chart2 .hl{stroke:rgba(0,0,0,.22);stroke-width:1.2;stroke-dasharray:3 4;transition:x1 .22s cubic-bezier(.22,1,.36,1),x2 .22s cubic-bezier(.22,1,.36,1)}
+body[data-brand="kareiq"] .chart2 .hr{stroke:#fff;stroke-width:3;transition:cx .22s cubic-bezier(.22,1,.36,1),cy .22s cubic-bezier(.22,1,.36,1);filter:drop-shadow(0 2px 4px rgba(0,0,0,.25))}
+body[data-brand="kareiq"] .chart2 .hr.s1{fill:#139b8c}
+body[data-brand="kareiq"] .chart2 .hr.s2{fill:#ef6b7b}
+body[data-brand="kareiq"] .chart2 .hr.lv-good{fill:var(--c-good)}
+body[data-brand="kareiq"] .chart2 .hr.lv-ok{fill:var(--c-ok)}
+body[data-brand="kareiq"] .chart2 .hr.lv-warn{fill:var(--c-warn)}
+body[data-brand="kareiq"] .chart2 .hr.lv-bad{fill:var(--c-bad)}
+body[data-brand="kareiq"] .chart2 .hov.on .hr{animation:kq-ring 1.6s ease-out infinite}
+@keyframes kq-ring{0%{stroke-width:3}50%{stroke-width:5}100%{stroke-width:3}}
+body[data-brand="kareiq"] .ctip{position:absolute;left:0;top:0;z-index:5;min-width:150px;max-width:240px;padding:10px 12px 9px;border-radius:14px;
+  background:rgba(255,255,255,.9);-webkit-backdrop-filter:saturate(180%) blur(16px);backdrop-filter:saturate(180%) blur(16px);
+  border:1px solid rgba(0,0,0,.07);box-shadow:0 1px 2px rgba(0,0,0,.06),0 16px 34px -14px rgba(20,40,60,.45);
+  pointer-events:none;opacity:0;scale:.92;transform-origin:var(--ax,50%) 100%;
+  transition:transform .24s cubic-bezier(.22,1,.36,1),opacity .16s ease,scale .2s cubic-bezier(.34,1.56,.64,1)}
+body[data-brand="kareiq"] .ctip.side-r{transform-origin:0 var(--ay,50%)}
+body[data-brand="kareiq"] .ctip.side-l{transform-origin:100% var(--ay,50%)}
+body[data-brand="kareiq"] .ctip.on{opacity:1;scale:1}
+body[data-brand="kareiq"] .ctip.pre{transition:none}
+body[data-brand="kareiq"] .ctip::after{content:"";position:absolute;left:var(--ax,50%);bottom:-6px;width:11px;height:11px;margin-left:-6px;background:inherit;border-right:1px solid rgba(0,0,0,.07);border-bottom:1px solid rgba(0,0,0,.07);rotate:45deg;-webkit-backdrop-filter:none;backdrop-filter:none;background:#fff}
+body[data-brand="kareiq"] .ctip.side-r::after{bottom:auto;left:-6px;top:var(--ay,50%);margin:-6px 0 0;rotate:135deg}
+body[data-brand="kareiq"] .ctip.side-l::after{bottom:auto;left:auto;right:-6px;top:var(--ay,50%);margin:-6px 0 0;rotate:-45deg}
+body[data-brand="kareiq"] .ct-d{font-size:.76rem;font-weight:600;color:var(--muted);margin-bottom:4px;white-space:nowrap}
+body[data-brand="kareiq"] .ct-v{display:flex;align-items:center;gap:7px;font-size:.88rem;color:var(--ink-2);line-height:1.5}
+body[data-brand="kareiq"] .ct-v i{flex:none;width:9px;height:9px;border-radius:50%;background:#139b8c}
+body[data-brand="kareiq"] .ct-v i.s2{background:#ef6b7b}
+body[data-brand="kareiq"] .ct-v i.lv-good{background:var(--c-good)}
+body[data-brand="kareiq"] .ct-v i.lv-ok{background:var(--c-ok)}
+body[data-brand="kareiq"] .ct-v i.lv-warn{background:var(--c-warn)}
+body[data-brand="kareiq"] .ct-v i.lv-bad{background:var(--c-bad)}
+body[data-brand="kareiq"] .ct-v b{margin-left:auto;font-size:1.02rem;color:var(--ink);letter-spacing:-.01em;white-space:nowrap}
+body[data-brand="kareiq"] .ct-v b small{font-size:.74rem;font-weight:500;color:var(--muted)}
+body[data-brand="kareiq"] .ctip.one .ct-v b{margin-left:0;font-size:1.2rem}
+body[data-brand="kareiq"] .ct-s{display:inline-block;margin-top:6px;padding:2px 9px;border-radius:999px;font-size:.74rem;font-weight:700;--sc:var(--c-none);background:color-mix(in srgb,var(--sc) 14%,#fff);color:color-mix(in srgb,var(--sc) 85%,#000)}
+body[data-brand="kareiq"] .ct-s.good{--sc:var(--c-good)}
+body[data-brand="kareiq"] .ct-s.ok{--sc:var(--c-ok)}
+body[data-brand="kareiq"] .ct-s.warn{--sc:var(--c-warn)}
+body[data-brand="kareiq"] .ct-s.bad{--sc:var(--c-bad)}
+body[data-brand="kareiq"] .ct-n{float:right;margin:8px 0 0 10px;font-size:.7rem;color:var(--muted)}
+@media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .ctip,body[data-brand="kareiq"] .chart2 .hr,body[data-brand="kareiq"] .chart2 .hl{transition:none;animation:none}}

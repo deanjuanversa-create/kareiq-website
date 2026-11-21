@@ -1311,17 +1311,94 @@
   }
   // draw charts at their real width after the HTML is on the page
   // anim: the line draws itself and the points pop in (when a chart is opened, not on resize)
+  // ---------------------------------------------------------------- chart tooltip
+  // Pointing anywhere over a chart picks the nearest reading: a guide line, a ring on each value and a
+  // card with the date, the values and the range status glide to it. Tap on phones; arrow keys when
+  // the chart has focus (Escape hides it).
+  function chartTip(wrap) {
+    var svg = $('svg.chart2', wrap); if (!svg) return;
+    var info = CHART_PTS[svg.getAttribute('data-gid')]; if (!info || !info.list.length) return;
+    var m = info.m, list = info.list, hov = $('.hov', svg), at = -1;
+    var tipEl = document.createElement('div');
+    tipEl.className = 'ctip'; tipEl.setAttribute('role', 'status'); tipEl.setAttribute('aria-live', 'polite');
+    wrap.appendChild(tipEl);
+    var show = function (i) {
+      if (i < 0 || i >= list.length) return;
+      var en = list[i], r = en.row, k = svg.getBoundingClientRect().width / info.W;
+      var lv = LV[r.level] || 'none';
+      // the guide and rings (in chart units)
+      $('.hl', hov).setAttribute('x1', en.x); $('.hl', hov).setAttribute('x2', en.x);
+      $$('.hr', hov).forEach(function (c, ci) {
+        var v = en.vals.filter(function (x) { return x.si === ci; })[0];
+        c.style.display = v ? '' : 'none';
+        if (v) { c.setAttribute('cx', en.x); c.setAttribute('cy', v.y); c.setAttribute('class', 'hr s' + (ci + 1) + (m.levels ? ' lv-' + lv : '')); }
+      });
+      if (i !== at) {
+        var rows = m.levels
+          ? '<div class="ct-v"><i class="lv-' + lv + '"></i><b>' + e(r.display || r.value) + '</b></div>'
+          : en.vals.map(function (v) { return '<div class="ct-v"><i class="s' + (v.si + 1) + '"></i>' + (m.keys.length > 1 ? '<span>' + e(v.name) + '</span>' : '') + '<b>' + e(fmtNum(v.v)) + (m.unit ? ' <small>' + e(m.unit) + '</small>' : '') + '</b></div>'; }).join('');
+        var status = r.status || r.band;
+        tipEl.classList.toggle('one', m.levels || en.vals.length === 1);
+        tipEl.innerHTML = '<div class="ct-d">' + e(dt(r.at)) + '</div>' + rows + (status ? '<span class="ct-s ' + lv + '">' + e(status) + '</span>' : '') +
+          (list.length > 1 ? '<span class="ct-n">' + (i + 1) + ' of ' + list.length + '</span>' : '');
+        at = i;
+      }
+      // the card: above the highest value, kept inside the chart; below it when there is no room above
+      // (SVG elements have no offsetLeft: measure the chart against its box)
+      var wr = wrap.getBoundingClientRect(), sr = svg.getBoundingClientRect();
+      var ox = sr.left - wr.left - wrap.clientLeft, oy = sr.top - wr.top - wrap.clientTop;
+      var top = Math.min.apply(null, en.vals.map(function (v) { return v.y; })) * k;
+      var w = tipEl.offsetWidth, h = tipEl.offsetHeight, ww = wrap.clientWidth;
+      var cx = en.x * k + ox, side = '';
+      var px = Math.min(Math.max(cx - w / 2, 4), ww - w - 4);
+      var py = top + oy - h - 14;
+      if (py < 2) {
+        // no room above: beside the reading (right if it fits, else left), level with the values
+        var lowY = Math.max.apply(null, en.vals.map(function (v) { return v.y; })) * k + oy, mid = (top + oy + lowY) / 2;
+        side = cx + 18 + w <= ww - 4 ? 'r' : 'l';
+        px = side === 'r' ? cx + 18 : cx - 18 - w;
+        py = Math.max(2, mid - h / 2);
+      }
+      tipEl.style.transform = 'translate3d(' + Math.round(px) + 'px,' + Math.round(py) + 'px,0)';
+      tipEl.style.setProperty('--ax', Math.round(Math.min(Math.max(cx - px, 14), w - 14)) + 'px');
+      tipEl.style.setProperty('--ay', Math.round(Math.min(Math.max((top + oy) - py, 14), h - 14)) + 'px');
+      tipEl.classList.toggle('side-r', side === 'r'); tipEl.classList.toggle('side-l', side === 'l');
+      if (!tipEl.classList.contains('on')) { tipEl.classList.add('pre'); void tipEl.offsetWidth; tipEl.classList.remove('pre'); }
+      tipEl.classList.add('on'); hov.classList.add('on');
+    };
+    var hide = function () { tipEl.classList.remove('on'); hov.classList.remove('on'); };
+    var nearest = function (ev) {
+      var rc = svg.getBoundingClientRect(), vx = (ev.clientX - rc.left) * info.W / rc.width, best = 0;
+      list.forEach(function (en, i) { if (Math.abs(en.x - vx) < Math.abs(list[best].x - vx)) best = i; });
+      return best;
+    };
+    svg.addEventListener('pointermove', function (ev) { show(nearest(ev)); });
+    svg.addEventListener('pointerdown', function (ev) { show(nearest(ev)); });
+    svg.addEventListener('pointerleave', function (ev) { if (ev.pointerType === 'mouse') hide(); });
+    svg.addEventListener('focus', function () { show(at < 0 ? list.length - 1 : at); });
+    svg.addEventListener('blur', hide);
+    svg.addEventListener('keydown', function (ev) {
+      var i = at < 0 ? list.length - 1 : at;
+      if (ev.key === 'ArrowLeft' || ev.key === 'ArrowDown') { ev.preventDefault(); show(Math.max(0, i - 1)); }
+      else if (ev.key === 'ArrowRight' || ev.key === 'ArrowUp') { ev.preventDefault(); show(Math.min(list.length - 1, i + 1)); }
+      else if (ev.key === 'Home') { ev.preventDefault(); show(0); }
+      else if (ev.key === 'End') { ev.preventDefault(); show(list.length - 1); }
+      else if (ev.key === 'Escape') { hide(); }
+    });
+  }
+
   function drawCharts(anim) {
     var d = S.cache.dash; if (!d) return;
     initSliders();
     anim = anim === true && !reducedMotion();
+    CHART_PTS = {};
     $$('[data-chart]').forEach(function (el) {
       var m = d.series.filter(function (x) { return x.metric === el.getAttribute('data-chart'); })[0];
-      if (m) el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim);
+      if (m) { el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim); chartTip(el); }
     });
     $$('[data-rchart]').forEach(function (el) {
       var m = riskSeries(d, el.getAttribute('data-rchart'));
-      if (m && m.rows.length) el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim);
+      if (m && m.rows.length) { el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim); chartTip(el); }
     });
     if (anim) $$('svg.chart2.anim path.ln').forEach(function (pl) {
       var len = 0; try { len = pl.getTotalLength(); } catch (x) {}
@@ -1378,6 +1455,7 @@
     }, 170);
   }
   chartSvg.n = 0;
+  var CHART_PTS = {};
   function chartSvg(m, range, width, anim) {
     var W = Math.max(300, Math.round(width || 640)), small = W < 560;
     var H = small ? 200 : 230, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
@@ -1406,7 +1484,7 @@
     var tl = timeline(m, start, end, x0, x1), x = tl.x;
     var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
     var gid = 'cg' + (++chartSvg.n);
-    var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">' +
+    var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" data-gid="' + gid + '" tabindex="0" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings. Use the arrow keys to read each one.') + '">' +
       '<defs>' + m.keys.map(function (k, i) { return '<linearGradient id="' + gid + '-' + (i + 1) + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="gs' + (i + 1) + '" stop-opacity=".22"/><stop offset="1" class="gs' + (i + 1) + '" stop-opacity="0"/></linearGradient>'; }).join('') + '</defs>';
     // y grid and labels
     for (var v = lo; v <= hi + 1e-9; v += stepGuess) {
@@ -1432,7 +1510,7 @@
     });
     out += '<line x1="' + L + '" y1="' + T + '" x2="' + L + '" y2="' + (H - B) + '" class="ax"/><line x1="' + L + '" y1="' + (H - B) + '" x2="' + (W - R) + '" y2="' + (H - B) + '" class="ax"/>';
     // readings in time order: line, points and a larger invisible target for the tooltip
-    var pIdx = 0, pTotal = Math.max(1, m.rows.length * m.keys.length);
+    var pIdx = 0, pTotal = Math.max(1, m.rows.length * m.keys.length), byTime = {};
     m.keys.forEach(function (k, si) {
       var pts = m.rows.filter(function (r) { return r[k] != null; }).slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (r) { return [x(r.ms), y(r[k]), r]; });
       var rad = pts.length > 90 ? 2.6 : pts.length > 40 ? 3.6 : 5;
@@ -1453,11 +1531,16 @@
         if (nx) { var a = run[run.length - 1], b = nx[0]; out += '<line class="ln gapln s' + (si + 1) + '" x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '"/>'; }
       });
       pts.forEach(function (p) {
-        var tip = m.tip ? m.tip(p[2]) : dt(p[2].at) + ': ' + (m.keys.length > 1 ? m.names[si] + ' ' : '') + p[2][k] + (m.unit ? ' ' + m.unit : '');
-        out += '<g class="pg"' + (anim ? ' style="--d:' + Math.round(150 + 650 * (pIdx++ / pTotal)) + 'ms"' : '') + '><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/>' +
-          '<circle class="hit" r="11" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"><title>' + e(tip) + '</title></circle></g>';
+        out += '<g class="pg"' + (anim ? ' style="--d:' + Math.round(150 + 650 * (pIdx++ / pTotal)) + 'ms"' : '') + '><circle class="pt s' + (si + 1) + (m.levels ? ' lv-' + (LV[p[2].level] || 'none') : '') + '" r="' + rad + '" cx="' + p[0].toFixed(1) + '" cy="' + p[1].toFixed(1) + '"/></g>';
+        var key = p[2].ms, en = byTime[key];
+        if (!en) en = byTime[key] = { x: p[0], ms: key, row: p[2], vals: [] };
+        en.vals.push({ y: p[1], si: si, name: m.names[si], v: p[2][k] });
       });
     });
+    // hover: a guide line and a ring on each value at the chosen time; an invisible layer catches the pointer
+    out += '<g class="hov" aria-hidden="true"><line class="hl" x1="0" x2="0" y1="' + T + '" y2="' + (H - B) + '"/>' + m.keys.map(function (k2, i) { return '<circle class="hr s' + (i + 1) + '" r="6"/>'; }).join('') + '</g>' +
+      '<rect class="hitarea" x="' + L + '" y="0" width="' + (W - R - L) + '" height="' + (H - B + 6) + '"/>';
+    CHART_PTS[gid] = { W: W, m: m, list: Object.keys(byTime).map(function (k3) { return byTime[k3]; }).sort(function (a, b) { return a.ms - b.ms; }) };
     return out + '</svg>';
   }
   function isoDay(ms) { var p = istParts(ms); return p.y + '-' + ('0' + (p.m + 1)).slice(-2) + '-' + ('0' + p.d).slice(-2); }
