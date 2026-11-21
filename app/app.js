@@ -697,11 +697,11 @@
           '<section class="hcard hins" aria-labelledby="h-ins"><div class="hcard-h"><h2 id="h-ins">' + icon('star') + '<span>Your Health Insights</span></h2></div><div id="hins" aria-busy="true">' + sk(2, 64) + '</div></section>' +
         '</div>' +
         '<div class="hlow">' +
-          '<section class="hcard" aria-labelledby="h-care"><div class="hcard-h"><h2 id="h-care">' + icon('clip') + '<span>Your Care at a Glance</span></h2><a class="hcard-more" href="#/package' + q + '">View All' + icon('arrow') + '</a></div><div id="hcare" aria-busy="true">' + sk(2, 52) + '</div></section>' +
+          '<section class="hcard" aria-labelledby="h-care"><div class="hcard-h"><h2 id="h-care">' + icon('clip') + '<span>Your Care at a Glance</span></h2><a class="hcard-more" href="#/package' + q + '">View All' + icon('arrow') + '</a></div><div id="hcare" aria-busy="true">' + sk(1, 52) + '</div></section>' +
           '<section class="hcard hteam" aria-labelledby="h-team"><div class="hcard-h"><h2 id="h-team">' + icon('people') + '<span>Your KareIQ Care Team</span></h2></div><p class="muted small">Stay connected with your care team.</p><div id="hteam" aria-busy="true">' + sk(1, 44) + '</div>' +
             '<div class="hteam-act"><a class="btn hbtn" href="' + e(waLink()) + '" target="_blank" rel="noopener">' + icon('wa') + '<span>Contact Your Care Team</span>' + icon('arrow') + '</a><a class="hcall" href="tel:+918129345178">' + icon('phone') + '<span>' + PHONE + '</span></a></div>' +
             '<img class="hteam-img" src="/img/karehome-hero.jpg" alt="" width="1168" height="850" loading="lazy" decoding="async"></section>' +
-          '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/karenest/images/exp1.webp" alt="" width="1600" height="793" loading="lazy" decoding="async"></a>' +
+          '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/img/home-explore.webp" alt="" width="368" height="360" loading="lazy" decoding="async"></a>' +
         '</div>' +
         '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team. Insights compare readings with KareIQ\'s standard ranges; they are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p></div>';
       homeData(cur, q);
@@ -794,17 +794,13 @@
           : '<div class="hempty">' + icon('heart') + '<span><b>No insights yet</b>Insights appear here once the care team records ' + e(first(p.name)) + '\'s readings.</span></div>';
       }
 
-      // ---- Care at a glance: the care plan and the next appointment (any visit, routine included)
+      // ---- Care at a glance: the care plan
       var hc = $('#hcare'); hc.removeAttribute('aria-busy');
-      var nextAppt = up.filter(function (v) { return v.confirmed; })[0] || up[0];
       var row = function (href, ic, title, sub, pill) { return '<a class="hrow" href="' + href + '"><span class="hrow-i" aria-hidden="true">' + icon(ic) + '</span><span class="hrow-t"><b>' + e(title) + '</b><span>' + e(sub) + '</span></span>' + (pill || '') + icon('right') + '</a>'; };
       var planRow = act ? row('#/package' + q, 'clip', 'My Care Plan', act.productName + ' · ' + act.name, '<span class="hpillx ' + (act.status === 'paused' ? 'warn' : 'good') + '">' + (act.status === 'paused' ? 'Paused' : 'Active') + '</span>')
         : pend ? row('#/package' + q, 'clip', 'My Care Plan', (pend.productName || 'Package') + ' · being set up', '<span class="hpillx info">Pending</span>')
         : row('#/packages' + q, 'clip', 'My Care Plan', pk.ok ? 'No active care plan yet' : 'Could not load just now', '');
-      var apptRow = !care.ok ? row('#/package' + q, 'cal', 'Next Appointment', 'Could not load just now', '')
-        : nextAppt ? row('#/package' + q, 'cal', 'Next Appointment', nextAppt.serviceName + ' · ' + dayShort(nextAppt.date) + (nextAppt.start ? ', ' + hm12(nextAppt.start) : nextAppt.slot ? ', ' + nextAppt.slot : '') + (nextAppt.confirmed ? (nextAppt.nurse ? ' · ' + nextAppt.nurse : '') : ' · finding a nurse'), '')
-        : row('#/package' + q, 'cal', 'Next Appointment', 'No upcoming appointment', '');
-      hc.innerHTML = planRow + apptRow;
+      hc.innerHTML = planRow;
 
       // ---- Care team: the nurses assigned to this person (names only)
       var ht = $('#hteam'); ht.removeAttribute('aria-busy');
