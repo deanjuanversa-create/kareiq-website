@@ -89,6 +89,9 @@
       kidney: '<path d="M10 5.5C6.5 4 4 7 4 11s2 8 5.5 8c2.2 0 2.7-2 2-3.6-.8-1.8-.9-3.4.4-4.6 1.4-1.3 1.6-4-1.9-5.3Z"/><path d="M14 5.5c3.5-1.5 6 1.5 6 5.5s-2 8-5.5 8"/>',
       liver: '<path d="M3.5 9.5c0-2.5 2.5-4 6-4h7c2.5 0 4 1.5 4 3.5 0 4-4.5 9.5-9 9.5-3 0-3-3-4.5-4.5S3.5 12 3.5 9.5Z"/>',
       drop: '<path d="M12 3.5s6 6.4 6 10.8a6 6 0 0 1-12 0C6 9.9 12 3.5 12 3.5Z"/>',
+      lungs: '<path d="M12 4v7M12 11c-1.2 1.2-2.6 1.6-3.6 1.6M12 11c1.2 1.2 2.6 1.6 3.6 1.6"/><path d="M8.6 7.5C6 8 4 12.3 4 16.2c0 2 1.4 3 3 2.6 2-.5 2.6-2.2 2.6-4.2V8.5c0-.7-.4-1.1-1-1ZM15.4 7.5c2.6.5 4.6 4.8 4.6 8.7 0 2-1.4 3-3 2.6-2-.5-2.6-2.2-2.6-4.2V8.5c0-.7.4-1.1 1-1Z"/>',
+      thermo: '<path d="M10 4.5a2 2 0 0 1 4 0v9.3a4 4 0 1 1-4 0Z"/><path d="M12 10v6"/>',
+      flask: '<path d="M9.5 3.5h5M10 3.5v6L5.5 18a2 2 0 0 0 1.8 2.9h9.4a2 2 0 0 0 1.8-2.9L14 9.5v-6"/><path d="M7.5 15h9"/>',
       scale: '<rect x="3.5" y="4" width="17" height="16" rx="3.5"/><path d="M8.5 9.5a5 5 0 0 1 7 0L12 12.5Z"/>',
       moon: '<path d="M19.5 14.5A7.5 7.5 0 0 1 9.5 4.5a7.5 7.5 0 1 0 10 10Z"/>',
       smile: '<circle cx="12" cy="12" r="8.5"/><path d="M8.5 14c.9 1.4 2.1 2 3.5 2s2.6-.6 3.5-2M9 9.5h.01M15 9.5h.01"/>',
@@ -934,6 +937,19 @@
     return '<div class="pitem">' + btn + '<button type="button" class="pinfo" data-act="pinfo" aria-expanded="false" aria-controls="' + id + '" aria-label="Summary of ' + e(label) + '">' + icon('info') + '</button>' +
       '<div class="pop" id="' + id + '" role="group" aria-label="' + e(label) + ' summary">' + pop + '</div></div>';
   }
+  function placePop(item) {
+    if (!item || !item.classList.contains('vci') || window.innerWidth <= 640) return;
+    var pop = item.querySelector('.pop'); if (!pop) return;
+    var r = item.getBoundingClientRect(), w = Math.min(320, window.innerWidth - 24);
+    var left = Math.min(Math.max(12, r.left), window.innerWidth - w - 12);
+    var below = r.bottom + 8, h = pop.offsetHeight || 220;
+    pop.style.left = left + 'px'; pop.style.width = w + 'px';
+    pop.style.top = (below + h > window.innerHeight - 8 && r.top - h - 8 > 8 ? r.top - h - 8 : below) + 'px';
+    pop.style.setProperty('--ax', Math.max(14, Math.min(w - 26, r.left + 24 - left)) + 'px');
+  }
+  document.addEventListener('mouseover', function (ev) { var it = ev.target.closest && ev.target.closest('.vci'); if (it && it !== placePop.last) { placePop.last = it; placePop(it); } });
+  document.addEventListener('focusin', function (ev) { var it = ev.target.closest && ev.target.closest('.vci'); if (it) placePop(it); });
+  window.addEventListener('scroll', function () { if ($('.vci.open')) closePops(); placePop.last = null; }, { passive: true });
   function closePops(except) { $$('.pitem.open').forEach(function (x) { if (x !== except) { x.classList.remove('open'); var b = x.querySelector('.pinfo'); if (b) b.setAttribute('aria-expanded', 'false'); } }); }
   // Health details > Notes: every note the care team wrote on a visit, newest first
   function notesView(r) {
@@ -1109,11 +1125,10 @@
     if (!items.some(function (it) { return it.r.test === sel; })) sel = S.cache.riskSel = items[0].r.test;
     var p = periodMs(d);
     // compact items, the same as the Vitals filter: dot, short name, latest value; the rest is in the popover
-    var picker = '<div class="vsel rpick" role="group" aria-label="Choose an indicator to show">' + items.map(function (it) {
+    var cards = items.map(function (it) {
       var x = it.r, lv = LV[x.level] || 'none', prev = it.t && it.t.previous;
-      var n = it.t ? it.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }).length : 0;
-      var btn = '<button type="button" class="vbtn ' + lv + '" data-act="rsel" data-k="' + e(x.test) + '" aria-pressed="' + (x.test === sel) + '" aria-controls="rdetail">' +
-        dotHtml(x.level) + '<span>' + e(shortTitle(x.title)) + '<small>' + e(x.display) + ' · ' + (n ? n + ' result' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+      var hist = it.t ? it.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }) : [];
+      var n = hist.length;
       var pop = '<span class="pop-g">' + e(x.groupName) + '</span><span class="pop-t ' + lv + '">' + e(x.title) + '</span>' +
         '<span class="pop-v">' + e(x.display) + '</span><span class="pop-s"><b class="' + lv + '">' + e(x.band) + '</b></span>' +
         '<span class="pop-c">' + catWord(x) + '</span>' +
@@ -1121,8 +1136,11 @@
         '<span class="pop-l">' + trendChip(x.trend) + (prev ? ' <span class="muted">vs ' + e(prev.display) + ' on ' + e(date(prev.at)) + '</span>' : '') + '</span>' +
         '<span class="pop-l">' + (n ? n + ' result' + (n === 1 ? '' : 's') + ' in this period' : 'No results in this period') + '</span>' +
         (x.message ? '<span class="pop-m">' + e(x.message) + '</span>' : '');
-      return popItem('rp-' + x.test, btn, x.title, pop);
-    }).join('') + '</div>';
+      var vals = hist.slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (h) { return h.value; }).filter(function (v) { return typeof v === 'number'; });
+      return vcardHtml({ act: 'rsel', k: x.test, on: x.test === sel, controls: 'rdetail', level: x.level, icon: RICON[x.group] || ['gauge', 'teal'],
+        label: shortTitle(x.title), value: x.display || '—', unit: '', sub: (x.band || '') + (x.band ? ' · ' : '') + (n ? n + ' result' + (n === 1 ? '' : 's') : 'none in this period'), spark: vals, popId: 'rp-' + x.test, pop: pop });
+    }).join('');
+    var picker = sliderHtml(cards, 'Choose an indicator to show', 'r');
     return picker + '<div id="rdetail" aria-live="polite">' + riskBlockHtml(d, sel) + '</div>';
   }
   // a short name for the buttons ("Heart disease risk (Reynolds Risk Score)" -> "Heart disease risk")
@@ -1184,6 +1202,72 @@
     var withData = list.filter(function (x) { return d.series.some(function (m) { return m.metric === x.metric; }); })[0];
     return withData ? withData.metric : list.length ? list[0].metric : null;
   }
+  // ---------------------------------------------------------------- filter cards in a slider
+  // Each card: icon, name, the latest value, a pill when it needs a look, a small line of the period's
+  // readings and "View trend". Four show at a time; the rest are a swipe (or an arrow) away. The
+  // summary (the "i" button, or pointing at the card) and choosing a card for the big chart work as before.
+  var VICON = { bp: ['heart', 'rose'], hr: ['pulse', 'teal'], glucose: ['drop', 'blue'], spo2: ['lungs', 'green'], pi: ['gauge', 'violet'], temp: ['thermo', 'amber'], chol: ['flask', 'amber'],
+    weight: ['scale', 'teal'], bmi: ['scale', 'blue'], bodyfat: ['drop', 'rose'], moisture: ['drop', 'blue'], visceral: ['heart', 'violet'], bone: ['walk', 'amber'], bmr: ['pulse', 'green'], protein: ['ribbon', 'violet'], subfat: ['drop', 'amber'], lean: ['walk', 'green'], height: ['up', 'teal'] };
+  var PILL = { bad: 'Attention', warn: 'Review', ok: 'Watch' };
+  var RICON = { heart: ['heart', 'rose'], diabetes: ['drop', 'blue'], kidney: ['kidney', 'violet'], falls: ['walk', 'amber'], mood: ['smile', 'green'], sleep: ['moon', 'violet'], weight: ['scale', 'teal'], vitals: ['pulse', 'teal'] };
+  function miniSpark(vals, levels, tone) {
+    if (!vals || vals.length < 2) return '<span class="vc-sp none" aria-hidden="true"><i></i><em>' + (vals && vals.length ? 'One reading in this period' : 'None in this period') + '</em></span>';
+    var W = 120, H = 34, lo = Math.min.apply(null, vals), hi = Math.max.apply(null, vals);
+    if (hi === lo) { hi += 1; lo -= 1; }
+    var pts = vals.map(function (v, i) { return [(W - 4) * i / (vals.length - 1) + 2, H - 4 - (H - 8) * (v - lo) / (hi - lo)]; });
+    var dpath = smoothPath(pts);
+    return '<svg class="vc-sp ' + tone + '" viewBox="0 0 ' + W + ' ' + H + '" preserveAspectRatio="none" aria-hidden="true"><path class="a" d="' + dpath + ' L' + pts[pts.length - 1][0].toFixed(1) + ',' + H + ' L' + pts[0][0].toFixed(1) + ',' + H + ' Z"/><path class="l" d="' + dpath + '"/></svg>';
+  }
+  function vcardHtml(o) {
+    var lv = LV[o.level] || 'none', ic = o.icon || ['pulse', 'teal'];
+    var btn = '<button type="button" class="vbtn vcard ' + lv + '" data-act="' + o.act + '" data-k="' + e(o.k) + '" aria-pressed="' + o.on + '" aria-controls="' + o.controls + '">' +
+      '<span class="vc-top"><span class="vc-i ' + ic[1] + '" aria-hidden="true">' + icon(ic[0]) + '</span><span class="vc-n">' + e(o.label) + '</span></span>' +
+      '<span class="vc-row"><span class="vc-v">' + e(o.value) + (o.unit ? ' <small>' + e(o.unit) + '</small>' : '') + '</span>' +
+      (PILL[o.level] ? '<span class="vc-pill ' + lv + '">' + PILL[o.level] + '</span>' : '') + '</span>' +
+      '<span class="vc-sub">' + dotHtml(o.level) + e(o.sub) + '</span>' +
+      miniSpark(o.spark, null, lv) +
+      '<span class="vc-go">View trend' + icon('arrow') + '</span></button>';
+    return popItem(o.popId, btn, o.label, o.pop).replace('<div class="pitem">', '<div class="pitem vci">');
+  }
+  function sliderHtml(cards, label, id) {
+    return '<div class="vslide" data-slider="' + id + '"><div class="vs-track" role="group" aria-label="' + e(label) + '" tabindex="-1">' + cards + '</div>' +
+      '<button type="button" class="vs-nav prev" data-act="vs-prev" aria-label="Show earlier items" hidden>' + icon('left') + '</button>' +
+      '<button type="button" class="vs-nav next" data-act="vs-next" aria-label="Show more items" hidden>' + icon('right') + '</button>' +
+      '<div class="vs-dots" aria-hidden="true"></div></div>';
+  }
+  // after a slider is drawn: arrows and page dots follow the scroll, the chosen card is brought into view
+  function initSliders(root) {
+    $$('.vslide', root || document).forEach(function (sl) {
+      var tr = $('.vs-track', sl), dots = $('.vs-dots', sl);
+      var upd = function () {
+        var max = tr.scrollWidth - tr.clientWidth;
+        $('.vs-nav.prev', sl).hidden = tr.scrollLeft <= 2;
+        $('.vs-nav.next', sl).hidden = tr.scrollLeft >= max - 2;
+        var pages = Math.max(1, Math.ceil(tr.scrollWidth / tr.clientWidth - 0.05)), at = max > 0 ? Math.round(tr.scrollLeft / max * (pages - 1)) : 0;
+        dots.innerHTML = pages > 1 ? Array.apply(null, Array(pages)).map(function (_, i) { return '<i' + (i === at ? ' class="on"' : '') + '></i>'; }).join('') : '';
+        sl.classList.toggle('more', max > 2);
+      };
+      if (!sl.__init) { sl.__init = true; tr.addEventListener('scroll', function () { cancelAnimationFrame(sl.__raf); sl.__raf = requestAnimationFrame(upd); if ($('.vci.open', tr)) closePops(); placePop.last = null; }, { passive: true }); window.addEventListener('resize', upd); }
+      var on = $('[aria-pressed="true"]', tr);
+      if (on) { var it = on.closest('.vci'); var l = it.offsetLeft - tr.offsetLeft, r2 = l + it.offsetWidth; if (l < tr.scrollLeft || r2 > tr.scrollLeft + tr.clientWidth) tr.scrollLeft = Math.max(0, l - 8); }
+      upd();
+    });
+  }
+  // a smooth line through points (for the charts and the small lines on the cards)
+  function smoothPath(p) {
+    if (p.length < 3) return 'M' + p.map(function (a) { return a[0].toFixed(1) + ',' + a[1].toFixed(1); }).join(' L');
+    var d = 'M' + p[0][0].toFixed(1) + ',' + p[0][1].toFixed(1);
+    for (var i = 0; i < p.length - 1; i++) {
+      var p0 = p[i - 1] || p[i], p1 = p[i], p2 = p[i + 1], p3 = p[i + 2] || p2, t = 0.18;
+      var c1 = [p1[0] + (p2[0] - p0[0]) * t, p1[1] + (p2[1] - p0[1]) * t], c2 = [p2[0] - (p3[0] - p1[0]) * t, p2[1] - (p3[1] - p1[1]) * t];
+      // keep the curve between the two readings (no overshoot above or below them)
+      var lo = Math.min(p1[1], p2[1]), hi = Math.max(p1[1], p2[1]);
+      c1[1] = Math.min(hi, Math.max(lo, c1[1])); c2[1] = Math.min(hi, Math.max(lo, c2[1]));
+      d += ' C' + c1[0].toFixed(1) + ',' + c1[1].toFixed(1) + ' ' + c2[0].toFixed(1) + ',' + c2[1].toFixed(1) + ' ' + p2[0].toFixed(1) + ',' + p2[1].toFixed(1);
+    }
+    return d;
+  }
+
   function chartsHtml(d, group) {
     var list = vitalList(d, group);
     var reg = d.range.registeredOn ? date(d.range.registeredOn) : '';
@@ -1191,18 +1275,20 @@
     var sel = vitalSelected(d, group);
     var count = function (k) { var m = d.metrics.filter(function (x) { return x.k === k; })[0]; return m ? m.count : 0; };
     var head = d.range.clamped ? '<p class="histnote">' + icon('clock') + '<span>' + e(first(d.person.name)) + '\'s recorded history begins on <b>' + e(reg) + '</b> (the first record), so this view starts there. There is no earlier data for this period.</span></p>' : '';
-    var picker = '<div class="vsel" role="group" aria-label="Choose a ' + (group === 'body' ? 'measurement' : 'vital') + ' to show">' + list.map(function (x) {
+    var cards = list.map(function (x) {
       var n = count(x.metric);
-      var btn = '<button type="button" class="vbtn ' + (LV[x.level] || 'none') + '" data-act="vsel" data-k="' + x.metric + '" aria-pressed="' + (x.metric === sel) + '" aria-controls="vdetail">' +
-        dotHtml(x.level) + '<span>' + e(x.label) + '<small>' + e(x.value) + (x.unit ? ' ' + e(x.unit) : '') + ' · ' + (n ? n + ' reading' + (n === 1 ? '' : 's') : 'none in this period') + '</small></span></button>';
+      var m = d.series.filter(function (y) { return y.metric === x.metric; })[0];
+      var vals = m ? m.rows.slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (r) { return r[m.keys[0]]; }).filter(function (v) { return typeof v === 'number'; }) : [];
       var pop = '<span class="pop-t ' + (LV[x.level] || 'none') + '">' + dotHtml(x.level) + e(x.label) + (x.context ? ' <small>(' + e(GLUCOSE[x.context] || x.context) + ')</small>' : '') + '</span>' +
         '<span class="pop-v">' + e(x.value) + (x.unit ? ' <small>' + e(x.unit) + '</small>' : '') + '</span>' +
         (x.status ? '<span class="pop-s"><b class="' + (LV[x.level] || '') + '">' + e(x.status) + '</b></span>' : '') +
         '<span class="pop-l">Last measured on ' + e(date(x.at)) + '</span>' +
         (x.range ? '<span class="pop-l">Normal range: ' + e(x.range) + '</span>' : '') +
         '<span class="pop-l">' + (n ? n + ' reading' + (n === 1 ? '' : 's') + ' in this period' : 'No readings in this period') + '</span>';
-      return popItem('vp-' + x.metric, btn, x.label, pop);
-    }).join('') + '</div>';
+      return vcardHtml({ act: 'vsel', k: x.metric, on: x.metric === sel, controls: 'vdetail', level: x.level, icon: VICON[x.metric], label: x.label, value: x.value, unit: x.unit,
+        sub: (x.status || '') + (x.status ? ' · ' : '') + (n ? n + ' reading' + (n === 1 ? '' : 's') : 'none in this period'), spark: vals, popId: 'vp-' + x.metric, pop: pop });
+    }).join('');
+    var picker = sliderHtml(cards, 'Choose a ' + (group === 'body' ? 'measurement' : 'vital') + ' to show', 'v-' + group);
     return picker + head + '<div id="vdetail" aria-live="polite">' + vitalDetailHtml(d, sel) + '</div>';
   }
   function vitalDetailHtml(d, k) {
@@ -1228,6 +1314,7 @@
   // anim: the line draws itself and the points pop in (when a chart is opened, not on resize)
   function drawCharts(anim) {
     var d = S.cache.dash; if (!d) return;
+    initSliders();
     anim = anim === true && !reducedMotion();
     $$('[data-chart]').forEach(function (el) {
       var m = d.series.filter(function (x) { return x.metric === el.getAttribute('data-chart'); })[0];
@@ -1237,7 +1324,7 @@
       var m = riskSeries(d, el.getAttribute('data-rchart'));
       if (m && m.rows.length) el.innerHTML = chartSvg(m, d.range, el.clientWidth, anim);
     });
-    if (anim) $$('svg.chart2.anim polyline').forEach(function (pl) {
+    if (anim) $$('svg.chart2.anim path.ln').forEach(function (pl) {
       var len = 0; try { len = pl.getTotalLength(); } catch (x) {}
       if (len) pl.style.setProperty('--len', Math.ceil(len) + 'px'); else pl.closest('svg').classList.remove('anim');
     });
@@ -1291,6 +1378,7 @@
       el._free = setTimeout(function () { el.style.minHeight = ''; el.classList.remove('pin'); }, 520);
     }, 170);
   }
+  chartSvg.n = 0;
   function chartSvg(m, range, width, anim) {
     var W = Math.max(300, Math.round(width || 640)), small = W < 560;
     var H = small ? 250 : 320, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
@@ -1318,7 +1406,9 @@
     // narrow break so the readings around them stay readable (e.g. one old report, then two busy months)
     var tl = timeline(m, start, end, x0, x1), x = tl.x;
     var y = function (v) { return T + (H - T - B) * (1 - (v - lo) / (hi - lo)); };
-    var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">';
+    var gid = 'cg' + (++chartSvg.n);
+    var out = '<svg class="chart2' + (anim ? ' anim' : '') + '" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + e(m.label + ' from ' + date(range.from) + ' to ' + date(range.to) + ', ' + m.rows.length + ' readings') + '">' +
+      '<defs>' + m.keys.map(function (k, i) { return '<linearGradient id="' + gid + '-' + (i + 1) + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" class="gs' + (i + 1) + '" stop-opacity=".22"/><stop offset="1" class="gs' + (i + 1) + '" stop-opacity="0"/></linearGradient>'; }).join('') + '</defs>';
     // y grid and labels
     for (var v = lo; v <= hi + 1e-9; v += stepGuess) {
       var yy = y(v).toFixed(1);
@@ -1355,7 +1445,11 @@
       });
       if (cur.length) runs.push(cur);
       runs.forEach(function (run, ri) {
-        if (run.length > 1) out += '<polyline class="ln s' + (si + 1) + '" points="' + run.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ') + '"/>';
+        if (run.length > 1) {
+          var dd = smoothPath(run.map(function (p) { return [p[0], p[1]]; }));
+          out += '<path class="ar" fill="url(#' + gid + '-' + (si + 1) + ')" d="' + dd + ' L' + run[run.length - 1][0].toFixed(1) + ',' + (H - B) + ' L' + run[0][0].toFixed(1) + ',' + (H - B) + ' Z"/>' +
+            '<path class="ln s' + (si + 1) + '" d="' + dd + '"/>';
+        }
         var nx = runs[ri + 1];
         if (nx) { var a = run[run.length - 1], b = nx[0]; out += '<line class="ln gapln s' + (si + 1) + '" x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '"/>'; }
       });
@@ -3226,7 +3320,7 @@
         break;
       }
       case 'rec-ex': recExDialog(id); break;
-      case 'pinfo': { var pi = t.closest('.pitem'), wasOpen = pi.classList.contains('open'); closePops(); pi.classList.toggle('open', !wasOpen); t.setAttribute('aria-expanded', String(!wasOpen)); break; }
+      case 'pinfo': { var pi = t.closest('.pitem'), wasOpen = pi.classList.contains('open'); closePops(); pi.classList.toggle('open', !wasOpen); t.setAttribute('aria-expanded', String(!wasOpen)); if (!wasOpen) placePop(pi); break; }
       case 'notes-more': S.cache.notesShown = (S.cache.notesShown || 20) + 20; $('#noteslist').innerHTML = notesListHtml(); break;
       case 'risk-hist': {
         var det = t.closest('details'), box = det && $('.rh-hl', det);
@@ -3311,6 +3405,7 @@
       case 'det-reload': render(); break;
       case 'det-jump': { ev.preventDefault(); var tgt = document.getElementById(t.getAttribute('data-id')); if (tgt) { tgt.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var h = tgt.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } break; }
       case 'home-retry': render(); break;
+      case 'vs-prev': case 'vs-next': { var trk = $('.vs-track', t.closest('.vslide')); closePops(); trk.scrollBy({ left: (act === 'vs-next' ? 1 : -1) * trk.clientWidth * 0.92, behavior: reducedMotion() ? 'auto' : 'smooth' }); break; }
       case 'ins-jump': { ev.preventDefault(); var sec = $('#ins-' + t.getAttribute('data-k')); if (sec) sec.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' }); break; }
       case 'jump': case 'vsel': {
         // show only the chosen vital's chart
