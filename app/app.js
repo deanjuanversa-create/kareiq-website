@@ -503,6 +503,7 @@
   var POLICY_MENU = POLICIES.map(function (x) { return ['policies/' + x[0], x[1], 'file']; });
   var MENUS = {
     family: [
+      ['welcome', 'Home', 'home'],
       { k: 'profile', label: 'Profile', icon: 'user', sub: [['profile/personal', 'Personal details', 'idcard'], ['profile/conditions', 'Pre-existing health conditions', 'clip']] },
       { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt'],
@@ -656,9 +657,11 @@
   var LV = { good: 'good', ok: 'ok', warn: 'warn', bad: 'bad' };
   function dotHtml(level) { return '<i class="dot ' + (LV[level] || 'none') + '" aria-hidden="true"></i>'; }
 
-  // ================================================================ Welcome (families)
-  // A neutral starting page: the people on the account and where to go. Nothing opens by itself and
-  // no health data is shown here; each section is one click away.
+  // ================================================================ Home (families)
+  // The family's Home: a greeting, "At a glance" (profile, package, next booking), the two health
+  // sections, health insights from the existing range and risk logic, then care plan, care team and
+  // the KareNest / Kare@Home showcase. Every number comes from the person's own records; a section
+  // with nothing to show says so. Changing the person reloads every section for that person.
   function welcomeView(r) {
     shell('welcome', loading(90) + loading(260));
     loadPeople().then(function (people) {
@@ -670,83 +673,168 @@
       try { localStorage.setItem('kq.pid', cur.id); } catch (x) {}
       var q = '?p=' + encodeURIComponent(cur.id);
       var u = S.me.user;
-      // most used first; the person's package and payments sit above in "At a glance"
-      var tiles = [
-        ['#/health/vitals' + q, 'heart', 'Health details', 'Vitals, body composition, wellbeing, risk trends and notes'],
-        ['#/records' + q, 'file', 'Medical records', 'Lab reports, scans and prescriptions'],
-        ['#/package' + q, 'box', 'My package', 'What is included, and booking services'],
-        ['#/profile/personal' + q, 'user', 'Profile', 'Personal details, contacts, conditions and allergies'],
-        ['#/invoices' + q, 'receipt', 'Invoices', 'Charges and payments for your packages'],
-        ['#/packages' + q, 'layers', 'Other packages', 'Kare@Home, KareNest, KareBalance, KareMind and Bystander'],
-        ['#/policies/' + POLICIES[0][0], 'shield', 'KareIQ Policies', 'Policies, charters and forms, always the latest version']
-      ];
       var today = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'long', day: 'numeric', month: 'long' }).format(new Date());
+      var sk = function (n, h) { var o = ''; for (var i = 0; i < n; i++) o += '<div class="skel" style="height:' + h + 'px"></div>'; return o; };
+      // a whole-card link with an extra area below (quick links or a summary) that fills in when loaded
+      var navCard = function (href, ic, title, text, tone, extra) {
+        return '<div class="hnav ' + tone + '"><a class="hnav-a" href="' + href + '"><span class="hnav-i" aria-hidden="true">' + icon(ic) + '</span><span class="hnav-t"><b>' + e(title) + '</b><span>' + e(text) + '</span></span></a>' +
+          (extra || '') + '<a class="hnav-go" href="' + href + '" tabindex="-1" aria-hidden="true">Open' + icon('arrow') + '</a></div>';
+      };
+      var subs = [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']];
+      var healthLinks = '<nav class="hsubs" aria-label="Health details pages">' + subs.map(function (x) { return '<a href="#/' + x[0] + q + '">' + icon(x[2]) + '<span>' + x[1] + '</span></a>'; }).join('') + '</nav>';
+      var recBox = '<div class="hrec" id="hrec" aria-live="polite"><div class="skel" style="height:44px"></div></div>';
       // the same "PERSON NAME ▾" selector as every other page (relationship and package tags included)
-      $('#mn').innerHTML = '<div id="pv">' + personBar(cur, people) + '<div class="pagehead wel"><p class="eyebrow">' + e(today) + '</p><h1>Good ' + greeting() + ', ' + e(first(u.name)) + '</h1><p class="muted">Here is where things stand for ' + e(first(cur.name)) + '.</p></div>' +
+      $('#mn').innerHTML = '<div id="pv" class="home">' + personBar(cur, people) +
+        '<section class="hhero" aria-labelledby="h-hi"><div class="hhero-t"><p class="eyebrow">' + e(today) + '</p><h1 id="h-hi">Good ' + greeting() + ', ' + e(first(u.name)) + '!</h1>' +
+          '<p class="hhero-s">' + e(first(cur.name)) + '\'s health journey, at a glance.</p><p class="hpill" id="hpill" aria-live="polite"><span class="skel" style="width:220px;height:18px;display:inline-block"></span></p></div>' +
+          '<div class="hhero-img" aria-hidden="true"><img src="/img/hero.jpg" alt="" width="1048" height="728" decoding="async"></div></section>' +
         '<section aria-labelledby="h-glance"><h2 class="sec" id="h-glance">At a glance</h2><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
-        '<section aria-labelledby="h-go"><h2 class="sec" id="h-go">Where would you like to go?</h2><nav class="gotiles" aria-label="Sections">' + tiles.map(function (t, i) {
-          return '<a class="gotile' + (t[1] === 'shield' ? ' wide' : '') + '" style="--i:' + i + '" href="' + t[0] + '"><span class="gt-i" aria-hidden="true">' + icon(t[1]) + '</span><span class="gt-t"><b>' + e(t[2]) + '</b><span class="muted small">' + e(t[3]) + '</span></span>' + icon('arrow') + '</a>';
-        }).join('') + '</nav></section>' +
-        '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team.</span></p></div>';
-      glance(cur, q);
+        '<div class="hgrid">' +
+          '<section class="hnavs" aria-label="Health sections">' +
+            navCard('#/health/vitals' + q, 'heart', 'Health Details', 'Vitals, body composition, wellbeing, risk trends and notes', 'rose', healthLinks) +
+            navCard('#/records' + q, 'file', 'Medical Records', 'Lab reports, scans and prescriptions', 'teal', recBox) +
+          '</section>' +
+          '<section class="hcard hins" aria-labelledby="h-ins"><div class="hcard-h"><h2 id="h-ins">' + icon('star') + '<span>Your Health Insights</span></h2></div><div id="hins" aria-busy="true">' + sk(2, 64) + '</div></section>' +
+        '</div>' +
+        '<div class="hlow">' +
+          '<section class="hcard" aria-labelledby="h-care"><div class="hcard-h"><h2 id="h-care">' + icon('clip') + '<span>Your Care at a Glance</span></h2><a class="hcard-more" href="#/package' + q + '">View All' + icon('arrow') + '</a></div><div id="hcare" aria-busy="true">' + sk(2, 52) + '</div></section>' +
+          '<section class="hcard hteam" aria-labelledby="h-team"><div class="hcard-h"><h2 id="h-team">' + icon('people') + '<span>Your KareIQ Care Team</span></h2></div><p class="muted small">Stay connected with your care team.</p><div id="hteam" aria-busy="true">' + sk(1, 44) + '</div>' +
+            '<div class="hteam-act"><a class="btn hbtn" href="' + e(waLink()) + '" target="_blank" rel="noopener">' + icon('wa') + '<span>Contact Your Care Team</span>' + icon('arrow') + '</a><a class="hcall" href="tel:+918129345178">' + icon('phone') + '<span>' + PHONE + '</span></a></div>' +
+            '<img class="hteam-img" src="/img/karehome-hero.jpg" alt="" width="1168" height="850" loading="lazy" decoding="async"></section>' +
+          '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/karenest/images/exp1.webp" alt="" width="1600" height="793" loading="lazy" decoding="async"></a>' +
+        '</div>' +
+        '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team. Insights compare readings with KareIQ\'s standard ranges; they are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p></div>';
+      homeData(cur, q);
     });
   }
 
-  // "At a glance": the package, payments and what happens next for one person. No health readings
-  // here (the welcome page never opens health data by itself); each card links to its page.
-  function glance(p, q) {
+  function hm12(hm) { if (!hm) return ''; var p = String(hm).split(':'), h = Number(p[0]); return (h % 12 || 12) + ':' + p[1] + ' ' + (h < 12 ? 'AM' : 'PM'); }
+  function dayShort(iso) { return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso + 'T12:00:00+05:30')); }
+  function retryHtml(what) { return '<div class="hempty">' + icon('info') + '<span>We could not load ' + e(what) + ' just now. <button type="button" class="linkbtn" data-act="home-retry">Try again</button></span></div>'; }
+
+  // loads every Home section for one person; a section that fails shows its own retry
+  function homeData(p, q) {
     var pid = encodeURIComponent(p.id);
     var safe = function (path) { return api('GET', path).catch(function () { return { ok: false }; }); };
-    Promise.all([safe('people/' + pid + '/package'), safe('people/' + pid + '/invoices'), safe('people/' + pid + '/orders'), safe('people/' + pid + '/services')]).then(function (x) {
-      var box = $('#glance'); if (!box || S.pid !== p.id) return;
-      var pk = x[0].ok ? x[0] : { plans: [] }, inv = x[1].ok ? x[1] : { rows: [] }, ord = x[2].ok ? x[2] : { rows: [] }, sv = x[3].ok ? x[3] : {};
-      var today = todayIST(), cards = [];
+    Promise.all([safe('people/' + pid + '/package'), safe('people/' + pid + '/services'), safe('people/' + pid + '/care'), safe('people/' + pid + '/dashboard?period=7d'), safe('people/' + pid + '/records')]).then(function (x) {
+      if (S.pid !== p.id || !$('#glance')) return; // another person was chosen meanwhile
+      var pk = x[0], sv = x[1], care = x[2], d = x[3];
+      var today = todayIST();
+      var plans = pk.ok ? (pk.plans || []).filter(function (y) { return !y.included; }) : [];
+      var act = plans.filter(function (y) { return y.status === 'active' || y.status === 'paused'; })[0];
+      var pend = plans.filter(function (y) { return y.status === 'pending'; })[0];
+      var up = care.ok ? care.upcoming || [] : [];
+      var dash = d.ok ? d : null;
+
+      // ---- the greeting's status line: last health update and readings this week
+      var stamps = dash ? (dash.latest || []).map(function (y) { return y.at; }).concat(dash.lastVisit ? [dash.lastVisit.at] : []).filter(Boolean).sort() : [];
+      var n7 = dash ? (dash.metrics || []).reduce(function (a, m) { return a + (m.count || 0); }, 0) : 0;
+      $('#hpill').innerHTML = !dash ? '<span>' + icon('cal') + 'Health updates appear after the first visit</span>'
+        : '<span>' + icon('cal') + (stamps.length ? 'Last health update: <b>' + e(date(stamps[stamps.length - 1])) + '</b>' : 'No health updates yet') + '</span>' +
+          '<span class="hpill-n"><i class="dot ' + (n7 ? 'good' : 'none') + '" aria-hidden="true"></i>' + n7 + ' reading' + (n7 === 1 ? '' : 's') + ' in the last 7 days</span>';
+
+      // ---- At a glance: profile, package, next booking
+      var cards = [];
       var card = function (o) {
         return '<a class="gl ' + (o.tone || '') + '" href="' + o.href + '"><span class="gl-h">' + icon(o.icon) + '<span>' + e(o.label) + '</span></span>' +
           (o.ring != null ? '<span class="gl-ring" style="--p:' + Math.round(o.ring * 100) + '" aria-hidden="true"></span>' : '') +
+          (o.avatar ? '<span class="gl-av" aria-hidden="true">' + e(initials(o.avatar)) + '</span>' : '') +
           '<b class="gl-v">' + e(o.value) + '</b><span class="gl-s">' + e(o.sub || '') + '</span><span class="gl-go">' + e(o.go) + icon('arrow') + '</span></a>';
       };
-      // 1. the package and how far through it they are
-      var plans = (pk.plans || []).filter(function (x) { return !x.included; });
-      var act = plans.filter(function (x) { return x.status === 'active'; })[0];
-      var pend = plans.filter(function (x) { return x.status === 'pending'; })[0];
+      var who = dash ? dash.person : {};
+      var bits = [p.relation || who.relation, who.age ? who.age + ' years' : null, who.sex ? who.sex.charAt(0).toUpperCase() + who.sex.slice(1) : null].filter(Boolean);
+      cards.push({ icon: 'user', label: 'Profile', value: p.name, sub: bits.length ? bits.join(' · ') : 'Personal details, contacts and conditions', href: '#/profile/personal' + q, go: 'View profile', avatar: p.name });
       if (act) {
         var left = act.endDate ? Math.round((new Date(act.endDate + 'T12:00:00+05:30') - new Date(today + 'T12:00:00+05:30')) / 864e5) : null;
         var span = act.startDate && act.endDate ? (new Date(act.endDate) - new Date(act.startDate)) / 864e5 : null;
         cards.push({ icon: 'box', label: act.productName, value: act.name, href: '#/package' + q, go: 'View package', tone: left != null && left <= 30 ? 'warn' : '',
-          sub: left == null ? 'Active' : left <= 0 ? 'Ended on ' + date(act.endDate) : left <= 30 ? 'Renews in ' + left + ' day' + (left === 1 ? '' : 's') + ', on ' + date(act.endDate) : 'Active until ' + date(act.endDate),
+          sub: act.status === 'paused' ? 'Paused' : left == null ? 'Active' : left <= 0 ? 'Ended on ' + date(act.endDate) : left <= 30 ? 'Renews in ' + left + ' day' + (left === 1 ? '' : 's') + ', on ' + date(act.endDate) : 'Active until ' + date(act.endDate),
           ring: span && left != null ? Math.min(1, Math.max(0, 1 - left / span)) : null });
       } else if (pend) {
         cards.push({ icon: 'box', label: pend.productName, value: pend.name || 'Package requested', sub: 'Our team is setting it up', href: '#/package' + q, go: 'View package', tone: 'info' });
       } else {
-        cards.push({ icon: 'box', label: 'Package', value: 'No package yet', sub: 'See what KareIQ can do for ' + first(p.name), href: '#/packages' + q, go: 'Explore packages', tone: 'info' });
+        cards.push({ icon: 'box', label: 'Package', value: pk.ok ? 'No active package' : 'Package', sub: pk.ok ? 'See what KareIQ can do for ' + first(p.name) : 'Could not load just now', href: '#/packages' + q, go: 'Explore packages', tone: 'info' });
       }
-      // 2. payments
-      var due = (inv.rows || []).filter(function (r) { return r.outstanding > 0; });
-      if (due.length) {
-        var sum = due.reduce(function (a, r) { return a + r.outstanding; }, 0);
-        var over = due.filter(function (r) { return r.overdueDays > 0; })[0];
-        cards.push({ icon: 'receipt', label: 'Payments', value: 'Rs ' + sum.toLocaleString('en-IN') + ' due', sub: over ? 'Overdue by ' + over.overdueDays + ' day' + (over.overdueDays === 1 ? '' : 's') : 'Due by ' + date(due[0].dueDate), href: '#/invoices' + q, go: 'View invoices', tone: over ? 'bad' : 'warn' });
-      } else if ((inv.rows || []).length) {
-        cards.push({ icon: 'check', label: 'Payments', value: 'All paid', sub: 'Nothing to pay right now', href: '#/invoices' + q, go: 'View invoices', tone: 'good' });
+      // a confirmed booking: a booked service with its nurse assigned (routine home visits are not bookings)
+      var conf = up.filter(function (v) { return !v.routine && v.confirmed; }).map(function (v) { return { name: v.serviceName, date: v.date, when: v.start ? hm12(v.start) : v.slot, nurse: v.nurse }; });
+      ((sv.ok && sv.bookings) || []).forEach(function (b) { if (b.status === 'scheduled' && b.date && b.date >= today && !b.visit) conf.push({ name: b.name, date: b.date, when: b.time, nurse: null }); });
+      conf.sort(function (a, b) { return a.date.localeCompare(b.date); });
+      var waiting = up.filter(function (v) { return !v.routine && !v.confirmed; }).length + ((sv.ok && sv.bookings) || []).filter(function (b) { return (b.status === 'new' || b.status === 'contacted') && !b.visit; }).length;
+      if (conf.length) cards.push({ icon: 'cal', label: 'Next booking', value: conf[0].name, sub: dayShort(conf[0].date) + (conf[0].when ? ', ' + conf[0].when : '') + (conf[0].nurse ? ' · with ' + conf[0].nurse : ''), href: '#/package' + q, go: 'View bookings' });
+      else cards.push({ icon: 'cal', label: 'Next booking', value: 'No upcoming booking', sub: waiting ? waiting + ' request' + (waiting === 1 ? '' : 's') + ' waiting for confirmation' : act ? 'Book physiotherapy, bystander and more' : 'Bookings open once a package is active', href: '#/package' + q, go: waiting || !act ? 'View bookings' : 'Book a service', tone: 'quiet' });
+      var box = $('#glance'); box.innerHTML = cards.map(card).join(''); box.removeAttribute('aria-busy');
+
+      // ---- Medical records: how many, and the newest
+      var rec = x[4], rb = $('#hrec');
+      if (rb) {
+        var rr = rec.ok ? (rec.rows || []) : null;
+        var newest = rr && rr.slice().sort(function (a, b) { return String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')); })[0];
+        rb.innerHTML = rr == null ? '<span class="muted small">Could not load the records just now.</span>'
+          : rr.length ? '<b>' + rr.length + '</b><span>document' + (rr.length === 1 ? '' : 's') + ' kept safely</span>' + (newest ? '<span class="hrec-n">' + icon('clock') + 'Latest: ' + e(newest.name) + (newest.uploadedAt ? ', ' + e(date(newest.uploadedAt)) : '') + '</span>' : '')
+          : '<span class="muted small">No documents yet. Upload reports and prescriptions from Medical Records.</span>';
       }
-      // 3. what happens next: a request in progress, else the next booked service, else booking
-      var open = (ord.rows || []).filter(function (o) { return o.status === 'awaiting_approval' || o.status === 'awaiting_payment'; })[0];
-      var next = (sv.bookings || []).filter(function (b) { return b.status !== 'closed' && (!b.date || b.date >= today); }).sort(function (a, b) { return String(a.date || '9').localeCompare(String(b.date || '9')); })[0];
-      if (open) cards.push({ icon: 'clock', label: 'Your request', value: open.name, sub: open.statusName, href: '#/package' + q, go: 'See details', tone: open.status === 'awaiting_payment' ? 'warn' : 'info' });
-      else if (next) cards.push({ icon: 'cal', label: 'Next booking', value: next.name, sub: next.date ? date(next.date) + (next.time ? ', ' + next.time : '') : 'Our team will confirm the date', href: '#/package' + q, go: 'View bookings' });
-      else if (act && sv.canBook) cards.push({ icon: 'cal', label: 'Services', value: 'Book a service', sub: 'Physiotherapy, bystander and more', href: '#/package' + q, go: 'Book now' });
-      else cards.push({ icon: 'wa', label: 'Need a hand?', value: 'Talk to our team', sub: 'We usually reply within minutes', href: waLink(), go: 'WhatsApp us' });
-      box.innerHTML = cards.map(card).join('');
-      box.removeAttribute('aria-busy');
-      $$('a.gl', box).forEach(function (a) { if (/^https?:/.test(a.getAttribute('href'))) { a.target = '_blank'; a.rel = 'noopener'; } });
+
+      // ---- Health insights, from the person's own readings, range levels and risk category
+      var ins = $('#hins'); ins.removeAttribute('aria-busy');
+      if (!d.ok) ins.innerHTML = retryHtml('the health insights');
+      else {
+        var list = insightsOf(dash, q);
+        ins.innerHTML = list.length
+          ? '<ul class="insl">' + list.slice(0, 3).map(function (it) {
+              return '<li><a class="ins ' + it.tone + '" href="' + it.href + '"><span class="ins-i" aria-hidden="true">' + icon(it.tone === 'good' ? 'check' : it.tone === 'bad' ? 'info' : 'info') + '</span><span class="ins-t"><b>' + e(it.title) + '</b><span>' + e(it.text) + '</span></span>' + icon('right') + '</a></li>';
+            }).join('') + '</ul><a class="hcard-more c" href="#/health/vitals' + q + '">View All Health Details' + icon('arrow') + '</a>'
+          : '<div class="hempty">' + icon('heart') + '<span><b>No insights yet</b>Insights appear here once the care team records ' + e(first(p.name)) + '\'s readings.</span></div>';
+      }
+
+      // ---- Care at a glance: the care plan and the next appointment (any visit, routine included)
+      var hc = $('#hcare'); hc.removeAttribute('aria-busy');
+      var nextAppt = up.filter(function (v) { return v.confirmed; })[0] || up[0];
+      var row = function (href, ic, title, sub, pill) { return '<a class="hrow" href="' + href + '"><span class="hrow-i" aria-hidden="true">' + icon(ic) + '</span><span class="hrow-t"><b>' + e(title) + '</b><span>' + e(sub) + '</span></span>' + (pill || '') + icon('right') + '</a>'; };
+      var planRow = act ? row('#/package' + q, 'clip', 'My Care Plan', act.productName + ' · ' + act.name, '<span class="hpillx ' + (act.status === 'paused' ? 'warn' : 'good') + '">' + (act.status === 'paused' ? 'Paused' : 'Active') + '</span>')
+        : pend ? row('#/package' + q, 'clip', 'My Care Plan', (pend.productName || 'Package') + ' · being set up', '<span class="hpillx info">Pending</span>')
+        : row('#/packages' + q, 'clip', 'My Care Plan', pk.ok ? 'No active care plan yet' : 'Could not load just now', '');
+      var apptRow = !care.ok ? row('#/package' + q, 'cal', 'Next Appointment', 'Could not load just now', '')
+        : nextAppt ? row('#/package' + q, 'cal', 'Next Appointment', nextAppt.serviceName + ' · ' + dayShort(nextAppt.date) + (nextAppt.start ? ', ' + hm12(nextAppt.start) : nextAppt.slot ? ', ' + nextAppt.slot : '') + (nextAppt.confirmed ? (nextAppt.nurse ? ' · ' + nextAppt.nurse : '') : ' · finding a nurse'), '')
+        : row('#/package' + q, 'cal', 'Next Appointment', 'No upcoming appointment', '');
+      hc.innerHTML = planRow + apptRow;
+
+      // ---- Care team: the nurses assigned to this person (names only)
+      var ht = $('#hteam'); ht.removeAttribute('aria-busy');
+      var team = care.ok ? care.team || [] : null;
+      ht.innerHTML = team == null ? retryHtml('the care team')
+        : team.length ? '<ul class="teaml">' + team.map(function (m) { return '<li><span class="tav" aria-hidden="true">' + e(initials(m.name)) + '</span><span><b>' + e(m.name) + '</b><span class="muted small">' + e(m.role) + '</span></span></li>'; }).join('') + '</ul>'
+        : '<p class="muted small">' + (act ? 'A nurse is assigned to ' + e(first(p.name)) + ' shortly. Our care coordinators are here for anything you need.' : 'Your care team is assigned once a package is active.') + '</p>';
     });
+  }
+
+  // insights: attention first (risk category, readings outside range, wellbeing flags), then progress
+  // that the data itself shows. No reading, date or advice is made up; nothing → no insight.
+  function insightsOf(d, q) {
+    var out = [];
+    var rs = d.riskStatus;
+    if (rs && rs.category && rs.category !== 'none') {
+      var tone = rs.category === 'red' ? 'bad' : rs.category === 'amber' ? 'warn' : rs.category === 'green' ? 'good' : null;
+      if (tone) out.push({ rank: tone === 'bad' ? 0 : tone === 'warn' ? 1 : 5, tone: tone, title: 'Overall risk: ' + String(rs.categoryName || rs.category).split(/\s[–-]\s/)[0], text: rs.reason || 'Calculated from the recorded vitals and assessments.', href: '#/health/risks' + q });
+    }
+    var latest = d.latest || [];
+    latest.filter(function (x) { return x.level === 'bad' || x.level === 'warn'; }).sort(function (a, b) { return (a.level === 'bad' ? 0 : 1) - (b.level === 'bad' ? 0 : 1); }).forEach(function (x) {
+      out.push({ rank: x.level === 'bad' ? 0.5 : 1.5, tone: x.level, title: x.label + ': ' + (x.status || 'needs a look'),
+        text: 'Latest ' + x.value + (x.unit ? ' ' + x.unit : '') + ' on ' + date(x.at) + (x.range ? ' · ' + x.range : ''),
+        href: (x.group === 'body' ? '#/health/body' : '#/health/vitals') + q + '&m=' + encodeURIComponent(x.metric) });
+    });
+    if (d.obs && d.obs.flags > 0) out.push({ rank: 2, tone: 'warn', title: 'Wellbeing: ' + d.obs.flags + ' item' + (d.obs.flags === 1 ? '' : 's') + ' to watch', text: 'From the check on ' + date(d.obs.at) + (d.obs.by ? ' by ' + d.obs.by : '') + '.', href: '#/health/wellbeing' + q });
+    var rated = latest.filter(function (x) { return x.level && x.level !== 'none'; });
+    if (rated.length && rated.every(function (x) { return x.level === 'good' || x.level === 'ok'; })) out.push({ rank: 4, tone: 'good', title: 'Readings within range', text: 'All ' + rated.length + ' latest readings are within KareIQ\'s standard ranges.', href: '#/health/vitals' + q });
+    var n7 = (d.metrics || []).reduce(function (a, m) { return a + (m.count || 0); }, 0);
+    if (n7) out.push({ rank: 4.5, tone: 'good', title: 'Good progress!', text: n7 + ' reading' + (n7 === 1 ? ' has' : 's have') + ' been recorded in the last 7 days' + (d.lastVisit && d.lastVisit.by ? ', most recently by ' + d.lastVisit.by + ' on ' + date(d.lastVisit.at) : '') + '.', href: '#/health/vitals' + q });
+    return out.sort(function (a, b) { return a.rank - b.rank; });
   }
 
   // ================================================================ Health details: Vitals, Risk trends, Notes
   // Separate pages, each built from separate sections (like Customer analytics): a summary section
   // and a chart section whose period filter sits at the chart's top-right. Notes have their own page.
   function healthView(r, kind) {
+    if (r.q && r.q.m && /^[a-z0-9_]{1,24}$/i.test(r.q.m)) S.cache.metric = r.q.m;
     var page = 'health/' + kind;
     withPerson(r, page, function (p, people) {
       var role = S.me.user.role;
@@ -3080,6 +3168,7 @@
       case 'det-save': ev.preventDefault(); detSave(t.getAttribute('data-status')); break;
       case 'det-reload': render(); break;
       case 'det-jump': { ev.preventDefault(); var tgt = document.getElementById(t.getAttribute('data-id')); if (tgt) { tgt.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' }); var h = tgt.querySelector('h2'); if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); } } break; }
+      case 'home-retry': render(); break;
       case 'jump': case 'vsel': {
         // show only the chosen vital's chart
         var k2 = t.getAttribute('data-k'), dd2 = S.cache.dash; if (!dd2) break;

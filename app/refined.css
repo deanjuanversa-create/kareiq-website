@@ -202,3 +202,142 @@ body[data-brand="kareiq"] .tabbar{display:none}
   body[data-brand="kareiq"] .gotile.wide>svg{display:block}
 }
 @media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .gl,body[data-brand="kareiq"] .gotile{animation:none}}
+
+/* ================= Home (families): greeting hero, health cards, insights, care sections ================= */
+body[data-brand="kareiq"] .home{--rose:#e5546b;--rose-soft:#fdecef;--mint:#e7f5f1;--peach:#fff3ea}
+body[data-brand="kareiq"] .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent-d);font-weight:600;text-decoration:underline;cursor:pointer}
+body[data-brand="kareiq"] .hhero{position:relative;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:center;gap:20px;margin:4px 0 26px;padding:30px 0 30px 34px;border-radius:28px;overflow:hidden;background:radial-gradient(120% 140% at 0% 0%,#eaf6f2 0%,rgba(234,246,242,0) 55%),radial-gradient(90% 120% at 100% 100%,#fdeef0 0%,rgba(253,238,240,0) 60%),#fbfbfd;border:1px solid rgba(0,0,0,.05);animation:kq-rise .5s cubic-bezier(.22,1,.36,1) both}
+body[data-brand="kareiq"] .hhero h1{font-size:clamp(2rem,3.6vw,2.9rem);letter-spacing:-.035em;line-height:1.08;margin:2px 0 8px}
+body[data-brand="kareiq"] .hhero .eyebrow{color:var(--muted);letter-spacing:.06em;font-weight:600}
+body[data-brand="kareiq"] .hhero-s{font-size:1.15rem;color:var(--ink-2);margin:0 0 18px}
+body[data-brand="kareiq"] .hpill{display:inline-flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:0;padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.8);border:1px solid rgba(0,0,0,.06);box-shadow:0 6px 18px -14px rgba(0,0,0,.3);font-size:.92rem;color:var(--ink-2)}
+body[data-brand="kareiq"] .hpill>span{display:inline-flex;align-items:center;gap:8px}
+body[data-brand="kareiq"] .hpill svg{width:17px;height:17px;color:var(--accent-d)}
+body[data-brand="kareiq"] .hpill .hpill-n{padding-left:16px;border-left:1px solid rgba(0,0,0,.12)}
+body[data-brand="kareiq"] .hhero-img{align-self:stretch;margin:-30px 0 -30px;min-height:230px;position:relative}
+body[data-brand="kareiq"] .hhero-img img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 30%;-webkit-mask:linear-gradient(90deg,transparent 0,#000 28%);mask:linear-gradient(90deg,transparent 0,#000 28%)}
+/* At a glance: profile avatar */
+body[data-brand="kareiq"] .gl-av{position:absolute;top:18px;right:18px;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#5ec2ae);color:#fff;font-weight:700;font-size:.95rem;letter-spacing:.02em}
+body[data-brand="kareiq"] .gl.quiet .gl-v{color:var(--ink-2)}
+/* health navigation cards + insights */
+body[data-brand="kareiq"] .hgrid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:16px;margin-bottom:16px}
+body[data-brand="kareiq"] .hnavs{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+body[data-brand="kareiq"] .hnav{position:relative;display:flex;flex-direction:column;gap:14px;padding:24px;border-radius:24px;text-decoration:none;color:var(--ink);overflow:hidden;min-height:220px;border:1px solid rgba(0,0,0,.05);box-shadow:0 1px 1px rgba(0,0,0,.025),0 10px 26px -18px rgba(0,0,0,.25);transition:transform .35s cubic-bezier(.22,1,.36,1),box-shadow .35s;animation:kq-rise .5s .1s cubic-bezier(.22,1,.36,1) both}
+body[data-brand="kareiq"] .hnav.rose{background:linear-gradient(160deg,#fff 30%,var(--rose-soft) 100%);--hc:var(--rose)}
+body[data-brand="kareiq"] .hnav.teal{background:linear-gradient(160deg,#fff 30%,var(--mint) 100%);--hc:var(--accent)}
+body[data-brand="kareiq"] .hnav::after{content:"";position:absolute;right:-40px;bottom:-40px;width:150px;height:150px;border-radius:50%;background:var(--hc);opacity:.07;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+body[data-brand="kareiq"] .hnav:hover{transform:translateY(-4px);box-shadow:0 1px 1px rgba(0,0,0,.03),0 24px 40px -24px rgba(0,0,0,.4)}
+body[data-brand="kareiq"] .hnav:hover::after{transform:scale(1.25)}
+body[data-brand="kareiq"] .hnav-a{display:flex;flex-direction:column;gap:14px;text-decoration:none;color:inherit;border-radius:16px}
+body[data-brand="kareiq"] .hnav-a::before{content:"";position:absolute;inset:0;z-index:0}
+body[data-brand="kareiq"] .hnav-a>*{position:relative}
+body[data-brand="kareiq"] .hnav-a:focus-visible{outline:3px solid var(--accent);outline-offset:6px}
+body[data-brand="kareiq"] .hsubs,body[data-brand="kareiq"] .hrec{position:relative;z-index:1}
+body[data-brand="kareiq"] .hsubs{display:flex;flex-wrap:wrap;gap:8px}
+body[data-brand="kareiq"] .hsubs a{display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid color-mix(in srgb,var(--hc) 22%,transparent);color:var(--ink);font-size:.86rem;font-weight:500;text-decoration:none;transition:background-color .2s,border-color .2s,transform .2s}
+body[data-brand="kareiq"] .hsubs a svg{width:15px;height:15px;color:var(--hc)}
+body[data-brand="kareiq"] .hsubs a:hover{background:#fff;border-color:var(--hc);transform:translateY(-1px)}
+body[data-brand="kareiq"] .hrec{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;padding:14px 16px;border-radius:16px;background:rgba(255,255,255,.8);border:1px solid rgba(0,0,0,.05)}
+body[data-brand="kareiq"] .hrec>b{font-size:1.9rem;letter-spacing:-.03em;color:var(--hc);line-height:1}
+body[data-brand="kareiq"] .hrec>span{color:var(--ink-2)}
+body[data-brand="kareiq"] .hrec .hrec-n{flex-basis:100%;display:inline-flex;align-items:center;gap:6px;font-size:.84rem;color:var(--muted);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+body[data-brand="kareiq"] .hrec .hrec-n svg{flex:none;width:14px;height:14px}
+body[data-brand="kareiq"] .hnav-go{position:relative;z-index:1;text-decoration:none}
+body[data-brand="kareiq"] .hnav-i{width:56px;height:56px;border-radius:18px;display:grid;place-items:center;background:#fff;color:var(--hc);box-shadow:0 8px 18px -10px color-mix(in srgb,var(--hc) 60%,transparent)}
+body[data-brand="kareiq"] .hnav-i svg{width:28px;height:28px}
+body[data-brand="kareiq"] .hnav-t{display:flex;flex-direction:column;gap:6px}
+body[data-brand="kareiq"] .hnav-t b{font-size:1.3rem;letter-spacing:-.02em}
+body[data-brand="kareiq"] .hnav-t span{color:var(--ink-2);line-height:1.45}
+body[data-brand="kareiq"] .hnav-go{margin-top:auto;display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--hc)}
+body[data-brand="kareiq"] .hnav-go svg{width:16px;height:16px;transition:transform .3s cubic-bezier(.34,1.56,.64,1)}
+body[data-brand="kareiq"] .hnav:hover .hnav-go svg{transform:translateX(4px)}
+body[data-brand="kareiq"] .hcard{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:24px;padding:20px 22px;box-shadow:0 1px 1px rgba(0,0,0,.025),0 10px 26px -18px rgba(0,0,0,.22);animation:kq-rise .5s .15s cubic-bezier(.22,1,.36,1) both;min-width:0}
+body[data-brand="kareiq"] .hcard-h{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+body[data-brand="kareiq"] .hcard-h h2{display:flex;align-items:center;gap:10px;font-size:1.15rem;letter-spacing:-.02em;margin:0}
+body[data-brand="kareiq"] .hcard-h h2 svg{width:22px;height:22px;color:var(--accent-d)}
+body[data-brand="kareiq"] .hins .hcard-h h2 svg{color:#f0a020}
+body[data-brand="kareiq"] .hcard-more{display:inline-flex;align-items:center;gap:6px;font-size:.92rem;font-weight:600;color:var(--accent-d);text-decoration:none}
+body[data-brand="kareiq"] .hcard-more.c{display:flex;justify-content:center;margin-top:12px}
+body[data-brand="kareiq"] .hcard-more svg{width:15px;height:15px}
+body[data-brand="kareiq"] .insl{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+body[data-brand="kareiq"] .ins{display:flex;align-items:center;gap:12px;padding:13px 14px;border-radius:16px;text-decoration:none;color:var(--ink);--ic:var(--c-good);background:color-mix(in srgb,var(--ic) 8%,#fff);border:1px solid color-mix(in srgb,var(--ic) 18%,transparent);transition:transform .25s,box-shadow .25s}
+body[data-brand="kareiq"] .ins.warn{--ic:var(--c-warn)}
+body[data-brand="kareiq"] .ins.bad{--ic:var(--c-bad)}
+body[data-brand="kareiq"] .ins:hover{transform:translateX(2px);box-shadow:0 10px 20px -16px rgba(0,0,0,.4)}
+body[data-brand="kareiq"] .ins-i{flex:none;width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:var(--ic);color:#fff}
+body[data-brand="kareiq"] .ins-i svg{width:18px;height:18px}
+body[data-brand="kareiq"] .ins-t{display:flex;flex-direction:column;gap:2px;min-width:0}
+body[data-brand="kareiq"] .ins-t b{font-size:.98rem}
+body[data-brand="kareiq"] .ins-t span{font-size:.88rem;color:var(--ink-2);line-height:1.4}
+body[data-brand="kareiq"] .ins>svg{flex:none;width:18px;height:18px;margin-left:auto;color:var(--muted)}
+body[data-brand="kareiq"] .hempty{display:flex;gap:12px;align-items:flex-start;padding:16px;border-radius:16px;background:#f5f5f7;color:var(--ink-2);font-size:.92rem}
+body[data-brand="kareiq"] .hempty svg{flex:none;width:20px;height:20px;color:var(--muted)}
+body[data-brand="kareiq"] .hempty b{display:block;color:var(--ink);margin-bottom:2px}
+/* lower row: care at a glance, care team, explore */
+body[data-brand="kareiq"] .hlow{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px;margin-bottom:22px}
+body[data-brand="kareiq"] .hrow{display:flex;align-items:center;gap:12px;padding:12px 4px;border-top:1px solid rgba(0,0,0,.07);text-decoration:none;color:var(--ink)}
+body[data-brand="kareiq"] .hrow:first-child{border-top:0}
+body[data-brand="kareiq"] .hrow-i{flex:none;width:42px;height:42px;border-radius:14px;display:grid;place-items:center;background:var(--accent-soft);color:var(--accent-d)}
+body[data-brand="kareiq"] .hrow-i svg{width:20px;height:20px}
+body[data-brand="kareiq"] .hrow-t{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+body[data-brand="kareiq"] .hrow-t span{font-size:.88rem;color:var(--ink-2)}
+body[data-brand="kareiq"] .hrow>svg{flex:none;width:18px;height:18px;color:var(--muted);transition:transform .25s}
+body[data-brand="kareiq"] .hrow:hover>svg{transform:translateX(3px);color:var(--ink)}
+body[data-brand="kareiq"] .hpillx{flex:none;font-size:.8rem;font-weight:600;padding:4px 10px;border-radius:999px;background:color-mix(in srgb,var(--c-good) 14%,#fff);color:var(--c-good)}
+body[data-brand="kareiq"] .hpillx.warn{background:color-mix(in srgb,var(--c-warn) 14%,#fff);color:#a35a00}
+body[data-brand="kareiq"] .hpillx.info{background:#eef2f7;color:var(--ink-2)}
+body[data-brand="kareiq"] .hteam{position:relative;overflow:hidden;background:linear-gradient(160deg,#fff 40%,var(--rose-soft) 140%)}
+body[data-brand="kareiq"] .hteam>*:not(.hteam-img){position:relative;z-index:1}
+body[data-brand="kareiq"] .hteam-img{position:absolute;right:-30px;bottom:-20px;width:46%;height:62%;object-fit:cover;object-position:30% 20%;border-radius:22px 0 0 0;opacity:.95;-webkit-mask:linear-gradient(90deg,transparent,#000 40%);mask:linear-gradient(90deg,transparent,#000 40%)}
+body[data-brand="kareiq"] .teaml{list-style:none;margin:10px 0 14px;padding:0;display:grid;gap:8px;max-width:60%}
+body[data-brand="kareiq"] .teaml li{display:flex;align-items:center;gap:10px}
+body[data-brand="kareiq"] .teaml li>span:last-child{display:flex;flex-direction:column}
+body[data-brand="kareiq"] .tav{flex:none;width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:#fff;border:2px solid var(--accent);color:var(--accent-d);font-weight:700;font-size:.82rem}
+body[data-brand="kareiq"] .hteam-act{display:flex;flex-direction:column;align-items:flex-start;gap:10px;margin-top:6px}
+body[data-brand="kareiq"] .hbtn{display:inline-flex;align-items:center;gap:8px;background:var(--accent-d);color:#fff;border-radius:999px;padding:11px 18px;font-weight:600;text-decoration:none;box-shadow:0 10px 20px -12px color-mix(in srgb,var(--accent) 80%,transparent)}
+body[data-brand="kareiq"] .hbtn:hover{background:var(--accent);color:#fff}
+body[data-brand="kareiq"] .hbtn svg{width:17px;height:17px}
+body[data-brand="kareiq"] .hcall{display:inline-flex;align-items:center;gap:6px;font-size:.9rem;color:var(--ink-2);text-decoration:none;font-weight:500}
+body[data-brand="kareiq"] .hcall svg{width:15px;height:15px}
+body[data-brand="kareiq"] .hexplore{position:relative;display:flex;overflow:hidden;padding:0;text-decoration:none;color:var(--ink);min-height:220px;background:linear-gradient(120deg,var(--rose-soft),#fff 60%)}
+body[data-brand="kareiq"] .hexplore img{position:absolute;right:0;top:0;width:50%;height:100%;object-fit:cover;-webkit-mask:linear-gradient(90deg,transparent,#000 45%);mask:linear-gradient(90deg,transparent,#000 45%);transition:transform .8s cubic-bezier(.22,1,.36,1)}
+body[data-brand="kareiq"] .hexplore:hover img{transform:scale(1.05)}
+body[data-brand="kareiq"] .hx-t{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;padding:22px;max-width:56%}
+body[data-brand="kareiq"] .hx-t b{font-size:1.2rem;letter-spacing:-.02em;line-height:1.25}
+body[data-brand="kareiq"] .hx-t em{font-style:normal;color:var(--rose)}
+body[data-brand="kareiq"] .hx-t>span:not(.hx-btn){color:var(--ink-2);font-size:.95rem}
+body[data-brand="kareiq"] .hx-btn{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:999px;border:1.5px solid var(--accent-d);color:var(--accent-d);font-weight:600;background:#fff}
+body[data-brand="kareiq"] .hx-btn svg{width:15px;height:15px}
+body[data-brand="kareiq"] .hexplore:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+/* tablet and phone */
+@media (max-width:1180px){
+  body[data-brand="kareiq"] .hpill .hpill-n{padding-left:0;border-left:0}
+  body[data-brand="kareiq"] .hgrid{grid-template-columns:1fr}
+  body[data-brand="kareiq"] .hlow{grid-template-columns:1fr 1fr}
+  body[data-brand="kareiq"] .hexplore{grid-column:1/-1}
+}
+@media (max-width:760px){
+  body[data-brand="kareiq"] .hhero{grid-template-columns:1fr;padding:22px 20px 0;gap:0}
+  body[data-brand="kareiq"] .hhero h1{font-size:1.85rem}
+  body[data-brand="kareiq"] .hhero-img{margin:16px -20px 0;min-height:170px}
+  body[data-brand="kareiq"] .hhero-img img{-webkit-mask:linear-gradient(180deg,transparent 0,#000 35%);mask:linear-gradient(180deg,transparent 0,#000 35%)}
+  body[data-brand="kareiq"] .hpill{border-radius:16px}
+  body[data-brand="kareiq"] .hpill .hpill-n{padding-left:0;border-left:0}
+  body[data-brand="kareiq"] .hnavs{grid-template-columns:1fr 1fr;gap:10px}
+  body[data-brand="kareiq"] .hnav{min-height:0;padding:16px;gap:10px;border-radius:20px}
+  body[data-brand="kareiq"] .hnav-i{width:46px;height:46px;border-radius:14px}
+  body[data-brand="kareiq"] .hnav-t b{font-size:1.05rem}
+  body[data-brand="kareiq"] .hnav-t span{font-size:.85rem}
+  body[data-brand="kareiq"] .hnav-go{display:none}
+  body[data-brand="kareiq"] .hlow{grid-template-columns:1fr}
+  body[data-brand="kareiq"] .hteam-img{display:none}
+  body[data-brand="kareiq"] .teaml{max-width:none}
+  body[data-brand="kareiq"] .hexplore img{width:100%;opacity:.28;-webkit-mask:none;mask:none}
+  body[data-brand="kareiq"] .hsubs a{padding:5px 9px;font-size:.78rem}
+  body[data-brand="kareiq"] .hsubs a svg{display:none}
+  body[data-brand="kareiq"] .hrec{padding:10px 12px}
+  body[data-brand="kareiq"] .hrec>b{font-size:1.4rem}
+  body[data-brand="kareiq"] .hx-t{max-width:none}
+  body[data-brand="kareiq"] .gl-av{top:50%;margin-top:-19px;width:38px;height:38px}
+}
+@media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .hhero,body[data-brand="kareiq"] .hnav,body[data-brand="kareiq"] .hcard{animation:none}}

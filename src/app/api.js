@@ -578,6 +578,27 @@ async function servicesData(user, person) {
   return { person: { id: person.id, name: person.name }, product: productOf(plans), free, discount, included, additional, last: list[0] || null, bookings: list, canBook: user.role !== 'caregiver' && plans.some((pl) => pl.status === 'active' || pl.status === 'paused') };
 }
 
+// "Nurse Anjali (demo)" -> "Anjali": the name a family would use, without a title or note
+const firstName = (name) => String(name || '').replace(/\(.*?\)/g, ' ').replace(/^\s*(nurse|sister|sr|dr|mr|mrs|ms)\.?\s+/i, '').trim().split(/\s+/)[0] || null;
+
+async function careData(person) {
+  const links = await docs.find('app_links', { personId: person.id, kind: 'caregiver' });
+  const today = todayIST();
+  const rows = (await docs.find('app_schedule', { personId: person.id }))
+    .filter((v) => v.date && v.date >= today && (schedulerMod.ACTIVE.includes(v.status) || v.status === 'awaiting_assignment'))
+    .sort((a, b) => (a.date + (a.start || '99')).localeCompare(b.date + (b.start || '99')));
+  const names = await namesFor(links.map((l) => l.userId).concat(rows.map((v) => v.nurseId)));
+  const users = links.length ? await docs.find('app_users', { id: { $in: links.map((l) => l.userId) } }) : [];
+  const team = users.filter((u) => u.active !== false && u.role === 'caregiver').map((u) => ({ name: u.name, role: 'Nurse' }));
+  const upcoming = rows.slice(0, 10).map((v) => {
+    const slot = schedulerMod.SLOTS[v.slot] || schedulerMod.SLOTS[schedulerMod.LEGACY_SLOT[v.slot]] || null;
+    return { date: v.date, start: v.start || null, slot: slot ? slot.label : null, service: v.service, serviceName: v.serviceName || (care.SERVICES[v.service] || {}).name || 'Visit',
+      routine: v.service === 'home-visit' || v.service === 'first-visit', confirmed: schedulerMod.ACTIVE.includes(v.status), status: v.status, statusName: schedulerMod.STATUS[v.status] || v.status,
+      nurse: v.nurseId ? firstName(names[v.nurseId]) : null };
+  });
+  return { person: { id: person.id, name: person.name }, team, upcoming };
+}
+
 async function invoicesData(person) {
   // the same invoices the office sees, with what has been paid (recorded, checked payments only)
   const rows = (await shared.finance.invoices({ personId: person.id })).map((i) => ({
@@ -1122,6 +1143,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (parts[0] === 'people' && parts[2] === 'package' && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1]);
       return json(res, 200, { ok: true, ...(await packageData(person)) });
+    }
+    // the customer's care team and upcoming visits, for the family Home page (read-only; no contact
+    // numbers of nurses: families reach the team through the office's WhatsApp and phone line)
+    if (parts[0] === 'people' && parts[2] === 'care' && parts.length === 3 && req.method === 'GET') {
+      const person = await visiblePerson(user, parts[1]);
+      if (user.role === 'caregiver') throw forbidden();
+      return json(res, 200, { ok: true, ...(await careData(person)) });
     }
     if (parts[0] === 'people' && parts[2] === 'services' && req.method === 'GET') {
       const person = await visiblePerson(user, parts[1]);
