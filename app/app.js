@@ -509,7 +509,7 @@
     family: [
       ['welcome', 'Home', 'home'],
       { k: 'profile', label: 'Profile', icon: 'user', sub: [['profile/personal', 'Personal details', 'idcard'], ['profile/conditions', 'Pre-existing health conditions', 'clip']] },
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/insights', 'Health insights', 'star'], ['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/insights', 'Health insights', 'star'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'My package', 'box'], ['packages', 'Other packages', 'layers'], ['invoices', 'Invoices', 'receipt'],
       ['policies', 'KareIQ Policies', 'shield']
     ],
@@ -519,7 +519,7 @@
       ['records', 'Medical records', 'file']
     ],
     admin: [
-      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/insights', 'Health insights', 'star'], ['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/notes', 'Notes', 'chat']] },
+      { k: 'health', label: 'Health details', icon: 'heart', sub: [['health/vitals', 'Vitals', 'pulse'], ['health/body', 'Body composition', 'scale'], ['health/wellbeing', 'Wellbeing checks', 'smile'], ['health/risks', 'Risk trends', 'gauge'], ['health/insights', 'Health insights', 'star'], ['health/notes', 'Notes', 'chat']] },
       ['records', 'Medical records', 'file'], ['package', 'Package and services', 'box'], ['invoices', 'Invoices', 'receipt'],
       ['clientinfo', 'Client information', 'clip']
     ]
@@ -897,7 +897,7 @@
           var groups = []; (d.risks || []).forEach(function (x) { if (groups.indexOf(x.groupName) === -1) groups.push(x.groupName); });
           if (rgroup !== 'all' && groups.indexOf(rgroup) === -1) rgroup = S.cache.riskGroup = 'all';
           var gsel = groups.length > 1 ? '<label class="sumsel"><span class="sr">Show</span><select data-act="rgroup">' + [['all', 'All indicators']].concat(groups.map(function (g) { return [g, g]; })).map(function (o) { return '<option value="' + e(o[0]) + '"' + (o[0] === rgroup ? ' selected' : '') + '>' + e(o[1]).toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '';
-          fill(personBar(p, people) + head('Risk trends', 'The overall risk category, then each indicator: its summary and the history of the one you choose.') +
+          fill(personBar(p, people) + head('Risk trends', 'The overall risk, then each indicator and the history of the one you choose.') +
             '<section class="hsec" aria-labelledby="h-rall"><div class="hsec-h"><h2 id="h-rall">Overall risk</h2><span class="muted small">Calculated automatically from the recorded vitals and assessments</span></div>' + riskHeroHtml(d.riskStatus, { history: role !== 'caregiver', pid: p.id }) + '</section>' +
             '<section class="hsec trends" aria-labelledby="h-rtr"><div class="hsec-h"><h2 id="h-rtr">Indicators</h2><div class="hsec-tools">' + gsel + periodChips(d) + '</div></div>' + (d.risks && d.risks.length ? hint : '') + rangeNote(d) + '<div id="rcharts">' + riskChartsHtml(d, rgroup) + '</div></section>' + guide);
           drawCharts(true);
@@ -913,7 +913,7 @@
         }
         var group = kind === 'body' ? 'body' : 'vitals';
         var has = vitalList(d, group).length;
-        fill(personBar(p, people) + head(group === 'body' ? 'Body composition' : 'Vitals', group === 'body' ? 'Weight, BMI and the smart-scale measurements: the summary of each and the history of the one you choose.' : 'Blood pressure, pulse, oxygen, perfusion index, sugar and the other vital signs: the summary of each and the history of the one you choose.') +
+        fill(personBar(p, people) + head(group === 'body' ? 'Body composition' : 'Vitals', group === 'body' ? 'The latest of each measurement, and the history of the one you choose.' : 'The latest reading of each vital, and the history of the one you choose.') +
           '<section class="hsec trends" aria-labelledby="h-vtr"><div class="hsec-h"><h2 id="h-vtr">' + (group === 'body' ? 'Measurements' : 'Your vitals') + '</h2>' + periodChips(d) + '</div>' + (has ? hint : '') + rangeNote(d) + '<div id="charts">' + chartsHtml(d, group) + '</div></section>' +
           (group === 'vitals' ? '<p class="muted small notes-link">' + icon('chat') + ' Notes from the care team are under <a href="#/health/notes?p=' + e(p.id) + '">Health details, Notes</a>.</p>' : '') + guide);
         drawCharts(true);
@@ -1153,13 +1153,13 @@
     var lv = LV[cur.level] || 'none', status = t ? t.direction : 'none';
     var span = date(d.range.from) + ' – ' + date(d.range.to);
     var html = '<div class="tblock rblock" id="t-risk-' + e(test) + '"><div class="rsum ' + lv + '"><span class="rg">' + e(x.groupName) + '</span><h3>' + e(x.title) + '</h3></div>' +
-      '<div class="avgbar ' + lv + '"><div><span>Latest score</span><b>' + e(cur.display) + '</b></div><span class="ast">● ' + e(cur.band) + '</span><span class="aspan">' + e(date(cur.at)) + (x.by ? ' · ' + e(x.by) : '') + '</span></div>' +
+      '<div class="vsum"><div class="avgbar ' + lv + '"><div><span>Latest score</span><b>' + e(cur.display) + '</b></div><span class="ast">● ' + e(cur.band) + '</span><span class="aspan">' + e(date(cur.at)) + (x.by ? ' · ' + e(x.by) : '') + '</span></div>' +
       '<dl class="vfacts rfacts">' +
         '<div><dt>Previous</dt><dd>' + (prev ? '<b>' + e(prev.display) + '</b><span class="rbv">' + dotHtml(prev.level) + e(prev.band) + '</span><span class="muted small">' + e(date(prev.at)) + '</span>' : '<span class="muted">No earlier assessment</span>') + '</dd></div>' +
         '<div><dt>Change</dt><dd>' + (prev ? '<b>' + e(changeText(t) || (t.change === 0 ? 'No change' : 'Not calculable for this check')) + '</b>' : '<span class="muted">Needs two assessments</span>') + '</dd></div>' +
         '<div><dt>Status</dt><dd><b class="rst ' + status + '">' + TREND_WORD[status] + '</b></dd></div>' +
         '<div><dt>Assessments</dt><dd><b>' + rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div>' +
-      '</dl>';
+      '</dl></div>';
     if (d.range.clamped) html += '<p class="histline">' + icon('clock') + '<span>History begins on <b>' + e(date(d.range.registeredOn)) + '</b>, the first record. There is no earlier data.</span></p>';
     if (!rows.length) {
       html += '<div class="empty"><b>No ' + e(x.title) + ' assessments in this period</b>' +
@@ -1225,8 +1225,7 @@
       '<span class="vc-row"><span class="vc-v">' + e(o.value) + (o.unit ? ' <small>' + e(o.unit) + '</small>' : '') + '</span>' +
       (PILL[o.level] ? '<span class="vc-pill ' + lv + '">' + PILL[o.level] + '</span>' : '') + '</span>' +
       '<span class="vc-sub">' + dotHtml(o.level) + e(o.sub) + '</span>' +
-      miniSpark(o.spark, null, lv) +
-      '<span class="vc-go">View trend' + icon('arrow') + '</span></button>';
+      '<span class="vc-foot">' + miniSpark(o.spark, null, lv) + '<span class="vc-go">View trend' + icon('arrow') + '</span></span></button>';
     return popItem(o.popId, btn, o.label, o.pop).replace('<div class="pitem">', '<div class="pitem vci">');
   }
   function sliderHtml(cards, label, id) {
@@ -1301,11 +1300,11 @@
     var last = m.rows[m.rows.length - 1];
     var lastVal = m.keys.map(function (x) { return last[x]; }).filter(function (v) { return v != null; }).join('/');
     return '<div class="tblock" id="t-' + m.metric + '"><h3>' + e(m.label) + '</h3>' +
-      '<div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
+      '<div class="vsum vv"><div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
         (m.status ? '<span class="ast">● ' + e(m.status) + '</span>' : '<span></span>') + '<span class="aspan">' + e(span) + '</span></div>' +
       '<dl class="vfacts"><div><dt>Latest in this period</dt><dd><b>' + e(lastVal) + (m.unit ? ' ' + e(m.unit) : '') + '</b>' + (last.status ? ' ' + dotHtml(last.level) + e(last.status) : '') + '<span class="muted small">' + e(dt(last.at)) + '</span></dd></div>' +
         (lat.range ? '<div><dt>Normal range</dt><dd><b>' + e(lat.range) + '</b></dd></div>' : '') +
-        '<div><dt>Readings</dt><dd><b>' + m.rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div></dl>' +
+        '<div><dt>Readings</dt><dd><b>' + m.rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div></dl></div>' +
       '<div class="cwrap" data-chart="' + m.metric + '"></div>' +
       '<div class="legend2">' + m.keys.map(function (x, i) { return '<span><i class="s' + (i + 1) + '"></i>' + e(m.names[i]) + (m.unit ? ' (' + e(m.unit) + ')' : '') + '</span>'; }).join('') + '</div>' +
       '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
@@ -1381,7 +1380,7 @@
   chartSvg.n = 0;
   function chartSvg(m, range, width, anim) {
     var W = Math.max(300, Math.round(width || 640)), small = W < 560;
-    var H = small ? 250 : 320, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
+    var H = small ? 200 : 230, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
     // x axis: from the first date the person can see (registration or period start) to now
     var start = Date.parse(range.from + 'T00:00:00+05:30');
     var end = Math.min(Date.parse(range.to + 'T23:59:59+05:30'), Date.now());

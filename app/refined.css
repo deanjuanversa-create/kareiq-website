@@ -477,3 +477,59 @@ body[data-brand="kareiq"] .legend2 i.s2{background:#ef6b7b}
 body[data-brand="kareiq"] .chart2.anim path.ln{stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:kq-draw .9s cubic-bezier(.45,0,.2,1) .12s forwards}
 body[data-brand="kareiq"] .chart2.anim .ar{animation:kq-fade .9s ease .3s both}
 @media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .chart2.anim path.ln,body[data-brand="kareiq"] .chart2.anim .ar{animation:none;stroke-dashoffset:0}}
+
+/* ---------- compact: cards, the summary above the chart, and the Home lower row */
+body[data-brand="kareiq"] .hlow{align-items:start}
+body[data-brand="kareiq"] .vcard{min-height:0;padding:12px 14px 10px;gap:2px;border-radius:18px}
+body[data-brand="kareiq"] .vc-top{gap:8px}
+body[data-brand="kareiq"] .vc-i{width:32px;height:32px}
+body[data-brand="kareiq"] .vc-i svg{width:17px;height:17px}
+body[data-brand="kareiq"] .vc-n{font-size:.92rem;-webkit-line-clamp:1}
+body[data-brand="kareiq"] .vc-row{margin-top:6px}
+body[data-brand="kareiq"] .vc-v{font-size:1.4rem}
+body[data-brand="kareiq"] .vc-pill{font-size:.7rem;padding:2px 8px}
+body[data-brand="kareiq"] .vc-sub{font-size:.76rem}
+body[data-brand="kareiq"] .vc-sp,body[data-brand="kareiq"] .vc-sp.none{height:24px;margin-top:4px}
+body[data-brand="kareiq"] .vc-sp.none em{margin-top:4px}
+body[data-brand="kareiq"] .vc-go{padding-top:2px;font-size:.8rem}
+body[data-brand="kareiq"] .vci .pinfo{top:10px;right:10px;width:26px;height:26px}
+body[data-brand="kareiq"] .vs-track{padding:8px 8px 10px}
+body[data-brand="kareiq"] .vslide{margin-bottom:10px}
+body[data-brand="kareiq"] .tblock h3{margin:4px 0 8px;font-size:1.1rem}
+body[data-brand="kareiq"] .avgbar{padding:9px 16px;border-radius:14px;margin-bottom:8px;gap:10px}
+body[data-brand="kareiq"] .avgbar b{font-size:1.15rem}
+body[data-brand="kareiq"] .avgbar span{font-size:.82rem}
+body[data-brand="kareiq"] .vfacts{gap:8px;margin:0 0 4px}
+body[data-brand="kareiq"] .vfacts>div{padding:8px 12px;border-radius:12px}
+body[data-brand="kareiq"] .vfacts dt{font-size:.68rem;margin-bottom:2px}
+body[data-brand="kareiq"] .vfacts dd{font-size:.9rem;line-height:1.35}
+body[data-brand="kareiq"] .vfacts dd .muted.small{font-size:.76rem}
+body[data-brand="kareiq"] .legend2{margin:2px 0 8px;font-size:.88rem}
+body[data-brand="kareiq"] .showall{min-height:38px;font-size:.85rem}
+body[data-brand="kareiq"] .phint{margin:0 0 2px;font-size:.84rem}
+@media (max-width:760px){
+  body[data-brand="kareiq"] .vfacts{grid-template-columns:1fr 1fr}
+  body[data-brand="kareiq"] .vfacts>div:last-child{grid-column:1/-1}
+}
+body[data-brand="kareiq"] .vc-foot{display:flex;align-items:flex-end;gap:10px;margin-top:4px}
+body[data-brand="kareiq"] .vc-foot .vc-sp{flex:1;min-width:0;margin:0}
+body[data-brand="kareiq"] .vc-foot .vc-go{flex:none;margin:0;padding:0;align-self:flex-end}
+/* the average and the facts in one row */
+body[data-brand="kareiq"] .vsum{display:grid;grid-template-columns:minmax(230px,1fr) 2.6fr;gap:8px;align-items:stretch;margin-bottom:6px}
+body[data-brand="kareiq"] .vsum .avgbar{margin:0;grid-template-columns:1fr;gap:2px;align-content:center}
+body[data-brand="kareiq"] .vsum .avgbar .ast,body[data-brand="kareiq"] .vsum .avgbar .aspan{font-size:.78rem}
+body[data-brand="kareiq"] .vsum .vfacts{margin:0;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+body[data-brand="kareiq"] .pagehead.hrow{margin-bottom:14px}
+body[data-brand="kareiq"] .pagehead.hrow h1{margin-bottom:2px}
+@media (max-width:900px){ body[data-brand="kareiq"] .vsum{grid-template-columns:1fr} }
+body[data-brand="kareiq"] .vsum .avgbar{display:flex;flex-wrap:wrap;align-items:baseline;column-gap:10px;row-gap:0;padding:10px 16px}
+body[data-brand="kareiq"] .vsum .avgbar>div{flex:1 1 100%}
+body[data-brand="kareiq"] .vsum .avgbar>div b{display:inline}
+body[data-brand="kareiq"] .vsum.vv .avgbar .aspan{display:none}
+body[data-brand="kareiq"] .vsum .vfacts dd b{white-space:nowrap}
+body[data-brand="kareiq"] .vsum .avgbar{align-items:flex-end;justify-content:space-between}
+body[data-brand="kareiq"] .vsum .avgbar>div{flex:0 1 auto}
+body[data-brand="kareiq"] .vsum .avgbar>div span{display:block}
+body[data-brand="kareiq"] .vsum .avgbar>div b{display:block}
+body[data-brand="kareiq"] .vsum .avgbar .ast{margin-bottom:3px}
+body[data-brand="kareiq"] .vc-sp.none em{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:calc(100% - 4px)}
