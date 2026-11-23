@@ -117,6 +117,8 @@ function create(ctx) {
     for (const userId of [...new Set(userIds)]) await docs.insert('app_notifications', { id: uid(), userId, ...n, readAt: null, createdAt: now() });
   }
   async function admins() { return (await docs.find('app_users', { role: 'admin', active: true })).map((u) => u.id); }
+  // the office admins and the Operations Managers (scheduling notices)
+  async function operations() { return (await docs.find('app_users', { active: true })).filter((u) => u.role === 'admin' || u.role === 'operations').map((u) => u.id); }
   function pushHistory(v, entry) { return [...(v.history || []), { at: now(), ...entry }]; }
 
   // Give a waiting visit to a nurse: the fairest available one, or the one asked for (office).
@@ -156,7 +158,7 @@ function create(ctx) {
       // nobody free: keep it waiting and tell the office (once per visit)
       if (!v.officeToldAt) {
         await docs.update('app_schedule', v.id, { status: 'awaiting_assignment', officeToldAt: now(), updatedAt: now(), history: pushHistory(v, { by: 'system', byRole: 'system', action: 'waiting', note: 'No nurse is available for this slot' }) });
-        await notify(await admins(), { kind: 'visit-unassigned', title: 'Visit needs a nurse', body: `${v.serviceName} for ${v.customerName} on ${v.date} (${SLOTS[v.slot].name}): no nurse is available.`, link: '#/office/scheduler?tab=unassigned' });
+        await notify(await operations(), { kind: 'visit-unassigned', title: 'Visit needs a nurse', body: `${v.serviceName} for ${v.customerName} on ${v.date} (${SLOTS[v.slot].name}): no nurse is available.`, link: '#/office/scheduler?tab=unassigned' });
       }
       return { ok: false, visit: await docs.findOne('app_schedule', { id: v.id }), why: 'No nurse is available for this slot.' };
     });
@@ -202,7 +204,7 @@ function create(ctx) {
     return locked(async () => {
       const v = await docs.findOne('app_schedule', { id: visitId });
       if (!v) return { ok: false, code: 404, why: 'Visit not found.' };
-      const office = user.role === 'admin';
+      const office = user.role === 'admin' || user.role === 'operations'; // the Operations Manager runs the scheduler too
       if (!office && v.nurseId !== user.id) return { ok: false, code: 404, why: 'Visit not found.' };
       if (status === 'cancelled') {
         if (!office) return { ok: false, code: 403, why: 'Only the office can cancel a visit.' };
@@ -238,7 +240,7 @@ function create(ctx) {
     return out;
   }
 
-  return { SLOTS, STATUS, ACTIVE, SERVICE_MINUTES, DEFAULT_DAYS, DAYS, assign, createVisit, setStatus, options, conflicts, nurses, profileDefaults, settings, notify, admins, weekOf, locked };
+  return { SLOTS, STATUS, ACTIVE, SERVICE_MINUTES, DEFAULT_DAYS, DAYS, assign, createVisit, setStatus, options, conflicts, nurses, profileDefaults, settings, notify, admins, operations, weekOf, locked };
 }
 
 module.exports = { create, SLOTS, STATUS, ACTIVE, SERVICE_MINUTES, DEFAULT_DAYS, DAYS, LEGACY_SLOT };

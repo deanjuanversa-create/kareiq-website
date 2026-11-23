@@ -13,7 +13,12 @@ const USERS = [
   ['family', 'Arjun Iyer (demo)', 'arjun@demo.kareiq', '+919800000003'],   // bought Kare@Home only
   ['family', 'Meena Das (demo)', 'meena@demo.kareiq', '+919800000004'],    // bought KareNest (Kare@Home is included)
   ['caregiver', 'Nurse Anjali (demo)', 'nurse@demo.kareiq', '+919800000011'],
-  ['caregiver', 'Joseph, KareNest care team (demo)', 'nest@demo.kareiq', '+919800000012']
+  ['caregiver', 'Joseph, KareNest care team (demo)', 'nest@demo.kareiq', '+919800000012'],
+  // the four team dashboards
+  ['finance', 'Farah, Finance Manager (demo)', 'finance@demo.kareiq', null],
+  ['hr', 'Hari, HR (demo)', 'hr@demo.kareiq', null],
+  ['operations', 'Omana, Operations Manager (demo)', 'ops@demo.kareiq', null],
+  ['sales', 'Sanjay, Sales Executive (demo)', 'sales@demo.kareiq', null]
 ];
 
 function rand(seed) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
@@ -281,6 +286,18 @@ async function seedOperations(ids, pdf, day0) {
     ['enquiries', 'KQ', { name: 'George Mathew (demo)', phone: '+919800100005', interest: 'karehome', interestName: 'Kare@Home', source: 'kareiq', createdAt: day0(75), leadStatus: 'lost' }]
   ];
   for (const [col, prefix, rec] of leads) await store.add(col, prefix, rec);
+
+  // the team dashboards (demo records): one lead with a follow-up for Sales, a nurse licence that
+  // expires soon for HR, one expense waiting for approval for Finance, one open service issue for Operations
+  const sunil = (await store.readAll('enquiries')).find((r) => r.name === 'Sunil Kumar (demo)');
+  if (sunil) await store.update('enquiries', sunil.id, { assignedTo: ids.sales, assignedAt: day0(1), leadStatus: 'contacted', followUpAt: addD(1), nextAction: 'Call back with Kare@Home HomePlus prices', package: 'homeplus',
+    leadHistory: [{ at: day0(1), by: 'Sanjay, Sales Executive (demo)', byId: ids.sales, action: 'contact', channel: 'call', outcome: 'Interested', note: 'Wants daily visits for his father; asked for prices.' }] });
+  const staffRow = await docs.findOne('app_staff', { userId: ids.nurse });
+  const lic = { id: 'demo-cred-1', type: 'license', name: 'Kerala Nurses and Midwives Council registration', number: 'KNMC-DEMO-0001', issuer: 'KNMC', issuedOn: '2021-12-15', expiresOn: addD(20), addedBy: ids.hr, addedAt: iso() };
+  if (staffRow) await docs.update('app_staff', staffRow.id, { designation: 'Staff Nurse', credentials: [lic] });
+  else await docs.insert('app_staff', { id: 'demo-staff-nurse', userId: ids.nurse, employeeId: 'EMP-DEMO01', department: 'Nursing', designation: 'Staff Nurse', businessUnit: 'karehome', location: 'Kochi', joinDate: day0(400).slice(0, 10), status: 'active', leave: [], kyc: { docs: [] }, credentials: [lic], createdAt: iso() });
+  await docs.insert('app_expenses', { id: 'demo-exp-1', reference: 'EX-DEMO01', date: day0(3).slice(0, 10), category: 'supplies', amount: 4850, vendor: 'Medline Kochi (demo)', description: 'Glucometer strips and dressing kits', status: 'submitted', createdBy: ids.finance, createdAt: day0(3), history: [{ at: day0(3), by: ids.finance, action: 'submitted' }] });
+  await docs.insert('app_issues', { id: 'demo-issue-1', reference: 'IS-DEMO01', type: 'complaint', title: 'Nurse arrived later than the slot', detail: 'The family says the morning visit started after 11 AM.', priority: 'normal', personId: 'P-DEMO01', customerName: 'Lakshmi Nair', status: 'open', createdBy: ids.ops, createdAt: day0(2), history: [{ at: day0(2), by: ids.ops, action: 'opened' }] });
 
   // the demo's older notifications count as read; two fresh ones show on the bell
   for (const n of await docs.find('app_notifications')) await docs.update('app_notifications', n.id, { readAt: iso() });

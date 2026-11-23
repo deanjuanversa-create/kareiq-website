@@ -493,7 +493,7 @@
   function liveLeave(l) { return !l.status || l.status === 'approved' || l.status === 'pending'; }
   var LST = { pending: 'pending', approved: 'active', rejected: 'ended', cancelled: 'ended' };
   function leavePage(r) {
-    page('office/scheduler/leave', 'Leave records', 'Every nurse\'s leave: who is away now, approved leave coming up, requests to decide, and the visits each leave affects.', '<button class="btn sm" data-act="o-leave-add">' + icon('plus') + 'Add leave</button>', skeleton());
+    page('office/scheduler/leave', 'Leave records', 'Every nurse\'s leave: who is away now, approved leave coming up, requests to decide, and the visits each leave affects.' + (role() === 'operations' ? ' Read only: leave is approved by HR and the office admin; approved leave blocks visit assignments.' : ''), role() === 'operations' ? '' : '<button class="btn sm" data-act="o-leave-add">' + icon('plus') + 'Add leave</button>', skeleton());
     api('GET', 'admin/leave').then(function (d) {
       if (!d.ok) return fail(d);
       S.cache.leave = d;
@@ -520,7 +520,7 @@
         (rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Nurse</th><th>Dates</th><th>Days</th><th>Type</th><th>Status</th><th>Affected visits</th><th></th></tr></thead><tbody>' + rows.map(function (l) {
           var need = l.affected.filter(function (a) { return a.result === 'awaiting_assignment'; }).length;
           var acts = l.status === 'pending' ? '<button class="btn sm" data-act="o-leave-approve" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Approve</button><button class="btn sm ghost" data-act="o-leave-reject" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Reject</button>' : '';
-          if (l.status === 'pending' || l.status === 'approved') acts += '<button class="btn sm ghost" data-act="o-leave-edit" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Edit</button><button class="btn sm ghost" data-act="o-leave-cancel" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Cancel</button>';
+          if (role() === 'operations') acts = ''; else if (l.status === 'pending' || l.status === 'approved') acts += '<button class="btn sm ghost" data-act="o-leave-edit" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Edit</button><button class="btn sm ghost" data-act="o-leave-cancel" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Cancel</button>';
           return '<tr><td data-l="Nurse"><a href="#/office/scheduler/leave?nurse=' + e(l.nurseId) + '"><b>' + e(l.nurseName) + '</b></a><br><span class="muted small">' + e(l.employeeId) + '</span></td>' +
             '<td data-l="Dates"><b>' + e(K.date(l.from)) + '</b>' + (l.to !== l.from ? ' to <b>' + e(K.date(l.to)) + '</b>' : '') + (l.current ? '<br><span class="pill pending"><i></i>On leave now</span>' : '') + (l.reason ? '<br><span class="muted small">' + e(l.reason) + '</span>' : '') + '</td>' +
             '<td data-l="Days">' + l.days + '</td><td data-l="Type">' + e(l.typeName) + '</td>' +
@@ -616,11 +616,13 @@
         '<form data-form="o-lead-assign" data-type="' + e(type) + '" data-id="' + e(id) + '" class="osub" novalidate><div class="alert bad" data-msg hidden></div><h3>Assigned to</h3><div class="row2"><label class="field"><span>Team member</span><select class="in" name="userId"><option value="">Choose</option>' + d.members.map(function (m) { return '<option value="' + e(m.id) + '"' + (m.id === l.assignedTo ? ' selected' : '') + '>' + e(m.name) + ' (' + m.open + ' open)</option>'; }).join('') + '</select><em class="err" data-err="userId"></em></label>' +
           '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300"></label></div><button class="btn sm" type="submit">' + (l.assignedTo ? 'Reassign' : 'Assign') + '</button></form>' +
         (d.duplicates.length ? '<h3 class="osub-h">Other enquiries from the same person</h3><ul class="rlist">' + d.duplicates.map(function (x) { return '<li><span><b>' + e(x.enquiryId) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.statusName) + '</span></span><button class="btn sm ghost" data-act="o-lead" data-type="' + e(x.type) + '" data-id="' + e(x.id) + '">Open</button></li>'; }).join('') + '</ul>' : '') +
-        '<h3 class="osub-h">History</h3>' + (l.history.length ? '<ol class="tl">' + l.history.slice().reverse().map(function (h) { return '<li><div class="t">' + e(HIST[h.action] || (h.action === 'status' ? 'Status: ' + (d.statuses[h.to] || h.to) : (h.action === 'reassigned' ? 'Reassigned to ' : 'Assigned to ') + h.to)) + '</div><div class="m">' + e(K.dt(h.at)) + ' by ' + e(h.by) + '</div>' + (h.note ? '<div class="n">' + e(h.note) + '</div>' : '') + '</li>'; }).join('') + '</ol>' : '<p class="muted">No changes yet.</p>'),
+        '<h3 class="osub-h">Contact and follow-up</h3><p class="small">' + (l.followUpAt ? 'Next follow-up <b>' + e(l.followUpAt.replace('T', ' ')) + '</b>' + (l.nextAction ? ': ' + e(l.nextAction) : '') : '<span class="muted">No follow-up planned.</span>') + '</p><button class="btn sm" data-act="o-contact" data-type="' + e(type) + '" data-id="' + e(id) + '" data-name="' + e(l.name) + '">' + icon('phone') + 'Log contact or plan a follow-up</button>' +
+        '<h3 class="osub-h">History</h3>' + (l.history.length ? '<ol class="tl">' + l.history.slice().reverse().map(function (h) { return '<li><div class="t">' + e(h.action === 'contact' ? (CONTACT[h.channel] || 'Contact') + (h.outcome ? ': ' + h.outcome : '') : HIST[h.action] || (h.action === 'status' ? 'Status: ' + (d.statuses[h.to] || h.to) : (h.action === 'reassigned' ? 'Reassigned to ' : 'Assigned to ') + h.to)) + '</div><div class="m">' + e(K.dt(h.at)) + ' by ' + e(h.by) + '</div>' + (h.note ? '<div class="n">' + e(h.note) + '</div>' : '') + '</li>'; }).join('') + '</ol>' : '<p class="muted">No changes yet.</p>'),
         '<button class="btn ghost" data-act="close">Close</button>');
     });
   }
-  var HIST = { general: 'General information saved', approved: 'Package approved', declined: 'Request declined' };
+  var HIST = { general: 'General information saved', approved: 'Package approved', declined: 'Request declined', plan: 'Follow-up plan updated' };
+  var CONTACT = { call: 'Phone call', whatsapp: 'WhatsApp', email: 'Email', meeting: 'Meeting / visit', note: 'Note' };
   var STEPS = [['requested', 'Request received'], ['info', 'General information'], ['approved', 'Package approved'], ['active', 'Payment confirmed'], ['onboarded', 'Nurse onboarding']];
   // the package request: where it stands, the customer's General Information, and the approval
   function lifecycleHtml(type, id, d) {
@@ -633,7 +635,8 @@
         '<dl class="kv okv">' + (lc.order ? '<dt>Order</dt><dd><b>' + e(lc.order.reference) + '</b> · ' + e(lc.order.name) + ' · ' + e(lc.order.amountText) + ' <span class="muted small">(' + e(lc.order.status.replace(/_/g, ' ')) + ')</span></dd>' : '') +
           (lc.approval && lc.approval.status === 'approved' ? '<dt>Approved</dt><dd>' + e(K.dt(lc.approval.at)) + ' by ' + e(lc.approval.byName || 'the office') + '</dd>' : '') +
           '<dt>Onboarding</dt><dd>' + (lc.stage === 'onboarded' ? 'Completed by the nurse' : lc.eligible ? '<b>Ready</b>: the assigned nurse sees the customer under Customer Onboarding' : '<span class="muted">' + e((lc.eligibilityReasons || [])[0] || 'Not yet') + '</span>') + '</dd></dl>' +
-        (lc.canApprove || lc.canReject ? '<form data-form="o-lc-approve" data-type="' + e(type) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+        (!isAdmin() && (lc.canApprove || lc.canReject) ? '<p class="note small">' + icon('shield') + '<span>Approving or declining the package is done by the office admin. Capture the General Information so it is ready for approval.</span></p>' : '') +
+        (isAdmin() && (lc.canApprove || lc.canReject) ? '<form data-form="o-lc-approve" data-type="' + e(type) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
           (lc.canApprove ? '' : (lc.generalInfo ? '' : '<p class="note small">' + icon('clock') + '<span>Capture the General Information below before approving the package.</span></p>')) +
           (lc.kind === 'plan-request' && lc.canApprove ? '<div class="row2">' + K.field('amount', 'Agreed amount (only for a package priced on call)', 'inputmode="decimal" placeholder="Leave empty to use the published price"') + '</div>' : '') +
           K.field('note', 'Note (needed to decline)', 'maxlength="300"') +
@@ -701,10 +704,10 @@
       var nurses = {}; d.nurses.forEach(function (n) { nurses[n.id] = n.name; });
       var ST = { active: 'Active', paused: 'Paused', pending: 'Being set up', inactive: 'Inactive', no_plan: 'No package' };
       swap(filters(r, [['q', 'Search', 'search', 'Name, customer ID, phone or email'], ['brand', 'Brand', 'select', brandOpts(d)], ['package', 'Package', 'select', pkgOpts(d)], ['status', 'Status', 'select', { active: 'Active', inactive: 'Not active', paused: 'Paused', pending: 'Being set up', no_plan: 'No package' }], ['from', 'Registered from', 'date'], ['to', 'Registered to', 'date'], ['nurse', 'Nurse', 'select', nurses], ['sort', 'Sort', 'select', { new: 'Newest first', old: 'Oldest first', name: 'Name', id: 'Customer ID' }]]) +
-        (d.rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Customer</th><th>Brand</th><th>Package</th><th>Status</th><th>Risk</th><th>Registered</th><th>Contact</th><th>Nurses</th><th></th></tr></thead><tbody>' + d.rows.map(function (c) {
+        (d.rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Customer</th><th>Brand</th><th>Package</th><th>Status</th>' + (isAdmin() ? '<th>Risk</th>' : '') + '<th>Registered</th><th>Contact</th><th>Nurses</th><th></th></tr></thead><tbody>' + d.rows.map(function (c) {
           return '<tr><td data-l="Customer"><a class="ocust" href="#/office/customer?p=' + e(c.id) + '"><span class="av">' + e(K.initials(c.name)) + '</span><span><b>' + e(c.name) + '</b><span class="muted small">' + e(c.id) + '</span></span></a></td>' +
             '<td data-l="Brand">' + (tags(c.brands, d.brands) || '–') + '</td><td data-l="Package">' + e(c.currentPackages.join(', ') || '–') + '</td><td data-l="Status"><span class="pill ' + (c.status === 'active' ? 'active' : c.status === 'pending' ? 'pending' : c.status === 'paused' ? 'paused' : 'ended') + '"><i></i>' + e(ST[c.status]) + '</span></td>' +
-            '<td data-l="Risk"><span class="rcat sm ' + e(c.risk || 'grey') + '"><i aria-hidden="true">' + K.CAT_ICON[c.risk || 'grey'] + '</i>' + e(RISK_NAME[c.risk || 'grey']) + '</span></td>' +
+            (isAdmin() ? '<td data-l="Risk"><span class="rcat sm ' + e(c.risk || 'grey') + '"><i aria-hidden="true">' + K.CAT_ICON[c.risk || 'grey'] + '</i>' + e(RISK_NAME[c.risk || 'grey']) + '</span></td>' : '') +
             '<td data-l="Registered">' + e(K.date(c.registeredAt)) + '</td><td data-l="Contact"><span class="small">' + e(K.phoneNice(c.phone) || '–') + '</span>' + (c.family.length ? '<br><span class="muted small">' + e(c.family.join(', ')) + '</span>' : '') + '</td>' +
             '<td data-l="Nurses">' + e(c.nurses.map(function (n) { return n.name; }).join(', ') || '–') + '</td><td><a class="btn sm ghost" href="#/office/customer?p=' + e(c.id) + '">Profile</a></td></tr>';
         }).join('') + '</tbody></table></section>' + pager(d, r) : '<div class="empty"><b>No customers match</b>Try other filters.</div>'));
@@ -742,7 +745,7 @@
   function invoiceTable(rows, compact) {
     return '<div class="tw"><table class="stackable otable"><thead><tr><th>Invoice</th>' + (compact ? '' : '<th>Customer</th>') + '<th>Package</th><th>Amount</th><th>Paid</th><th>Outstanding</th><th>Status</th><th></th></tr></thead><tbody>' + rows.map(function (i) {
       return '<tr><td data-l="Invoice"><b>' + e(i.number) + '</b><br><span class="muted small">' + e(K.date(i.date)) + ', due ' + e(K.date(i.dueDate)) + '</span></td>' +
-        (compact ? '' : '<td data-l="Customer"><a href="#/office/customer?p=' + e(i.personId) + '">' + e(i.customerName) + '</a><br><span class="muted small">' + e(i.personId) + '</span></td>') +
+        (compact ? '' : '<td data-l="Customer">' + custLink(i.personId, i.customerName) + '<br><span class="muted small">' + e(i.personId) + '</span></td>') +
         '<td data-l="Package">' + e(i.packageName) + (i.months ? '<br><span class="muted small">' + i.months + ' month' + (i.months > 1 ? 's' : '') + '</span>' : '') + '</td><td data-l="Amount"><b>' + money(i.amount) + '</b></td><td data-l="Paid">' + money(i.paid - i.refunded) + '</td>' +
         '<td data-l="Outstanding">' + (i.outstanding ? '<b>' + money(i.outstanding) + '</b>' + (i.overdueDays ? '<br><span class="odue">' + i.overdueDays + ' days overdue</span>' : '') : '–') + '</td>' +
         '<td data-l="Status"><span class="ipill ' + e(i.status) + '">' + e(INV_STATUS[i.status] || i.status) + '</span></td>' +
@@ -1011,11 +1014,584 @@
   }
   K.FORMS['o-policy'] = function (f, v) { return api('POST', 'admin/settings/contact-policy', { policy: v.policy }).then(function (d) { if (!d.ok) return d; K.toast('Policy saved. It applies from the next request.', 'ok'); }); };
 
+  // ================================================================ Team dashboards
+  // Finance Manager, HR, Operations Manager and Sales Executive: the same office interface, each role
+  // with its own landing page and only its own modules (the server refuses the rest, src/app/access.js).
+  // The office admin sees all four under "Team dashboards".
+  function role() { return (S.me && S.me.user.role) || ''; }
+  function isAdmin() { return role() === 'admin'; }
+  var ROLE_LABEL = { admin: 'Office', finance: 'Finance Manager', hr: 'HR', operations: 'Operations Manager', sales: 'Sales Executive' };
+  var LANDING = { finance: 'office/fin', hr: 'office/hr', operations: 'office/ops', sales: 'office/sales' };
+  function hello() { var h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Kolkata', hour: '2-digit', hourCycle: 'h23' }).format(new Date())); return 'Good ' + (h < 12 ? 'morning' : h < 17 ? 'afternoon' : 'evening') + ', ' + K.first(S.me.user.name).replace(/[,;.]+$/, ''); }
+  // a landing page: greeting for the person whose dashboard it is; the dashboard's name for the office admin
+  function landing(active, roleKey, sub) {
+    var mine = role() === roleKey;
+    page(active, mine ? hello() : ROLE_LABEL[roleKey] + ' dashboard', (mine ? ROLE_LABEL[roleKey] + ' dashboard · ' : 'As the ' + ROLE_LABEL[roleKey] + ' sees it · ') + e(K.date(K.todayIST())) + '. ' + sub, '', skeleton());
+  }
+  function tiles(list) {
+    return '<div class="gotiles osm tquick">' + list.map(function (q) { return '<a class="gotile sm" href="#/' + q[0] + '"><span class="gt-i">' + icon(q[2]) + '</span><span class="gt-t"><b>' + e(q[1]) + '</b>' + (q[3] ? '<span>' + e(q[3]) + '</span>' : '') + '</span>' + icon('arrow') + '</a>'; }).join('') + '</div>';
+  }
+  function csvBtn(path, label, query) { return '<a class="btn sm ghost" href="/api/app/admin/' + path + (query || '') + '" download>' + icon('download') + e(label || 'Download CSV') + '</a>'; }
+  function pill(text, tone) { return '<span class="tpill ' + (tone || '') + '">' + e(text) + '</span>'; }
+  function bar(pct, tone) { var v = Math.max(0, Math.min(100, Number(pct) || 0)); return '<span class="tbar ' + (tone || '') + '" role="img" aria-label="' + v + '%"><i style="width:' + v + '%"></i></span>'; }
+  function hours(min) { return (Math.round((min || 0) / 6) / 10).toLocaleString('en-IN') + ' h'; }
+  function panel(title, body, right) { return '<section class="panel"><div class="panel-h"><h2>' + e(title) + '</h2>' + (right || '') + '</div>' + body + '</section>'; }
+  function table(head, rows, emptyText) {
+    if (!rows.length) return '<div class="empty"><b>' + e(emptyText || 'Nothing to show') + '</b>Try other filters or another period.</div>';
+    return '<div class="tw"><table class="stackable otable"><thead><tr>' + head.map(function (h) { return '<th>' + e(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+      rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td data-l="' + e(head[i] || '') + '"' + (head[i] === '' ? ' class="oacts"' : '') + '>' + c + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
+  }
+  function opts(map, sel, blank) { return (blank ? '<option value="">' + e(blank) + '</option>' : '') + Object.keys(map).map(function (k) { return '<option value="' + e(k) + '"' + (k === sel ? ' selected' : '') + '>' + e(map[k]) + '</option>'; }).join(''); }
+  function selField(name, label, map, sel, blank) { return '<label class="field"><span>' + e(label) + '</span><select class="in" name="' + name + '">' + opts(map, sel, blank) + '</select><em class="err" data-err="' + name + '"></em></label>'; }
+  function areaField(name, label, val, attrs) { return '<label class="field"><span>' + e(label) + '</span><textarea class="in" name="' + name + '" rows="3" ' + (attrs || '') + '>' + e(val || '') + '</textarea><em class="err" data-err="' + name + '"></em></label>'; }
+  function custLink(id, name) { return isAdmin() || role() === 'operations' ? '<a href="#/office/customer?p=' + e(id) + '">' + e(name || id) + '</a>' : e(name || id); }
+
+  // ---------------------------------------------------------------- Finance Manager
+  var EXP_TONE = { submitted: 'warn', approved: 'info', rejected: 'bad', paid: 'good', cancelled: '' };
+  function finDashboard() {
+    landing('office/fin', 'finance', 'Revenue, collections, receivables, refunds and expenses from the recorded invoices and payments.');
+    api('GET', 'admin/fin/overview').then(function (d) {
+      if (!d.ok) return fail(d);
+      var k = d.kpis;
+      swap(kpis([kpi('Total revenue (invoiced)', k.totalRevenue, { money: true, icon: 'receipt' }), kpi('Revenue collected', k.collected, { money: true, icon: 'check', tone: 'good', sub: money(k.thisMonth) + ' this month' }),
+          kpi('Outstanding receivables', k.outstanding, { money: true, icon: 'clock', tone: k.outstanding ? 'warn' : '', sub: k.overdueInvoices ? k.overdueInvoices + ' overdue (' + money(k.overdueAmount) + ')' : 'Nothing overdue' }),
+          kpi('Pending payments', k.pendingPayments, { icon: 'inbox', sub: money(k.pendingAmount) + ' waiting' }), kpi('Refunds', k.refunds, { money: true, icon: 'left', sub: k.refundCount + ' refund' + (k.refundCount === 1 ? '' : 's') }),
+          kpi('Expenses this month', k.expensesThisMonth, { money: true, icon: 'rupee', sub: k.expensesWaiting ? k.expensesWaiting + ' waiting for approval' : 'None waiting' })]) +
+        tiles([['office/finance/invoices', 'Invoices', 'receipt'], ['office/finance/due', 'Payment due', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check', d.lastRecon ? 'Last run ' + K.date(d.lastRecon.at) : 'Not run yet'], ['office/fin/expenses', 'Expenses', 'receipt'], ['office/fin/reports', 'Financial reports', 'download']]) +
+        '<div class="ocharts">' +
+          timeChart('Revenue trend: invoiced, collected and expenses', d.monthly.map(function (x) { return x.key; }), [{ name: 'Invoiced', color: PAL[0], values: d.monthly.map(function (x) { return x.billed; }) }, { name: 'Collected', color: PAL[2], values: d.monthly.map(function (x) { return x.collected; }) }, { name: 'Expenses', color: PAL[1], values: d.monthly.map(function (x) { return x.expenses; }) }], { fmt: money, short: moneyShort }) +
+          donut('Invoices by payment status', d.invoiceStatus.filter(function (x) { return x.key !== 'overdue'; }), num) +
+          hbars('Revenue collected by package', d.byPackage, money) + hbars('Revenue collected by service line', d.byService, money, PAL[2]) + hbars('Received by payment method', d.byMethod, money, PAL[6]) +
+          timeChart('Yearly summary: collected and expenses', d.yearly.map(function (x) { return x.key; }), [{ name: 'Collected', color: PAL[2], values: d.yearly.map(function (x) { return x.collected; }) }, { name: 'Expenses', color: PAL[1], values: d.yearly.map(function (x) { return x.expenses; }) }], { fmt: money, short: moneyShort, label: function (x) { return x; } }) +
+        '</div>' +
+        panel('Package-wise financial performance', table(['Package', 'Invoices', 'Invoiced', 'Collected', 'Outstanding'], d.packagePerformance.map(function (x) { return [e(x.label), num(x.invoices), money(x.billed), money(x.collected), x.outstanding ? '<b>' + money(x.outstanding) + '</b>' : '–']; }), 'No invoices yet'), csvBtn('fin/reports/revenue-package.csv')) +
+        '<p class="note">' + icon('info') + '<span>' + e(d.note) + ' Finance sees money only; medical records, health reports and risk results are not part of this dashboard.</span></p>');
+    });
+  }
+  function finPayments(r) {
+    page('office/fin/payments', 'Payments and refunds', 'Every payment and refund recorded against an invoice, with who recorded it.', csvBtn('fin/reports/payments.csv', 'Payments CSV', qs(r)) + csvBtn('fin/reports/refunds.csv', 'Refunds CSV', qs(r)), K.loading(60) + K.loading(420));
+    api('GET', 'admin/fin/payments' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters(r, [['q', 'Search', 'search', 'Reference, invoice or customer'], ['kind', 'Type', 'select', { payment: 'Payments', refund: 'Refunds' }], ['method', 'Method', 'select', d.methods], ['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        kpis([kpi('Received', d.totals.received, { money: true, icon: 'check', tone: 'good', sub: d.totals.payments + ' payments' }), kpi('Refunded', d.totals.refunded, { money: true, icon: 'left', sub: d.totals.refunds + ' refunds' }), kpi('Net', d.totals.received - d.totals.refunded, { money: true, icon: 'rupee' })]) +
+        '<section class="panel otw">' + table(['Date', 'Reference', 'Invoice', 'Customer', 'Package', 'Method', 'Amount', 'Status', 'Recorded by'], d.rows.map(function (x) {
+          return ['<b>' + e(K.date(x.receivedAt)) + '</b>', e(x.ref || '–'), e(x.invoiceNo), e(x.customerName) + '<br><span class="muted small">' + e(x.personId) + '</span>', e(x.packageName), e((d.methods || {})[x.method] || x.method || '–'),
+            (x.kind === 'refund' ? '−' : '') + money(x.amount), pill(x.status, x.kind === 'refund' ? 'warn' : 'good') + (x.reason ? '<br><span class="muted small">' + e(x.reason) + '</span>' : ''), e(x.recordedBy)];
+        }), 'No payments match') + '</section>' + pager(d, r));
+    });
+  }
+  function finRecon(r) {
+    if (r.q.id) return finReconRun(r);
+    page('office/fin/recon', 'Reconciliation', 'Match a payment gateway or bank statement against the payments KareIQ recorded. Every run is kept.', '', K.loading(160) + K.loading(300));
+    api('GET', 'admin/fin/recon').then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<section class="panel"><h2>Reconcile a statement</h2><form data-form="o-recon" novalidate><div class="alert bad" data-msg hidden></div>' +
+          '<div class="row2">' + K.field('source', 'Statement from', 'maxlength="60" placeholder="e.g. Razorpay settlements, HDFC current account"') +
+          '<label class="field"><span>Statement file (CSV)</span><input class="in" type="file" name="file" accept=".csv,text/csv" required><em class="err" data-err="csv"></em></label></div>' +
+          '<p class="muted small">The file needs a transaction reference column (UTR, reference, transaction or payment ID) and an amount column; a date and a status column are used when present. Payments recorded in KareIQ for the statement\'s dates but missing from it are reported too.</p>' +
+          '<button class="btn" type="submit">' + icon('check') + 'Reconcile</button></form></section>' +
+        panel('Reconciliation history', table(['Run', 'Statement', 'Dates', 'Matched', 'Exceptions', 'Resolved', 'By', ''], d.rows.map(function (x) {
+          return ['<b>' + e(x.reference) + '</b><br><span class="muted small">' + e(K.dt(x.createdAt)) + '</span>', e(x.source) + (x.fileName ? '<br><span class="muted small">' + e(x.fileName) + '</span>' : ''), e(x.from ? K.date(x.from) + ' – ' + K.date(x.to) : '–'),
+            num(x.counts.matched), x.exceptions ? '<b class="odue">' + num(x.exceptions) + '</b>' : '0', num(x.resolved) + ' of ' + num(x.exceptions), e(x.by), '<a class="btn sm ghost" href="#/office/fin/recon?id=' + e(x.id) + '">Open</a>'];
+        }), 'No statement reconciled yet')));
+    });
+  }
+  K.FORMS['o-recon'] = function (f, v) {
+    var file = f.elements.file.files[0];
+    if (!file) return Promise.resolve({ ok: false, message: 'Choose the statement file.', errors: { csv: 'Required' } });
+    if (file.size > 2000000) return Promise.resolve({ ok: false, message: 'The statement is too large (2 MB at most).', errors: { csv: 'Too large' } });
+    return file.text().then(function (text) {
+      return api('POST', 'admin/fin/recon', { source: v.source, fileName: file.name, csv: text }).then(function (d) { if (!d.ok) return d; K.toast('Reconciled: ' + d.exceptions + ' exception' + (d.exceptions === 1 ? '' : 's') + '.', 'ok'); K.go('#/office/fin/recon?id=' + d.id); });
+    });
+  };
+  var RC_TONE = { matched: 'good', amount_mismatch: 'warn', missing_in_kareiq: 'bad', missing_in_statement: 'warn', failed: '', failed_but_recorded: 'bad', duplicate: 'warn' };
+  function finReconRun(r) {
+    page('office/fin/recon', 'Reconciliation run', '<a href="#/office/fin/recon">All runs</a>', '', K.loading(420));
+    api('GET', 'admin/fin/recon/' + enc(r.q.id)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var run = d.run, st = r.q.status || '';
+      var items = run.items.filter(function (i) { return !st || (st === 'exceptions' ? i.status !== 'matched' : i.status === st); });
+      swap(kpis(Object.keys(d.statuses).filter(function (k) { return run.counts[k]; }).map(function (k) { return kpi(d.statuses[k], run.counts[k], { icon: k === 'matched' ? 'check' : 'info', tone: k === 'matched' ? 'good' : RC_TONE[k] }); })) +
+        '<p class="muted">' + e(run.reference) + ' · ' + e(run.source) + (run.fileName ? ' (' + e(run.fileName) + ')' : '') + ' · ' + e(run.from ? K.date(run.from) + ' to ' + K.date(run.to) : '') + ' · by ' + e(run.by) + ', ' + e(K.dt(run.createdAt)) + '</p>' +
+        '<div class="tchips">' + [['', 'All rows'], ['exceptions', 'Exceptions only']].concat(Object.keys(d.statuses).map(function (k) { return [k, d.statuses[k]]; })).map(function (c) { return '<a class="chip' + (c[0] === st ? ' on' : '') + '" href="#/office/fin/recon?id=' + e(run.id) + (c[0] ? '&status=' + c[0] : '') + '">' + e(c[1]) + '</a>'; }).join('') + csvBtn('fin/recon/' + enc(run.id) + '/exceptions.csv', 'Exception report') + '</div>' +
+        '<section class="panel otw">' + table(['Row', 'Status', 'Reference', 'Date', 'Statement', 'KareIQ', 'Invoice', ''], items.map(function (i) {
+          return [num(i.n), pill(i.statusName, RC_TONE[i.status]) + (i.gatewayStatus ? '<br><span class="muted small">Gateway: ' + e(i.gatewayStatus) + '</span>' : ''), e(i.ref || '–'), e(i.date ? K.date(i.date) : '–'), i.amount == null ? '–' : money(i.amount), i.kareiqAmount == null ? '–' : money(i.kareiqAmount), e(i.invoiceNo || '–'),
+            i.status === 'matched' ? '' : i.resolved ? '<span class="small">' + icon('check') + ' Resolved by ' + e(i.resolved.byName) + '<br><span class="muted">' + e(i.resolved.note) + '</span></span>' : '<button class="btn sm ghost" data-act="o-recon-resolve" data-id="' + e(run.id) + '" data-n="' + i.n + '">Mark resolved</button>'];
+        }), 'No rows') + '</section>');
+    });
+  }
+  function expenseDialog() {
+    var c = S.cache.expCats || {};
+    K.openDialog('Record an expense', '<form data-form="o-expense" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('date', 'Date', 'type="date" max="' + K.todayIST() + '" value="' + K.todayIST() + '"') + selField('category', 'Category', c, '', 'Choose') + '</div>' +
+      '<div class="row2">' + K.field('amount', 'Amount (₹)', 'inputmode="decimal"') + K.field('vendor', 'Paid to', 'maxlength="100"') + '</div>' + K.field('invoiceRef', 'Bill or invoice number (optional)', 'maxlength="60"') + areaField('description', 'What it was for', '', 'maxlength="300"') +
+      '<p class="muted small">It waits for approval by another Finance Manager or the office admin; you cannot approve your own expense.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Submit for approval</button>');
+  }
+  K.FORMS['o-expense'] = function (f, v) { return api('POST', 'admin/fin/expenses', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Expense ' + d.reference + ' submitted for approval.', 'ok'); K.render(); }); };
+  function finExpenses(r) {
+    page('office/fin/expenses', 'Expenses', 'Operational expenses: recorded, approved by someone else, then paid. Every step is kept.', '<button class="btn sm" data-act="o-exp-new">' + icon('plus') + 'Record an expense</button>' + csvBtn('fin/reports/expenses.csv', 'CSV', qs(r)), skeleton());
+    api('GET', 'admin/fin/expenses' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.expCats = d.categories;
+      swap(filters(r, [['q', 'Search', 'search', 'Reference, payee or description'], ['status', 'Status', 'select', d.statuses], ['category', 'Category', 'select', d.categories], ['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        kpis([kpi('Approved and paid', d.totals.approved, { money: true, icon: 'check', tone: 'good' }), kpi('Waiting for approval', d.totals.waiting, { money: true, icon: 'clock', tone: d.totals.waitingCount ? 'warn' : '', sub: d.totals.waitingCount + ' expense' + (d.totals.waitingCount === 1 ? '' : 's') }), kpi('Paid out', d.totals.paid, { money: true, icon: 'rupee' })]) +
+        '<div class="ocharts">' + hbars('Approved expenses by category', d.byCategory, money, PAL[1]) + timeChart('Approved expenses by month', d.byMonth.map(function (x) { return x.key; }), [{ name: 'Expenses', color: PAL[1], values: d.byMonth.map(function (x) { return x.value; }) }], { fmt: money, short: moneyShort }) + '</div>' +
+        '<section class="panel otw">' + table(['Expense', 'Category', 'Paid to', 'Amount', 'Status', 'Recorded by', ''], d.rows.map(function (x) {
+          var a = '';
+          if (x.status === 'submitted' && x.createdBy !== d.me) a += '<button class="btn sm" data-act="o-exp" data-s="approve" data-id="' + e(x.id) + '">Approve</button><button class="btn sm ghost" data-act="o-exp" data-s="reject" data-id="' + e(x.id) + '">Reject</button>';
+          if (x.status === 'submitted' && x.createdBy === d.me) a += '<span class="muted small">Waiting for someone else to approve</span><button class="btn sm ghost" data-act="o-exp" data-s="cancel" data-id="' + e(x.id) + '">Withdraw</button>';
+          if (x.status === 'approved') a += '<button class="btn sm" data-act="o-exp" data-s="paid" data-id="' + e(x.id) + '">Mark paid</button>';
+          return ['<b>' + e(x.reference) + '</b><br><span class="muted small">' + e(K.date(x.date)) + '</span>' + (x.description ? '<br><span class="small">' + e(x.description) + '</span>' : ''), e(x.categoryName), e(x.vendor) + (x.invoiceRef ? '<br><span class="muted small">Bill ' + e(x.invoiceRef) + '</span>' : ''), '<b>' + money(x.amount) + '</b>',
+            pill(x.statusName, EXP_TONE[x.status]) + (x.decidedByName ? '<br><span class="muted small">' + e(x.status === 'rejected' ? 'Rejected' : 'Approved') + ' by ' + e(x.decidedByName) + (x.decisionNote ? ': ' + e(x.decisionNote) : '') + '</span>' : '') + (x.paymentRef ? '<br><span class="muted small">Paid, ref ' + e(x.paymentRef) + '</span>' : ''), e(x.createdByName), a];
+        }), 'No expenses recorded') + '</section>' + pager(d, r));
+    });
+  }
+  function reportsPage(active, title, sub, list, extra) {
+    page(active, title, sub, '', '<section class="panel">' + (extra || '') + '<ul class="treports">' + list.map(function (x) {
+      return '<li><span class="gt-i">' + icon(x[3] || 'file') + '</span><div><b>' + e(x[1]) + '</b><span class="muted small">' + e(x[2]) + '</span></div><a class="btn sm" href="/api/app/admin/' + x[0] + '" data-rep="' + e(x[0]) + '" download>' + icon('download') + 'Download CSV</a></li>';
+    }).join('') + '</ul><p class="muted small">CSV files open in Excel, Numbers and Google Sheets. Figures are worked out from the records at the moment you download.</p></section>');
+  }
+  function finReports() {
+    reportsPage('office/fin/reports', 'Financial reports', 'Download the healthcare business reports as spreadsheets.', [
+      ['fin/reports/revenue-package.csv', 'Revenue by healthcare package', 'Invoiced, collected and outstanding for each package (package-wise performance).', 'box'],
+      ['fin/reports/revenue-service.csv', 'Revenue by service type', 'Collected for each service line (Kare@Home, KareNest, KareWellness).', 'layers'],
+      ['fin/reports/revenue-method.csv', 'Revenue by payment method', 'Received by UPI, card, bank transfer and the other methods.', 'rupee'],
+      ['fin/reports/monthly.csv', 'Monthly financial report', 'The last 12 months: invoiced, collected and approved expenses.', 'cal'],
+      ['fin/reports/yearly.csv', 'Yearly financial summary', 'Collected and approved expenses for each year.', 'chart'],
+      ['fin/reports/invoices.csv', 'Invoice register', 'Every invoice with its paid, refunded and outstanding amounts.', 'receipt'],
+      ['fin/reports/receivables.csv', 'Outstanding receivables', 'Unpaid and part-paid invoices with days overdue.', 'clock'],
+      ['fin/reports/payments.csv', 'Payments', 'Every recorded payment.', 'check'], ['fin/reports/refunds.csv', 'Refunds', 'Every recorded refund with its reason.', 'left'],
+      ['fin/reports/expenses.csv', 'Expenses', 'Every expense with its approval and payment.', 'receipt']]);
+  }
+
+  // ---------------------------------------------------------------- HR
+  var CRED_TONE = { valid: 'good', expiring: 'warn', expired: 'bad', withdrawn: '' };
+  function hrDashboard() {
+    landing('office/hr', 'hr', 'Headcount, onboarding, attendance, leave and healthcare credentials.');
+    api('GET', 'admin/hr/overview').then(function (d) {
+      if (!d.ok) return fail(d);
+      var k = d.kpis;
+      swap(kpis([kpi('Total employees', k.total, { icon: 'team', sub: k.active + ' active · ' + k.inactive + ' inactive' }), kpi('On leave today', k.onLeave, { icon: 'cal' }), kpi('New employees', k.joined, { icon: 'plus', sub: 'joined in the last 30 days' }),
+          kpi('Departures', k.left, { icon: 'out', sub: 'last 30 days · ' + k.leftThisYear + ' this year' }), kpi('Onboarding in progress', k.onboarding, { icon: 'idcard', tone: k.onboarding ? 'warn' : '' }),
+          kpi('Credentials expiring', k.expiring + k.expired, { icon: 'shield', tone: k.expired ? 'bad' : k.expiring ? 'warn' : '', sub: k.expired + ' expired · ' + k.expiring + ' within 30 days' }), kpi('Leave requests to decide', k.pendingLeave, { icon: 'clip', tone: k.pendingLeave ? 'warn' : '' }), kpi('Attendance marked today', k.markedToday, { icon: 'check' })]) +
+        tiles([['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and documents', 'idcard'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge'], ['office/hr/reports', 'HR reports', 'download']]) +
+        '<div class="ocharts">' + hbars('Employees by department', d.byDepartment, num) + donut('Employees by role', d.byRole, num) +
+          timeChart('Joiners and departures', d.joining.map(function (x) { return x.key; }), [{ name: 'Joined', color: PAL[2], values: d.joining.map(function (x) { return x.joined; }) }, { name: 'Left', color: PAL[7], values: d.joining.map(function (x) { return x.left; }) }]) + '</div>' +
+        '<div class="ogrid2">' + panel('Credentials needing attention', d.expiringSoon.length ? '<ul class="rlist">' + d.expiringSoon.map(function (c) { return '<li><span><b>' + e(c.employeeName) + '</b> · ' + e(c.name) + '<br><span class="muted small">' + e(c.typeName) + ' · ' + (c.status === 'expired' ? 'expired ' : 'expires ') + e(K.date(c.expiresOn)) + '</span></span>' + pill(c.status === 'expired' ? 'Expired' : c.daysLeft + ' days left', CRED_TONE[c.status]) + '</li>'; }).join('') + '</ul>' : '<p class="muted">No credential is expired or expiring in the next 30 days.</p>', '<a class="btn sm ghost" href="#/office/hr/credentials">All credentials</a>') +
+          panel('Recently joined', d.recent.length ? '<ul class="rlist">' + d.recent.map(function (x) { return '<li><span><a href="#/office/hr/employee?id=' + e(x.userId) + '"><b>' + e(x.name) + '</b></a><br><span class="muted small">' + e(x.roleName) + ' · joined ' + e(K.date(x.joinDate)) + '</span></span>' + pill(x.onboarding.status === 'complete' ? 'Onboarded' : x.onboarding.done + ' of ' + x.onboarding.total, x.onboarding.status === 'complete' ? 'good' : 'warn') + '</li>'; }).join('') + '</ul>' : '<p class="muted">Nobody yet.</p>') + '</div>');
+    });
+  }
+  function hrOnboarding(r) {
+    page('office/hr/onboarding', 'Employee onboarding', 'Each employee\'s onboarding steps, worked out from their employee record, KYC documents, credentials and login.', csvBtn('hr/reports/onboarding.csv'), K.loading(420));
+    api('GET', 'admin/hr/onboarding' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters(r, [['status', 'Status', 'select', { in_progress: 'In progress', complete: 'Complete' }]]) + '<section class="panel otw">' + table(['Employee', 'Role', 'Joined', 'Progress', 'Still to do', ''], d.rows.map(function (v) {
+        var o = v.onboarding;
+        return ['<b>' + e(v.name) + '</b><br><span class="muted small">' + e(v.employeeId) + '</span>', e(v.roleName), e(v.joinDate ? K.date(v.joinDate) : '–'), bar(o.done / o.total * 100, o.status === 'complete' ? 'good' : 'warn') + '<span class="small">' + o.done + ' of ' + o.total + '</span>',
+          o.steps.filter(function (s) { return !s.ok; }).map(function (s) { return '<span class="small">' + icon('clock') + ' ' + e(s.label) + '</span>'; }).join('<br>') || pill('Complete', 'good'), '<a class="btn sm ghost" href="#/office/hr/employee?id=' + e(v.userId) + '">Open</a>'];
+      }), 'Nobody matches') + '</section>');
+    });
+  }
+  function hrEmployee(r) {
+    page('office/hr/employees', 'Employee', '<a href="#/office/hr/onboarding">Employee onboarding</a> · <a href="#/office/employees">Employee overview</a>', '', K.loading(160) + K.loading(300));
+    api('GET', 'admin/hr/employees/' + enc(r.q.id || '')).then(function (d) {
+      if (!d.ok) return fail(d);
+      var v = d.employee; S.cache.hrEmp = d;
+      var ro = function (l, x) { return '<div class="rof"><dt>' + e(l) + '</dt><dd>' + (x ? e(x) : '<span class="muted">Not given</span>') + '</dd></div>'; };
+      var CH = { department: 'Department', designation: 'Designation', businessUnit: 'Business unit', location: 'Location', status: 'Status', joinDate: 'Date of joining' };
+      swap('<section class="phead"><div class="avatar"><span class="ph">' + e(K.initials(v.name)) + '</span></div><div class="phead-t"><h2>' + e(v.name) + '</h2><p class="muted">' + e(v.employeeId) + ' · ' + e(v.roleName) + (v.designation ? ' · ' + e(v.designation) : '') + '</p><div class="ptags" style="margin-top:8px">' + pill(v.statusName, v.status === 'inactive' ? '' : v.status === 'on_leave' ? 'warn' : 'good') + ' ' + pill(v.onboarding.status === 'complete' ? 'Onboarding complete' : 'Onboarding ' + v.onboarding.done + ' of ' + v.onboarding.total, v.onboarding.status === 'complete' ? 'good' : 'warn') + '</div></div>' +
+          '<div class="oacts"><button class="btn sm" data-act="o-hr-edit">' + icon('pen') + 'Edit employment</button><a class="btn sm ghost" href="#/office/employees/kyc?id=' + e(v.userId) + '">' + icon('idcard') + 'KYC documents</a></div></section>' +
+        '<div class="ogrid2">' + panel('Employment', '<dl class="rogrid">' + ro('Department', v.department) + ro('Designation', v.designation) + ro('Business unit', v.businessUnitName) + ro('Location', v.location) + ro('Date of joining', v.joinDate && K.date(v.joinDate)) + ro('Length of service', v.service && v.service.text) + ro('Left on', v.exitDate && K.date(v.exitDate)) + ro('Phone', K.phoneNice(v.phone)) + ro('Email', v.email) + ro('Emergency contact', v.emergencyContact && (v.emergencyContact.name || '') + ' ' + (K.phoneNice(v.emergencyContact.phone) || '')) + '</dl>') +
+          panel('Onboarding checklist', '<ul class="tcheck">' + v.onboarding.steps.map(function (s) { return '<li class="' + (s.ok ? 'ok' : '') + '">' + icon(s.ok ? 'check' : 'clock') + '<span>' + e(s.label) + '</span></li>'; }).join('') + '</ul>') + '</div>' +
+        panel('Qualifications, licences, certifications and training', table(['Record', 'Number', 'Issued', 'Expires', 'Status', ''], v.credentials.map(function (c) {
+          return ['<b>' + e(c.name) + '</b><br><span class="muted small">' + e(c.typeName) + (c.issuer ? ' · ' + e(c.issuer) : '') + '</span>', e(c.number || '–'), e(c.issuedOn ? K.date(c.issuedOn) : '–'), e(c.expiresOn ? K.date(c.expiresOn) : 'No expiry'),
+            pill(c.statusName + (c.status === 'expiring' ? ' (' + c.daysLeft + ' days)' : ''), CRED_TONE[c.status]), c.withdrawn ? '' : '<button class="btn sm ghost" data-act="o-cred" data-id="' + e(c.id) + '">Edit</button><button class="btn sm ghost" data-act="o-cred-wd" data-id="' + e(c.id) + '">Withdraw</button>'];
+        }), 'No credentials recorded yet'), '<button class="btn sm" data-act="o-cred">' + icon('plus') + 'Add a record</button>') +
+        '<div class="ogrid2">' + panel('Attendance this month', '<ul class="rlist">' + Object.keys(d.attendance).map(function (k2) { return '<li><span>' + e({ present: 'Present', absent: 'Absent', half_day: 'Half day', on_leave: 'On leave', week_off: 'Weekly off', holiday: 'Holiday' }[k2]) + '</span><b>' + d.attendance[k2] + '</b></li>'; }).join('') + '</ul>', '<a class="btn sm ghost" href="#/office/hr/attendance">Attendance</a>') +
+          panel('Employment history', (v.history || []).length ? '<ol class="tl">' + v.history.slice().reverse().map(function (h) { return '<li><div class="t">' + h.changes.map(function (c) { return e(CH[c.field] || c.field) + ': ' + e(c.from || '–') + ' → ' + e(c.to || '–'); }).join('<br>') + '</div><div class="m">' + e(K.dt(h.at)) + ' · ' + e(h.byName) + '</div></li>'; }).join('') + '</ol>' : '<p class="muted">No changes recorded since the employee record was created.</p>') + '</div>' +
+        (v.leave && v.leave.length ? panel('Leave', '<ul class="rlist">' + v.leave.slice().reverse().slice(0, 10).map(function (l) { return '<li><span>' + e(K.date(l.from)) + ' – ' + e(K.date(l.to)) + '<br><span class="muted small">' + e(l.type || 'Leave') + (l.reason ? ' · ' + e(l.reason) : '') + '</span></span>' + pill(l.status || 'approved', l.status === 'pending' ? 'warn' : l.status === 'rejected' || l.status === 'cancelled' ? '' : 'good') + '</li>'; }).join('') + '</ul>', '<a class="btn sm ghost" href="#/office/scheduler/leave">Leave records</a>') : ''));
+    });
+  }
+  function hrEditDialog() {
+    var d = S.cache.hrEmp, v = d.employee, deps = {}; d.departments.forEach(function (x) { deps[x] = x; });
+    K.openDialog('Employment: ' + v.name, '<form data-form="o-hr-edit" data-id="' + e(v.userId) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('department', 'Department', deps, v.department) + K.field('designation', 'Designation', 'maxlength="80" value="' + e(v.designation || '') + '"') + '</div>' +
+      '<div class="row2">' + K.field('location', 'Location', 'maxlength="80" value="' + e(v.location || '') + '"') + K.field('joinDate', 'Date of joining', 'type="date" max="' + K.todayIST() + '" value="' + e(v.joinDate || '') + '"') + '</div>' +
+      '<div class="row2">' + selField('status', 'Employment status', { active: 'Active', inactive: 'Left / inactive' }, v.status === 'inactive' ? 'inactive' : 'active') + K.field('exitDate', 'Last working day (when leaving)', 'type="date" max="' + K.todayIST() + '" value="' + e(v.exitDate || '') + '"') + '</div>' +
+      '<p class="muted small">Every change is kept in the employment history. Turning someone inactive here does not switch off their login; the office admin does that under Settings > Logins.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Save</button>');
+  }
+  K.FORMS['o-hr-edit'] = function (f, v) {
+    var body = { department: v.department, designation: v.designation, location: v.location, status: v.status }; if (v.joinDate) body.joinDate = v.joinDate; if (v.exitDate) body.exitDate = v.exitDate;
+    return api('PATCH', 'admin/employees/' + enc(f.getAttribute('data-id')), body).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved.', 'ok'); K.render(); });
+  };
+  function credDialog(id) {
+    var d = S.cache.hrEmp, c = id ? d.employee.credentials.filter(function (x) { return x.id === id; })[0] : {};
+    K.openDialog(id ? 'Edit record' : 'Add a qualification, licence or certification', '<form data-form="o-cred" data-u="' + e(d.employee.userId) + '" data-id="' + e(id || '') + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('type', 'Kind', d.credTypes, c.type || (d.employee.role === 'caregiver' ? 'license' : 'qualification'), 'Choose') + K.field('name', 'Name', 'maxlength="120" value="' + e(c.name || '') + '" placeholder="e.g. Kerala Nurses and Midwives Council registration"') + '</div>' +
+      '<div class="row2">' + K.field('number', 'Number (optional)', 'maxlength="60" value="' + e(c.number || '') + '"') + K.field('issuer', 'Issued by (optional)', 'maxlength="120" value="' + e(c.issuer || '') + '"') + '</div>' +
+      '<div class="row2">' + K.field('issuedOn', 'Issued on', 'type="date" value="' + e(c.issuedOn || '') + '"') + K.field('expiresOn', 'Expires on (leave empty if it does not expire)', 'type="date" value="' + e(c.expiresOn || '') + '"') + '</div>' +
+      '<p class="muted small">HR and the employee are reminded 30 days before it expires, and again when it has expired.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Save</button>');
+  }
+  K.FORMS['o-cred'] = function (f, v) {
+    var id = f.getAttribute('data-id'), u = f.getAttribute('data-u');
+    return api(id ? 'PATCH' : 'POST', 'admin/hr/employees/' + enc(u) + '/credentials' + (id ? '/' + enc(id) : ''), v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved.', 'ok'); K.render(); });
+  };
+  function hrCredentials(r) {
+    page('office/hr/credentials', 'Healthcare staff credentials', 'Professional qualifications, nursing and healthcare licences, certifications, training and compliance records, with their expiry.', csvBtn('hr/reports/credentials.csv', 'Expiry report'), K.loading(420));
+    api('GET', 'admin/hr/credentials' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters(r, [['status', 'Status', 'select', { valid: 'Valid', expiring: 'Expiring within ' + d.soonDays + ' days', expired: 'Expired', withdrawn: 'Withdrawn' }], ['type', 'Kind', 'select', d.types]]) +
+        kpis([kpi('Valid', d.counts.valid, { icon: 'check', tone: 'good' }), kpi('Expiring within ' + d.soonDays + ' days', d.counts.expiring, { icon: 'clock', tone: d.counts.expiring ? 'warn' : '' }), kpi('Expired', d.counts.expired, { icon: 'shield', tone: d.counts.expired ? 'bad' : '' })]) +
+        '<section class="panel otw">' + table(['Employee', 'Record', 'Number', 'Expires', 'Status', ''], d.rows.map(function (c) {
+          return ['<b>' + e(c.employeeName) + '</b><br><span class="muted small">' + e(c.employeeId) + ' · ' + e(c.roleName) + '</span>', e(c.name) + '<br><span class="muted small">' + e(c.typeName) + '</span>', e(c.number || '–'), e(c.expiresOn ? K.date(c.expiresOn) : 'No expiry'),
+            pill(c.statusName + (c.daysLeft != null && c.status !== 'withdrawn' ? ' (' + (c.daysLeft < 0 ? -c.daysLeft + ' days ago' : c.daysLeft + ' days') + ')' : ''), CRED_TONE[c.status]), '<a class="btn sm ghost" href="#/office/hr/employee?id=' + e(c.userId) + '">Open</a>'];
+        }), 'No credentials match') + '</section>');
+    });
+  }
+  var ATT = { present: 'Present', absent: 'Absent', half_day: 'Half day', on_leave: 'On leave', week_off: 'Weekly off', holiday: 'Holiday' };
+  function hrAttendance(r) {
+    if (r.q.view === 'month') return hrAttendanceMonth(r);
+    var day = r.q.date || K.todayIST();
+    page('office/hr/attendance', 'Attendance', 'Mark each employee\'s attendance for a day. Approved leave and nurses\' visits that day are shown beside each name.', '<a class="btn sm ghost" href="#/office/hr/attendance?view=month">' + icon('chart') + 'Monthly summary</a>', K.loading(420));
+    api('GET', 'admin/hr/attendance?date=' + enc(day)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>Day</span><input class="in" type="date" name="date" max="' + K.todayIST() + '" value="' + e(d.date) + '" data-act="o-auto"></label></form>' +
+        '<form data-form="o-att" data-date="' + e(d.date) + '" novalidate><div class="alert bad" data-msg hidden></div><section class="panel otw">' + table(['Employee', 'Role', 'Leave and visits', 'Attendance', 'Note'], d.rows.map(function (x) {
+          var val = x.status || x.suggested || '';
+          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + (x.markedBy ? ' · marked by ' + e(x.markedBy) : '') + '</span>', e(x.roleName) + (x.department ? '<br><span class="muted small">' + e(x.department) + '</span>' : ''),
+            (x.onLeave ? pill(x.onLeave, 'warn') + ' ' : '') + (x.visits ? '<span class="small">' + x.visitsDone + ' of ' + x.visits + ' visit' + (x.visits === 1 ? '' : 's') + ' started or done</span>' : '<span class="muted small">–</span>'),
+            '<select class="in sm" name="s_' + e(x.userId) + '" aria-label="Attendance of ' + e(x.name) + '">' + opts(ATT, val, 'Not marked') + '</select>' + (!x.status && x.suggested ? '<br><span class="muted small">Suggested from ' + (x.suggested === 'on_leave' ? 'approved leave' : 'visits') + '</span>' : ''),
+            '<input class="in sm" name="n_' + e(x.userId) + '" maxlength="200" value="' + e(x.note || '') + '" aria-label="Note for ' + e(x.name) + '">'];
+        }), 'No active employees') + '</section><button class="btn" type="submit">' + icon('check') + 'Save attendance for ' + e(K.date(d.date)) + '</button></form>');
+    });
+  }
+  K.FORMS['o-att'] = function (f, v) {
+    var rows = []; Object.keys(v).forEach(function (k) { if (k.indexOf('s_') === 0 && v[k]) rows.push({ userId: k.slice(2), status: v[k], note: v['n_' + k.slice(2)] || '' }); });
+    if (!rows.length) return Promise.resolve({ ok: false, message: 'Mark at least one person.' });
+    return api('POST', 'admin/hr/attendance', { date: f.getAttribute('data-date'), rows: rows }).then(function (d) { if (!d.ok) return d; K.toast(d.saved ? 'Saved ' + d.saved + ' change' + (d.saved === 1 ? '' : 's') + '.' : 'Nothing changed.', 'ok'); K.render(); });
+  };
+  function hrAttendanceMonth(r) {
+    var m = r.q.month || K.todayIST().slice(0, 7);
+    page('office/hr/attendance', 'Attendance summary', '<a href="#/office/hr/attendance">Mark attendance</a>', csvBtn('hr/reports/attendance.csv', 'Attendance report', '?month=' + enc(m)), K.loading(420));
+    api('GET', 'admin/hr/attendance/summary?month=' + enc(m)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<form class="ofilters" data-form="o-filter" novalidate><input type="hidden" name="view" value="month"><label><span>Month</span><input class="in" type="month" name="month" value="' + e(d.month) + '" data-act="o-auto"></label></form>' +
+        '<section class="panel otw">' + table(['Employee', 'Present', 'Half day', 'Absent', 'On leave', 'Off / holiday', 'Approved leave days', 'Not marked'], d.rows.map(function (x) {
+          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.roleName) + '</span>', num(x.counts.present), num(x.counts.half_day), x.counts.absent ? '<b class="odue">' + x.counts.absent + '</b>' : '0', num(x.counts.on_leave), num(x.counts.week_off + x.counts.holiday), num(x.approvedLeaveDays), x.unmarked ? '<span class="muted">' + x.unmarked + '</span>' : '0'];
+        }), 'No employees') + '</section>');
+    });
+  }
+  function hrLeave(r) {
+    var y = r.q.year || K.todayIST().slice(0, 4);
+    page('office/hr/leave', 'Leave balances', 'The yearly allowance you set, minus the approved leave in Leave records. Requests are approved or rejected in <a href="#/office/scheduler/leave">Leave records</a>.', csvBtn('hr/reports/leave.csv', 'Leave report', '?year=' + enc(y)), K.loading(420));
+    api('GET', 'admin/hr/leave/balances?year=' + enc(y)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var types = Object.keys(d.types);
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>Year</span><select class="in" name="year" data-act="o-auto">' + [0, 1, 2].map(function (i) { var yy = String(Number(K.todayIST().slice(0, 4)) - i); return '<option' + (yy === d.year ? ' selected' : '') + '>' + yy + '</option>'; }).join('') + '</select></label></form>' +
+        '<section class="panel"><h2>Yearly allowance (days)</h2>' + (d.policySet ? '' : '<p class="note small">' + icon('info') + '<span>No allowance is set yet, so only the days used are shown. Enter the allowance from your leave policy.</span></p>') +
+        '<form data-form="o-leave-policy" novalidate><div class="alert bad" data-msg hidden></div><div class="tgrid4">' + types.map(function (t) { return K.field('a_' + t, d.types[t], 'type="number" min="0" max="365" step="1" value="' + (d.allowances[t] != null ? d.allowances[t] : '') + '"'); }).join('') + '</div><button class="btn sm" type="submit">Save allowance</button></form></section>' +
+        '<section class="panel otw">' + table(['Nurse'].concat(types.map(function (t) { return d.types[t]; })), d.rows.map(function (x) {
+          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + (x.active ? '' : ' · inactive') + '</span>'].concat(types.map(function (t) {
+            var b = x.types[t];
+            return (b.allowance != null ? '<b class="' + (b.remaining < 0 ? 'odue' : '') + '">' + b.remaining + ' left</b><br><span class="muted small">' + b.used + ' of ' + b.allowance + ' used</span>' : '<span class="small">' + b.used + ' used</span>') + (b.pending ? '<br><span class="small">' + b.pending + ' pending</span>' : '');
+          }));
+        }), 'No nurses') + '</section><p class="muted small">Leave is recorded for nurses in Leave records (the existing leave system). Approved leave keeps blocking visit assignments as before.</p>');
+    });
+  }
+  K.FORMS['o-leave-policy'] = function (f, v) {
+    var a = {}; Object.keys(v).forEach(function (k) { if (k.indexOf('a_') === 0) a[k.slice(2)] = v[k]; });
+    return api('POST', 'admin/hr/leave/policy', { allowances: a }).then(function (d) { if (!d.ok) return d; K.toast('Allowance saved.', 'ok'); K.render(); });
+  };
+  function hrReports() {
+    var m = K.todayIST().slice(0, 7), y = K.todayIST().slice(0, 4);
+    reportsPage('office/hr/reports', 'HR reports', 'Download the HR reports as spreadsheets.', [
+      ['hr/reports/headcount.csv', 'Employee headcount', 'Everyone with their role, department, designation, joining and leaving dates.', 'team'],
+      ['hr/reports/attendance.csv?month=' + m, 'Attendance this month', 'Days present, absent, on leave and off for each employee.', 'cal'],
+      ['hr/reports/leave.csv?year=' + y, 'Leave this year', 'Every leave record with its type, days and status.', 'clip'],
+      ['hr/reports/onboarding.csv', 'Employee onboarding status', 'Steps done and still to do for each employee.', 'idcard'],
+      ['hr/reports/credentials.csv', 'Credential and certification expiry', 'Every qualification, licence and certification with its expiry.', 'shield']]);
+  }
+
+  // ---------------------------------------------------------------- Operations Manager
+  var VTONE = { awaiting_assignment: 'warn', assigned: 'info', accepted: 'info', in_progress: 'info', completed: 'good', cancelled: '' };
+  function visitFlags(v) { return (v.missed ? pill('Missed', 'bad') + ' ' : '') + (v.delayed ? pill('Delayed', 'warn') + ' ' : '') + (v.rescheduled ? pill('Rescheduled', '') : ''); }
+  function visitActs(v) {
+    if (v.status === 'completed' || v.status === 'cancelled') return '';
+    return (v.status !== 'in_progress' ? '<button class="btn sm ghost" data-act="o-resched" data-id="' + e(v.id) + '" data-ref="' + e(v.reference) + '">Reschedule</button>' : '') +
+      (v.status === 'awaiting_assignment' || v.status === 'assigned' ? '<button class="btn sm ghost" data-act="o-assign" data-id="' + e(v.id) + '">' + (v.nurseId ? 'Reassign' : 'Assign') + '</button>' : '') +
+      (v.missed ? '<button class="btn sm ghost" data-act="o-issue-new" data-type="missed-visit" data-visit="' + e(v.id) + '" data-title="' + e('Missed visit ' + v.reference + ' (' + v.serviceName + ')') + '">Follow up</button>' : '');
+  }
+  function visitRow(v) {
+    return ['<b>' + e(K.date(v.date)) + '</b><br><span class="muted small">' + e(v.slotName) + (v.start ? ' · ' + e(v.start) : '') + '</span>', e(v.serviceName) + '<br><span class="muted small">' + e(v.reference) + '</span>', v.personId ? custLink(v.personId, v.customerName) : e(v.customerName),
+      v.nurseName ? e(v.nurseName) : '<span class="muted">Not assigned</span>', pill(v.statusName, VTONE[v.status]) + '<br>' + visitFlags(v), visitActs(v)];
+  }
+  function opsDashboard() {
+    landing('office/ops', 'operations', 'Customers, visits, nurse capacity, onboarding and service quality.');
+    api('GET', 'admin/ops/overview').then(function (d) {
+      if (!d.ok) return fail(d);
+      var k = d.kpis;
+      swap(kpis([kpi('Active customers', k.activeCustomers, { icon: 'people' }), kpi('Awaiting onboarding', k.awaitingOnboarding, { icon: 'idcard', tone: k.delayedOnboarding ? 'warn' : '', sub: k.delayedOnboarding + ' delayed' }), kpi('Awaiting nurse assignment', k.awaitingNurse, { icon: 'user', tone: k.awaitingNurse ? 'warn' : '', sub: 'active customers without a nurse' }),
+          kpi('Today\'s visits', k.today, { icon: 'cal', sub: k.todayDone + ' completed' }), kpi('Upcoming visits', k.upcoming, { icon: 'right', sub: 'next 7 days' }), kpi('Completed', k.completed30, { icon: 'check', tone: 'good', sub: 'last 30 days' + (k.completionRate != null ? ' · ' + k.completionRate + '% completion' : '') }),
+          kpi('Cancelled', k.cancelled30, { icon: 'x', sub: 'last 30 days · ' + k.rescheduled30 + ' rescheduled' }), kpi('Unassigned visits', k.unassigned, { icon: 'inbox', tone: k.unassigned ? 'warn' : '' }), kpi('Missed or delayed', k.missed + k.delayed, { icon: 'clock', tone: k.missed ? 'bad' : k.delayed ? 'warn' : '', sub: k.missed + ' missed · ' + k.delayed + ' delayed now' }),
+          kpi('Open service issues', k.openIssues, { icon: 'star', tone: k.openIssues ? 'warn' : '' })]) +
+        tiles([['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard'], ['office/scheduler', 'Visit board', 'cal'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download']]) +
+        panel('Needs attention: missed and delayed visits', table(['Date', 'Service', 'Customer', 'Nurse', 'Status', ''], d.attention.map(visitRow), 'No missed or delayed visits'), '<a class="btn sm ghost" href="#/office/ops/visits?flag=missed">All missed visits</a>') +
+        panel('Today', table(['Date', 'Service', 'Customer', 'Nurse', 'Status', ''], d.today.map(visitRow), 'No visits today'), '<a class="btn sm ghost" href="#/office/scheduler">Visit board</a>') +
+        '<div class="ocharts">' + timeChart('Visits in the last 14 days', d.daily.map(function (x) { return x.key; }), [{ name: 'Completed', color: PAL[2], values: d.daily.map(function (x) { return x.completed; }) }, { name: 'Missed', color: PAL[7], values: d.daily.map(function (x) { return x.missed; }) }, { name: 'Cancelled', color: PAL[3], values: d.daily.map(function (x) { return x.cancelled; }) }], { label: function (x) { return K.date(x).replace(/ \d{4}$/, ''); } }) + '</div>' +
+        '<p class="note">' + icon('shield') + '<span>Operations works with contact details, visits and packages. Medical records, health readings and risk results stay with the care team and the office admin.</span></p>');
+    });
+  }
+  function opsVisits(r) {
+    page('office/ops/visits', 'Visit tracking', 'Every scheduled visit with its status: completed, missed, delayed, rescheduled or cancelled.', csvBtn('ops/reports/visits.csv', 'CSV', qs(r, ['from', 'to'])), K.loading(60) + K.loading(420));
+    api('GET', 'admin/ops/visits' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var nurses = {}; d.nurses.forEach(function (n) { nurses[n.id] = n.name; });
+      swap(filters(r, [['q', 'Search', 'search', 'Reference, customer or service'], ['from', 'From', 'date'], ['to', 'To', 'date'], ['status', 'Status', 'select', d.statuses], ['flag', 'Show', 'select', { missed: 'Missed', delayed: 'Delayed now', rescheduled: 'Rescheduled' }], ['nurse', 'Nurse', 'select', nurses]]) +
+        '<p class="muted small">' + e(K.date(d.from)) + ' to ' + e(K.date(d.to)) + '</p>' +
+        kpis([kpi('Visits', d.totals.all, { icon: 'cal' }), kpi('Completed', d.totals.completed, { icon: 'check', tone: 'good' }), kpi('Missed', d.totals.missed, { icon: 'clock', tone: d.totals.missed ? 'bad' : '' }), kpi('Rescheduled', d.totals.rescheduled, { icon: 'right' }), kpi('Cancelled', d.totals.cancelled, { icon: 'x' })]) +
+        '<section class="panel otw">' + table(['Date', 'Service', 'Customer', 'Nurse', 'Status', ''], d.rows.map(visitRow), 'No visits match') + '</section>' + pager(d, r));
+    });
+  }
+  function reschedDialog(id, ref) {
+    K.openDialog('Reschedule visit ' + ref, '<form data-form="o-resched" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('date', 'New date', 'type="date" min="' + K.todayIST() + '"') + selField('slot', 'Slot', { morning: 'Morning (8 AM to 12 PM)', evening: 'Evening (2 PM to 6 PM)' }, 'morning') + '</div>' +
+      K.field('note', 'Why it is moved', 'maxlength="200" placeholder="e.g. The family asked for Thursday"') + '<label class="check"><input type="checkbox" name="keepNurse" value="1" checked> Keep the same nurse if they are free</label>' +
+      '<p class="muted small">The visit is given to a nurse by the scheduler\'s usual rules: working hours, approved leave and holidays are respected and visits never overlap.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Reschedule</button>');
+  }
+  K.FORMS['o-resched'] = function (f, v) { v.keepNurse = Boolean(v.keepNurse); return api('POST', 'admin/ops/visits/' + enc(f.getAttribute('data-id')) + '/reschedule', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast(d.message, d.assigned ? 'ok' : 'bad'); K.render(); }); };
+  function opsCapacity(r) {
+    page('office/ops/capacity', 'Nurse capacity', 'Availability, workload, upcoming assignments, scheduling conflicts and leave conflicts for each nurse.', csvBtn('ops/reports/utilisation.csv', 'Utilisation CSV', qs(r, ['from', 'to'])), K.loading(420));
+    api('GET', 'admin/ops/capacity' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var t = d.totals;
+      swap(filters(r, [['from', 'From', 'date'], ['to', 'To', 'date']]) + '<p class="muted small">' + e(K.date(d.from)) + ' to ' + e(K.date(d.to)) + '</p>' +
+        kpis([kpi('Available hours', Math.round(t.available / 60), { icon: 'clock' }), kpi('Booked hours', Math.round(t.booked / 60), { icon: 'cal' }), kpi('Utilisation', t.available ? Math.round(t.booked / t.available * 1000) / 10 : 0, { icon: 'gauge', suffix: '%' }), kpi('Scheduling conflicts', t.conflicts, { icon: 'info', tone: t.conflicts ? 'bad' : '', sub: t.leaveConflicts + ' with approved leave' })]) +
+        '<section class="panel otw">' + table(['Nurse', 'Working days', 'Available', 'Booked', 'Utilisation', 'Visits', 'Upcoming', 'Leave', 'Conflicts'], d.rows.map(function (n) {
+          return ['<b>' + e(n.name) + '</b>' + (n.onLeaveToday ? '<br>' + pill('On leave today', 'warn') : '') + (n.active ? '' : '<br><span class="muted small">Inactive</span>'), n.workDays + ' a week', hours(n.availableMinutes), hours(n.bookedMinutes),
+            n.utilisation == null ? '<span class="muted">No hours</span>' : bar(n.utilisation, n.utilisation > 90 ? 'bad' : n.utilisation > 70 ? 'warn' : 'good') + '<span class="small">' + n.utilisation + '%</span>', num(n.visits) + '<br><span class="muted small">' + n.completed + ' done</span>', num(n.upcoming), n.leaveDays ? n.leaveDays + ' day' + (n.leaveDays === 1 ? '' : 's') : '–',
+            n.conflicts ? n.conflictList.map(function (c) { return '<span class="small odue">' + e(c.why) + ': ' + e(c.reference || '') + ' ' + e(c.date ? K.date(c.date) : '') + '</span>'; }).join('<br>') + '<br><a class="btn sm ghost" href="#/office/ops/visits?from=' + e(d.from) + '&to=' + e(d.to) + '&nurse=' + e(n.id) + '">Reassign</a>' : '–'];
+        }), 'No nurses') + '</section><p class="muted small">Available hours come from each nurse\'s working days and slots (Nurses and hours), less holidays and approved leave. Booked hours are the visits given to them, by the length of each service.</p>');
+    });
+  }
+  function opsOnboarding(r) {
+    page('office/ops/onboarding', 'Customer onboarding', 'Customers with a package: whether the package approval and payment allow onboarding, whether a nurse looks after them, and how long they have waited.', csvBtn('ops/reports/onboarding.csv'), K.loading(420));
+    api('GET', 'admin/ops/onboarding' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var c = d.counts, ST = { awaiting: 'warn', onboarded: 'good', not_eligible: '', package: '' };
+      swap('<div class="tchips">' + [['', 'All'], ['awaiting', 'Waiting for onboarding (' + c.awaiting + ')'], ['delayed', 'Delayed (' + c.delayed + ')'], ['no_nurse', 'No nurse yet (' + c.noNurse + ')'], ['not_eligible', 'Not eligible yet (' + c.notEligible + ')'], ['onboarded', 'Onboarded (' + c.onboarded + ')']].map(function (x) { return '<a class="chip' + ((r.q.stage || '') === x[0] ? ' on' : '') + '" href="#/office/ops/onboarding' + (x[0] ? '?stage=' + x[0] : '') + '">' + e(x[1]) + '</a>'; }).join('') + '</div>' +
+        '<section class="panel otw">' + table(['Customer', 'Package', 'Stage', 'Waiting', 'Nurse', ''], d.rows.map(function (x) {
+          return [custLink(x.id, x.name) + '<br><span class="muted small">' + e(x.id) + '</span>', e(x.packages.join(', ') || '–') + (x.since ? '<br><span class="muted small">active since ' + e(K.date(x.since)) + '</span>' : ''),
+            pill(x.stageName, ST[x.stage]) + (x.reasons.length ? '<br><span class="muted small">' + e(x.reasons.join(' ')) + '</span>' : '') + (x.onboardedAt ? '<br><span class="muted small">on ' + e(K.date(x.onboardedAt)) + '</span>' : ''),
+            x.waitingDays != null ? (x.delayed ? '<b class="odue">' + x.waitingDays + ' days</b>' : x.waitingDays + ' days') : '–', x.hasNurse ? e(x.nurses.map(function (n) { return n.name; }).join(', ')) : pill('No nurse yet', 'warn'),
+            x.stage === 'awaiting' ? '<button class="btn sm ghost" data-act="o-book">Book a visit</button>' : ''];
+        }), 'No customers match') + '</section><p class="muted small">Onboarding stays locked until the package is approved by the office admin and its payment is confirmed; this page only shows where each customer stands. A customer waiting more than ' + d.lateDays + ' days after the package started is shown as delayed.</p>');
+    });
+  }
+  var ISTONE = { open: 'warn', in_progress: 'info', resolved: 'good', closed: '' };
+  function issueDialog(o) {
+    o = o || {};
+    var types = S.cache.issueTypes || { complaint: 'Customer complaint', service: 'Service-delivery exception', 'missed-visit': 'Missed-visit follow-up', incident: 'Operational incident', feedback: 'Customer feedback' };
+    K.openDialog(o.type === 'feedback' ? 'Record customer feedback' : 'Log a service issue', '<form data-form="o-issue" data-visit="' + e(o.visit || '') + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('type', 'Kind', types, o.type || 'complaint') + selField('priority', 'Priority', { normal: 'Normal', high: 'High', low: 'Low' }, 'normal') + '</div>' +
+      K.field('title', 'Summary', 'maxlength="140" value="' + e(o.title || '') + '"') + K.field('personId', 'Customer ID (optional)', 'maxlength="40" placeholder="e.g. P-1A2B3C" value="' + e(o.personId || '') + '"') +
+      selField('rating', 'Rating the customer gave (feedback only)', { 5: '5 – Very satisfied', 4: '4', 3: '3', 2: '2', 1: '1 – Very unsatisfied' }, '', 'Not feedback') + areaField('detail', 'Details', '', 'maxlength="1000"') + '</form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Save</button>');
+  }
+  K.FORMS['o-issue'] = function (f, v) { if (f.getAttribute('data-visit')) v.visitId = f.getAttribute('data-visit'); if (v.type !== 'feedback') delete v.rating; return api('POST', 'admin/ops/issues', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved as ' + d.reference + '.', 'ok'); K.render(); }); };
+  function issueUpdateDialog(x) {
+    var team = {}; (S.cache.issueTeam || []).forEach(function (u) { team[u.id] = u.name; });
+    K.openDialog(x.reference + ': ' + x.title, '<form data-form="o-issue-upd" data-id="' + e(x.id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + (x.detail ? '<p style="white-space:pre-line;margin-bottom:12px">' + e(x.detail) + '</p>' : '') +
+      '<div class="row2">' + selField('status', 'Status', { open: 'Open', in_progress: 'In progress', resolved: 'Resolved', closed: 'Closed' }, x.status) + selField('assignedTo', 'Assigned to', team, x.assignedTo || '', 'Nobody') + '</div>' + areaField('note', 'Note (required to resolve or close)', '', 'maxlength="500"') +
+      '<h3 class="osub-h">History</h3><ol class="tl">' + (x.history || []).slice().reverse().map(function (h) { return '<li><div class="t">' + e(h.action === 'status' ? 'Status: ' + h.to : h.action === 'assigned' ? 'Assigned' : h.action === 'opened' ? 'Opened' : 'Note') + (h.note ? ' · ' + e(h.note) : '') + '</div><div class="m">' + e(K.dt(h.at)) + '</div></li>'; }).join('') + '</ol></form>',
+      '<button class="btn ghost" data-act="close">Close</button><button class="btn" data-act="submit-dialog">Save</button>');
+  }
+  K.FORMS['o-issue-upd'] = function (f, v) { var x = (S.cache.issues || []).filter(function (i) { return i.id === f.getAttribute('data-id'); })[0] || {}; var body = { note: v.note }; if (v.status !== x.status) body.status = v.status; if ((v.assignedTo || null) !== (x.assignedTo || null)) body.assignedTo = v.assignedTo || null; return api('PATCH', 'admin/ops/issues/' + enc(f.getAttribute('data-id')), body).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved.', 'ok'); K.render(); }); };
+  function opsQuality(r) {
+    page('office/ops/quality', 'Service quality', 'Customer complaints, service-delivery exceptions, missed-visit follow-up, operational incidents and recorded customer feedback.', '<button class="btn sm" data-act="o-issue-new">' + icon('plus') + 'Log an issue</button><button class="btn sm ghost" data-act="o-issue-new" data-type="feedback">' + icon('star') + 'Record feedback</button>' + csvBtn('ops/reports/issues.csv', 'CSV'), skeleton());
+    api('GET', 'admin/ops/issues' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.issueTypes = d.types; S.cache.issueTeam = d.team; S.cache.issues = d.rows;
+      swap(filters(r, [['q', 'Search', 'search', 'Reference, title or customer'], ['status', 'Status', 'select', Object.assign({ open_all: 'Open or in progress' }, d.statuses)], ['type', 'Kind', 'select', d.types]]) +
+        kpis([kpi('Open', d.counts.open, { icon: 'inbox', tone: d.counts.open ? 'warn' : '' }), kpi('In progress', d.counts.in_progress, { icon: 'clock' }), kpi('Resolved', d.counts.resolved, { icon: 'check', tone: 'good' }),
+          kpi('Customer satisfaction', d.satisfaction ? d.satisfaction.average : 0, { icon: 'star', suffix: d.satisfaction ? ' / 5' : '', sub: d.satisfaction ? d.satisfaction.responses + ' feedback recorded' : 'No feedback recorded yet' })]) +
+        '<div class="ocharts">' + hbars('Issues by kind', d.byType, num, PAL[1]) + (d.satisfaction ? hbars('Feedback ratings', d.satisfaction.byRating, num, PAL[3]) : '') + '</div>' +
+        '<section class="panel otw">' + table(['Issue', 'Kind', 'Customer', 'Priority', 'Status', 'Assigned', ''], d.rows.map(function (x) {
+          return ['<b>' + e(x.reference) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.createdByName) + (x.visitRef ? ' · visit ' + e(x.visitRef) : '') + '</span>', e(x.typeName) + (x.rating ? '<br>' + '★'.repeat(x.rating) : ''), x.personId ? custLink(x.personId, x.customerName) : e(x.customerName || '–'),
+            pill(x.priority, x.priority === 'high' ? 'bad' : ''), pill(x.statusName, ISTONE[x.status]) + (x.status === 'open' || x.status === 'in_progress' ? '<br><span class="muted small">' + x.ageDays + ' days old</span>' : ''), e(x.assignedName || '–'), '<button class="btn sm ghost" data-act="o-issue-open" data-id="' + e(x.id) + '">Open</button>'];
+        }), 'No issues match') + '</section>' + pager(d, r));
+    });
+  }
+  function opsReports() {
+    var to = K.todayIST(), from = new Date(Date.parse(to + 'T12:00:00Z') - 30 * 86400000).toISOString().slice(0, 10), q = '?from=' + from + '&to=' + to;
+    reportsPage('office/ops/reports', 'Operations reports', 'The last 30 days unless stated. Download as spreadsheets.', [
+      ['ops/reports/summary.csv' + q, 'Operations summary', 'Visit completion rate, missed, cancelled and rescheduled visits, assignment time and onboarding completion.', 'chart'],
+      ['ops/reports/visits.csv' + q, 'Visit history', 'Every visit with its nurse, status and times.', 'cal'],
+      ['ops/reports/missed-cancelled.csv' + q, 'Missed and cancelled visits', 'Only the visits that were missed or cancelled.', 'clock'],
+      ['ops/reports/utilisation.csv' + q, 'Nurse utilisation', 'Available and booked hours, visits, leave and conflicts for each nurse.', 'gauge'],
+      ['ops/reports/onboarding.csv', 'Customer onboarding', 'Every customer with a package, where onboarding stands and how long they waited (all time).', 'idcard'],
+      ['ops/reports/issues.csv', 'Service issues', 'Complaints, exceptions, incidents and feedback (all time).', 'star']]);
+  }
+
+  // ---------------------------------------------------------------- Sales Executive
+  function salesDashboard(r) {
+    landing('office/sales', 'sales', 'Leads, follow-ups, the pipeline and confirmed package purchases.');
+    api('GET', 'admin/sales/overview' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var k = d.kpis;
+      swap('<div class="tchips"><a class="chip' + (r.q.mine ? '' : ' on') + '" href="#/office/sales">All leads</a><a class="chip' + (r.q.mine ? ' on' : '') + '" href="#/office/sales?mine=1">Assigned to me</a></div>' +
+        kpis([kpi('Total leads', k.total, { icon: 'inbox', sub: k.unassigned + ' not assigned' }), kpi('New', k.new, { icon: 'plus' }), kpi('Contacted', k.contacted, { icon: 'phone' }), kpi('Qualified (follow-up)', k.qualified, { icon: 'clock' }),
+          kpi('Converted', k.converted, { icon: 'check', tone: 'good' }), kpi('Lost', k.lost, { icon: 'x' }), kpi('Conversion rate', k.conversion, { icon: 'gauge', suffix: '%' }),
+          kpi('Pipeline value', k.pipeline, { money: true, icon: 'rupee', sub: k.pipelineLeads + ' open lead' + (k.pipelineLeads === 1 ? '' : 's') + ' with a value' + (k.unpriced ? ' · ' + k.unpriced + ' priced on call' : '') }),
+          kpi('Follow-ups due', k.overdue + k.dueToday, { icon: 'cal', tone: k.overdue ? 'bad' : k.dueToday ? 'warn' : '', sub: k.overdue + ' overdue · ' + k.dueToday + ' today · ' + k.upcoming + ' later' }), kpi('Confirmed purchases', k.purchaseValue, { money: true, icon: 'receipt', tone: 'good', sub: k.purchases + ' paid package' + (k.purchases === 1 ? '' : 's') })]) +
+        tiles([['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/leads/assign', 'Assign to a member', 'team'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download']]) +
+        '<div class="ocharts">' + funnel('Conversion by stage', d.stageConversion.map(function (x) { return { key: x.key, label: x.key === 'new' ? 'All leads' : x.label, value: x.value }; })) +
+          timeChart('Leads, conversions and purchases by month', d.monthly.map(function (x) { return x.key; }), [{ name: 'Leads', color: PAL[0], values: d.monthly.map(function (x) { return x.leads; }) }, { name: 'Converted', color: PAL[2], values: d.monthly.map(function (x) { return x.converted; }) }, { name: 'Paid purchases', color: PAL[6], values: d.monthly.map(function (x) { return x.purchases; }) }]) +
+          hbars('Leads by source', d.bySource, num) + hbars('Leads by package', d.byPackage, num, PAL[2]) +
+          (d.packageTrend.packages.length ? timeChart('Package enquiry trend', d.packageTrend.months.map(function (x) { return x.key; }), d.packageTrend.packages.map(function (p2, i) { return { name: p2.label, color: PAL[i], values: d.packageTrend.months.map(function (m) { return m.values[i]; }) }; }), { kind: 'line' }) : '') + '</div>' +
+        '<div class="ogrid2">' + panel('Performance by team member', table(['Team member', 'Leads', 'Converted'], d.byMember.map(function (x) { return [e(x.label), num(x.value), num(x.converted)]; }), 'No leads assigned yet')) +
+          panel('Confirmed package purchases', d.recentPurchases.length ? '<ul class="rlist">' + d.recentPurchases.map(function (x) { return '<li><span><b>' + e(x.name) + '</b> · ' + e(x.packageName) + '<br><span class="muted small">' + e(x.reference) + ' · paid ' + e(K.date(x.at)) + '</span></span><b>' + money(x.amount) + '</b></li>'; }).join('') + '</ul>' : '<p class="muted">No purchase from a lead has been paid yet.</p>') + '</div>' +
+        '<p class="note">' + icon('info') + '<span>' + e(d.note) + ' Package approval, payment confirmation and activation stay with the office admin.</span></p>');
+    });
+  }
+  function contactDialog(type, id, name) {
+    var kinds = { call: 'Phone call', whatsapp: 'WhatsApp', email: 'Email', meeting: 'Meeting / visit', note: 'Note' };
+    var packs = S.cache.salesPacks;
+    var go = function () {
+      var po = {}; (packs || []).forEach(function (p2) { po[p2.id] = p2.name + ' (' + p2.productName + ')'; });
+      K.openDialog('Log contact: ' + name, '<form data-form="o-contact" data-type="' + e(type) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('kind', 'Contact', kinds, 'call', 'No contact, only update the plan') + K.field('outcome', 'Outcome', 'maxlength="120" placeholder="e.g. Interested, call back Friday"') + '</div>' +
+        areaField('note', 'What was discussed', '', 'maxlength="500"') + '<div class="row2">' + K.field('followUpAt', 'Next follow-up', 'type="datetime-local" min="' + K.todayIST() + 'T00:00"') + K.field('nextAction', 'Next action', 'maxlength="200" placeholder="e.g. Send the KareNest brochure"') + '</div>' +
+        '<div class="row2">' + selField('package', 'Package of interest', po, '', 'Keep as it is') + K.field('expectedValue', 'Expected value (₹, optional)', 'inputmode="numeric" placeholder="Leave empty to use the published price"') + '</div>' +
+        '<p class="muted small">This records the conversation and the plan. Approving the package, confirming the payment and activating it stay with the office admin.</p></form>',
+        '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Save</button>');
+    };
+    if (packs) return go();
+    api('GET', 'admin/sales/packages').then(function (d) { if (d.ok) S.cache.salesPacks = packs = d.rows; go(); });
+  }
+  K.FORMS['o-contact'] = function (f, v) {
+    var body = { kind: v.kind || undefined, outcome: v.outcome, note: v.note, nextAction: v.nextAction || undefined };
+    if (v.followUpAt) body.followUpAt = v.followUpAt; if (v.package) body.package = v.package; if (v.expectedValue) body.expectedValue = v.expectedValue;
+    return api('POST', 'admin/sales/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/activity', body).then(function (d) { if (!d.ok) return d; K.closeDialog(); S.cache.dirtyLead = false; K.toast('Saved.', 'ok'); K.render(); });
+  };
+  function salesFollowups(r) {
+    page('office/sales/followups', 'Follow-ups', 'Leads with a follow-up date: overdue first. You are reminded on the day each one is due.', csvBtn('sales/reports/followups.csv', 'Follow-up report', qs(r)) + '<a class="btn sm ghost" href="#/office/sales/followups' + (r.q.mine ? '' : '?mine=1') + '">' + (r.q.mine ? 'Show everyone\'s' : 'Only mine') + '</a>', K.loading(420));
+    api('GET', 'admin/sales/followups' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var rows = function (list) {
+        return table(['Lead', 'Interest', 'Follow-up', 'Next action', 'Last contact', 'Assigned', ''], list.map(function (l) {
+          return ['<b>' + e(l.name) + '</b><br><span class="muted small">' + e(l.enquiryId) + (l.phone ? ' · <a href="tel:' + e(l.phone) + '">' + e(K.phoneNice(l.phone) || l.phone) + '</a>' : '') + '</span>', e(l.packageName || l.title) + '<br><span class="muted small">' + e(l.statusName) + (l.expected ? ' · ' + money(l.expected) : '') + '</span>',
+            e(l.followUpAt ? K.dt(l.followUpAt.length === 10 ? l.followUpAt + 'T10:00:00+05:30' : l.followUpAt + ':00+05:30') : '–'), e(l.nextAction || '–'), e(l.lastContactAt ? K.ago(l.lastContactAt) : 'Never') + '<br><span class="muted small">' + l.contacts + ' contact' + (l.contacts === 1 ? '' : 's') + '</span>', e(l.assignedName || '–'),
+            '<button class="btn sm" data-act="o-contact" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '" data-name="' + e(l.name) + '">Log contact</button><button class="btn sm ghost" data-act="o-lead" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '">Open</button>'];
+        }), 'None');
+      };
+      swap(kpis([kpi('Overdue', d.overdue.length, { icon: 'clock', tone: d.overdue.length ? 'bad' : '' }), kpi('Due today', d.today.length, { icon: 'cal', tone: d.today.length ? 'warn' : '' }), kpi('Upcoming', d.upcoming.length, { icon: 'right' }), kpi('Open leads without a follow-up', d.none.length, { icon: 'inbox' })]) +
+        panel('Overdue', rows(d.overdue)) + panel('Today', rows(d.today)) + panel('Upcoming', rows(d.upcoming)) + panel('Open leads without a follow-up date', rows(d.none)));
+    });
+  }
+  function salesPackages(r) {
+    page('office/sales/packages', 'Packages and enquiries', 'The healthcare packages on sale, with the enquiries, conversions and paid purchases for each.', csvBtn('sales/reports/packages.csv', 'Package enquiry report'), K.loading(420));
+    api('GET', 'admin/sales/packages').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.salesPacks = d.rows;
+      swap('<section class="panel otw">' + table(['Package', 'Brand', 'Price', 'Enquiries', 'Open', 'Converted', 'Paid purchases', ''], d.rows.map(function (p2) {
+        return ['<b>' + e(p2.name) + '</b><br><span class="muted small">' + e(p2.group) + (p2.tagline ? ' · ' + e(p2.tagline) : '') + '</span>', e(p2.productName), e(p2.priceText || '–'), num(p2.enquiries), num(p2.open), num(p2.converted), num(p2.purchases), p2.enquiries ? '<a class="btn sm ghost" href="#/office/leads/list?package=' + e(p2.id) + '">Enquiries</a>' : ''];
+      }), 'No packages') + '</section><p class="muted small">Prices are the published website prices. Record a customer\'s package interest with Log contact on a lead.</p>');
+    });
+  }
+  function salesReports() {
+    reportsPage('office/sales/reports', 'Sales reports', 'Download the sales reports as spreadsheets.', [
+      ['sales/reports/daily.csv', 'Daily lead report', 'Leads received each day and where they stand.', 'cal'], ['sales/reports/monthly.csv', 'Monthly lead report', 'Leads received each month and where they stand.', 'chart'],
+      ['sales/reports/conversions.csv', 'Conversion report', 'Converted leads with their paid orders.', 'check'], ['sales/reports/followups.csv', 'Follow-up report', 'Open leads with a follow-up date, overdue first.', 'clock'],
+      ['sales/reports/packages.csv', 'Package enquiry report', 'Enquiries, conversions and paid purchases for each package.', 'box'], ['sales/reports/pipeline.csv', 'Sales pipeline report', 'Open leads with their expected value.', 'rupee'],
+      ['sales/reports/leads.csv', 'All leads', 'Every lead with its source, package, status, follow-up and contacts.', 'inbox']]);
+  }
+
+  // ---------------------------------------------------------------- the Operations Manager's customer profile (no clinical information)
+  function opsCustomerProfile(r) {
+    page('office/customers', 'Customer profile', 'Contact details, family and nurses, visits, orders and operational activity.', '<a class="btn sm ghost" href="#/office/customers">' + icon('left') + 'Customer directory</a>', K.loading(160) + K.loading(300));
+    api('GET', 'admin/customers/' + enc(r.q.p || '')).then(function (d) {
+      if (!d.ok) return fail(d);
+      var c = d.customer, det = d.details || {};
+      var ro = function (l, v) { return '<div class="rof"><dt>' + e(l) + '</dt><dd>' + (v ? e(v) : '<span class="muted">Not given</span>') + '</dd></div>'; };
+      swap('<section class="phead"><div class="avatar"><span class="ph">' + e(K.initials(c.name)) + '</span></div><div class="phead-t"><h2>' + e(c.name) + '</h2><p class="muted">Customer ID <b>' + e(c.id) + '</b> · registered ' + e(K.date(c.registeredAt)) + '</p><div class="ptags" style="margin-top:8px">' + tags(c.brands, { karehome: 'Kare@Home', karenest: 'KareNest', karewellness: 'KareWellness' }) + '</div></div>' +
+          '<div class="oacts"><button class="btn sm" data-act="o-book">' + icon('cal') + 'Book a visit</button><button class="btn sm ghost" data-act="o-issue-new" data-person="' + e(c.id) + '">Log an issue</button></div></section>' +
+        '<div class="ogrid2">' + panel('Contact details', '<dl class="rogrid">' + ro('Phone', K.phoneNice(det.phone1 || c.phone)) + ro('Other phone', K.phoneNice(det.phone2)) + ro('Email', det.email || c.email) + ro('Address', det.address) + ro('Languages', det.languages) + ro('Packages', c.currentPackages.join(', ')) + '</dl>') +
+          panel('Family and care team', d.links.length ? '<ul class="rlist">' + d.links.map(function (l) { return '<li><span><b>' + e(l.name) + '</b><br><span class="muted small">' + e(l.kind === 'family' ? 'Family' + (l.relation ? ', ' + l.relation : '') : 'Nurse') + ' · since ' + e(K.date(l.since)) + '</span></span></li>'; }).join('') + '</ul>' : '<p class="muted">Nobody linked yet.</p>') + '</div>' +
+        panel('Visits', table(['Date', 'Service', 'Nurse', 'Status'], d.visits.slice(0, 20).map(function (v) { return ['<b>' + e(K.date(v.date)) + '</b><br><span class="muted small">' + e(v.start || v.slot) + '</span>', e(v.serviceName) + '<br><span class="muted small">' + e(v.reference) + '</span>', e(v.nurse || 'Not assigned'), pill(v.statusName, VTONE[v.status])]; }), 'No visits yet'), '<a class="btn sm ghost" href="#/office/ops/visits?q=' + e(c.id) + '">Visit tracking</a>') +
+        (d.orders.length ? panel('Orders', '<ul class="rlist">' + d.orders.map(function (o) { return '<li><span><b>' + e(o.name) + '</b><br><span class="muted small">' + e(o.reference) + ' · ' + e(K.dt(o.createdAt)) + '</span></span><span class="pill">' + e(o.status.replace(/_/g, ' ')) + '</span></li>'; }).join('') + '</ul>') : '') +
+        panel('Operational activity', d.activity.length ? '<ol class="tl">' + d.activity.slice(0, 15).map(function (a) { return '<li><div class="t">' + e(K.ACTIONS[a.action] || a.action) + '</div><div class="m">' + e(K.dt(a.at)) + ' · ' + e(a.by) + '</div></li>'; }).join('') + '</ol>' : '<p class="muted">Nothing yet.</p>') +
+        '<p class="note">' + icon('shield') + '<span>Health details, readings, medical records and risk results are not shown to Operations.</span></p>');
+    });
+  }
+
+  // ---------------------------------------------------------------- menus for each role
+  var TEAM_MENUS = {
+    finance: [['office/fin', 'Dashboard', 'home'],
+      { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/finance/due', 'Payment due', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check']] },
+      ['office/fin/expenses', 'Expenses', 'receipt'], ['office/overview/revenue', 'Revenue analytics', 'chart'], ['office/fin/reports', 'Financial reports', 'download']],
+    hr: [['office/hr', 'Dashboard', 'home'],
+      { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard'], ['office/hr/onboarding', 'Employee onboarding', 'user']] },
+      ['office/hr/credentials', 'Credentials', 'shield'],
+      { k: 'att', label: 'Attendance and leave', icon: 'cal', sub: [['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge']] },
+      ['office/hr/reports', 'HR reports', 'download']],
+    operations: [['office/ops', 'Dashboard', 'home'],
+      { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard']] },
+      { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/scheduler/nurses', 'Nurses and hours', 'clock'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
+      ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download']],
+    sales: [['office/sales', 'Dashboard', 'home'],
+      { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/leads/assign', 'Assign to a member', 'team'], ['office/sales/followups', 'Follow-ups', 'clock']] },
+      ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download']]
+  };
+  // the office admin: the existing menu, with the four team dashboards and the new pages in their groups
+  (function () {
+    var add = function (k, items) { MENU.forEach(function (g) { if (g.k === k) g.sub = g.sub.concat(items); }); };
+    MENU.splice(1, 0, { k: 'teams', label: 'Team dashboards', icon: 'grid', sub: [['office/fin', 'Finance Manager', 'rupee'], ['office/hr', 'HR', 'team'], ['office/ops', 'Operations Manager', 'cal'], ['office/sales', 'Sales Executive', 'funnel']] });
+    add('leads', [['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
+    add('cust', [['office/ops/onboarding', 'Onboarding operations', 'idcard'], ['office/ops/quality', 'Service quality', 'star']]);
+    add('fin', [['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);
+    add('emp', [['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/hr/leave', 'Leave balances', 'gauge']]);
+    add('sch', [['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge']]);
+    MENU.splice(MENU.length - 1, 0, { k: 'rep', label: 'Reports', icon: 'download', sub: [['office/fin/reports', 'Financial reports', 'receipt'], ['office/hr/reports', 'HR reports', 'team'], ['office/ops/reports', 'Operations reports', 'cal'], ['office/sales/reports', 'Sales reports', 'funnel']] });
+  })();
+  // which office pages each team role may open (the server checks every call again)
+  var TEAM_PAGES = {
+    finance: /^(fin(\/.*)?|finance(\/.*)?|overview\/revenue)$/,
+    hr: /^(hr(\/.*)?|employees(\/kyc)?|scheduler\/leave)$/,
+    operations: /^(ops(\/.*)?|customers|customer|scheduler(\/.*)?)$/,
+    sales: /^(sales(\/.*)?|leads(\/.*)?)$/
+  };
+  // ---------------------------------------------------------------- team dashboard actions
+  K.FORMS['o-exp-step'] = function (f, v) { return api('POST', 'admin/fin/expenses/' + enc(f.getAttribute('data-id')) + '/' + f.getAttribute('data-s'), v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved.', 'ok'); K.render(); }); };
+  K.FORMS['o-recon-res'] = function (f, v) { return api('POST', 'admin/fin/recon/' + enc(f.getAttribute('data-id')) + '/items/' + f.getAttribute('data-n') + '/resolve', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Marked resolved.', 'ok'); K.render(); }); };
+  K.FORMS['o-cred-wd'] = function (f, v) { var d0 = S.cache.hrEmp; return api('POST', 'admin/hr/employees/' + enc(d0.employee.userId) + '/credentials/' + enc(f.getAttribute('data-id')) + '/withdraw', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Withdrawn. It stays in the history.', 'ok'); K.render(); }); };
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]'); if (!t) return;
+    var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
+    if (act === 'o-exp-new') expenseDialog();
+    else if (act === 'o-exp') {
+      var s = t.getAttribute('data-s');
+      var T = { approve: ['Approve the expense', 'Note (optional)', 'Approve'], reject: ['Reject the expense', 'Reason (required)', 'Reject'], paid: ['Mark the expense as paid', '', 'Mark paid'], cancel: ['Withdraw the expense', 'Reason (optional)', 'Withdraw'] }[s];
+      K.openDialog(T[0], '<form data-form="o-exp-step" data-id="' + e(id) + '" data-s="' + e(s) + '" novalidate><div class="alert bad" data-msg hidden></div>' + (s === 'paid' ? K.field('ref', 'Payment reference', 'maxlength="60"') : K.field('note', T[1], 'maxlength="300"')) + '</form>',
+        '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">' + T[2] + '</button>');
+    } else if (act === 'o-recon-resolve') {
+      K.openDialog('Mark row ' + t.getAttribute('data-n') + ' resolved', '<form data-form="o-recon-res" data-id="' + e(id) + '" data-n="' + e(t.getAttribute('data-n')) + '" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('note', 'How it was resolved', 'maxlength="300" placeholder="e.g. Recorded the payment on invoice KQ-…; gateway refunded the failed charge"') + '</form>',
+        '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">Mark resolved</button>');
+    } else if (act === 'o-hr-edit') hrEditDialog();
+    else if (act === 'o-cred') credDialog(id);
+    else if (act === 'o-cred-wd') {
+      K.openDialog('Withdraw this record', '<form data-form="o-cred-wd" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><p style="margin-bottom:12px">Use this for a record entered by mistake or no longer held. It stays in the history.</p>' + K.field('note', 'Reason (optional)', 'maxlength="200"') + '</form>',
+        '<button class="btn ghost" data-act="close">Back</button><button class="btn" data-act="submit-dialog">Withdraw</button>');
+    } else if (act === 'o-resched') reschedDialog(id, t.getAttribute('data-ref'));
+    else if (act === 'o-issue-new') issueDialog({ type: t.getAttribute('data-type'), visit: t.getAttribute('data-visit'), title: t.getAttribute('data-title'), personId: t.getAttribute('data-person') });
+    else if (act === 'o-issue-open') { var x = (S.cache.issues || []).filter(function (i) { return i.id === id; })[0]; if (x) issueUpdateDialog(x); }
+    else if (act === 'o-contact') contactDialog(t.getAttribute('data-type'), id, t.getAttribute('data-name') || '');
+  });
+
   // ---------------------------------------------------------------- counts on the menu (waiting visits, waiting contact requests)
   function refreshCounts() {
     if (S.cache.countsAt && Date.now() - S.cache.countsAt < 120000) return;
     S.cache.countsAt = Date.now();
-    Promise.all([api('GET', 'admin/scheduler/visits?status=awaiting_assignment'), api('GET', 'admin/contact-audit?approval=pending&size=5')]).then(function (x) {
+    var rl = role(), none = Promise.resolve({ ok: false });
+    if (rl !== 'admin' && rl !== 'operations') return;
+    Promise.all([api('GET', 'admin/scheduler/visits?status=awaiting_assignment'), rl === 'admin' ? api('GET', 'admin/contact-audit?approval=pending&size=5') : none]).then(function (x) {
       S.counts = S.counts || {};
       S.counts['office/scheduler'] = x[0].ok ? x[0].rows.length : 0;
       S.counts['office/contact-audit'] = x[1].ok ? x[1].total : 0;
@@ -1122,13 +1698,17 @@
   document.addEventListener('close', function () { if (S.cache.dirtyLead && !$('dialog[open]')) { S.cache.dirtyLead = false; var r = K.route(); if (r.parts[0] === 'office' && r.parts[1] === 'leads') K.render(); } }, true);
 
   K.register('office', {
-    label: 'Office',
-    menu: MENU,
+    get label() { return ROLE_LABEL[role()] || 'Office'; },
+    menu: function () { return TEAM_MENUS[role()] || MENU; },
+    home: function (rl) { return LANDING[rl] ? '#/' + LANDING[rl] : null; },
     personPages: ['office/customer'],
     notifPage: null,
     route: function (r, top) {
       if (top !== 'office') return false;
       var p = r.parts.slice(1).join('/');
+      // a team role opens only its own pages (the server refuses the rest anyway)
+      var rl = role();
+      if (TEAM_PAGES[rl] && !TEAM_PAGES[rl].test(p)) { K.go('#/' + LANDING[rl], true); return true; }
       refreshCounts();
       var pages = {
         'overview/summary': summaryPage, 'overview/customers': customerAnalytics, 'overview/revenue': revenueAnalytics, overview: summaryPage,
@@ -1137,9 +1717,14 @@
         'finance/invoices': invoicesPage, finance: invoicesPage, 'finance/due': duePage,
         employees: employeesPage, 'employees/kyc': kycPage,
         scheduler: boardPage, 'scheduler/nurses': nursesPage, 'scheduler/holidays': holidaysPage, 'scheduler/leave': leavePage, 'risk-rules': rulesPage,
-        'contact-audit': auditPage, documents: docsPage
+        'contact-audit': auditPage, documents: docsPage,
+        fin: finDashboard, 'fin/payments': finPayments, 'fin/recon': finRecon, 'fin/expenses': finExpenses, 'fin/reports': finReports,
+        hr: hrDashboard, 'hr/onboarding': hrOnboarding, 'hr/employee': hrEmployee, 'hr/credentials': hrCredentials, 'hr/attendance': hrAttendance, 'hr/leave': hrLeave, 'hr/reports': hrReports,
+        ops: opsDashboard, 'ops/visits': opsVisits, 'ops/capacity': opsCapacity, 'ops/onboarding': opsOnboarding, 'ops/quality': opsQuality, 'ops/reports': opsReports,
+        sales: salesDashboard, 'sales/followups': salesFollowups, 'sales/packages': salesPackages, 'sales/reports': salesReports
       };
-      (pages[p] || function () { K.go('#/office/overview/summary', true); })(r);
+      if (p === 'customer' && rl === 'operations') return opsCustomerProfile(r), true;
+      (pages[p] || function () { K.go('#/' + (LANDING[rl] || 'office/overview/summary'), true); })(r);
       return true;
     }
   });

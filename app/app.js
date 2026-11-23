@@ -45,7 +45,7 @@
   function $(sel, el) { return (el || document).querySelector(sel); }
   function $$(sel, el) { return Array.prototype.slice.call((el || document).querySelectorAll(sel)); }
   function initials(name) { return String(name || '?').replace(/\(.*?\)/g, '').trim().split(/\s+/).slice(0, 2).map(function (w) { return w[0]; }).join('').toUpperCase(); }
-  function first(name) { return String(name || '').replace(/\(.*?\)/g, '').trim().split(/\s+/)[0]; }
+  function first(name) { return String(name || '').replace(/\(.*?\)/g, '').trim().split(/[\s,;]+/)[0]; }
   var fmtD = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' });
   var fmtDT = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', hour12: true });
   var fmtS = new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short' });
@@ -246,13 +246,14 @@
   // by itself), the office its health pages for a person, caregivers the people they look after
   // nurses (caregiver logins) open on their visits; the office on its overview
   var HOME_PAGE = '#/office/overview/customers';
-  function homeOf(role) { return role === 'family' ? '#/welcome' : role === 'caregiver' ? '#/nurse/visits' : HOME_PAGE; }
+  var TEAM_HOME = { finance: '#/office/fin', hr: '#/office/hr', operations: '#/office/ops', sales: '#/office/sales' };
+  function homeOf(role) { return role === 'family' ? '#/welcome' : role === 'caregiver' ? '#/nurse/visits' : TEAM_HOME[role] || HOME_PAGE; }
 
   // ---------------------------------------------------------------- role interfaces (loaded only for that role)
   // The nurse portal (app/nurse.js) and the office interface (app/office.js) are separate scripts. A family
   // never downloads them; each one registers its menu and pages here when it loads.
   var VER = ((document.currentScript && document.currentScript.src) || '').split('v=')[1] || '';
-  var MODS = {}, MOD_OF = { caregiver: 'nurse', admin: 'office' }, modLoads = {};
+  var MODS = {}, MOD_OF = { caregiver: 'nurse', admin: 'office', finance: 'office', hr: 'office', operations: 'office', sales: 'office' }, modLoads = {};
   function loadModule(name) {
     if (MODS[name]) return Promise.resolve(MODS[name]);
     if (modLoads[name]) return modLoads[name];
@@ -318,6 +319,8 @@
     }
     var mod = modOf(role);
     if (mod && mod.route(r, top)) return;
+    // the Finance, HR, Operations and Sales logins use only their office pages and their own account
+    if (TEAM_HOME[role] && top !== 'account') return go(homeOf(role), true);
     // nurses: the former caregiver pages now live in the nurse portal
     if (role === 'caregiver') {
       if (top === 'people') return go('#/nurse/customers', true);
@@ -3095,7 +3098,7 @@
   }
   function addUserDialog() {
     openDialog('Add a login', '<form data-form="add-user" novalidate><div class="alert bad" data-msg hidden></div>' +
-      '<div class="field"><span>Role</span><div class="seg"><label><input type="radio" name="role" value="caregiver" checked><span>Caregiver</span></label><label><input type="radio" name="role" value="admin"><span>Office admin</span></label><label><input type="radio" name="role" value="family"><span>Family</span></label></div><em class="err" data-err="role"></em></div>' +
+      '<div class="field"><span>Role</span><div class="seg"><label><input type="radio" name="role" value="caregiver" checked><span>Caregiver</span></label><label><input type="radio" name="role" value="admin"><span>Office admin</span></label><label><input type="radio" name="role" value="family"><span>Family</span></label><label><input type="radio" name="role" value="finance"><span>Finance Manager</span></label><label><input type="radio" name="role" value="hr"><span>HR</span></label><label><input type="radio" name="role" value="operations"><span>Operations Manager</span></label><label><input type="radio" name="role" value="sales"><span>Sales Executive</span></label></div><em class="err" data-err="role"></em></div>' +
       field('name', 'Name', 'autocomplete="off"') + '<div class="row2">' + field('phone', 'Mobile number', 'type="tel"') + field('email', 'Email (optional)', 'type="email"') + '</div>' +
       '<p class="muted small">They sign in with the mobile number or email. You will get a welcome link to send them.</p></form>',
       '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Add login</button>');

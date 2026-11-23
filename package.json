@@ -17,6 +17,8 @@
     "check:roles": "node tools/check-roles.js http://localhost:3000",
     "check:risk": "node tools/check-risk.js",
     "check:scheduler": "node tools/check-scheduler.js",
+    "check:teams": "node tools/check-teams.js http://localhost:3000",
+    "check:teams-ui": "python3 tools/check-teams-ui.py http://localhost:3000",
     "check:trends": "node tools/check-trends.js http://localhost:3000"
   },
   "engines": {

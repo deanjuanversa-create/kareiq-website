@@ -184,7 +184,7 @@ function create(ctx) {
         result: r.ok ? 'reassigned' : 'awaiting_assignment', newNurse: to ? to.name : null, at: now() });
     }
     if (affected.some((a) => a.result === 'awaiting_assignment')) {
-      await scheduler.notify(await scheduler.admins(), { kind: 'leave-conflict', title: 'Visits need a nurse', body: `${n.user.name}'s leave (${l.from} to ${l.to}) leaves ${affected.filter((a) => a.result === 'awaiting_assignment').length} visit(s) without a nurse.`, link: '#/office/scheduler/leave' });
+      await scheduler.notify(await scheduler.operations(), { kind: 'leave-conflict', title: 'Visits need a nurse', body: `${n.user.name}'s leave (${l.from} to ${l.to}) leaves ${affected.filter((a) => a.result === 'awaiting_assignment').length} visit(s) without a nurse.`, link: '#/office/scheduler/leave' });
     }
     return affected;
   }
@@ -488,7 +488,7 @@ function create(ctx) {
 
     // ================================================================ office only from here
     if (parts[0] !== 'admin') return undefined;
-    if (!isAdmin) throw forbidden();
+    if (!require('./access').allows(user.role, parts.slice(1), req.method)) throw forbidden(); // HR: leave records; Operations: reading them
     const ap = parts.slice(1).join('/');
 
     if (ap === 'summary' && req.method === 'GET') return json(res, 200, { ok: true, ...(await summary({ risk: url.searchParams.get('risk'), pkg: url.searchParams.get('pkg'), ind: url.searchParams.get('ind') })) });

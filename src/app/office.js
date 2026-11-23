@@ -13,6 +13,9 @@ const care = require('./care');
 const LEAD_STATUS = { new: 'New', contacted: 'Contacted', follow_up: 'Follow-up pending', converted: 'Converted', lost: 'Lost / closed' };
 const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office' };
 const PAGE = 25;
+// everyone with a staff login is an employee: nurses, the office admins and the four team roles
+const STAFF_ROLES = ['admin', 'caregiver', 'finance', 'hr', 'operations', 'sales'];
+const ROLE_NAMES = { admin: 'Office admin', caregiver: 'Nurses / caregivers', finance: 'Finance Manager', hr: 'HR', operations: 'Operations Manager', sales: 'Sales Executive' };
 const ymd = (s) => String(s || '').slice(0, 10);
 const month = (s) => String(s || '').slice(0, 7);
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
@@ -120,7 +123,8 @@ function create(ctx) {
         title: type === 'booking' ? (r.serviceName || 'Booking') : (r.interestName || 'Enquiry'), source: r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq'),
         sourceName: SOURCES[r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq')] || r.source || 'Website', status: derived, statusName: LEAD_STATUS[derived],
         assignedTo: r.assignedTo || null, assignedName: who ? who.name : null, assignedAt: r.assignedAt || null, createdAt: r.createdAt, history: r.leadHistory || [], personId: r.personId || null,
-        requestKind: r.kind === 'order' || r.kind === 'plan-request' ? r.kind : null, generalInfoAt: r.generalInfo ? r.generalInfo.at : null
+        requestKind: r.kind === 'order' || r.kind === 'plan-request' ? r.kind : null, generalInfoAt: r.generalInfo ? r.generalInfo.at : null,
+        followUpAt: r.followUpAt || null, nextAction: r.nextAction || null, expectedValue: Number.isFinite(r.expectedValue) ? r.expectedValue : null, expectedMonths: r.expectedMonths || r.months || null, orderId: r.orderId || null, appPlanId: r.appPlanId || null
       };
     }).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
@@ -155,7 +159,8 @@ function create(ctx) {
     };
   }
   async function members() {
-    const users = (await docs.find('app_users', { active: true })).filter((u) => u.role === 'admin');
+    // the office admins and the Sales Executives can be given enquiries
+    const users = (await docs.find('app_users', { active: true })).filter((u) => u.role === 'admin' || u.role === 'sales');
     const leads = await leadRows();
     return users.map((u) => ({ id: u.id, name: u.name, open: leads.filter((l) => l.assignedTo === u.id && !['converted', 'lost'].includes(l.status)).length, total: leads.filter((l) => l.assignedTo === u.id).length }));
   }
@@ -300,6 +305,8 @@ function create(ctx) {
       let rows = filterCustomers(await customerRows(), url);
       rows = rows.sort((a, b) => (sort === 'name' ? a.name.localeCompare(b.name) : sort === 'id' ? a.id.localeCompare(b.id) : sort === 'old' ? a.registeredAt.localeCompare(b.registeredAt) : b.registeredAt.localeCompare(a.registeredAt)));
       const nurses = (await docs.find('app_users', { role: 'caregiver' })).map((u) => ({ id: u.id, name: u.name }));
+      // the Operations Manager manages services, not clinical results: no risk category
+      if (admin.role !== 'admin') rows = rows.map(({ risk, ...c }) => c);
       return json(res, 200, { ok: true, ...paginate(rows, url), brands: BRAND_NAMES, packages: (await packinfo.all()).map((x) => ({ id: x.id, name: x.name })), nurses });
     }
     if (parts[0] === 'customers' && parts.length === 2 && req.method === 'GET') {
@@ -311,6 +318,18 @@ function create(ctx) {
         docs.find('app_audit', { personId: person.id }, { sort: { at: -1 }, limit: 40 }), docs.find('app_orders', { personId: person.id }, { sort: { createdAt: -1 } }), docs.findOne('app_details', { id: 'det-' + person.id })
       ]);
       const names = await namesFor([...links.map((l) => l.userId), ...visits.map((v) => v.nurseId), ...activity.map((a) => a.userId)].filter(Boolean));
+      if (admin.role !== 'admin') {
+        // Operations: the operational profile only (contact details, family and nurses, visits, orders,
+        // operational activity); no health details, risk results, records or readings
+        const { risk, ...op } = row;
+        const general = Object.fromEntries(['name', 'gender', 'languages', 'address', 'email', 'phone1', 'phone2'].filter((k) => det && det.data && det.data[k] != null).map((k) => [k, det.data[k]]));
+        const OPS_ACTIONS = /^(visit|plan|package|general|onboarding|lead|user|order|payment\.recorded)/;
+        return json(res, 200, { ok: true, operational: true, customer: op, details: general, detailsStatus: det ? det.status : 'new',
+          links: links.map((l) => ({ kind: l.kind, userId: l.userId, name: names[l.userId] || '', relation: l.relation || null, since: l.createdAt })),
+          visits: visits.slice(0, 60).map((v) => ({ id: v.id, reference: v.reference, date: v.date, slot: v.slot, start: v.start, serviceName: v.serviceName, status: v.status, statusName: STATUS[v.status], nurse: names[v.nurseId] || null })),
+          orders: orders.map((o) => ({ reference: o.reference, name: o.name, amountText: o.amountText, status: o.status, createdAt: o.createdAt })),
+          activity: activity.filter((a) => OPS_ACTIONS.test(a.action || '')).map((a) => ({ at: a.at, by: names[a.userId] || 'KareIQ', action: a.action })) });
+      }
       return json(res, 200, { ok: true, customer: { ...row, photo: person.photoAt || null }, details: det ? det.data : {}, detailsStatus: det ? det.status : 'new',
         links: links.map((l) => ({ kind: l.kind, userId: l.userId, name: names[l.userId] || '', relation: l.relation || null, since: l.createdAt })),
         visits: visits.slice(0, 60).map((v) => ({ id: v.id, reference: v.reference, date: v.date, slot: v.slot, start: v.start, serviceName: v.serviceName, status: v.status, statusName: STATUS[v.status], nurse: names[v.nurseId] || null })),
@@ -385,7 +404,7 @@ function create(ctx) {
 
     // ---- employees
     if (p === 'employees' && req.method === 'GET') {
-      const users = (await docs.find('app_users')).filter((u) => u.role === 'admin' || u.role === 'caregiver');
+      const users = (await docs.find('app_users')).filter((u) => STAFF_ROLES.includes(u.role));
       const rows = [];
       for (const u of users) rows.push(staff.view(u, await staff.profileOf(u.id)));
       const role = q(url, 'role'), dept = q(url, 'department'), unit = q(url, 'unit'), status = q(url, 'status'), from = q(url, 'from'), to = q(url, 'to'), loc = q(url, 'location').toLowerCase(), text = q(url, 'q').toLowerCase();
@@ -394,14 +413,14 @@ function create(ctx) {
       const group = (f, names) => { const m = {}; list.forEach((e) => { const k = f(e) || 'none'; m[k] = (m[k] || 0) + 1; }); return Object.keys(m).map((k) => ({ key: k, label: names(k), value: m[k] })); };
       return json(res, 200, { ok: true, rows: list.sort((a, b) => a.name.localeCompare(b.name)),
         kpis: { total: list.length, active: list.filter((e) => e.status === 'active').length, inactive: list.filter((e) => e.status === 'inactive').length, onLeave: list.filter((e) => e.status === 'on_leave').length, newlyJoined: list.filter((e) => (e.joinDate || '') >= since).length },
-        byRole: group((e) => e.role, (k) => (k === 'caregiver' ? 'Nurses / caregivers' : 'Office')), byDepartment: group((e) => e.department, (k) => (k === 'none' ? 'Not set' : k)),
+        byRole: group((e) => e.role, (k) => (k === 'caregiver' ? 'Nurses / caregivers' : ROLE_NAMES[k] || 'Office')), byDepartment: group((e) => e.department, (k) => (k === 'none' ? 'Not set' : k)),
         byStatus: group((e) => e.status, (k) => ({ active: 'Active', inactive: 'Inactive', on_leave: 'On leave' }[k])), byUnit: group((e) => e.businessUnit, (k) => UNITS[k] || k),
         joining: monthsBack(today, 12).map((m) => ({ key: m, value: list.filter((e) => month(e.joinDate) === m).length })),
         departments: DEPARTMENTS, units: UNITS });
     }
     if (parts[0] === 'employees' && parts.length >= 2) {
       const user = await docs.findOne('app_users', { id: parts[1] });
-      if (!user || !['admin', 'caregiver'].includes(user.role)) throw notFound();
+      if (!user || !STAFF_ROLES.includes(user.role)) throw notFound();
       const prof = await staff.profileOf(user.id);
       if (parts.length === 2 && req.method === 'GET') return json(res, 200, { ok: true, employee: staff.view(user, prof, { full: true }), kycKinds: KYC_KINDS, departments: DEPARTMENTS, units: UNITS });
       if (parts.length === 2 && req.method === 'PATCH') {
@@ -411,7 +430,14 @@ function create(ctx) {
         if (body.location !== undefined) ch.location = clean(body.location, 80);
         if (body.joinDate !== undefined) { if (!isDate(body.joinDate) || body.joinDate > todayIST()) throw bad('Choose the date of joining.'); ch.joinDate = body.joinDate; }
         if (body.status !== undefined) { if (!['active', 'inactive'].includes(body.status)) throw bad('Choose a status.'); ch.status = body.status; }
+        if (body.designation !== undefined) ch.designation = clean(body.designation, 80);
+        if (ch.status === 'inactive' && prof.status !== 'inactive') ch.exitDate = isDate(body.exitDate) && body.exitDate <= todayIST() ? body.exitDate : todayIST();
+        if (ch.status === 'active' && prof.status === 'inactive') ch.exitDate = null;
         if (body.emergencyContact !== undefined) { const ph = body.emergencyContact && body.emergencyContact.phone ? normalisePhone(body.emergencyContact.phone) : null; if (body.emergencyContact && body.emergencyContact.phone && !ph) throw bad('Enter a 10-digit mobile number.'); ch.emergencyContact = body.emergencyContact && body.emergencyContact.name ? { name: clean(body.emergencyContact.name, 80), relation: clean(body.emergencyContact.relation, 40), phone: ph } : null; }
+        // employment history: every change of department, designation, unit, location or status is kept
+        const moved = ['department', 'designation', 'businessUnit', 'location', 'status', 'joinDate'].filter((k) => ch[k] !== undefined && (prof[k] || '') !== (ch[k] || ''))
+          .map((k) => ({ field: k, from: prof[k] || null, to: ch[k] || null }));
+        if (moved.length) ch.history = [...(prof.history || []), { at: now(), by: admin.id, byName: admin.name, changes: moved }];
         await docs.update('app_staff', prof.id, { ...ch, updatedAt: now() });
         await audit(admin.id, 'employee.edit', null, { employee: prof.employeeId, fields: Object.keys(ch) });
         return json(res, 200, { ok: true });
@@ -630,7 +656,7 @@ function create(ctx) {
     return Buffer.from(await doc.save());
   }
 
-  return { handle };
+  return { handle, leadRows, filterLeads, customerRows, members };
 }
 
 module.exports = { create, LEAD_STATUS, SOURCES };

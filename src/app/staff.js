@@ -11,8 +11,8 @@ const KYC_KINDS = {
   qualification: 'Qualification certificate',
   'police-verification': 'Police verification'
 };
-const REQUIRED = { caregiver: ['id-proof', 'address-proof', 'nursing-registration', 'qualification'], admin: ['id-proof', 'address-proof'] };
-const DEPARTMENTS = ['Nursing', 'Care', 'Operations', 'Sales', 'Finance', 'Office'];
+const REQUIRED = { caregiver: ['id-proof', 'address-proof', 'nursing-registration', 'qualification'], admin: ['id-proof', 'address-proof'] }; // every other staff role: as the office
+const DEPARTMENTS = ['Nursing', 'Care', 'Operations', 'Sales', 'Finance', 'HR', 'Office'];
 const UNITS = { kareiq: 'KareIQ', karehome: 'Kare@Home', karenest: 'KareNest' };
 
 // how long someone has worked here, from the date of joining to today (worked out each time)
@@ -48,7 +48,7 @@ function create(ctx) {
     let employeeId;
     do { employeeId = store.makeReference('EMP'); } while (await docs.findOne('app_staff', { employeeId }));
     p = {
-      id: uid(), userId, employeeId, department: user && user.role === 'caregiver' ? 'Nursing' : 'Office', businessUnit: 'kareiq', location: '',
+      id: uid(), userId, employeeId, department: user && user.role === 'caregiver' ? 'Nursing' : ({ finance: 'Finance', hr: 'Office', operations: 'Operations', sales: 'Sales' }[user && user.role] || 'Office'), businessUnit: 'kareiq', location: '',
       joinDate: user && user.createdAt ? user.createdAt.slice(0, 10) : todayIST(), status: 'active', emergencyContact: null,
       availability: null, leave: [], kyc: { docs: [] }, createdAt: now()
     };
@@ -60,11 +60,12 @@ function create(ctx) {
     const t = todayIST();
     const status = !user.active || p.status === 'inactive' ? 'inactive' : onLeaveToday(p) ? 'on_leave' : 'active';
     return {
-      userId: user.id, employeeId: p.employeeId, name: user.name, role: user.role, roleName: user.role === 'caregiver' ? 'Nurse / caregiver' : user.role === 'admin' ? 'Office' : user.role,
+      userId: user.id, employeeId: p.employeeId, name: user.name, role: user.role, roleName: { caregiver: 'Nurse / caregiver', admin: 'Office', finance: 'Finance Manager', hr: 'HR', operations: 'Operations Manager', sales: 'Sales Executive' }[user.role] || user.role,
+      designation: p.designation || '', exitDate: p.exitDate || null,
       department: p.department || '', businessUnit: p.businessUnit || 'kareiq', businessUnitName: UNITS[p.businessUnit] || p.businessUnit || 'KareIQ', location: p.location || '',
       joinDate: p.joinDate || null, service: serviceLength(p.joinDate, t), status, statusName: { active: 'Active', inactive: 'Inactive', on_leave: 'On leave' }[status],
       ...(opts && opts.full ? {
-        phone: user.phone || null, email: user.email || null, emergencyContact: p.emergencyContact || null, leave: p.leave || [],
+        phone: user.phone || null, email: user.email || null, emergencyContact: p.emergencyContact || null, leave: p.leave || [], history: p.history || [],
         kyc: { ...kycSummary(user.role, p.kyc), docs: ((p.kyc && p.kyc.docs) || []).map((d) => ({ id: d.id, kind: d.kind, kindName: KYC_KINDS[d.kind] || d.kind, name: d.name, uploadedAt: d.uploadedAt, status: d.status, verifiedAt: d.verifiedAt || null, note: d.note || null })) }
       } : { kycStatus: kycSummary(user.role, p.kyc).status })
     };

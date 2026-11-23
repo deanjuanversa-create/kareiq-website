@@ -43,8 +43,10 @@ const officeMod = require('./office');
 const riskEngineMod = require('./riskengine');
 const riskRules = require('./riskrules');
 const featuresMod = require('./features');
+const access = require('./access');
+const teamsMod = require('./teams');
 
-const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin' };
+const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin', ...access.TEAM_ROLES };
 const RELATIONS_MAX = 40;
 const REQUEST_KINDS = {
   visit: 'Extra visit request',
@@ -1361,7 +1363,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     }
 
     if (parts[0] === 'admin') {
-      if (user.role !== 'admin') throw forbidden();
+      if (!access.allows(user.role, parts.slice(1), req.method)) throw forbidden();
       return adminRoute(req, res, parts.slice(1), url, user, body);
     }
     return undefined;
@@ -1373,6 +1375,9 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   async function adminRoute(req, res, parts, url, admin, body) {
     const officeDone = await officeApi.handle(req, res, parts, url, admin, body);
     if (officeDone !== undefined) return officeDone;
+    // the Finance, HR, Operations and Sales dashboards (src/app/teams.js)
+    const teamDone = await teamsApi.handle(req, res, parts, url, admin, body);
+    if (teamDone !== undefined) return teamDone;
     const p = parts.join('/');
     const product = PRODUCTS[url.searchParams.get('product')] ? url.searchParams.get('product') : null;
 
@@ -1920,6 +1925,14 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   modCtx.nursing = nursingApi;
   const officeApi = officeMod.create(modCtx);
   const featuresApi = featuresMod.create({ ...modCtx, visiblePerson, careTeam, canRecord, historyAllowed, readJson, risk: shared.risk });
+  const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi });
+  // HR credential expiry and sales follow-up reminders: shortly after start, then every hour
+  if (!global.__kqTeamTimer && process.env.APP_STATELESS !== 'true') {
+    global.__kqTeamTimer = true;
+    const tick = () => ensureReady().then(() => teamsApi.remind()).catch((e) => console.error('[teams] reminders failed:', e.message));
+    setTimeout(tick, 25000).unref();
+    setInterval(tick, 3600000).unref();
+  }
 
   // keep every stored risk category current: once shortly after start, then every hour
   if (!global.__kqRiskTimer && process.env.APP_STATELESS !== 'true') {
@@ -1969,6 +1982,10 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 403, { ok: false, message: 'Please refresh the page and try again.' });
     }
     try {
+      // role-based access: a team login (Finance, HR, Operations, Sales) uses only its own account,
+      // its notifications and the office APIs of its role; every office API checks the role first
+      if (access.isTeam(signed.user.role) && parts[0] !== 'admin' && !access.teamMayUse(p)) throw forbidden();
+      if (parts[0] === 'admin' && !access.allows(signed.user.role, parts.slice(1), req.method)) throw forbidden();
       // medical record files are sent as raw bytes (not JSON) and downloaded as files
       if (parts[0] === 'people' && parts[2] === 'records' && parts.length === 3 && req.method === 'POST') return await uploadRecord(req, res, parts[1], signed.user);
       if (parts[0] === 'records' && parts[2] === 'file' && req.method === 'GET') return await downloadRecord(req, res, parts[1], signed.user, url);
@@ -1976,7 +1993,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (parts[0] === 'people' && parts[2] === 'cartoon' && parts.length === 3) return await cartoonRoute(req, res, parts[1], signed.user);
       // employee KYC documents are raw files too (office only)
       if (parts[0] === 'admin' && parts[1] === 'employees' && parts[3] === 'kyc' && parts.length === 4 && req.method === 'POST') {
-        if (signed.user.role !== 'admin') throw forbidden();
+        if (!access.allows(signed.user.role, parts.slice(1), req.method)) throw forbidden();
         return await officeApi.handle(req, res, parts.slice(1), url, signed.user, {});
       }
       if (parts[0] === 'nurse' || p === 'notifications' || p === 'notifications/read') {

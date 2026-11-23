@@ -187,10 +187,11 @@ const overlaps = (vs) => vs.some((a) => vs.some((b) => a.id !== b.id && a.nurseI
   r = await office('GET', 'admin/leads?q=Sunil');
   ok(r.body.rows.length === 2 && r.body.rows.every((l) => l.duplicates === 1), 'both enquiries from the same number are marked');
   const lead = r.body.rows[0];
+  const histBefore = (await office('GET', 'admin/leads/' + lead.type + '/' + lead.id)).body.lead.history.length;
   ok((await office('POST', 'admin/leads/' + lead.type + '/' + lead.id + '/assign', { userId: 'demo-u-admin', note: 'Call back' })).status === 200, 'lead assigned');
   ok((await office('PATCH', 'admin/leads/' + lead.type + '/' + lead.id, { status: 'follow_up', note: 'Wants a demo' })).status === 200, 'lead status changed');
   r = await office('GET', 'admin/leads/' + lead.type + '/' + lead.id);
-  ok(r.body.lead.history.length === 2 && r.body.lead.status === 'follow_up' && r.body.lead.assignedTo === 'demo-u-admin', 'lead history kept');
+  ok(r.body.lead.history.length === histBefore + 2 && r.body.lead.status === 'follow_up' && r.body.lead.assignedTo === 'demo-u-admin', 'lead history kept');
   ok((await nurse('GET', 'admin/leads')).status === 403, 'nurses cannot see leads');
 
   // ---------------------------------------------------------------- customers, employees, KYC
@@ -228,7 +229,8 @@ const overlaps = (vs) => vs.some((a) => vs.some((b) => a.id !== b.id && a.nurseI
   ok(st.indicators.find((i) => i.id === 'copd').status === 'blocked', 'COPD: no formula in the workbook');
   await nurse('POST', 'people/P-DEMO04/assessments', { date: today, values: { tug: 25 } });
   st = (await office('GET', 'people/P-DEMO04/risk')).body.status;
-  ok(st.indicators.find((i) => i.id === 'tug').status === 'unresolved', 'TUG 25 s falls where the two sheets disagree: unresolved, not classified');
+  const tug25 = st.indicators.find((i) => i.id === 'tug');
+  ok(tug25.status === 'calculated' && tug25.band === 'Potential risk of falls (limited mobility)', 'TUG 25 s: the Risk and Other Indicators sheet decides where the sheets disagree (owner, 23 Nov 2026): potential risk of falls');
   await nurse('POST', 'people/P-DEMO04/assessments', { date: today, values: { phq9: 22 } });
   st = (await office('GET', 'people/P-DEMO04/risk')).body.status;
   const phq2 = st.indicators.find((i) => i.id === 'phq9');
@@ -239,7 +241,7 @@ const overlaps = (vs) => vs.some((a) => vs.some((b) => a.id !== b.id && a.nurseI
   r = await office('GET', 'admin/risk/rules');
   ok(r.status === 200 && r.body.indicators.length === 22 && r.body.global, 'rules view lists the 22 workbook indicators');
   const iv = Object.fromEntries(r.body.indicators.map((i) => [i.id, i.state]));
-  ok(iv.phq9 === 'active' && iv.cvd === 'conflict' && iv.tug === 'partial' && iv.copd === 'blocked', 'indicator states: active, conflict, partial, blocked');
+  ok(iv.phq9 === 'active' && iv.cvd === 'conflict' && iv.idrs === 'partial' && iv.tug === 'active' && iv.copd === 'blocked', 'indicator states: active, conflict, partial (IDRS gap), blocked; TUG active with the sheet\'s bands');
   ok((await office('POST', 'admin/risk/rules/copd', { approverName: 'Owner', confirm: true })).status === 400, 'blocked indicator cannot be configured');
   ok((await office('POST', 'admin/risk/rules/phq9', { approverName: 'Ow', confirm: true })).status === 400, 'the name of the person deciding is required');
   ok((await office('POST', 'admin/risk/rules/phq9', { approverName: 'Owner', confirm: true, validityDays: 0 })).status === 400, 'validity must be 1 to 3650 days');

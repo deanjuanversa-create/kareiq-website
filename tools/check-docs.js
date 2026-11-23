@@ -278,7 +278,8 @@ async function partTwo(URL0) {
   const allDash = (await fam('GET', 'people/' + FP + '/dashboard?period=all')).body;
   ok(allDash.range.registeredOn === D.d9 && allDash.series.find((m) => m.metric === 'glucose').rows.some((x) => x.value === 98 && istDay(new Date(x.at)) === D.d9), 'Vitals "All": history now starts at the old report (' + allDash.range.registeredOn + ') and shows its fasting sugar');
   const oldRisk = (await fam('GET', 'people/' + FP + '/risk')).body.status.indicators.find((i) => i.id === 'psqi');
-  ok(oldRisk && oldRisk.status === 'calculated' && oldRisk.value === 4 && oldRisk.band === 'Good sleep quality', 'Risk: the PSQI from the old report is used by the engine (Good sleep quality)');
+  // the engine uses the newest PSQI: the demo customer's own assessment (30 days ago) is newer than this old report
+  ok(oldRisk && oldRisk.status === 'calculated' && oldRisk.value === 7 && oldRisk.band === 'Poor sleep quality', 'Risk: the newest PSQI is used; the old report does not replace a newer assessment');
 }
 
 (async () => {

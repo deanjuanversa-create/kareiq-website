@@ -143,7 +143,7 @@ Walk-ins and phone bookings: **Office → Add a family**. New caregivers and off
 
 **Safety rules carried over from the dashboard spec:** families only ever see their own people (anything else answers "not found"); health readings are never deleted, a wrong one is removed with a reason and kept in the record; no "normal/high" labels until the doctors approve the reference ranges; signed out after 15 minutes without activity (4 hours at most); every action is in **Office → Activity**.
 
-**Try it on your computer:** `node server.js`, open http://localhost:3000/app. Without a database, demo logins are created (password `demo-pass-123`): `family@demo.kareiq` (mother on Kare@Home, father at KareNest), `arjun@demo.kareiq` (Kare@Home only), `meena@demo.kareiq` (KareNest, so also Kare@Home), `rahul@demo.kareiq` (plan being set up), `nurse@demo.kareiq`, `nest@demo.kareiq`, `admin@demo.kareiq`. Delete the `data` folder to start again. With the server running, `npm run check:app` runs the end-to-end checks.
+**Try it on your computer:** `node server.js`, open http://localhost:3000/app. Without a database, demo logins are created (password `demo-pass-123`): `family@demo.kareiq` (mother on Kare@Home, father at KareNest), `arjun@demo.kareiq` (Kare@Home only), `meena@demo.kareiq` (KareNest, so also Kare@Home), `rahul@demo.kareiq` (plan being set up), `nurse@demo.kareiq`, `nest@demo.kareiq`, `admin@demo.kareiq`. The four team dashboards: `finance@demo.kareiq` (Finance Manager), `hr@demo.kareiq` (HR), `ops@demo.kareiq` (Operations Manager), `sales@demo.kareiq` (Sales Executive). Delete the `data` folder to start again. With the server running, `npm run check:app` runs the end-to-end checks.
 
 **Where things are:** `app/` (the screens), `src/app/` (sign-in, permissions, plans, readings), `src/docs.js` (storage for MongoDB, Redis or files). Plan names per brand are in `src/app/products.js`. KareNest plans are the website packages (KarePlus, KarePremium, Bloom, Flourish, Thrive, KareBalance and KareMind) listed in `src/catalog.js`.
 
@@ -499,3 +499,23 @@ Failures that may pass are retried automatically (3 attempts); the office can al
 On a server without Tesseract, Poppler and OpenCV, documents stay Failed and are retried. The Dockerfile installs all three; on Render the service must run from the Dockerfile.
 
 Tests: `node tools/check-docs.js http://localhost:3000` on a fresh demo server. It needs `python3` with `reportlab` and `Pillow` to build the test documents.
+
+## Team dashboards: Finance Manager, HR, Operations Manager, Sales Executive
+
+Four office roles beside the office admin, each with its own landing page and only its own modules,
+all inside the same office interface (`app/office.js`) and on the same records:
+
+| Role | Reused modules | Added (src/app/teams.js) |
+|---|---|---|
+| Finance Manager (`finance`) | Financials (invoices, payment due, recording payments and refunds), revenue analytics | Financial overview, payments and refunds ledger, gateway/bank statement reconciliation with history, expenses (approved by someone else), financial reports (CSV) |
+| HR (`hr`) | Employees (records, KYC documents), Leave records | Employee onboarding checklist, employment history, credentials with expiry reminders, attendance, leave balances, HR reports |
+| Operations Manager (`operations`) | Customer directory (operational profile only), Nurse scheduler, leave records (read only) | Operations overview, visit tracking (missed, delayed, rescheduled), rescheduling through the scheduler, nurse capacity and conflicts, onboarding operations, service quality (issues and recorded feedback), reports |
+| Sales Executive (`sales`) | Lead management (overview, enquiry database, assigning, General Information) | Sales overview with pipeline value, follow-ups with reminders, contact history, packages and enquiries, sales reports |
+
+Permissions are enforced on the server (`src/app/access.js`): every `/api/app/admin/...` call checks the
+role first, and a team login cannot use any family or nurse route. Team roles never see health
+readings, medical records or risk results. Sales cannot approve packages or confirm payments.
+The office admin keeps every permission and sees all four dashboards under **Team dashboards**.
+Create team logins under Settings > Logins. Checks: `npm run check:teams` and `npm run check:teams-ui`
+(Python Playwright) against a fresh demo server.
+
