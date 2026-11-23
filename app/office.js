@@ -1017,7 +1017,7 @@
   // ================================================================ Team dashboards
   // Finance Manager, HR, Operations Manager and Sales Executive: the same office interface, each role
   // with its own landing page and only its own modules (the server refuses the rest, src/app/access.js).
-  // The office admin sees all four under "Team dashboards".
+  // The office admin reaches the same pages from its own menu groups.
   function role() { return (S.me && S.me.user.role) || ''; }
   function isAdmin() { return role() === 'admin'; }
   var ROLE_LABEL = { admin: 'Office', finance: 'Finance Manager', hr: 'HR', operations: 'Operations Manager', sales: 'Sales Executive' };
@@ -1540,10 +1540,9 @@
       { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/leads/assign', 'Assign to a member', 'team'], ['office/sales/followups', 'Follow-ups', 'clock']] },
       ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download']]
   };
-  // the office admin: the existing menu, with the four team dashboards and the new pages in their groups
+  // the office admin: the existing menu, with the new pages in their own groups (no separate team dashboards)
   (function () {
     var add = function (k, items) { MENU.forEach(function (g) { if (g.k === k) g.sub = g.sub.concat(items); }); };
-    MENU.splice(1, 0, { k: 'teams', label: 'Team dashboards', icon: 'grid', sub: [['office/fin', 'Finance Manager', 'rupee'], ['office/hr', 'HR', 'team'], ['office/ops', 'Operations Manager', 'cal'], ['office/sales', 'Sales Executive', 'funnel']] });
     add('leads', [['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
     add('cust', [['office/ops/onboarding', 'Onboarding operations', 'idcard'], ['office/ops/quality', 'Service quality', 'star']]);
     add('fin', [['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);

@@ -185,6 +185,62 @@ async function server() {
   ok(members.some((m) => m.name.includes('Sales')), 'sales executives can be given leads');
   ok((await sales('GET', 'admin/sales/reports/pipeline.csv')).status === 200, 'sales report downloads');
 
+  // ---- integration: an action in one dashboard shows in the others (one set of records)
+  const D = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  // Finance records a payment -> the invoice, the admin's revenue, Finance's overview and Operations' onboarding all follow
+  const owed = (await admin('GET', 'admin/finance/invoices?size=100')).body.rows.find((i) => i.outstanding > 0);
+  if (owed) {
+    const before = (await fin('GET', 'admin/fin/overview')).body.kpis.collected;
+    const pr = await fin('POST', 'admin/finance/payments', { planId: owed.planId, method: 'upi', ref: 'INTEG-' + Date.now(), amount: String(owed.outstanding) });
+    ok(pr.status === 201, 'integration: Finance records a payment on ' + owed.number);
+    const inv2 = (await admin('GET', 'admin/finance/invoices?q=' + owed.number)).body.rows[0];
+    ok(inv2.status === 'paid' && inv2.outstanding === 0, 'integration: the admin\'s invoice list shows it paid');
+    ok((await fin('GET', 'admin/fin/overview')).body.kpis.collected === before + owed.outstanding, 'integration: Finance overview collected rises by the payment');
+    ok((await admin('GET', 'admin/analytics/revenue')).body.kpis.collected === before + owed.outstanding, 'integration: the admin\'s revenue analytics shows the same figure');
+    const ob = (await ops('GET', 'admin/ops/onboarding')).body.rows.find((c) => c.id === owed.personId);
+    ok(!ob || !ob.reasons.some((x) => /payment for the package is not confirmed/.test(x)), 'integration: Operations no longer sees the payment as missing for that customer');
+    ok((await fin('GET', 'admin/fin/payments?q=' + owed.number)).body.rows.length >= 1, 'integration: the payment is in Finance\'s ledger');
+  }
+  // HR approves a nurse's leave -> the scheduler moves the visit, Operations' capacity shows the leave, the nurse's portal drops the visit
+  const nurseId = 'demo-u-nurse';
+  const upcoming = (await ops('GET', 'admin/ops/visits?from=' + D(1) + '&to=' + D(20) + '&nurse=' + nurseId)).body.rows.find((v) => ['assigned', 'accepted'].includes(v.status));
+  if (upcoming) {
+    const lv = await hr('POST', 'admin/leave', { nurseId, from: upcoming.date, to: upcoming.date, type: 'casual', status: 'approved', reason: 'Integration check' });
+    ok(lv.status === 201, 'integration: HR records approved leave on ' + upcoming.date);
+    const moved = (await ops('GET', 'admin/ops/visits?from=' + upcoming.date + '&to=' + upcoming.date)).body.rows.find((v) => v.id === upcoming.id);
+    ok(moved && moved.nurseId !== nurseId, 'integration: Operations sees the visit moved off the nurse on leave (' + (moved && moved.statusName) + ')');
+    const capN = (await ops('GET', 'admin/ops/capacity?from=' + upcoming.date + '&to=' + upcoming.date)).body.rows.find((n) => n.id === nurseId);
+    ok(capN && capN.leaveDays === 1 && capN.availableMinutes === 0, 'integration: Operations\' capacity shows the leave day and no hours');
+    const nv = (await nurse('GET', 'nurse/visits?from=' + upcoming.date + '&to=' + upcoming.date)).body;
+    ok(!JSON.stringify(nv).includes(upcoming.id), 'integration: the visit leaves the nurse\'s own portal');
+    ok((await hr('GET', 'admin/hr/leave/balances')).body.rows.find((r) => r.userId === nurseId).types.casual.used >= 1, 'integration: HR\'s leave balance counts the day');
+    ok((await admin('GET', 'admin/leave')).body.rows.some((l) => l.from === upcoming.date && l.nurseId === nurseId), 'integration: the admin\'s leave records show it');
+  }
+  // Operations reschedules -> the admin's visit board and the customer's visit history follow
+  const mv = (await ops('GET', 'admin/ops/visits?from=' + D(0) + '&to=' + D(20))).body.rows.find((v) => ['assigned', 'accepted', 'awaiting_assignment'].includes(v.status) && v.personId);
+  if (mv) {
+    const nd = D(12);
+    ok((await ops('POST', 'admin/ops/visits/' + mv.id + '/reschedule', { date: nd, slot: 'evening', note: 'Integration check' })).status === 200, 'integration: Operations reschedules ' + mv.reference);
+    ok((await admin('GET', 'admin/scheduler/visits?from=' + nd + '&to=' + nd)).body.rows.some((v) => v.id === mv.id && v.date === nd), 'integration: the admin\'s visit board shows the new day');
+    ok((await admin('GET', 'admin/customers/' + mv.personId)).body.visits.some((v) => v.id === mv.id && v.date === nd), 'integration: the customer profile shows the new day');
+  }
+  // Sales logs a contact -> the admin sees it on the enquiry and in the follow-ups
+  const sl = (await sales('GET', 'admin/leads?size=50')).body.rows.find((l) => l.status !== 'converted' && l.status !== 'lost');
+  await sales('POST', 'admin/sales/leads/' + sl.type + '/' + sl.id + '/activity', { kind: 'whatsapp', note: 'Integration check', followUpAt: D(2) + 'T10:00' });
+  ok((await admin('GET', 'admin/leads/' + sl.type + '/' + sl.id)).body.lead.history.some((h) => h.channel === 'whatsapp' && h.note === 'Integration check'), 'integration: the admin sees the contact Sales logged');
+  ok((await admin('GET', 'admin/sales/followups')).body.upcoming.some((l) => l.id === sl.id), 'integration: the admin sees the follow-up');
+  // Operations logs a complaint -> the admin sees it, and it is in the customer's activity
+  const ci = await ops('POST', 'admin/ops/issues', { type: 'service', title: 'Integration check', personId: 'P-DEMO02' });
+  ok((await admin('GET', 'admin/ops/issues')).body.rows.some((x) => x.id === ci.body.id), 'integration: the admin sees the issue Operations logged');
+  ok((await admin('GET', 'admin/customers/P-DEMO02')).body.activity.some((a) => a.action === 'issue.add'), 'integration: it is in the customer\'s activity');
+  // HR edits an employee -> the scheduler and Employees show it
+  ok((await hr('PATCH', 'admin/employees/' + nurseId, { designation: 'Charge Nurse' })).status === 200, 'integration: HR changes the nurse\'s designation');
+  ok((await admin('GET', 'admin/employees/' + nurseId)).body.employee.designation === 'Charge Nurse', 'integration: the admin\'s employee record shows it');
+  // Expenses -> Finance overview and reports
+  const ov3 = (await fin('GET', 'admin/fin/overview')).body;
+  ok(ov3.monthly[ov3.monthly.length - 1].expenses >= 1200, 'integration: the paid expense is in Finance\'s monthly figures');
+  ok(/Test supplier/.test((await admin('GET', 'admin/fin/reports/expenses.csv')).text), 'integration: and in the expenses report the admin downloads');
+
   // ---- existing access unchanged
   ok((await admin('GET', 'admin/summary')).status === 200 && (await admin('GET', 'admin/risk/rules')).status === 200 && (await admin('GET', 'admin/fin/overview')).status === 200, 'admin: existing pages and the team dashboards');
   ok((await nurse('GET', 'nurse/customers')).status === 200, 'nurse portal unchanged');

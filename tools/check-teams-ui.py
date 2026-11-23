@@ -93,10 +93,9 @@ async def main():
         # ---- admin: existing dashboard plus the four team dashboards
         ctx, pg, errs = await signin(b, 'admin')
         groups = await pg.eval_on_selector_all('#sb .sbg-btn span', 'e=>e.map(x=>x.textContent)')
-        ok('Team dashboards' in groups and 'Overview' in groups and 'Settings' in groups, 'admin: existing menu with Team dashboards added')
-        for d in ['fin', 'hr', 'ops', 'sales']:
-            await pg.goto(B + '/app/#/office/' + d); await pg.wait_for_timeout(1500)
-            ok('dashboard' in (await pg.inner_text('h1')).lower(), 'admin: opens the ' + d + ' dashboard')
+        ok('Team dashboards' not in groups and 'Overview' in groups and 'Financials' in groups and 'Settings' in groups, 'admin: its own menu, no separate team dashboards section')
+        subs = await pg.eval_on_selector_all('#sb .sbg-sub a span', 'e=>e.map(x=>x.textContent)')
+        ok('Reconciliation' in subs and 'Credentials' in subs and 'Visit tracking' in subs and 'Follow-ups' in subs, 'admin: the new pages sit in its existing groups')
         await pg.goto(B + '/app/#/office/overview/summary'); await pg.wait_for_timeout(1500)
         ok(await pg.locator('.pageerr').count() == 0, 'admin: summary still opens')
         ok(not errs, 'admin: no page errors')

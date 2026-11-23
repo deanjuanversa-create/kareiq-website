@@ -515,7 +515,7 @@ all inside the same office interface (`app/office.js`) and on the same records:
 Permissions are enforced on the server (`src/app/access.js`): every `/api/app/admin/...` call checks the
 role first, and a team login cannot use any family or nurse route. Team roles never see health
 readings, medical records or risk results. Sales cannot approve packages or confirm payments.
-The office admin keeps every permission and sees all four dashboards under **Team dashboards**.
+The office admin keeps every permission and reaches the new pages from its own menu groups (Financials, Employees, Customer management, Nurse scheduler, Lead management, Reports).
 Create team logins under Settings > Logins. Checks: `npm run check:teams` and `npm run check:teams-ui`
 (Python Playwright) against a fresh demo server.
 
