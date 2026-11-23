@@ -1245,7 +1245,7 @@
       swap(filters(r, [['status', 'Status', 'select', { in_progress: 'In progress', complete: 'Complete' }]]) + '<section class="panel otw">' + table(['Employee', 'Role', 'Joined', 'Progress', 'Still to do', ''], d.rows.map(function (v) {
         var o = v.onboarding;
         return ['<b>' + e(v.name) + '</b><br><span class="muted small">' + e(v.employeeId) + '</span>', e(v.roleName), e(v.joinDate ? K.date(v.joinDate) : '–'), bar(o.done / o.total * 100, o.status === 'complete' ? 'good' : 'warn') + '<span class="small">' + o.done + ' of ' + o.total + '</span>',
-          o.steps.filter(function (s) { return !s.ok; }).map(function (s) { return '<span class="small">' + icon('clock') + ' ' + e(s.label) + '</span>'; }).join('<br>') || pill('Complete', 'good'), '<a class="btn sm ghost" href="#/office/hr/employee?id=' + e(v.userId) + '">Open</a>'];
+          (o.steps.filter(function (s) { return !s.ok; }).map(function (s) { return '<li>' + icon('clock') + '<span>' + e(s.label) + '</span></li>'; }).join('').replace(/^(.+)$/, '<ul class="tcheck tcheck-sm">$1</ul>')) || pill('Complete', 'good'), '<a class="btn sm ghost" href="#/office/hr/employee?id=' + e(v.userId) + '">Open</a>'];
       }), 'Nobody matches') + '</section>');
     });
   }

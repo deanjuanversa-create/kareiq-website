@@ -708,6 +708,9 @@ body[data-brand="kareiq"] .tblock.rblock.inner > .rsum{display:none}
 .tcheck li{display:flex;gap:10px;align-items:center;color:var(--muted,#5b6575)}
 .tcheck li svg{width:18px;height:18px;flex:none;color:#eda100}
 .tcheck li.ok{color:inherit}.tcheck li.ok svg{color:var(--good)}
+.tcheck-sm{gap:4px;font-size:.85em}.tcheck-sm li{gap:6px;align-items:flex-start}.tcheck-sm li svg{width:14px;height:14px;margin-top:2px}
+td>span.small>svg{width:15px;height:15px;vertical-align:-3px}
+.otw td svg{max-width:18px;max-height:18px}
 .tgrid4{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:0 12px}
 .in.sm{padding:6px 10px;min-height:36px;font-size:.9rem}
 .otable td .in.sm{min-width:130px}
