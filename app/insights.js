@@ -64,9 +64,9 @@
     var rs = d && d.riskStatus;
     if (rs && rs.category && { red: 1, amber: 1, green: 1 }[rs.category]) {
       var rtone = rs.category === 'red' ? 'bad' : rs.category === 'amber' ? 'warn' : 'good';
-      var name = String(rs.categoryName || rs.category).split(/\s[–-]\s/);
+      // plain words for the family; the card's colour (red, amber, green) shows the level
       add({ id: 'risk', kind: 'risk', tone: rtone, metric: null, rank: rtone === 'bad' ? 0 : rtone === 'warn' ? 1 : 7,
-        title: 'Overall risk: ' + name[0] + (name[1] ? ' (' + name[1].toLowerCase() + ')' : ''),
+        title: 'Overall risk: ' + { red: 'Critical', amber: 'Moderate', green: 'Good' }[rs.category],
         summary: rs.reason || 'Calculated automatically from the recorded vitals and assessments.',
         facts: (rs.responsible || []).slice(0, 4).map(function (x) { return [x.short || x.title, (x.display || '') + (x.band ? ' · ' + x.band : '')]; }).concat(rs.at ? [['Checked', day(Date.parse(rs.at))]] : []),
         href: '#/health/risks' + q });

@@ -70,7 +70,8 @@ ok(!one(L, 'change-weight'), 'a 0.2 kg difference is not reported');
 // ---------------------------------------------------------------- overall risk category (from the risk engine, as stored)
 L = build({ riskStatus: { category: 'red', categoryName: 'Red – High Risk', reason: 'One indicator is Very High Risk.', responsible: [{ short: 'Kidney', display: '45', band: 'Very high' }], at: new Date(ago(1)).toISOString() } });
 x = one(L, 'risk');
-ok(x && x.tone === 'bad' && x.rank === 0 && x.title === 'Overall risk: Red (high risk)' && x.summary === 'One indicator is Very High Risk.', 'red risk: first, with the engine\'s own reason');
+ok(x && x.tone === 'bad' && x.rank === 0 && x.title === 'Overall risk: Critical' && x.summary === 'One indicator is Very High Risk.', 'red risk: "Critical", first, with the engine\'s own reason');
+ok(one(build({ riskStatus: { category: 'amber', reason: 'r' } }), 'risk').title === 'Overall risk: Moderate' && one(build({ riskStatus: { category: 'green', reason: 'r' } }), 'risk').title === 'Overall risk: Good', 'amber is "Moderate", green is "Good" (no colour names)');
 ok(x.facts[0][0] === 'Kidney' && x.facts[0][1] === '45 · Very high', 'names the indicators responsible');
 ok(!build({ riskStatus: { category: 'none' } }).length, 'no category yet: no risk insight');
 
