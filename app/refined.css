@@ -732,3 +732,29 @@ body[data-brand="kareiq"] .tblock.rblock.inner > .rsum{display:none}
 .otable td.tact{text-align:right;white-space:nowrap}
 .otable td.tact .oacts{display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
 @media (max-width:760px){.otable td.tact{text-align:left;white-space:normal}.otable td.tact .oacts{justify-content:flex-start}}
+/* Needs your attention: the work waiting for this person */
+.ttodo{background:#fff;border:1px solid rgba(0,0,0,.06);border-radius:18px;padding:16px 18px;margin:0 0 16px;box-shadow:0 1px 1px rgba(0,0,0,.025),0 6px 20px -14px rgba(0,0,0,.14)}
+.ttodo h2{font-size:1rem;margin:0 0 10px}
+.ttodo ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:8px}
+.ttodo a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:12px;background:#f6f7f9;color:inherit;text-decoration:none;border-left:4px solid #c9ced6;transition:background .2s,transform .2s}
+.ttodo a:hover{background:#eef4fd;transform:translateX(2px)}
+.ttodo a.warn{border-left-color:#eda100}.ttodo a.bad{border-left-color:var(--bad)}
+.ttodo a b{font-size:1.25rem;min-width:32px;text-align:center;font-variant-numeric:tabular-nums}
+.ttodo a span{flex:1;font-size:.92rem}
+.ttodo a svg{width:16px;height:16px;color:var(--muted,#5b6575)}
+.ttodo.clear{display:flex;align-items:center;gap:12px}
+.ttodo.clear>svg{width:26px;height:26px;color:var(--good);flex:none}
+.ttodo.clear div{display:grid}
+/* summary cards that open their list */
+a.okpi{color:inherit;text-decoration:none;position:relative;transition:transform .2s,box-shadow .2s}
+a.okpi:hover{transform:translateY(-2px);box-shadow:0 10px 26px -14px rgba(0,0,0,.28)}
+a.okpi .ok-go{position:absolute;right:12px;top:12px;opacity:0;transition:opacity .2s}
+a.okpi .ok-go svg{width:16px;height:16px;color:var(--muted,#5b6575)}
+a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
+/* receivables by age */
+.tbuckets{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,170px),1fr));gap:10px;margin:0 0 16px}
+.tbucket{display:grid;gap:2px;padding:12px 14px;border-radius:14px;background:#fff;border:1.5px solid rgba(0,0,0,.07);color:inherit;text-decoration:none;border-top:4px solid #c9ced6}
+.tbucket.warn{border-top-color:#eda100}.tbucket.bad{border-top-color:var(--bad)}
+.tbucket span{font-size:.82rem;color:var(--muted,#5b6575)}.tbucket b{font-size:1.15rem}.tbucket small{color:var(--muted,#5b6575)}
+.tbucket.on{border-color:var(--accent,#2a78d6);box-shadow:0 0 0 2px var(--accent,#2a78d6) inset}
+.head .oacts{display:flex;gap:8px;flex-wrap:wrap}

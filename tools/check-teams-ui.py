@@ -15,13 +15,13 @@ def ok(c, m):
 
 ROLES = {
   'finance': ('office/fin', 'Finance Manager', ['Dashboard', 'Financials', 'Expenses', 'Revenue analytics', 'Financial reports'],
-              ['fin/payments', 'fin/recon', 'fin/expenses', 'fin/reports', 'finance/invoices', 'finance/due', 'overview/revenue']),
+              ['fin/receivables', 'fin/payments', 'fin/recon', 'fin/expenses', 'fin/reports', 'finance/invoices', 'finance/due', 'overview/revenue']),
   'hr': ('office/hr', 'HR', ['Dashboard', 'Employees', 'Credentials', 'Attendance and leave', 'HR reports'],
          ['hr/onboarding', 'hr/credentials', 'hr/attendance', 'hr/attendance?view=month', 'hr/leave', 'hr/reports', 'employees', 'employees/kyc', 'scheduler/leave']),
   'ops': ('office/ops', 'Operations Manager', ['Dashboard', 'Customer management', 'Nurse scheduler', 'Service quality', 'Operations reports'],
-          ['ops/visits', 'ops/capacity', 'ops/onboarding', 'ops/quality', 'ops/reports', 'customers', 'customer?p=P-DEMO01', 'scheduler', 'scheduler/nurses', 'scheduler/leave']),
+          ['ops/visits', 'ops/capacity', 'ops/onboarding', 'ops/quality', 'ops/reports', 'customers', 'customer?p=P-DEMO01', 'scheduler', 'scheduler/leave', 'scheduler/holidays']),
   'sales': ('office/sales', 'Sales Executive', ['Dashboard', 'Lead management', 'Packages and enquiries', 'Sales reports'],
-            ['sales/followups', 'sales/packages', 'sales/reports', 'leads/overview', 'leads/list', 'leads/assign']),
+            ['sales/followups', 'sales/packages', 'sales/reports', 'leads/overview', 'leads/list']),
 }
 
 async def signin(b, who, w=1440, h=900):
@@ -50,6 +50,11 @@ async def main():
             for other in ['office/overview/summary', 'office/risk-rules', 'health/vitals?p=P-DEMO01', 'records?p=P-DEMO01', 'admin/logins']:
                 await pg.goto(B + '/app/#/' + other); await pg.wait_for_timeout(1200)
                 ok(pg.url.endswith('#/' + home), who + ': ' + other + ' sends it back to its dashboard')
+            await pg.goto(B + '/app/#/' + home); await pg.wait_for_timeout(1800)
+            ok(await pg.locator('.ttodo').count() == 1, who + ': "Needs your attention" on the landing page')
+            ok(await pg.locator('a.okpi').count() >= 4, who + ': summary cards open their lists')
+            subs = await pg.eval_on_selector_all('#sb .sbg-sub a span', 'e=>e.map(x=>x.textContent)')
+            ok('Assign to a member' not in subs and 'Nurses and hours' not in subs, who + ': no Assign to a member or Nurses and hours in the menu')
             ok(not errs, who + ': no page errors ' + str(errs[:3]))
             await ctx.close()
 
@@ -71,8 +76,27 @@ async def main():
         await pg.goto(B + '/app/#/office/leads/list'); await pg.wait_for_timeout(1500)
         await pg.click('[data-act=o-lead] >> nth=0'); await pg.wait_for_timeout(1500)
         ok(await pg.locator('dialog[open] [value=approve]').count() == 0, 'sales: the enquiry has no Approve package button')
+        await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
+        await pg.goto(B + '/app/#/office/sales'); await pg.wait_for_timeout(1500)
+        await pg.click('[data-act=o-lead-new] >> nth=0'); await pg.wait_for_timeout(1200)
+        await pg.fill('dialog[open] input[name=name]', 'Walk-in Visitor (UI test)'); await pg.fill('dialog[open] input[name=phone]', '9800199999')
+        await pg.select_option('dialog[open] select[name=source]', 'walk-in'); await pg.click('dialog[open] [data-act=submit-dialog]'); await pg.wait_for_timeout(1500)
+        await pg.goto(B + '/app/#/office/leads/list?q=Walk-in'); await pg.wait_for_timeout(1500)
+        ok(await pg.locator('td:has-text("Walk-in Visitor (UI test)")').count() == 1, 'sales: adds a walk-in lead from the dashboard')
+        await pg.goto(B + '/app/#/office/leads/assign'); await pg.wait_for_timeout(1200)
+        ok('/office/leads/list' in pg.url, 'sales: the old Assign to a member address opens the enquiry database')
+        await ctx.close()
+        ctx, pg, errs = await signin(b, 'finance')
+        await pg.goto(B + '/app/#/office/fin/receivables'); await pg.wait_for_timeout(1500)
+        ok(await pg.locator('.tbucket').count() >= 6, 'finance: receivables by age')
+        if await pg.locator('[data-act=o-remind]').count():
+            await pg.click('[data-act=o-remind] >> nth=0'); await pg.wait_for_timeout(400)
+            await pg.click('dialog[open] [data-act=submit-dialog]'); await pg.wait_for_timeout(1500)
+            ok(await pg.locator('td:has-text("whatsapp")').count() >= 1, 'finance: logs a payment reminder')
         await ctx.close()
         ctx, pg, errs = await signin(b, 'ops')
+        await pg.goto(B + '/app/#/office/scheduler/nurses'); await pg.wait_for_timeout(1200)
+        ok(pg.url.endswith('#/office/ops'), 'operations: Nurses and hours is not available')
         await pg.goto(B + '/app/#/office/ops/visits'); await pg.wait_for_timeout(1500)
         if await pg.locator('[data-act=o-resched]').count():
             await pg.click('[data-act=o-resched] >> nth=0'); await pg.wait_for_timeout(500)
@@ -85,6 +109,11 @@ async def main():
         ok(await pg.locator('[data-act=o-leave-add], [data-act=o-leave-approve]').count() == 0, 'operations: leave records are read only')
         await ctx.close()
         ctx, pg, errs = await signin(b, 'hr')
+        await pg.click('[data-act=o-hr-new]'); await pg.wait_for_timeout(500)
+        await pg.fill('dialog[open] input[name=name]', 'Nurse Bindu (UI test)'); await pg.fill('dialog[open] input[name=phone]', '9800177777')
+        await pg.click('dialog[open] [data-act=submit-dialog]'); await pg.wait_for_timeout(1800)
+        ok(await pg.locator('dialog[open] input[readonly]').count() == 1, 'hr: adds a nurse and gets the sign-in link')
+        await pg.keyboard.press('Escape'); await pg.wait_for_timeout(300)
         await pg.goto(B + '/app/#/office/hr/attendance'); await pg.wait_for_timeout(1500)
         sel = pg.locator('form[data-form=o-att] select').first
         await sel.select_option('present'); await pg.click('form[data-form=o-att] button[type=submit]'); await pg.wait_for_timeout(1500)
@@ -96,6 +125,10 @@ async def main():
         ok('Team dashboards' not in groups and 'Overview' in groups and 'Financials' in groups and 'Settings' in groups, 'admin: its own menu, no separate team dashboards section')
         subs = await pg.eval_on_selector_all('#sb .sbg-sub a span', 'e=>e.map(x=>x.textContent)')
         ok('Reconciliation' in subs and 'Credentials' in subs and 'Visit tracking' in subs and 'Follow-ups' in subs, 'admin: the new pages sit in its existing groups')
+        ok('Assign to a member' in subs and 'Nurses and hours' in subs, 'admin: keeps Assign to a member and Nurses and hours')
+        for pth in ['leads/assign', 'scheduler/nurses']:
+            await pg.goto(B + '/app/#/office/' + pth); await pg.wait_for_timeout(1500)
+            ok(pg.url.endswith('#/office/' + pth) and await pg.locator('.pageerr').count() == 0, 'admin: opens ' + pth)
         await pg.goto(B + '/app/#/office/overview/summary'); await pg.wait_for_timeout(1500)
         ok(await pg.locator('.pageerr').count() == 0, 'admin: summary still opens')
         ok(not errs, 'admin: no page errors')

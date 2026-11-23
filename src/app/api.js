@@ -1926,7 +1926,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   modCtx.nursing = nursingApi;
   const officeApi = officeMod.create(modCtx);
   const featuresApi = featuresMod.create({ ...modCtx, visiblePerson, careTeam, canRecord, historyAllowed, readJson, risk: shared.risk });
-  const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi });
+  const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi, welcomeLink });
   // HR credential expiry and sales follow-up reminders: shortly after start, then every hour
   if (!global.__kqTeamTimer && process.env.APP_STATELESS !== 'true') {
     global.__kqTeamTimer = true;

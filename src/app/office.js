@@ -11,7 +11,7 @@ const { POLICIES, CATEGORIES } = require('./nursing');
 const care = require('./care');
 
 const LEAD_STATUS = { new: 'New', contacted: 'Contacted', follow_up: 'Follow-up pending', converted: 'Converted', lost: 'Lost / closed' };
-const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office' };
+const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office', phone: 'Phone call', 'walk-in': 'Walk-in', referral: 'Referral', event: 'Health camp or event' };
 const PAGE = 25;
 // everyone with a staff login is an employee: nurses, the office admins and the four team roles
 const STAFF_ROLES = ['admin', 'caregiver', 'finance', 'hr', 'operations', 'sales'];

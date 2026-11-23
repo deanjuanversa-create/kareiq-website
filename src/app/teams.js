@@ -86,7 +86,24 @@ function statementRows(text) {
 }
 
 function create(ctx) {
-  const { docs, uid, now, todayIST, json, notFound, bad, forbidden, clean, audit, store, scheduler, staff, finance, namesFor, office, lifecycle } = ctx;
+  const { docs, uid, now, todayIST, json, notFound, bad, forbidden, clean, audit, store, scheduler, staff, finance, namesFor, office, lifecycle, normalisePhone, welcomeLink } = ctx;
+  // "Needs your attention": what is waiting for this person, each with where to go; only items that are not zero
+  const todo = (list) => list.filter((x) => x.count > 0);
+  // who to contact about a customer: the family logins linked to them, then the phone on the details form
+  async function contactsOf(personIds) {
+    const ids = [...new Set(personIds.filter(Boolean))];
+    if (!ids.length) return {};
+    const [links, dets] = await Promise.all([docs.find('app_links', { personId: { $in: ids }, kind: 'family' }), docs.find('app_details', { id: { $in: ids.map((x) => 'det-' + x) } })]);
+    const users = links.length ? await docs.find('app_users', { id: { $in: links.map((l) => l.userId) } }) : [];
+    const out = {};
+    for (const id of ids) {
+      const fam = links.filter((l) => l.personId === id).map((l) => users.find((u) => u.id === l.userId)).filter(Boolean);
+      const det = dets.find((d) => d.id === 'det-' + id);
+      const f = fam.find((u) => u.phone) || fam[0];
+      out[id] = { name: f ? f.name : null, phone: (f && f.phone) || (det && det.data && det.data.phone1) || null, email: (f && f.email) || (det && det.data && det.data.email) || null, relation: f ? (links.find((l) => l.userId === f.id && l.personId === id) || {}).relation || null : null };
+    }
+    return out;
+  }
   const q = (url, k) => (url.searchParams.get(k) || '').trim();
   const fail = (res, message, errors) => json(res, 400, { ok: false, message: message || 'Please check the highlighted fields.', errors });
   const people = async (ids) => { const list = [...new Set(ids.filter(Boolean))]; const rows = list.length ? await docs.find('app_people', { id: { $in: list } }) : []; return Object.fromEntries(rows.map((p) => [p.id, p.name])); };
@@ -95,7 +112,7 @@ function create(ctx) {
   async function usersWithRole(...roles) { return (await docs.find('app_users', { active: true })).filter((u) => roles.includes(u.role)).map((u) => u.id); }
 
   // ================================================================ Finance
-  async function financeOverview() {
+  async function financeOverview(user) {
     const today = todayIST();
     const [inv, pays, exps, orders, recon] = await Promise.all([finance.invoices(), docs.find('app_payments'), docs.find('app_expenses'), docs.find('app_orders', { status: 'awaiting_payment' }), docs.find('app_recon', {}, { sort: { createdAt: -1 }, limit: 1 })]);
     const billed = inv.filter((i) => i.status !== 'quote');
@@ -121,6 +138,13 @@ function create(ctx) {
       byMethod: group(pays.filter((p) => p.kind === 'payment'), (p) => p.method, (k) => require('./orders').METHODS[k] || k, (p) => p.amount),
       packagePerformance: [...new Set(billed.map((i) => i.packageId))].map((k) => { const mine = billed.filter((i) => i.packageId === k); return { key: k, label: planName(k), invoices: mine.length, billed: mine.reduce((s, i) => s + i.amount, 0), collected: mine.reduce((s, i) => s + i.paid - i.refunded, 0), outstanding: mine.reduce((s, i) => s + i.outstanding, 0) }; }).sort((a, b) => b.billed - a.billed),
       lastRecon: recon[0] ? { id: recon[0].id, at: recon[0].createdAt, counts: recon[0].counts, source: recon[0].source } : null,
+      todo: todo([
+        { key: 'overdue', label: 'Overdue invoices to follow up', count: inv.filter((i) => i.overdueDays > 0).length, href: '#/office/fin/receivables?bucket=overdue', tone: 'bad' },
+        { key: 'approve', label: 'Expenses waiting for your approval', count: exps.filter((x) => x.status === 'submitted' && (!user || x.createdBy !== user.id)).length, href: '#/office/fin/expenses?status=submitted', tone: 'warn' },
+        { key: 'pay', label: 'Approved expenses to pay', count: exps.filter((x) => x.status === 'approved').length, href: '#/office/fin/expenses?status=approved', tone: 'warn' },
+        { key: 'recon', label: 'Reconciliation exceptions not resolved', count: (await docs.find('app_recon')).reduce((n, r) => n + (r.items || []).filter((i) => i.status !== 'matched' && !i.resolved).length, 0), href: '#/office/fin/recon', tone: 'warn' },
+        { key: 'orders', label: 'Approved packages waiting for the customer\'s payment', count: orders.length, href: '#/office/finance/due', tone: '' }
+      ]),
       note: 'Collected = verified payments minus refunds. Revenue = invoiced amounts of confirmed packages (packages priced on call are left out until a price is agreed).'
     };
   }
@@ -169,11 +193,38 @@ function create(ctx) {
 
   async function financeRoute(req, res, parts, url, user, body) {
     const p = parts.join('/');
-    if (p === 'fin/overview' && req.method === 'GET') return json(res, 200, { ok: true, ...(await financeOverview()) });
+    if (p === 'fin/overview' && req.method === 'GET') return json(res, 200, { ok: true, ...(await financeOverview(user)) });
     if (p === 'fin/payments' && req.method === 'GET') {
       const rows = await paymentRows(url);
       const pay = rows.filter((x) => x.kind === 'payment'), ref = rows.filter((x) => x.kind === 'refund');
       return json(res, 200, { ok: true, ...paginate(rows, url), totals: { received: pay.reduce((s, x) => s + x.amount, 0), refunded: ref.reduce((s, x) => s + x.amount, 0), payments: pay.length, refunds: ref.length }, methods: require('./orders').METHODS });
+    }
+    // ---- receivables: what is owed, by age, with the billing contact and every reminder sent
+    if (p === 'fin/receivables' && req.method === 'GET') {
+      const today = todayIST();
+      const inv = (await finance.invoices()).filter((i) => i.outstanding > 0);
+      const [names, contacts, rem] = await Promise.all([people(inv.map((i) => i.personId)), contactsOf(inv.map((i) => i.personId)), docs.find('app_reminders', {}, { sort: { at: -1 } })]);
+      const by = await namesFor(rem.map((r) => r.by));
+      const bucketOf = (i) => (i.overdueDays === 0 ? 'current' : i.overdueDays <= 30 ? 'd30' : i.overdueDays <= 60 ? 'd60' : i.overdueDays <= 90 ? 'd90' : 'd90p');
+      const BUCKETS = { current: 'Not due yet', d30: '1–30 days overdue', d60: '31–60 days overdue', d90: '61–90 days overdue', d90p: 'More than 90 days overdue' };
+      const want = q(url, 'bucket'), text = q(url, 'q').toLowerCase();
+      const rows = inv.map((i) => { const mine = rem.filter((r) => r.planId === i.planId); return { planId: i.planId, number: i.number, date: i.date, dueDate: i.dueDate, personId: i.personId, customerName: names[i.personId] || i.personId, packageName: i.packageName,
+        amount: i.amount, paid: i.paid - i.refunded, outstanding: i.outstanding, overdueDays: i.overdueDays, bucket: bucketOf(i), bucketName: BUCKETS[bucketOf(i)], contact: contacts[i.personId] || null,
+        reminders: mine.length, lastReminder: mine[0] ? { at: mine[0].at, channel: mine[0].channel, by: by[mine[0].by] || '', note: mine[0].note || null } : null }; })
+        .filter((r) => (!want || (want === 'overdue' ? r.overdueDays > 0 : r.bucket === want)) && (!text || [r.number, r.customerName, r.personId].some((x) => String(x).toLowerCase().includes(text))))
+        .sort((a, b) => b.overdueDays - a.overdueDays);
+      const all = inv.map((i) => ({ b: bucketOf(i), o: i.outstanding }));
+      return json(res, 200, { ok: true, today, buckets: Object.keys(BUCKETS).map((k) => ({ key: k, label: BUCKETS[k], count: all.filter((x) => x.b === k).length, amount: all.filter((x) => x.b === k).reduce((s2, x) => s2 + x.o, 0) })), rows, methods: require('./orders').METHODS });
+    }
+    if (parts[0] === 'fin' && parts[1] === 'receivables' && parts[3] === 'remind' && parts.length === 4 && req.method === 'POST') {
+      const inv = (await finance.invoices()).find((i) => i.planId === parts[2]);
+      if (!inv) throw notFound();
+      const channel = ['whatsapp', 'call', 'email', 'sms', 'visit'].includes(body.channel) ? body.channel : null;
+      if (!channel) return fail(res, 'Choose how you reminded them.', { channel: 'Required' });
+      const r = { id: uid(), planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, channel, note: clean(body.note, 300) || null, promisedOn: isDate(body.promisedOn) ? body.promisedOn : null, outstanding: inv.outstanding, by: user.id, at: now() };
+      await docs.insert('app_reminders', r);
+      await audit(user.id, 'payment.reminder', inv.personId, { invoice: inv.number, channel });
+      return json(res, 201, { ok: true });
     }
     // ---- reconciliation: a gateway or bank statement against the payments KareIQ recorded
     if (p === 'fin/recon' && req.method === 'GET') {
@@ -269,7 +320,7 @@ function create(ctx) {
     // ---- reports (CSV)
     if (parts[0] === 'fin' && parts[1] === 'reports' && parts.length === 3 && req.method === 'GET') {
       const kind = parts[2].replace(/\.csv$/, '');
-      const ov = await financeOverview();
+      const ov = await financeOverview(user);
       const today = todayIST();
       if (kind === 'revenue-package') return sendCsv(res, 'revenue-by-package-' + today, ['Package', 'Invoices', 'Invoiced (INR)', 'Collected (INR)', 'Outstanding (INR)'], ov.packagePerformance.map((x) => [x.label, x.invoices, x.billed, x.collected, x.outstanding]));
       if (kind === 'revenue-service') return sendCsv(res, 'revenue-by-service-' + today, ['Service line', 'Collected (INR)'], ov.byService.map((x) => [x.label, x.value]));
@@ -349,7 +400,34 @@ function create(ctx) {
         byRole: group(list.filter((x) => x.v.status !== 'inactive'), (x) => x.u.role, (k) => ROLE_NAMES[k] || k),
         joining: monthsBack(today, 12).map((m) => ({ key: m, joined: list.filter((x) => month(x.v.joinDate) === m).length, left: list.filter((x) => month(x.v.exitDate) === m).length })),
         expiringSoon: creds.filter((c) => c.status !== 'valid').sort((a, b) => (a.expiresOn < b.expiresOn ? -1 : 1)).slice(0, 8).map((c) => ({ ...c, employee: (list.find((x) => (x.prof.credentials || []).some((y) => y.id === c.id)) || {}).v })).map((c) => ({ id: c.id, name: c.name, typeName: c.typeName, expiresOn: c.expiresOn, status: c.status, daysLeft: c.daysLeft, employeeName: c.employee ? c.employee.name : '', userId: c.employee ? c.employee.userId : null })),
-        recent: list.filter((x) => x.v.joinDate).sort((a, b) => (a.v.joinDate < b.v.joinDate ? 1 : -1)).slice(0, 5).map((x) => ({ userId: x.u.id, name: x.u.name, roleName: x.v.roleName, joinDate: x.v.joinDate, onboarding: x.v.onboarding })) });
+        recent: list.filter((x) => x.v.joinDate).sort((a, b) => (a.v.joinDate < b.v.joinDate ? 1 : -1)).slice(0, 5).map((x) => ({ userId: x.u.id, name: x.u.name, roleName: x.v.roleName, joinDate: x.v.joinDate, onboarding: x.v.onboarding })),
+        todo: todo([
+          { key: 'leave', label: 'Leave requests to approve or reject', count: pendingLeave, href: '#/office/scheduler/leave', tone: 'warn' },
+          { key: 'expired', label: 'Credentials that have expired', count: creds.filter((c) => c.status === 'expired').length, href: '#/office/hr/credentials?status=expired', tone: 'bad' },
+          { key: 'expiring', label: 'Credentials expiring within 30 days', count: creds.filter((c) => c.status === 'expiring').length, href: '#/office/hr/credentials?status=expiring', tone: 'warn' },
+          { key: 'onboarding', label: 'Employees with onboarding steps left', count: list.filter((x) => x.v.status !== 'inactive' && x.v.onboarding.status !== 'complete').length, href: '#/office/hr/onboarding?status=in_progress', tone: '' },
+          { key: 'attendance', label: 'Employees not marked in today\'s attendance', count: Math.max(0, list.filter((x) => x.u.active && x.v.status !== 'inactive').length - att.length), href: '#/office/hr/attendance', tone: '' }
+        ]) });
+    }
+    // HR adds a new nurse / caregiver: the login, the employee record and the welcome link to set a password.
+    // Office logins (admin, Finance, HR, Operations, Sales) are given by the office admin under Settings > Logins.
+    if (p === 'hr/employees' && req.method === 'POST') {
+      const errors = {};
+      const name = clean(body.name, 80); if (name.length < 2) errors.name = 'Enter the name.';
+      const phone = body.phone ? normalisePhone(body.phone) : null; if (body.phone && !phone) errors.phone = 'Enter a 10-digit Indian mobile number.';
+      const email = String(body.email || '').trim().toLowerCase().slice(0, 120); if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'This email address looks incomplete.';
+      if (!phone && !email) errors.phone = 'Enter a mobile number or email; it is what they sign in with.';
+      if (phone && await docs.findOne('app_users', { phone })) errors.phone = 'Another login already uses this mobile number.';
+      if (email && await docs.findOne('app_users', { email })) errors.email = 'Another login already uses this email.';
+      const dept = DEPARTMENTS.includes(body.department) ? body.department : 'Nursing';
+      if (body.joinDate && !isDate(body.joinDate)) errors.joinDate = 'Choose the date of joining.';
+      if (Object.keys(errors).length) return fail(res, null, errors);
+      const u = { id: uid(), name, email: email || null, phone, role: 'caregiver', passwordHash: null, active: true, createdAt: now(), createdBy: user.id };
+      await docs.insert('app_users', u);
+      const prof = await staff.profileOf(u.id);
+      await docs.update('app_staff', prof.id, { department: dept, designation: clean(body.designation, 80) || 'Staff Nurse', location: clean(body.location, 80), joinDate: isDate(body.joinDate) ? body.joinDate : today, businessUnit: ['karehome', 'karenest', 'kareiq'].includes(body.businessUnit) ? body.businessUnit : prof.businessUnit, updatedAt: now() });
+      await audit(user.id, 'user.add', null, { role: 'caregiver', name, by: 'hr' });
+      return json(res, 201, { ok: true, userId: u.id, employeeId: prof.employeeId, ...(await welcomeLink(req, u)) });
     }
     if (p === 'hr/onboarding' && req.method === 'GET') {
       const rows = (await employees()).map(({ user: u, prof }) => empView(u, prof, today)).filter((v) => v.status !== 'inactive' || q(url, 'all'));
@@ -516,8 +594,9 @@ function create(ctx) {
   async function visitRows(from, to) {
     const rows = await docs.find('app_schedule', { date: { $gte: from, $lte: to } }, { sort: { date: 1, start: 1 } });
     const names = await namesFor(rows.map((v) => v.nurseId));
+    const contacts = await contactsOf(rows.map((v) => v.personId));
     const today = todayIST(), hm = nowHM();
-    return rows.map((v) => ({ id: v.id, reference: v.reference, date: v.date, slot: v.slot, slotName: SLOTS[v.slot] ? SLOTS[v.slot].name : v.slot, start: v.start || null, end: v.end || null, serviceName: v.serviceName, product: v.product,
+    return rows.map((v) => ({ contact: v.personId ? contacts[v.personId] || null : null, id: v.id, reference: v.reference, date: v.date, slot: v.slot, slotName: SLOTS[v.slot] ? SLOTS[v.slot].name : v.slot, start: v.start || null, end: v.end || null, serviceName: v.serviceName, product: v.product,
       personId: v.personId || null, customerName: v.customerName || '', location: v.location || '', nurseId: v.nurseId || null, nurseName: names[v.nurseId] || null, status: v.status, statusName: VSTATUS[v.status],
       createdAt: v.createdAt, assignedAt: v.assignedAt || null, completedAt: v.completedAt || null, ...visitFlags(v, today, hm) }));
   }
@@ -583,6 +662,14 @@ function create(ctx) {
         completionRate: past30.filter((v) => v.status !== 'cancelled').length ? Math.round((past30.filter((v) => v.status === 'completed').length / past30.filter((v) => v.status !== 'cancelled').length) * 1000) / 10 : null
       },
       today: todays, attention: vis.filter((v) => v.missed || v.delayed).slice(0, 12),
+      todo: todo([
+        { key: 'unassigned', label: 'Visits waiting for a nurse', count: waiting.length, href: '#/office/scheduler?status=awaiting_assignment', tone: 'bad' },
+        { key: 'delayed', label: 'Visits running late right now', count: vis.filter((v) => v.delayed).length, href: '#/office/ops/visits?flag=delayed&from=' + today + '&to=' + today, tone: 'warn' },
+        { key: 'missed', label: 'Missed visits to follow up', count: vis.filter((v) => v.missed).length, href: '#/office/ops/visits?flag=missed&from=' + addDays(today, -30) + '&to=' + today, tone: 'bad' },
+        { key: 'onboarding', label: 'Customers waiting too long for onboarding', count: cust.filter((c) => c.delayed).length, href: '#/office/ops/onboarding?stage=delayed', tone: 'warn' },
+        { key: 'nonurse', label: 'Active customers without a nurse', count: cust.filter((c) => c.status === 'active' && !c.hasNurse).length, href: '#/office/ops/onboarding?stage=no_nurse', tone: 'warn' },
+        { key: 'issues', label: 'Open service issues', count: issues.filter((x) => x.status === 'open' || x.status === 'in_progress').length, href: '#/office/ops/quality?status=open_all', tone: '' }
+      ]),
       daily: daysIn(addDays(today, -13), today).map((d) => ({ key: d, completed: vis.filter((v) => v.date === d && v.status === 'completed').length, missed: vis.filter((v) => v.date === d && v.missed).length, cancelled: vis.filter((v) => v.date === d && v.status === 'cancelled').length }))
     };
   }
@@ -762,7 +849,34 @@ function create(ctx) {
         packageTrend: (() => { const top = group(rows.filter((l) => l.package), (l) => l.package).slice(0, 4).map((x) => x.key); return { packages: top.map((k) => ({ key: k, label: planName(k) })), months: months.map((m) => ({ key: m, values: top.map((k) => rows.filter((l) => l.package === k && month(l.createdAt) === m).length) })) }; })(),
         byMember: group(rows.filter((l) => l.assignedTo), (l) => l.assignedTo, (k) => (rows.find((l) => l.assignedTo === k) || {}).assignedName || 'Team member').map((x) => ({ ...x, converted: rows.filter((l) => l.assignedTo === x.key && l.status === 'converted').length })),
         recentPurchases: purchases.filter((l) => l.purchase).sort((a, b) => (a.purchase.at < b.purchase.at ? 1 : -1)).slice(0, 6).map((l) => ({ name: l.name, packageName: l.packageName, amount: l.purchase.amount, at: l.purchase.at, reference: l.purchase.reference })),
+        todo: todo([
+          { key: 'overdue', label: 'Follow-ups overdue', count: rows.filter((l) => l.open && l.followUp === 'overdue' && (!l.assignedTo || l.assignedTo === user.id || user.role === 'admin')).length, href: '#/office/sales/followups', tone: 'bad' },
+          { key: 'today', label: 'Follow-ups due today', count: rows.filter((l) => l.open && l.followUp === 'today' && (!l.assignedTo || l.assignedTo === user.id || user.role === 'admin')).length, href: '#/office/sales/followups', tone: 'warn' },
+          { key: 'new', label: 'New leads not contacted yet', count: rows.filter((l) => l.status === 'new').length, href: '#/office/leads/list?status=new', tone: 'warn' },
+          { key: 'nofollow', label: 'Open leads without a follow-up date', count: rows.filter((l) => l.open && !l.followUpAt && l.status !== 'new').length, href: '#/office/sales/followups', tone: '' }
+        ]),
         note: 'Expected values come from the published package prices (or the amount a team member entered); packages priced on call are not counted until a value is entered. A purchase is counted only when its payment is verified.' });
+    }
+    // a lead from a phone call, walk-in, referral or event: added to the same enquiry database as the websites'
+    if (p === 'sales/leads' && req.method === 'POST') {
+      const errors = {};
+      const name = clean(body.name, 80); if (name.length < 2) errors.name = 'Enter the name.';
+      const phone = body.phone ? normalisePhone(body.phone) : null; if (body.phone && !phone) errors.phone = 'Enter a 10-digit Indian mobile number.';
+      const email = String(body.email || '').trim().toLowerCase().slice(0, 120); if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'This email address looks incomplete.';
+      if (!phone && !email) errors.phone = 'Enter a mobile number or email so the lead can be contacted.';
+      const source = ['phone', 'walk-in', 'referral', 'event', 'admin'].includes(body.source) ? body.source : 'phone';
+      const pk = body.package ? await packinfo.byId(String(body.package)) : null;
+      if (body.package && !pk) errors.package = 'Choose a package.';
+      let followUpAt = null;
+      if (body.followUpAt) { if (!isDate(String(body.followUpAt).slice(0, 10)) || String(body.followUpAt).slice(0, 10) < today) errors.followUpAt = 'Choose today or a later date.'; else followUpAt = String(body.followUpAt).slice(0, 16); }
+      if (Object.keys(errors).length) return fail(res, null, errors);
+      const note = clean(body.note, 500);
+      const at = now();
+      const rec = await store.add('enquiries', 'KQ', { name, phone, email: email || '', interest: pk ? pk.product : 'kareiq', interestName: pk ? pk.name : 'Enquiry', package: pk ? pk.id : 'undecided', message: note, source, kind: 'enquiry', careForName: clean(body.careFor, 80) || null,
+        createdAt: at, assignedTo: user.id, assignedAt: at, leadStatus: note ? 'contacted' : 'new', status: note ? 'contacted' : 'new', followUpAt, nextAction: clean(body.nextAction, 200) || null, addedBy: user.id,
+        leadHistory: [{ at, by: user.name, byId: user.id, action: 'added', note: 'Added by ' + user.name + ' (' + (SOURCES[source] || source) + ')' }].concat(note ? [{ at, by: user.name, byId: user.id, action: 'contact', channel: source === 'walk-in' ? 'meeting' : 'call', outcome: null, note }] : []) });
+      await audit(user.id, 'lead.add', null, { lead: rec.reference, source });
+      return json(res, 201, { ok: true, id: rec.id, reference: rec.reference });
     }
     if (p === 'sales/followups' && req.method === 'GET') {
       const rows = (await salesLeads(url, user)).filter((l) => l.open);

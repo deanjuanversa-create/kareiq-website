@@ -15,12 +15,14 @@ const ok = (c, m) => { if (c) pass++; else { fail++; console.log('FAIL', m); } }
 // ---------------------------------------------------------------- 1. without a server
 const A = (role, path, method) => access.allows(role, path, method || 'GET');
 ok(A('admin', 'anything/at/all', 'DELETE'), 'admin keeps every office permission');
+ok(A('admin', 'scheduler/nurses/u1', 'PATCH') && A('admin', 'leads/enquiry/x/assign', 'POST'), 'admin keeps Nurses and hours and assigning leads');
 ok(!A('family', 'fin/overview') && !A('caregiver', 'customers'), 'family and nurse logins have no office permissions');
 ok(A('finance', 'fin/overview') && A('finance', 'finance/invoices') && A('finance', 'finance/payments', 'POST') && A('finance', 'analytics/revenue'), 'finance: its own modules');
 ok(!A('finance', 'employees') && !A('finance', 'customers') && !A('finance', 'leads') && !A('finance', 'summary') && !A('finance', 'risk/rules') && !A('finance', 'documents'), 'finance: no HR, customers, leads or clinical pages');
 ok(A('hr', 'employees') && A('hr', 'employees/u1', 'PATCH') && A('hr', 'leave/u1/l1/approve', 'POST') && A('hr', 'hr/attendance', 'POST'), 'hr: employees, leave and hr/*');
 ok(!A('hr', 'finance/invoices') && !A('hr', 'customers') && !A('hr', 'scheduler/visits') && !A('hr', 'summary'), 'hr: no finance, customers, scheduling or clinical pages');
-ok(A('operations', 'customers') && A('operations', 'customers/P-1') && A('operations', 'scheduler/visits/v1/assign', 'POST') && A('operations', 'ops/issues', 'POST'), 'operations: customers, scheduler and ops/*');
+ok(A('operations', 'customers') && A('operations', 'customers/P-1') && A('operations', 'scheduler/visits/v1/assign', 'POST') && A('operations', 'scheduler/nurses') && A('operations', 'scheduler/holidays', 'POST') && A('operations', 'ops/issues', 'POST'), 'operations: customers, visit board, holidays and ops/*');
+ok(!A('operations', 'scheduler/nurses/u1', 'PATCH') && !A('operations', 'scheduler/nurses/u1/leave', 'POST'), 'operations: nurses\' working hours and leave are not Operations\' to change');
 ok(A('operations', 'leave') && !A('operations', 'leave', 'POST') && !A('operations', 'leave/u1/l1/approve', 'POST'), 'operations: leave records read only');
 ok(!A('operations', 'finance/invoices') && !A('operations', 'employees') && !A('operations', 'records/review') && !A('operations', 'risk/rules') && !A('operations', 'summary'), 'operations: no finance, HR or clinical pages');
 ok(A('sales', 'leads') && A('sales', 'leads/overview') && A('sales', 'leads/enquiry/x', 'PATCH') && A('sales', 'leads/enquiry/x/assign', 'POST') && A('sales', 'sales/overview'), 'sales: lead management and sales/*');
@@ -240,6 +242,33 @@ async function server() {
   const ov3 = (await fin('GET', 'admin/fin/overview')).body;
   ok(ov3.monthly[ov3.monthly.length - 1].expenses >= 1200, 'integration: the paid expense is in Finance\'s monthly figures');
   ok(/Test supplier/.test((await admin('GET', 'admin/fin/reports/expenses.csv')).text), 'integration: and in the expenses report the admin downloads');
+
+  // ---- the added features
+  for (const [c, name] of [[fin, 'finance'], [hr, 'hr'], [ops, 'operations'], [sales, 'sales']]) {
+    const lp = { finance: 'admin/fin/overview', hr: 'admin/hr/overview', operations: 'admin/ops/overview', sales: 'admin/sales/overview' }[name];
+    const t = (await c('GET', lp)).body.todo;
+    ok(Array.isArray(t) && t.every((x) => x.count > 0 && x.href && x.label), name + ': "Needs your attention" lists only waiting work, each with a link (' + t.length + ')');
+  }
+  const rv = (await fin('GET', 'admin/fin/receivables')).body;
+  ok(rv.buckets.length === 5 && rv.rows.every((x) => x.outstanding > 0), 'finance: receivables by age, only money owed');
+  if (rv.rows[0]) {
+    ok((await fin('POST', 'admin/fin/receivables/' + rv.rows[0].planId + '/remind', { channel: 'whatsapp', note: 'Sent' })).status === 201, 'finance logs a payment reminder');
+    ok((await fin('GET', 'admin/fin/receivables')).body.rows.find((x) => x.planId === rv.rows[0].planId).reminders === 1, 'the reminder shows on the receivable');
+    ok((await sales('POST', 'admin/fin/receivables/' + rv.rows[0].planId + '/remind', { channel: 'call' })).status === 403, 'sales cannot log payment reminders');
+  }
+  const nn = await hr('POST', 'admin/hr/employees', { name: 'Nurse Test', phone: '9800155555', designation: 'Staff Nurse' });
+  ok(nn.status === 201 && nn.body.link && nn.body.employeeId, 'HR adds a nurse and gets the sign-in link');
+  ok((await hr('GET', 'admin/employees')).body.rows.some((x) => x.userId === nn.body.userId && x.role === 'caregiver'), 'the new nurse is an employee');
+  ok((await hr('POST', 'admin/hr/employees', { name: 'Again', phone: '9800155555' })).status === 400, 'the same mobile number cannot be used twice');
+  ok((await ops('POST', 'admin/hr/employees', { name: 'X', phone: '9800155556' })).status === 403, 'operations cannot add employees');
+  const nl = await sales('POST', 'admin/sales/leads', { name: 'Phone Lead', phone: '9800144444', source: 'phone', package: 'homeplus', note: 'Called about daily visits' });
+  ok(nl.status === 201, 'sales adds a lead from a phone call');
+  const nlr = (await admin('GET', 'admin/leads?q=Phone%20Lead')).body.rows[0];
+  ok(nlr && nlr.sourceName === 'Phone call' && nlr.assignedTo === 'demo-u-sales' && nlr.status === 'contacted', 'the lead is in the enquiry database, assigned to the executive, as contacted');
+  ok((await fin('POST', 'admin/sales/leads', { name: 'X', phone: '9800144445' })).status === 403, 'finance cannot add leads');
+  ok((await ops('PATCH', 'admin/scheduler/nurses/demo-u-nurse', { availability: {} })).status === 403, 'operations cannot change nurses\' working hours');
+  const vv = (await ops('GET', 'admin/ops/visits')).body.rows.find((v) => v.personId);
+  ok(vv && 'contact' in vv, 'operations sees who to call about a visit');
 
   // ---- existing access unchanged
   ok((await admin('GET', 'admin/summary')).status === 200 && (await admin('GET', 'admin/risk/rules')).status === 200 && (await admin('GET', 'admin/fin/overview')).status === 200, 'admin: existing pages and the team dashboards');

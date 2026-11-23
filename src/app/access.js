@@ -9,8 +9,8 @@
 //               analytics, and fin/* (payments ledger, reconciliation, expenses, reports)
 //   hr          Employees (records, KYC documents), Leave Record Management, and hr/* (onboarding,
 //               employment history, credentials, attendance, leave balances, reports)
-//   operations  Customer management (directory and operational profile), the Nurse scheduler,
-//               leave records (read only), and ops/* (visits, capacity, onboarding, service quality)
+//   operations  Customer management (directory and operational profile), the Nurse scheduler's
+//               visit board and holidays (not nurses' hours), leave records (read only), and ops/* (visits, capacity, onboarding, service quality)
 //   sales       Lead management (overview, enquiry database, assigning, status and General
 //               Information; never approving or declining a package) and sales/*
 
@@ -32,7 +32,8 @@ const RULES = {
   ],
   operations: [
     R('GET', /^customers$/), R('GET', /^customers\/[^/]+$/),
-    R('*', /^scheduler(\/.*)?$/),
+    // the visit board and holidays; nurses' working hours and leave stay with the office admin and HR
+    R('GET', /^scheduler\/nurses$/), R('*', /^scheduler\/(visits|holidays)(\/.*)?$/),
     R('GET', /^leave$/),
     R('*', /^ops(\/.*)?$/)
   ],
