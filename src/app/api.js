@@ -45,6 +45,7 @@ const riskRules = require('./riskrules');
 const featuresMod = require('./features');
 const access = require('./access');
 const teamsMod = require('./teams');
+const teamsPlusMod = require('./teamsplus');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin', ...access.TEAM_ROLES };
 const RELATIONS_MAX = 40;
@@ -77,7 +78,7 @@ function addMonths(isoDate, months) {
 }
 
 function publicUser(u) {
-  return { id: u.id, name: u.name, email: u.email || null, phone: u.phone || null, role: u.role, roleName: ROLES[u.role], active: u.active, hasPassword: Boolean(u.passwordHash), createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null };
+  return { id: u.id, name: u.name, email: u.email || null, phone: u.phone || null, role: u.role, roleName: ROLES[u.role], emailAlerts: u.emailAlerts !== false, active: u.active, hasPassword: Boolean(u.passwordHash), createdAt: u.createdAt, lastLoginAt: u.lastLoginAt || null };
 }
 
 async function audit(userId, action, personId, detail) {
@@ -186,7 +187,17 @@ function planView(p) {
 
 // Throws 404 unless this user may see this person in this brand.
 // shared helpers for scheduling, employees and money (created once, used by every route)
-const shared = { docs, uid, now, todayIST: dayIST, store };
+// e-mail copies of notifications for the team logins (Finance, HR, Operations, Sales) when e-mail is set up
+const TEAM_MAIL_ROLES = ['finance', 'hr', 'operations', 'sales'];
+async function mailCopy(userIds, n) {
+  if (!mailReady) return;
+  const users = await docs.find('app_users', { id: { $in: [...new Set(userIds)] } });
+  for (const u of users.filter((x) => x.active && x.email && TEAM_MAIL_ROLES.includes(x.role) && x.emailAlerts !== false)) {
+    const link = n.link && process.env.APP_URL ? process.env.APP_URL.replace(/\/+$/, '') + '/' + n.link : null;
+    try { await sendMail(u.email, 'KareIQ: ' + n.title, (n.body || '') + (link ? '\n\nOpen: ' + link : '') + '\n\nYou get this because you have a KareIQ team login. Turn e-mail alerts off under Your account.'); } catch (e) { console.error('[mail] alert failed:', e.message); }
+  }
+}
+const shared = { docs, uid, now, todayIST: dayIST, store, mailCopy };
 shared.scheduler = schedulerMod.create(shared);
 shared.staff = staffMod.create(shared);
 shared.finance = financeMod.create(shared);
@@ -849,6 +860,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     const product = url.searchParams.get('product') || undefined;
     const body = req.method === 'GET' ? {} : await readJson(req);
 
+    // a family's feedback on a completed visit (asked on the family Home)
+    if (parts[0] === 'feedback') { const fb = await plusApi.familyFeedback(req, res, parts, user, body, visiblePerson); if (fb !== undefined) return fb; }
     if (p === 'logout' && req.method === 'POST') {
       await auth.endSession(req);
       setCookie(res, '', req, 0);
@@ -873,7 +886,7 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (email && !validEmail(email)) errors.email = 'This email address looks incomplete.';
       if (email && email !== user.email && await docs.findOne('app_users', { email })) errors.email = 'This email is used by another account.';
       if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-      await docs.update('app_users', user.id, { name, email: email || null });
+      await docs.update('app_users', user.id, { name, email: email || null, ...(body.emailAlerts !== undefined ? { emailAlerts: Boolean(body.emailAlerts) } : {}) });
       return json(res, 200, { ok: true });
     }
 
@@ -1377,6 +1390,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     const officeDone = await officeApi.handle(req, res, parts, url, admin, body);
     if (officeDone !== undefined) return officeDone;
     // the Finance, HR, Operations and Sales dashboards (src/app/teams.js)
+    const plusDone = await plusApi.handle(req, res, parts, url, admin, body);
+    if (plusDone !== undefined) return plusDone;
     const teamDone = await teamsApi.handle(req, res, parts, url, admin, body);
     if (teamDone !== undefined) return teamDone;
     const p = parts.join('/');
@@ -1927,10 +1942,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   const officeApi = officeMod.create(modCtx);
   const featuresApi = featuresMod.create({ ...modCtx, visiblePerson, careTeam, canRecord, historyAllowed, readJson, risk: shared.risk });
   const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi, welcomeLink });
+  const plusApi = teamsPlusMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle });
   // HR credential expiry and sales follow-up reminders: shortly after start, then every hour
   if (!global.__kqTeamTimer && process.env.APP_STATELESS !== 'true') {
     global.__kqTeamTimer = true;
-    const tick = () => ensureReady().then(() => teamsApi.remind()).catch((e) => console.error('[teams] reminders failed:', e.message));
+    const tick = () => ensureReady().then(async () => { await teamsApi.remind(); await plusApi.remind(); }).catch((e) => console.error('[teams] reminders failed:', e.message));
     setTimeout(tick, 25000).unref();
     setInterval(tick, 3600000).unref();
   }
@@ -2001,6 +2017,11 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         const done = await nursingApi.handle(req, res, p, parts, url, signed.user, req.method === 'GET' ? {} : await readJson(req));
         if (done !== undefined) return;
         return json(res, 404, { ok: false, message: 'Not found.' });
+      }
+      // my trainings (every staff login)
+      if (p === 'me/trainings' && req.method === 'GET') {
+        if (!['caregiver', 'admin', ...Object.keys(access.TEAM_ROLES)].includes(signed.user.role)) throw forbidden();
+        return json(res, 200, { ok: true, rows: await plusApi.myTrainings(signed.user) });
       }
       // assessments, automatic risk, policies, leave records and notes (src/app/features.js)
       const fdone = await featuresApi.handle(req, res, parts, url, signed.user);

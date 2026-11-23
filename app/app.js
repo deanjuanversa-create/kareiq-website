@@ -318,6 +318,8 @@
       return loadModule(MOD_OF[role]).then(render, showOffline);
     }
     var mod = modOf(role);
+    // "My leave and training" from a notification: the nurse portal or the office page
+    if (top === 'me') return go(role === 'caregiver' ? '#/nurse/me' : MOD_OF[role] === 'office' ? '#/office/me' : homeOf(role), true);
     if (mod && mod.route(r, top)) return;
     // the Finance, HR, Operations and Sales logins use only their office pages and their own account
     if (TEAM_HOME[role] && top !== 'account') return go(homeOf(role), true);
@@ -735,7 +737,7 @@
         '<section class="hhero" aria-labelledby="h-hi"><div class="hhero-t"><p class="eyebrow">' + e(today) + '</p><h1 id="h-hi">Good ' + greeting() + ', ' + e(first(u.name)) + '!</h1>' +
           '<p class="hhero-s">' + e(first(cur.name)) + '\'s health journey, at a glance.</p><p class="hpill" id="hpill" aria-live="polite"><span class="skel" style="width:220px;height:18px;display:inline-block"></span></p></div>' +
           '<div class="hhero-img" id="hheroImg"><img src="/app/img/home-hero.webp" alt="" width="751" height="262" decoding="async"></div></section>' +
-        '<section aria-label="At a glance"><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
+        '<div id="hfb"></div><section aria-label="At a glance"><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
         '<div class="hgrid">' +
           '<section class="hnavs" aria-label="Health sections">' +
             navCard('#/health/vitals' + q, 'heart', 'Health Details', 'Vitals, body composition, wellbeing, risk trends and notes', 'rose', healthLinks) +
@@ -752,8 +754,29 @@
         '</div>' +
         '<p class="note">' + icon('shield') + '<span>Health information stays private to your family and the KareIQ care team. Insights compare readings with KareIQ\'s standard ranges; they are a guide, not a diagnosis. If something worries you, call us on <a href="tel:+918129345178">' + PHONE + '</a>.</span></p></div>';
       homeData(cur, q);
+      feedbackCard(cur.id);
     });
   }
+  // after a completed visit the family is asked how it went (one tap; a low rating goes to Operations)
+  function feedbackCard(pid) {
+    FORMS.feedback = FORMS.feedback || feedbackSubmit;
+    api('GET', 'feedback/pending').then(function (d) {
+      var box = $('#hfb'), rows = d.ok ? d.rows.filter(function (x) { return x.personId === pid; }) : [];
+      if (!box || !rows.length || S.pid !== pid) return; // only the person being viewed
+      var v = rows[0];
+      box.innerHTML = '<section class="hfb" aria-labelledby="h-fb"><div><h2 id="h-fb">How was ' + e(first(v.customerName)) + '\'s visit?</h2><p class="muted small">' + e(v.serviceName) + ' on ' + e(date(v.date)) + (v.nurseName ? ' with ' + e(v.nurseName.replace(/\s*\(.*\)$/, '')) : '') + '</p></div>' +
+        '<form data-form="feedback" data-id="' + e(v.visitId) + '" novalidate><div class="hfb-stars" role="radiogroup" aria-label="Rating">' + [1, 2, 3, 4, 5].map(function (n) { return '<label><input type="radio" name="rating" value="' + n + '"><span aria-label="' + n + ' star' + (n > 1 ? 's' : '') + '">★</span></label>'; }).join('') + '</div>' +
+        '<input class="in" name="comment" maxlength="500" placeholder="Anything to tell us? (optional)"><div class="hfb-b"><button class="btn sm" type="submit">Send</button><button class="btn sm ghost" type="button" data-act="fb-skip" data-id="' + e(v.visitId) + '">Not now</button></div><div class="alert bad" data-msg hidden></div></form></section>';
+    });
+  }
+  function feedbackSubmit(f, v) {
+    if (!v.rating) return Promise.resolve({ ok: false, message: 'Choose 1 to 5 stars.' });
+    return api('POST', 'feedback/' + encodeURIComponent(f.getAttribute('data-id')), v).then(function (d) { if (!d.ok) return d; var b = $('#hfb'); if (b) b.innerHTML = '<section class="hfb done">' + icon('check') + '<b>Thank you.</b><span class="muted small">' + (Number(v.rating) <= 2 ? 'Our team will call you about it.' : 'It helps us look after your family well.') + '</span></section>'; });
+  };
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest && ev.target.closest('[data-act=fb-skip]'); if (!t) return;
+    api('POST', 'feedback/' + encodeURIComponent(t.getAttribute('data-id')), { skip: true }).then(function () { var b = $('#hfb'); if (b) b.innerHTML = ''; });
+  });
 
   function dayShort(iso) { return new Intl.DateTimeFormat('en-IN', { timeZone: 'Asia/Kolkata', weekday: 'short', day: 'numeric', month: 'short' }).format(new Date(iso + 'T12:00:00+05:30')); }
   function retryHtml(what) { return '<div class="hempty">' + icon('info') + '<span>We could not load ' + e(what) + ' just now. <button type="button" class="linkbtn" data-act="home-retry">Try again</button></span></div>'; }
@@ -2894,6 +2917,7 @@
     shell('account', '<div class="head"><div><h1>Your account</h1><p class="sub">' + e(u.roleName) + ', signs in with ' + e([phoneNice(u.phone), u.email].filter(Boolean).join(' or ')) + '</p></div></div>' +
       '<div style="max-width:760px"><section class="panel"><h2>Your details</h2><form data-form="profile" novalidate><div class="alert bad" data-msg hidden></div>' +
         field('name', 'Name', 'value="' + e(u.name) + '" autocomplete="name"') + field('email', 'Email', 'type="email" value="' + e(u.email || '') + '" autocomplete="email"', 'Your mobile number ' + e(phoneNice(u.phone) || '') + ' can be changed by our team.') +
+        (TEAM_HOME[u.role] ? '<label class="check" style="margin:4px 0 14px"><input type="checkbox" name="emailAlerts" value="1"' + (u.emailAlerts !== false ? ' checked' : '') + '> Also e-mail me my notifications (when e-mail is set up)</label>' : '') +
         '<button class="btn" type="submit">Save details</button></form></section>' +
       '<section class="panel"><h2>Change password</h2><form data-form="password" novalidate><div class="alert bad" data-msg hidden></div>' +
         pwField('current', 'Current password') + pwField('next', 'New password', 'At least 8 characters.', 'new-password') +
@@ -3672,6 +3696,7 @@
       return api('POST', 'people/' + encodeURIComponent(f.getAttribute('data-id')) + '/profile', v).then(function (d) { if (!d.ok) return d; toast('Saved.'); render(); });
     },
     profile: function (f, v) {
+      if (f.querySelector('[name=emailAlerts]')) v.emailAlerts = Boolean(v.emailAlerts);
       return api('POST', 'profile', v).then(function (d) { if (!d.ok) return d; return loadSession().then(function () { toast('Details saved.'); render(); }); });
     },
     password: function (f, v) {

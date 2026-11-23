@@ -758,3 +758,22 @@ a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
 .tbucket span{font-size:.82rem;color:var(--muted,#5b6575)}.tbucket b{font-size:1.15rem}.tbucket small{color:var(--muted,#5b6575)}
 .tbucket.on{border-color:var(--accent,#2a78d6);box-shadow:0 0 0 2px var(--accent,#2a78d6) inset}
 .head .oacts{display:flex;gap:8px;flex-wrap:wrap}
+/* family Home: how was the visit? */
+.hfb{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:center;justify-content:space-between;background:#fff;border:1px solid rgba(0,0,0,.06);border-left:4px solid #eda100;border-radius:18px;padding:16px 20px;margin:0 0 16px;box-shadow:0 6px 20px -14px rgba(0,0,0,.14)}
+.hfb h2{font-size:1.05rem;margin:0 0 2px}
+.hfb form{display:flex;flex-wrap:wrap;gap:10px;align-items:center;flex:1 1 360px;justify-content:flex-end}
+.hfb form .in{flex:1 1 200px;min-width:0}
+.hfb-stars{display:flex;flex-direction:row-reverse;gap:2px}
+.hfb-stars label{cursor:pointer}
+.hfb-stars input{position:absolute;opacity:0;pointer-events:none}
+.hfb-stars span{font-size:1.9rem;line-height:1;color:#d5d9e0;transition:color .15s,transform .15s;display:inline-block}
+.hfb-stars label:hover span,.hfb-stars label:hover~label span,.hfb-stars input:checked~span,.hfb-stars label:has(input:checked)~label span{color:#eda100}
+.hfb-stars label:hover span{transform:scale(1.12)}
+.hfb-stars input:focus-visible+span{outline:2px solid var(--accent,#2a78d6);outline-offset:2px;border-radius:4px}
+.hfb-b{display:flex;gap:6px}
+.hfb.done{border-left-color:var(--good);justify-content:flex-start}.hfb.done svg{width:22px;height:22px;color:var(--good)}
+.tcheckgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,200px),1fr));gap:4px 12px;margin:6px 0}
+.treports li .oacts{display:flex;gap:6px;flex-wrap:wrap}
+.opage>.head .hacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex:none}
+.opage>.head .hacts .oacts{display:flex;gap:8px;flex-wrap:wrap}
+@media (max-width:760px){.opage>.head .hacts{justify-content:flex-start}}

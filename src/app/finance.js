@@ -26,6 +26,8 @@ function create(ctx) {
   async function invoices(filter) {
     const plans = (await docs.find('app_plans', filter && filter.personId ? { personId: filter.personId } : {})).filter((pl) => pl.status !== 'pending' && !pl.included && pl.planId);
     const pays = await docs.find('app_payments', filter && filter.personId ? { personId: filter.personId } : {});
+    // credit notes (Finance) reduce what is owed on an invoice; the invoice amount itself never changes
+    const cns = await docs.find('app_credit_notes', filter && filter.personId ? { personId: filter.personId } : {});
     const out = [];
     for (const pl of plans) {
       const charge = await care.chargeOf(pl);
@@ -34,14 +36,15 @@ function create(ctx) {
       const paid = mine.filter((p) => p.kind === 'payment').reduce((s, p) => s + p.amount, 0);
       const refunded = mine.filter((p) => p.kind === 'refund').reduce((s, p) => s + p.amount, 0);
       const amount = charge.amount || 0;
-      const outstanding = Math.max(0, amount - paid);
+      const credited = cns.filter((c) => c.planId === pl.id).reduce((s, c) => s + c.amount, 0);
+      const outstanding = Math.max(0, amount - credited - paid);
       const due = addDays(date, DUE_DAYS);
-      const status = !amount ? 'quote' : refunded && refunded >= paid ? 'refunded' : paid >= amount ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
+      const status = !amount ? 'quote' : refunded && refunded >= paid && paid > 0 ? 'refunded' : paid + credited >= amount ? (paid > 0 ? 'paid' : 'credited') : paid > 0 || credited > 0 ? 'partial' : 'unpaid';
       out.push({
         number: invoiceNo(pl), planId: pl.id, personId: pl.personId, product: pl.product, brand: BRAND_OF(pl.planId, pl.product), packageId: pl.planId, packageName: planName(pl.planId),
         productName: PRODUCTS[pl.product] ? PRODUCTS[pl.product].name : pl.product, months: pl.months || null, date, dueDate: due,
         period: pl.startDate ? { from: pl.startDate, to: pl.endDate } : null, description: charge.text, gst: charge.gst || null,
-        amount, paid, refunded, outstanding, status, overdueDays: outstanding > 0 && due < todayIST() ? daysBetween(due, todayIST()) : 0,
+        amount, credited, paid, refunded, outstanding, status, overdueDays: outstanding > 0 && due < todayIST() ? daysBetween(due, todayIST()) : 0,
         planStatus: pl.status, payments: mine.map((p) => ({ id: p.id, kind: p.kind, amount: p.amount, method: p.method, receivedAt: p.receivedAt }))
       });
     }

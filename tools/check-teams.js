@@ -270,6 +270,107 @@ async function server() {
   const vv = (await ops('GET', 'admin/ops/visits')).body.rows.find((v) => v.personId);
   ok(vv && 'contact' in vv, 'operations sees who to call about a visit');
 
+  // ================================================================ round 3: the rest of the features
+  // ---- Finance: GST, credit notes (they change what is owed everywhere), P&L and budgets, PDF reports
+  ok((await fin('GET', 'admin/fin/gst')).body.lines.every((l) => l.rate == null || typeof l.rate === 'number'), 'GST summary opens (rates not set until Finance sets them)');
+  ok((await fin('POST', 'admin/fin/gst/rates', { rates: { karehome: 18, karenest: 5, karewellness: 18 } })).status === 200, 'Finance sets the GST rates');
+  ok((await fin('POST', 'admin/fin/gst/rates', { rates: { karehome: 99 } })).status === 400, 'an impossible GST rate is refused');
+  const g2 = (await fin('GET', 'admin/fin/gst')).body;
+  const gm = g2.rows.find((r) => r.net > 0);
+  ok(gm && gm.gst != null && Math.abs(gm.gst - g2.lines.reduce((s, l) => s + (gm.lines[l.key].net * l.rate) / (100 + l.rate), 0)) < 1, 'GST = amount x rate / (100 + rate), from inclusive prices');
+  const owe = (await fin('GET', 'admin/finance/invoices?size=100')).body.rows.find((i) => i.outstanding > 2000);
+  if (owe) {
+    const before = owe.outstanding;
+    ok((await fin('POST', 'admin/fin/credit-notes', { planId: owe.planId, amount: String(before + 1), reason: 'Too much' })).status === 400, 'a credit note cannot exceed what is unpaid');
+    const cn = await fin('POST', 'admin/fin/credit-notes', { planId: owe.planId, amount: '1500', reason: 'Discount agreed on the call' });
+    ok(cn.status === 201 && /^CN-/.test(cn.body.number), 'Finance issues a credit note');
+    const after = (await admin('GET', 'admin/finance/invoices?q=' + owe.number)).body.rows[0];
+    ok(after.outstanding === before - 1500 && after.credited === 1500, 'integration: the admin\'s invoice shows the lower amount owed');
+    ok((await fin('GET', 'admin/fin/receivables')).body.rows.find((r) => r.planId === owe.planId).outstanding === before - 1500, 'integration: Receivables follows the credit note');
+    ok((await sales('POST', 'admin/fin/credit-notes', { planId: owe.planId, amount: '1', reason: 'xxxxx' })).status === 403, 'Sales cannot issue credit notes');
+  }
+  ok((await fin('POST', 'admin/fin/pnl/budget', { budget: { supplies: 5000 } })).status === 200, 'Finance sets a monthly budget');
+  const pl = (await fin('GET', 'admin/fin/pnl')).body;
+  ok(pl.categories.find((c) => c.key === 'supplies').monthlyBudget === 5000 && pl.rows.length === 12 && pl.totals.net === pl.totals.income - pl.totals.expenses, 'profit and loss: net = money in - expenses, budget against actual');
+  const pdf = await fin('GET', 'admin/fin/reports/monthly.csv?format=pdf');
+  ok(pdf.status === 200 && /application\/pdf/.test(pdf.type), 'a report downloads as PDF');
+  ok(/application\/pdf/.test((await hr('GET', 'admin/hr/reports/headcount.csv?format=pdf')).type) && /application\/pdf/.test((await sales('GET', 'admin/sales/reports/lost.csv?format=pdf')).type), 'every team\'s reports have a PDF');
+  ok((await fin('GET', 'admin/fin/activity')).body.rows.some((a) => a.action === 'credit.note' || a.action === 'gst.rates'), 'Finance team activity lists what Finance did');
+  ok((await sales('GET', 'admin/fin/activity')).status === 403, 'one team cannot read another team\'s activity');
+
+  // ---- HR: leave for every employee, self-service requests, payroll inputs, training plans
+  const d1 = D(20), d2 = D(21);
+  const myLv = await sales('POST', 'me/leave', { from: d1, to: d2, type: 'casual', reason: 'Family function' });
+  ok(myLv.status === 201, 'a Sales Executive asks for leave');
+  ok((await sales('POST', 'me/leave', { from: d1, to: d1, type: 'casual', reason: 'Again' })).status === 400, 'overlapping leave is refused');
+  const pend = (await hr('GET', 'admin/leave')).body.pending.find((l) => l.id === myLv.body.id);
+  ok(pend && pend.role === 'sales', 'integration: HR sees the office employee\'s request in Leave records');
+  ok((await hr('POST', 'admin/leave/demo-u-sales/' + myLv.body.id + '/approve', {})).status === 200, 'HR approves it');
+  ok((await sales('GET', 'me/leave')).body.rows.find((l) => l.id === myLv.body.id).status === 'approved', 'integration: the employee sees it approved');
+  ok((await hr('GET', 'admin/hr/leave/balances')).body.rows.find((r) => r.userId === 'demo-u-sales').types.casual.used === 2, 'integration: leave balances count it for office staff too');
+  const nl2 = await nurse('POST', 'me/leave', { from: D(25), to: D(25), type: 'sick', reason: 'Appointment' });
+  ok(nl2.status === 201, 'a nurse asks for leave from the nurse portal');
+  ok((await nurse('POST', 'me/leave/' + nl2.body.id + '/withdraw', {})).status === 200, 'and can withdraw a waiting request');
+  ok((await fam('GET', 'me/leave')).status === 403, 'families have no leave');
+  const pr = (await hr('GET', 'admin/hr/payroll?month=' + D(20).slice(0, 7))).body;
+  const prs = pr.rows.find((r) => r.userId === 'demo-u-sales');
+  ok(prs && prs.leave.casual >= 1 && typeof prs.unmarked === 'number', 'payroll inputs include approved leave and unmarked days');
+  ok((await fin('GET', 'admin/hr/payroll')).status === 403, 'Finance cannot read payroll inputs (HR\'s)');
+  const tr = await hr('POST', 'admin/hr/trainings', { title: 'Infection control refresher', dueDate: D(5), roles: ['caregiver'] });
+  ok(tr.status === 201, 'HR plans a training for all nurses');
+  const mt = (await nurse('GET', 'me/trainings')).body.rows.find((t) => t.id === tr.body.id);
+  ok(mt && mt.mine.status === 'due', 'integration: the nurse sees it as due this week');
+  ok((await hr('POST', 'admin/hr/trainings/' + tr.body.id + '/complete', { userId: 'demo-u-nurse' })).status === 200, 'HR marks it done');
+  ok((await hr('GET', 'admin/hr/employees/demo-u-nurse')).body.employee.credentials.some((c) => c.type === 'training' && c.name === 'Infection control refresher'), 'integration: the completed training is on the employee\'s record');
+  ok((await nurse('GET', 'notifications')).body.rows.some((n) => n.kind === 'training'), 'the nurse was told about the training');
+
+  // ---- Operations: on-time performance, visits by area, family feedback
+  const tl = (await ops('GET', 'admin/ops/timeliness')).body;
+  ok(tl.graceMin === null || typeof tl.graceMin === 'number', 'on-time performance opens');
+  ok((await ops('POST', 'admin/ops/timeliness/target', { graceMin: 30, targetPct: 90 })).status === 200, 'Operations sets the on-time target');
+  const tl2 = (await ops('GET', 'admin/ops/timeliness')).body;
+  ok(tl2.graceMin === 30 && tl2.rows.every((n) => n.pct == null || (n.pct >= 0 && n.pct <= 100)), 'on-time percentage per nurse against the target');
+  const ar = (await ops('GET', 'admin/ops/areas?date=' + D(-30) + '&to=' + D(7))).body;
+  ok(ar.rows.length > 0 && ar.rows.every((a) => a.area && a.visits.length), 'visits grouped by area');
+  const fp = (await fam('GET', 'feedback/pending')).body.rows;
+  if (fp.length) {
+    ok((await fam('POST', 'feedback/' + fp[0].visitId, { rating: 2, comment: 'Nurse was late' })).status === 201, 'a family rates a completed visit');
+    ok((await fam('POST', 'feedback/' + fp[0].visitId, { rating: 5 })).status === 409, 'one rating per visit');
+    const iss = (await ops('GET', 'admin/ops/issues')).body;
+    ok(iss.rows.some((x) => x.visitId === fp[0].visitId && x.source === 'family' && x.status === 'open'), 'integration: a low rating opens a service issue for Operations');
+    ok(iss.satisfaction && iss.satisfaction.responses >= 1, 'integration: it counts in customer satisfaction');
+    ok((await ops('GET', 'notifications')).body.rows.some((n) => n.kind === 'low-feedback'), 'integration: Operations is told about the low rating');
+  }
+  ok((await sales('GET', 'feedback/pending')).status === 403, 'only families give visit feedback');
+
+  // ---- Sales: quotations, targets, merging, lost reasons
+  const ld2 = (await sales('GET', 'admin/leads?size=50')).body.rows.find((l) => l.status !== 'converted' && l.status !== 'lost' && !l.requestKind);
+  const qt = await sales('POST', 'admin/sales/quotes', { leadType: ld2.type, leadId: ld2.id, packageId: 'homeplus', months: 6, discount: '500', extras: [{ label: 'Blood test at home', amount: '600' }] });
+  ok(qt.status === 201, 'Sales makes a quotation for a lead');
+  const ql = (await sales('GET', 'admin/sales/quotes')).body.rows.find((x) => x.number === qt.body.number);
+  ok(ql && ql.total === ql.items.reduce((s, i) => s + i.amount, 0) - 500, 'quotation total = package price + extras - discount');
+  ok(/application\/pdf/.test((await sales('GET', 'admin/sales/quotes/' + ql.id + '/pdf')).type), 'the quotation downloads as a PDF');
+  ok((await sales('POST', 'admin/sales/quotes/' + ql.id + '/status', { status: 'accepted' })).status === 400, 'a draft cannot jump to accepted');
+  await sales('POST', 'admin/sales/quotes/' + ql.id + '/status', { status: 'sent' });
+  ok((await sales('POST', 'admin/sales/quotes/' + ql.id + '/status', { status: 'accepted' })).status === 200, 'the customer accepts');
+  const ld3 = (await admin('GET', 'admin/leads/' + ld2.type + '/' + ld2.id)).body.lead;
+  ok(ld3.expectedValue === ql.total && ld3.history.some((h) => h.action === 'quote'), 'integration: the lead carries the quoted value and its history');
+  ok((await admin('GET', 'notifications')).body.rows.some((n) => n.kind === 'quote-accepted'), 'integration: the office admin is told to expect the package request');
+  ok((await sales('POST', 'admin/sales/targets', { targets: {} })).status === 403, 'targets are set by the office admin, not Sales');
+  ok((await admin('POST', 'admin/sales/targets', { targets: { 'demo-u-sales': { leads: 10, conversions: 2, revenue: 50000 } } })).status === 200, 'the office admin sets targets');
+  ok((await sales('GET', 'admin/sales/targets')).body.rows.find((r) => r.userId === 'demo-u-sales').target.leads === 10, 'integration: Sales sees its target and progress');
+  const dupA = await sales('POST', 'admin/sales/leads', { name: 'Repeat Person', phone: '9800133333', source: 'phone' });
+  const dupB = await sales('POST', 'admin/sales/leads', { name: 'Repeat Person', phone: '9800133333', source: 'walk-in' });
+  const both = (await sales('GET', 'admin/leads?q=Repeat%20Person')).body.rows;
+  ok(both.length === 2 && both.every((l) => l.duplicates === 1), 'two enquiries from one number are marked as repeats');
+  ok((await sales('POST', 'admin/sales/leads/merge', { keep: both[0].type + ':' + both[0].id, merge: [both[1].type + ':' + both[1].id] })).status === 200, 'Sales merges them');
+  const merged = (await admin('GET', 'admin/leads?q=Repeat%20Person')).body.rows;
+  ok(merged.length === 1 && merged[0].history.some((h) => h.action === 'merged'), 'integration: one lead remains everywhere, with the other\'s history');
+  ok((await sales('PATCH', 'admin/leads/' + merged[0].type + '/' + merged[0].id, { status: 'lost' })).status === 400, 'Sales must say why a lead was lost');
+  ok((await sales('PATCH', 'admin/leads/' + merged[0].type + '/' + merged[0].id, { status: 'lost', lostReason: 'competitor' })).status === 200, 'lost with a reason');
+  ok((await sales('GET', 'admin/sales/lost')).body.byReason.some((r) => r.key === 'competitor'), 'lost leads counted by reason');
+  ok((await admin('PATCH', 'admin/leads/' + ld2.type + '/' + ld2.id, { status: 'follow_up' })).status === 200, 'the office admin\'s status changes work as before');
+
   // ---- existing access unchanged
   ok((await admin('GET', 'admin/summary')).status === 200 && (await admin('GET', 'admin/risk/rules')).status === 200 && (await admin('GET', 'admin/fin/overview')).status === 200, 'admin: existing pages and the team dashboards');
   ok((await nurse('GET', 'nurse/customers')).status === 200, 'nurse portal unchanged');

@@ -14,6 +14,7 @@
     ONB_ITEM,
     { k: 'assess', label: 'Assessment', icon: 'clip', sub: [['assess/regular', 'Regular Checkup', 'pulse']] },
     { k: 'upl', label: 'Upload Documents', icon: 'upload', sub: [['nurse/upload', 'Upload', 'upload'], ['nurse/submissions', 'Your Submissions', 'file']] },
+    ['nurse/me', 'My leave and training', 'cal'],
     ['nurse/notifications', 'Notifications', 'bell']
   ];
   var STATUS = { awaiting_assignment: 'Awaiting assignment', assigned: 'Assigned to you', accepted: 'Accepted', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled' };
@@ -503,6 +504,35 @@
     return MENU.filter(function (m) { return m !== ONB_ITEM || (S.cache.onbPending || 0) > 0; });
   }
 
+  // ---------------------------------------------------------------- my leave and training
+  var LVT = { pending: 'warn', approved: 'good', rejected: 'bad', cancelled: '' };
+  function mePage() {
+    shell('nurse/me', head('My leave and training', 'Ask for leave, see your balance and the trainings you need to do.', '<button class="btn sm" data-act="n-leave">' + icon('plus') + 'Ask for leave</button>') + K.loading(260));
+    Promise.all([api('GET', 'me/leave'), api('GET', 'me/trainings')]).then(function (x) {
+      var d = x[0], t = x[1];
+      if (!d.ok) return K.pageError(d);
+      S.cache.myLeave = d;
+      var bal = d.balances.filter(function (b) { return b.allowance != null || b.used || b.pending; });
+      $('#mn').innerHTML = '<div class="npage">' + head('My leave and training', 'Ask for leave, see your balance and the trainings you need to do.', '<button class="btn sm" data-act="n-leave">' + icon('plus') + 'Ask for leave</button>') +
+        (bal.length ? '<div class="tbuckets">' + bal.map(function (b) { return '<div class="tbucket"><span>' + e(b.name) + '</span><b>' + (b.remaining != null ? b.remaining + ' left' : b.used + ' used') + '</b><small>' + (b.allowance != null ? b.used + ' of ' + b.allowance + ' used' : 'No allowance set') + (b.pending ? ' · ' + b.pending + ' waiting' : '') + '</small></div>'; }).join('') + '</div>' : '') +
+        '<section class="panel"><h2>My leave</h2>' + (d.rows.length ? '<ul class="rlist">' + d.rows.map(function (l) { return '<li><span><b>' + e(K.date(l.from)) + (l.to !== l.from ? ' – ' + e(K.date(l.to)) : '') + '</b><br><span class="muted small">' + e(l.typeName) + ' · ' + l.days + ' day' + (l.days === 1 ? '' : 's') + (l.decisionNote ? ' · ' + e(l.decisionNote) : '') + '</span></span><span class="tpill ' + (LVT[l.status] || '') + '">' + e(l.statusName) + '</span>' + (l.status === 'pending' ? '<button class="btn sm ghost" data-act="n-leave-wd" data-id="' + e(l.id) + '">Withdraw</button>' : '') + '</li>'; }).join('') + '</ul>' : '<p class="muted">No leave yet.</p>') + '</section>' +
+        '<section class="panel"><h2>My trainings</h2>' + (t.ok && t.rows.length ? '<ul class="rlist">' + t.rows.map(function (x) { return '<li><span><b>' + e(x.title) + '</b><br><span class="muted small">Due ' + e(K.date(x.dueDate)) + '</span></span><span class="tpill ' + ({ done: 'good', overdue: 'bad', due: 'warn' }[x.mine.status] || '') + '">' + e({ done: 'Done', overdue: 'Overdue', due: 'Due this week', planned: 'Planned' }[x.mine.status]) + '</span></li>'; }).join('') + '</ul>' : '<p class="muted">No training assigned to you.</p>') + '</section></div>';
+    });
+  }
+  K.FORMS['n-leave'] = function (f, v) { return api('POST', 'me/leave', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Request sent. HR will let you know.', 'ok'); K.render(); }); };
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]'); if (!t) return;
+    var act = t.getAttribute('data-act');
+    if (act === 'n-leave') {
+      var types = (S.cache.myLeave && S.cache.myLeave.types) || {};
+      K.openDialog('Ask for leave', '<form data-form="n-leave" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('from', 'First day', 'type="date" min="' + K.todayIST() + '"') + K.field('to', 'Last day', 'type="date" min="' + K.todayIST() + '"') + '</div>' +
+        '<label class="field"><span>Type of leave</span><select class="in" name="type"><option value="">Choose</option>' + Object.keys(types).map(function (k) { return '<option value="' + k + '">' + e(types[k]) + '</option>'; }).join('') + '</select><em class="err" data-err="type"></em></label>' + K.field('reason', 'Reason', 'maxlength="300"') +
+        '<p class="muted small">HR or the office approves it. Once approved, your visits on those days go to another nurse.</p></form>', '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send request</button>');
+    } else if (act === 'n-leave-wd') {
+      api('POST', 'me/leave/' + encodeURIComponent(t.getAttribute('data-id')) + '/withdraw', {}).then(function (d) { K.toast(d.ok ? 'Withdrawn.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+    }
+  });
+
   K.register('nurse', {
     label: 'Nurse portal',
     menu: menuNow,
@@ -519,6 +549,7 @@
       else if (page === 'submissions') submissionsPage(r);
       else if (page === 'onboarding') onboardingPage(r);
       else if (page === 'notifications') notificationsPage(r);
+      else if (page === 'me') mePage(r);
       else K.go('#/nurse/visits', true);
       return true;
     }

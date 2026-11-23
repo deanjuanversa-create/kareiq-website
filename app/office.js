@@ -20,7 +20,7 @@
   var PAL = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300', '#6250d6', '#e34948'];
   var FUNNEL = ['#86b6ef', '#5598e7', '#2a78d6', '#1c5cab'];
   var BRAND_COLOR = { karehome: PAL[0], karenest: PAL[2], karewellness: PAL[6], kareiq: PAL[1] };
-  var INV_STATUS = { paid: 'Paid', partial: 'Part paid', unpaid: 'Unpaid', refunded: 'Refunded', quote: 'Price on call' };
+  var INV_STATUS = { paid: 'Paid', partial: 'Part paid', unpaid: 'Unpaid', refunded: 'Refunded', quote: 'Price on call', credited: 'Credited' };
   var VSTATUS = { awaiting_assignment: 'Awaiting assignment', assigned: 'Nurse assigned', accepted: 'Accepted by nurse', in_progress: 'In progress', completed: 'Completed', cancelled: 'Cancelled' };
   var DAYS = [['mon', 'Mon'], ['tue', 'Tue'], ['wed', 'Wed'], ['thu', 'Thu'], ['fri', 'Fri'], ['sat', 'Sat'], ['sun', 'Sun']];
   var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -36,7 +36,7 @@
 
   // ---------------------------------------------------------------- page frame
   function page(active, title, sub, right, body) {
-    K.shell(active, '<div class="opage"><div class="head"><div><h1>' + e(title) + '</h1>' + (sub ? '<p class="sub">' + sub + '</p>' : '') + '</div>' + (right || '') + '</div>' + body + '</div>');
+    K.shell(active, '<div class="opage"><div class="head"><div><h1>' + e(title) + '</h1>' + (sub ? '<p class="sub">' + sub + '</p>' : '') + '</div>' + (right ? '<div class="hacts">' + right + '</div>' : '') + '</div>' + body + '</div>');
   }
   function skeleton() { return '<div class="okpis">' + [1, 2, 3, 4].map(function () { return '<div class="skel" style="height:104px"></div>'; }).join('') + '</div>' + K.loading(300); }
   function swap(html) { var m = $('#mn .opage'); if (!m) return; var h = $('.head', m); m.innerHTML = (h ? h.outerHTML : '') + html; animateIn(m); }
@@ -494,7 +494,7 @@
   function liveLeave(l) { return !l.status || l.status === 'approved' || l.status === 'pending'; }
   var LST = { pending: 'pending', approved: 'active', rejected: 'ended', cancelled: 'ended' };
   function leavePage(r) {
-    page('office/scheduler/leave', 'Leave records', 'Every nurse\'s leave: who is away now, approved leave coming up, requests to decide, and the visits each leave affects.' + (role() === 'operations' ? ' Read only: leave is approved by HR and the office admin; approved leave blocks visit assignments.' : ''), role() === 'operations' ? '' : '<button class="btn sm" data-act="o-leave-add">' + icon('plus') + 'Add leave</button>', skeleton());
+    page('office/scheduler/leave', 'Leave records', 'Every employee\'s leave (nurses and the office team): who is away now, approved leave coming up, requests to decide, and the visits each leave affects.' + (role() === 'operations' ? ' Read only: leave is approved by HR and the office admin; approved leave blocks visit assignments.' : ''), role() === 'operations' ? '' : '<button class="btn sm" data-act="o-leave-add">' + icon('plus') + 'Add leave</button>', skeleton());
     api('GET', 'admin/leave').then(function (d) {
       if (!d.ok) return fail(d);
       S.cache.leave = d;
@@ -516,9 +516,9 @@
       swap(kpis([kpi('On leave today', d.onLeaveNow.length, { icon: 'cal', tone: d.onLeaveNow.length ? 'warn' : '' }), kpi('Upcoming approved leave', d.upcoming.length, { icon: 'clock' }), kpi('Waiting for a decision', d.pending.length, { icon: 'inbox', tone: d.pending.length ? 'warn' : '' }),
           kpi('Visits needing a nurse', d.needsNurse, { icon: 'people', tone: d.needsNurse ? 'warn' : 'good', sub: 'because of leave' })]) +
         '<div class="ogrid2">' + mini('On leave today', d.onLeaveNow, 'Nobody is on leave today.') + mini('Upcoming approved leave', d.upcoming.slice(0, 8), 'No approved leave coming up.') + '</div>' +
-        filters(r, [['nurse', 'Nurse', 'select', nurses], ['status', 'Status', 'select', d.statuses], ['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        filters(r, [['nurse', 'Employee', 'select', nurses], ['status', 'Status', 'select', d.statuses], ['from', 'From', 'date'], ['to', 'To', 'date']]) +
         (who ? '<h2 class="sec">Leave history for ' + e(who.name) + '</h2>' : '') +
-        (rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Nurse</th><th>Dates</th><th>Days</th><th>Type</th><th>Status</th><th>Affected visits</th><th></th></tr></thead><tbody>' + rows.map(function (l) {
+        (rows.length ? '<section class="panel otw"><table class="stackable otable"><thead><tr><th>Employee</th><th>Dates</th><th>Days</th><th>Type</th><th>Status</th><th>Affected visits</th><th></th></tr></thead><tbody>' + rows.map(function (l) {
           var need = l.affected.filter(function (a) { return a.result === 'awaiting_assignment'; }).length;
           var acts = l.status === 'pending' ? '<button class="btn sm" data-act="o-leave-approve" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Approve</button><button class="btn sm ghost" data-act="o-leave-reject" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Reject</button>' : '';
           if (role() === 'operations') acts = ''; else if (l.status === 'pending' || l.status === 'approved') acts += '<button class="btn sm ghost" data-act="o-leave-edit" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Edit</button><button class="btn sm ghost" data-act="o-leave-cancel" data-u="' + e(l.nurseId) + '" data-id="' + e(l.id) + '">Cancel</button>';
@@ -536,12 +536,12 @@
   function leaveDialog(l) {
     var d = S.cache.leave, edit = Boolean(l);
     K.openDialog(edit ? 'Edit leave for ' + l.nurseName : 'Add leave', '<form data-form="o-leave2" data-u="' + e(edit ? l.nurseId : '') + '" data-id="' + e(edit ? l.id : '') + '" novalidate><div class="alert bad" data-msg hidden></div>' +
-      (edit ? '' : '<label class="field"><span>Nurse</span><select class="in" name="nurseId"><option value="">Choose a nurse</option>' + d.nurses.map(function (n) { return '<option value="' + e(n.id) + '">' + e(n.name + ' (' + n.employeeId + ')') + '</option>'; }).join('') + '</select><em class="err" data-err="nurseId"></em></label>') +
+      (edit ? '' : '<label class="field"><span>Employee</span><select class="in" name="nurseId"><option value="">Choose an employee</option>' + d.nurses.map(function (n) { return '<option value="' + e(n.id) + '">' + e(n.name + ' (' + n.employeeId + ')') + '</option>'; }).join('') + '</select><em class="err" data-err="nurseId"></em></label>') +
       '<div class="row2">' + K.field('from', 'First day', 'type="date" value="' + e(edit ? l.from : '') + '"') + K.field('to', 'Last day', 'type="date" value="' + e(edit ? l.to : '') + '"') + '</div>' +
       '<label class="field"><span>Type of leave</span><select class="in" name="type">' + (edit ? '' : '<option value="">Choose…</option>') + Object.keys(d.types).map(function (k) { return '<option value="' + k + '"' + (edit && l.type === k ? ' selected' : '') + '>' + e(d.types[k]) + '</option>'; }).join('') + '</select><em class="err" data-err="type"></em></label>' +
       (edit ? '' : '<div class="field"><span>Status</span><div class="seg"><label><input type="radio" name="status" value="approved" checked><span>Approved</span></label><label><input type="radio" name="status" value="pending"><span>Pending (a request to decide)</span></label></div></div>') +
       K.field('reason', 'Reason (optional)', 'maxlength="300" value="' + e(edit ? l.reason : '') + '"') +
-      '<p class="muted small">Approved leave makes the nurse unavailable. Their visits in this period go to a free nurse where possible; the rest are listed for you to reassign.</p></form>',
+      '<p class="muted small">Approved leave makes a nurse unavailable: their visits in this period go to a free nurse where possible; the rest are listed for you to reassign. Leave for the office team is recorded the same way.</p></form>',
       '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">' + (edit ? 'Save' : 'Add leave') + '</button>');
   }
   K.FORMS['o-leave2'] = function (f, v) {
@@ -586,7 +586,7 @@
   }
   function uniq(src) { var o = {}, seen = {}; Object.keys(src || {}).forEach(function (k) { if (!seen[src[k]]) { seen[src[k]] = 1; o[k] = src[k]; } }); return o; }
   function leadStatusSel(l, statuses) {
-    return '<select class="in sm" data-act="o-lead-status" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '" aria-label="Status of ' + e(l.enquiryId) + '">' + Object.keys(statuses).map(function (k) { return '<option value="' + k + '"' + (k === l.status ? ' selected' : '') + '>' + e(statuses[k]) + '</option>'; }).join('') + '</select>';
+    return '<select class="in sm" data-act="o-lead-status" data-was="' + e(l.status) + '" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '" aria-label="Status of ' + e(l.enquiryId) + '">' + Object.keys(statuses).map(function (k) { return '<option value="' + k + '"' + (k === l.status ? ' selected' : '') + '>' + e(statuses[k]) + '</option>'; }).join('') + '</select>';
   }
   function leadsList(r) {
     page('office/leads/list', 'Enquiry database', 'Every enquiry and booking, with status, owner and history. Repeat enquiries from the same number are marked.', '<button class="btn sm" data-act="o-lead-new">' + icon('plus') + 'Add a lead</button>', K.loading(60) + K.loading(400));
@@ -614,16 +614,16 @@
         '<dt>Interest</dt><dd>' + e(l.title) + '</dd><dt>Brand</dt><dd>' + e(l.brandName) + '</dd><dt>Package</dt><dd>' + e(l.packageName || 'Not chosen') + '</dd><dt>Source</dt><dd>' + e(l.sourceName) + '</dd>' + (l.message ? '<dt>Message</dt><dd style="white-space:pre-line">' + e(l.message) + '</dd>' : '') + '</dl>' +
         lifecycleHtml(type, id, d) +
         '<form data-form="o-lead-status" data-type="' + e(type) + '" data-id="' + e(id) + '" class="osub" novalidate><div class="alert bad" data-msg hidden></div><h3>Status</h3><div class="row2"><label class="field"><span>Status</span><select class="in" name="status">' + Object.keys(d.statuses).map(function (k) { return '<option value="' + k + '"' + (k === l.status ? ' selected' : '') + '>' + e(d.statuses[k]) + '</option>'; }).join('') + '</select></label>' +
-          '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300" placeholder="e.g. Called, will decide next week"></label></div><button class="btn sm" type="submit">Save status</button></form>' +
+          '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300" placeholder="e.g. Called, will decide next week"></label></div>' + selField('lostReason', 'If lost: why', LOST, l.lostReason || '', 'Choose (needed when lost)') + '<button class="btn sm" type="submit">Save status</button></form>' +
         '<form data-form="o-lead-assign" data-type="' + e(type) + '" data-id="' + e(id) + '" class="osub" novalidate><div class="alert bad" data-msg hidden></div><h3>Assigned to</h3><div class="row2"><label class="field"><span>Team member</span><select class="in" name="userId"><option value="">Choose</option>' + d.members.map(function (m) { return '<option value="' + e(m.id) + '"' + (m.id === l.assignedTo ? ' selected' : '') + '>' + e(m.name) + ' (' + m.open + ' open)</option>'; }).join('') + '</select><em class="err" data-err="userId"></em></label>' +
           '<label class="field"><span>Note (optional)</span><input class="in" name="note" maxlength="300"></label></div><button class="btn sm" type="submit">' + (l.assignedTo ? 'Reassign' : 'Assign') + '</button></form>' +
-        (d.duplicates.length ? '<h3 class="osub-h">Other enquiries from the same person</h3><ul class="rlist">' + d.duplicates.map(function (x) { return '<li><span><b>' + e(x.enquiryId) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.statusName) + '</span></span><button class="btn sm ghost" data-act="o-lead" data-type="' + e(x.type) + '" data-id="' + e(x.id) + '">Open</button></li>'; }).join('') + '</ul>' : '') +
-        '<h3 class="osub-h">Contact and follow-up</h3><p class="small">' + (l.followUpAt ? 'Next follow-up <b>' + e(l.followUpAt.replace('T', ' ')) + '</b>' + (l.nextAction ? ': ' + e(l.nextAction) : '') : '<span class="muted">No follow-up planned.</span>') + '</p><button class="btn sm" data-act="o-contact" data-type="' + e(type) + '" data-id="' + e(id) + '" data-name="' + e(l.name) + '">' + icon('phone') + 'Log contact or plan a follow-up</button>' +
+        (d.duplicates.length ? '<h3 class="osub-h">Other enquiries from the same person <button class="btn sm ghost" data-act="o-merge" data-keep="' + e(type + ':' + id) + '" data-merge="' + e(d.duplicates.map(function (x) { return x.type + ':' + x.id; }).join(',')) + '">Merge them into this lead</button></h3><ul class="rlist">' + d.duplicates.map(function (x) { return '<li><span><b>' + e(x.enquiryId) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.statusName) + '</span></span><button class="btn sm ghost" data-act="o-lead" data-type="' + e(x.type) + '" data-id="' + e(x.id) + '">Open</button></li>'; }).join('') + '</ul>' : '') +
+        '<h3 class="osub-h">Contact and follow-up</h3><p class="small">' + (l.followUpAt ? 'Next follow-up <b>' + e(l.followUpAt.replace('T', ' ')) + '</b>' + (l.nextAction ? ': ' + e(l.nextAction) : '') : '<span class="muted">No follow-up planned.</span>') + '</p><div class="oacts"><button class="btn sm" data-act="o-contact" data-type="' + e(type) + '" data-id="' + e(id) + '" data-name="' + e(l.name) + '">' + icon('phone') + 'Log contact or plan a follow-up</button><button class="btn sm ghost" data-act="o-quote-lead" data-type="' + e(type) + '" data-id="' + e(id) + '" data-name="' + e(l.name) + '" data-pkg="' + e(l.package || '') + '">' + icon('receipt') + 'New quotation</button></div>' +
         '<h3 class="osub-h">History</h3>' + (l.history.length ? '<ol class="tl">' + l.history.slice().reverse().map(function (h) { return '<li><div class="t">' + e(h.action === 'contact' ? (CONTACT[h.channel] || 'Contact') + (h.outcome ? ': ' + h.outcome : '') : HIST[h.action] || (h.action === 'status' ? 'Status: ' + (d.statuses[h.to] || h.to) : (h.action === 'reassigned' ? 'Reassigned to ' : 'Assigned to ') + h.to)) + '</div><div class="m">' + e(K.dt(h.at)) + ' by ' + e(h.by) + '</div>' + (h.note ? '<div class="n">' + e(h.note) + '</div>' : '') + '</li>'; }).join('') + '</ol>' : '<p class="muted">No changes yet.</p>'),
         '<button class="btn ghost" data-act="close">Close</button>');
     });
   }
-  var HIST = { general: 'General information saved', approved: 'Package approved', declined: 'Request declined', plan: 'Follow-up plan updated', added: 'Lead added' };
+  var HIST = { general: 'General information saved', approved: 'Package approved', declined: 'Request declined', plan: 'Follow-up plan updated', added: 'Lead added', quote: 'Quotation', merged: 'Repeat enquiry merged' };
   var CONTACT = { call: 'Phone call', whatsapp: 'WhatsApp', email: 'Email', meeting: 'Meeting / visit', note: 'Note' };
   var STEPS = [['requested', 'Request received'], ['info', 'General information'], ['approved', 'Package approved'], ['active', 'Payment confirmed'], ['onboarded', 'Nurse onboarding']];
   // the package request: where it stands, the customer's General Information, and the approval
@@ -677,7 +677,7 @@
     });
   };
   K.FORMS['o-lead-status'] = function (f, v) {
-    return api('PATCH', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')), { status: v.status, note: v.note }).then(function (d) { if (!d.ok) return d; K.toast('Status saved.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id')); });
+    return api('PATCH', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')), { status: v.status, note: v.note, lostReason: v.status === 'lost' ? v.lostReason || undefined : undefined }).then(function (d) { if (!d.ok) return d; K.toast('Status saved.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id')); });
   };
   K.FORMS['o-lead-assign'] = function (f, v) {
     return api('POST', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/assign', { userId: v.userId, note: v.note }).then(function (d) { if (!d.ok) return d; K.toast('Assigned. They have been notified.', 'ok'); S.cache.dirtyLead = true; leadDialog(f.getAttribute('data-type'), f.getAttribute('data-id')); });
@@ -753,7 +753,8 @@
         '<td data-l="Status"><span class="ipill ' + e(i.status) + '">' + e(INV_STATUS[i.status] || i.status) + '</span></td>' +
         '<td class="oacts"><a class="btn sm ghost" href="/api/app/admin/finance/invoices/' + enc(i.planId) + '/pdf" download>' + icon('download') + 'PDF</a>' +
         (i.outstanding ? '<button class="btn sm" data-act="o-pay" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + i.outstanding + '">Record payment</button>' : '') +
-        (i.paid - i.refunded > 0 ? '<button class="btn sm ghost" data-act="o-refund" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + (i.paid - i.refunded) + '">Refund</button>' : '') + '</td></tr>';
+        (i.paid - i.refunded > 0 ? '<button class="btn sm ghost" data-act="o-refund" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + (i.paid - i.refunded) + '">Refund</button>' : '') +
+        (i.outstanding && (role() === 'admin' || role() === 'finance') ? '<button class="btn sm ghost" data-act="o-credit" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + i.outstanding + '">Credit note</button>' : '') + '</td></tr>';
     }).join('') + '</tbody></table></div>';
   }
   function invoicesPage(r) {
@@ -1110,7 +1111,7 @@
             i.contact && i.contact.phone ? e(i.contact.name || '') + (i.contact.relation ? ' <span class="muted small">(' + e(i.contact.relation) + ')</span>' : '') + '<br><span class="small">' + e(K.phoneNice(i.contact.phone) || i.contact.phone) + '</span>' : '<span class="muted">No contact on record</span>',
             '<b>' + money(i.outstanding) + '</b><br><span class="muted small">of ' + money(i.amount) + '</span>', i.overdueDays ? pill(i.overdueDays + ' days', BUCKET_TONE[i.bucket]) : pill('Not due yet', ''),
             i.lastReminder ? e(K.ago(i.lastReminder.at)) + '<br><span class="muted small">' + e(i.lastReminder.channel) + ' · ' + e(i.lastReminder.by) + ' · ' + i.reminders + ' in all</span>' : '<span class="muted">None yet</span>',
-            contactBtns(i.contact, msg) + '<button class="btn sm ghost" data-act="o-remind" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '">Log reminder</button><button class="btn sm" data-act="o-pay" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + i.outstanding + '">Record payment</button>'];
+            contactBtns(i.contact, msg) + '<button class="btn sm ghost" data-act="o-remind" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '">Log reminder</button><button class="btn sm ghost" data-act="o-credit" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + i.outstanding + '">Credit note</button><button class="btn sm" data-act="o-pay" data-id="' + e(i.planId) + '" data-n="' + e(i.number) + '" data-o="' + i.outstanding + '">Record payment</button>'];
         }), 'Nothing outstanding') + '</section><p class="muted small">WhatsApp opens with a ready reminder you can edit before sending. Log each reminder so the team knows who was contacted and when.</p>');
     });
   }
@@ -1183,8 +1184,8 @@
   }
   function reportsPage(active, title, sub, list, extra) {
     page(active, title, sub, '', '<section class="panel">' + (extra || '') + '<ul class="treports">' + list.map(function (x) {
-      return '<li><span class="gt-i">' + icon(x[3] || 'file') + '</span><div><b>' + e(x[1]) + '</b><span class="muted small">' + e(x[2]) + '</span></div><a class="btn sm" href="/api/app/admin/' + x[0] + '" data-rep="' + e(x[0]) + '" download>' + icon('download') + 'Download CSV</a></li>';
-    }).join('') + '</ul><p class="muted small">CSV files open in Excel, Numbers and Google Sheets. Figures are worked out from the records at the moment you download.</p></section>');
+      return '<li><span class="gt-i">' + icon(x[3] || 'file') + '</span><div><b>' + e(x[1]) + '</b><span class="muted small">' + e(x[2]) + '</span></div><span class="oacts"><a class="btn sm" href="/api/app/admin/' + x[0] + '" data-rep="' + e(x[0]) + '" download>' + icon('download') + 'CSV</a><a class="btn sm ghost" href="/api/app/admin/' + x[0] + (x[0].indexOf('?') > -1 ? '&' : '?') + 'format=pdf" download>' + icon('download') + 'PDF</a></span></li>';
+    }).join('') + '</ul><p class="muted small">CSV files open in Excel, Numbers and Google Sheets; PDF is for sharing and printing. Figures are worked out from the records at the moment you download.</p></section>');
   }
   function finReports() {
     reportsPage('office/fin/reports', 'Financial reports', 'Download the healthcare business reports as spreadsheets.', [
@@ -1196,7 +1197,9 @@
       ['fin/reports/invoices.csv', 'Invoice register', 'Every invoice with its paid, refunded and outstanding amounts.', 'receipt'],
       ['fin/reports/receivables.csv', 'Outstanding receivables', 'Unpaid and part-paid invoices with days overdue.', 'clock'],
       ['fin/reports/payments.csv', 'Payments', 'Every recorded payment.', 'check'], ['fin/reports/refunds.csv', 'Refunds', 'Every recorded refund with its reason.', 'left'],
-      ['fin/reports/expenses.csv', 'Expenses', 'Every expense with its approval and payment.', 'receipt']]);
+      ['fin/reports/expenses.csv', 'Expenses', 'Every expense with its approval and payment.', 'receipt'],
+      ['fin/reports/gst.csv', 'GST summary', 'GST in the invoiced amounts by month and service line (this year).', 'rupee'], ['fin/reports/pnl.csv', 'Profit and loss', 'Money in, expenses and net by month (this year).', 'gauge'],
+      ['fin/reports/credit-notes.csv', 'Credit notes', 'Every credit note with its reason.', 'left']]);
   }
 
   // ---------------------------------------------------------------- HR
@@ -1363,7 +1366,8 @@
       ['hr/reports/attendance.csv?month=' + m, 'Attendance this month', 'Days present, absent, on leave and off for each employee.', 'cal'],
       ['hr/reports/leave.csv?year=' + y, 'Leave this year', 'Every leave record with its type, days and status.', 'clip'],
       ['hr/reports/onboarding.csv', 'Employee onboarding status', 'Steps done and still to do for each employee.', 'idcard'],
-      ['hr/reports/credentials.csv', 'Credential and certification expiry', 'Every qualification, licence and certification with its expiry.', 'shield']]);
+      ['hr/reports/credentials.csv', 'Credential and certification expiry', 'Every qualification, licence and certification with its expiry.', 'shield'],
+      ['hr/reports/payroll.csv?month=' + m, 'Payroll inputs this month', 'Days present, absent and on paid or unpaid leave for each employee.', 'rupee'], ['hr/reports/trainings.csv', 'Trainings', 'Every planned training and who has done it.', 'star']]);
   }
 
   // ---------------------------------------------------------------- Operations Manager
@@ -1471,7 +1475,7 @@
           kpi('Customer satisfaction', d.satisfaction ? d.satisfaction.average : 0, { icon: 'star', suffix: d.satisfaction ? ' / 5' : '', sub: d.satisfaction ? d.satisfaction.responses + ' feedback recorded' : 'No feedback recorded yet' })]) +
         '<div class="ocharts">' + hbars('Issues by kind', d.byType, num, PAL[1]) + (d.satisfaction ? hbars('Feedback ratings', d.satisfaction.byRating, num, PAL[3]) : '') + '</div>' +
         '<section class="panel otw">' + table(['Issue', 'Kind', 'Customer', 'Priority', 'Status', 'Assigned', ''], d.rows.map(function (x) {
-          return ['<b>' + e(x.reference) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.createdByName) + (x.visitRef ? ' · visit ' + e(x.visitRef) : '') + '</span>', e(x.typeName) + (x.rating ? '<br>' + '★'.repeat(x.rating) : ''), x.personId ? custLink(x.personId, x.customerName) : e(x.customerName || '–'),
+          return ['<b>' + e(x.reference) + '</b> ' + e(x.title) + '<br><span class="muted small">' + e(K.dt(x.createdAt)) + ' · ' + e(x.createdByName) + (x.visitRef ? ' · visit ' + e(x.visitRef) : '') + '</span>', e(x.typeName) + (x.rating ? '<br>' + '★'.repeat(x.rating) + (x.source === 'family' ? ' <span class="muted small">from the family</span>' : '') : ''), x.personId ? custLink(x.personId, x.customerName) : e(x.customerName || '–'),
             pill(x.priority, x.priority === 'high' ? 'bad' : ''), pill(x.statusName, ISTONE[x.status]) + (x.status === 'open' || x.status === 'in_progress' ? '<br><span class="muted small">' + x.ageDays + ' days old</span>' : ''), e(x.assignedName || '–'), '<button class="btn sm ghost" data-act="o-issue-open" data-id="' + e(x.id) + '">Open</button>'];
         }), 'No issues match') + '</section>' + pager(d, r));
     });
@@ -1484,7 +1488,8 @@
       ['ops/reports/missed-cancelled.csv' + q, 'Missed and cancelled visits', 'Only the visits that were missed or cancelled.', 'clock'],
       ['ops/reports/utilisation.csv' + q, 'Nurse utilisation', 'Available and booked hours, visits, leave and conflicts for each nurse.', 'gauge'],
       ['ops/reports/onboarding.csv', 'Customer onboarding', 'Every customer with a package, where onboarding stands and how long they waited (all time).', 'idcard'],
-      ['ops/reports/issues.csv', 'Service issues', 'Complaints, exceptions, incidents and feedback (all time).', 'star']]);
+      ['ops/reports/issues.csv', 'Service issues', 'Complaints, exceptions, incidents and feedback (all time).', 'star'],
+      ['ops/reports/timeliness.csv' + q, 'On-time performance', 'Visits started on time for each nurse.', 'clock'], ['ops/reports/feedback.csv', 'Customer feedback', 'Every rating, from families and recorded by the office.', 'smile']]);
   }
 
   // ---------------------------------------------------------------- Sales Executive
@@ -1573,7 +1578,8 @@
       ['sales/reports/daily.csv', 'Daily lead report', 'Leads received each day and where they stand.', 'cal'], ['sales/reports/monthly.csv', 'Monthly lead report', 'Leads received each month and where they stand.', 'chart'],
       ['sales/reports/conversions.csv', 'Conversion report', 'Converted leads with their paid orders.', 'check'], ['sales/reports/followups.csv', 'Follow-up report', 'Open leads with a follow-up date, overdue first.', 'clock'],
       ['sales/reports/packages.csv', 'Package enquiry report', 'Enquiries, conversions and paid purchases for each package.', 'box'], ['sales/reports/pipeline.csv', 'Sales pipeline report', 'Open leads with their expected value.', 'rupee'],
-      ['sales/reports/leads.csv', 'All leads', 'Every lead with its source, package, status, follow-up and contacts.', 'inbox']]);
+      ['sales/reports/leads.csv', 'All leads', 'Every lead with its source, package, status, follow-up and contacts.', 'inbox'],
+      ['sales/reports/lost.csv', 'Lost leads', 'Lost leads with the reason.', 'x'], ['sales/reports/quotes.csv', 'Quotations', 'Every quotation with its status.', 'receipt']]);
   }
 
   // ---------------------------------------------------------------- the Operations Manager's customer profile (no clinical information)
@@ -1594,40 +1600,283 @@
     });
   }
 
+  // ================================================================ more for the team dashboards
+  function yearSel(y) { var t = Number(K.todayIST().slice(0, 4)); return '<form class="ofilters" data-form="o-filter" novalidate><label><span>Year</span><select class="in" name="year" data-act="o-auto">' + [0, 1, 2].map(function (i) { var yy = String(t - i); return '<option' + (yy === y ? ' selected' : '') + '>' + yy + '</option>'; }).join('') + '</select></label></form>'; }
+  function moneyIn(name, label, v) { return K.field(name, label, 'inputmode="decimal" value="' + (v == null ? '' : e(v)) + '"'); }
+  // ---- Finance: GST
+  function finGst(r) {
+    var y = r.q.year || K.todayIST().slice(0, 4);
+    page('office/fin/gst', 'GST summary', 'GST inside the invoiced amounts (prices are shown inclusive of GST), by month and service line, after credit notes.', csvBtn('fin/reports/gst.csv', 'CSV', '?year=' + y) + csvBtn('fin/reports/gst.csv', 'PDF', '?year=' + y + '&format=pdf'), K.loading(420));
+    api('GET', 'admin/fin/gst?year=' + enc(y)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var unset = d.lines.filter(function (l) { return l.rate == null; });
+      swap(yearSel(d.year) + '<section class="panel"><h2>GST rate for each service line</h2>' + (unset.length ? '<p class="note small">' + icon('info') + '<span>Set the rate for ' + e(unset.map(function (l) { return l.label; }).join(', ')) + ' to see its GST. Check the rates with your accountant; healthcare services can be exempt.</span></p>' : '') +
+          '<form data-form="o-gst" novalidate><div class="alert bad" data-msg hidden></div><div class="tgrid4">' + d.lines.map(function (l) { return K.field('r_' + l.key, l.label + ' (% GST)', 'type="number" min="0" max="28" step="0.01" value="' + (l.rate == null ? '' : l.rate) + '"'); }).join('') + '</div><button class="btn sm" type="submit">Save rates</button></form></section>' +
+        kpis([kpi('Invoiced, after credit notes', d.totals.net, { money: true, icon: 'receipt' }), kpi('GST in it', d.totals.gst == null ? 0 : d.totals.gst, { money: true, icon: 'rupee', sub: d.totals.gst == null ? 'Set every rate to see the total' : d.year })]) +
+        '<section class="panel otw">' + table(['Month'].concat(d.lines.map(function (l) { return l.label; })).concat(['Total', 'GST']), d.rows.map(function (m) {
+          return ['<b>' + e(mon(m.key)) + '</b>'].concat(d.lines.map(function (l) { var x = m.lines[l.key]; return x.net ? money(x.net) + (x.gst != null ? '<br><span class="muted small">GST ' + money(x.gst) + '</span>' : '') + (x.credited ? '<br><span class="muted small">after ' + money(x.credited) + ' credited</span>' : '') : '–'; })).concat([money(m.net), m.gst == null ? '<span class="muted">Rate not set</span>' : '<b>' + money(m.gst) + '</b>']);
+        }), 'Nothing invoiced') + '</section>');
+    });
+  }
+  K.FORMS['o-gst'] = function (f, v) { var rates = {}; Object.keys(v).forEach(function (k) { if (k.indexOf('r_') === 0) rates[k.slice(2)] = v[k]; }); return api('POST', 'admin/fin/gst/rates', { rates: rates }).then(function (d) { if (!d.ok) return d; K.toast('Rates saved.', 'ok'); K.render(); }); };
+  // ---- Finance: credit notes
+  function finCredits(r) {
+    page('office/fin/credit-notes', 'Credit notes', 'A credit note reduces what is owed on an invoice (a discount agreed later, a billing mistake). The invoice itself is never changed. For money already paid, record a refund instead.', csvBtn('fin/reports/credit-notes.csv', 'CSV') + csvBtn('fin/reports/credit-notes.csv', 'PDF', '?format=pdf'), K.loading(420));
+    api('GET', 'admin/fin/credit-notes').then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<p class="muted small" style="margin-bottom:12px">Issue a credit note from <a href="#/office/fin/receivables">Receivables</a> or <a href="#/office/finance/invoices">Invoices</a> (the Credit note button on an invoice).</p>' + kpis([kpi('Credited in all', d.total, { money: true, icon: 'left' }), kpi('Credit notes', d.rows.length, { icon: 'receipt' })]) +
+        '<section class="panel otw">' + table(['Credit note', 'Invoice', 'Customer', 'Amount', 'Reason', 'By'], d.rows.map(function (c) { return ['<b>' + e(c.number) + '</b><br><span class="muted small">' + e(K.date(c.date)) + '</span>', e(c.invoiceNo), e(c.customerName), money(c.amount), e(c.reason), e(c.by)]; }), 'No credit notes yet') + '</section>');
+    });
+  }
+  function creditDialog(planId, number, max) {
+    K.openDialog('Credit note on ' + number, '<form data-form="o-credit" data-id="' + e(planId) + '" novalidate><div class="alert bad" data-msg hidden></div><p class="muted" style="margin-bottom:12px">Up to ' + money(max) + ' (the unpaid part) can be credited.</p>' +
+      moneyIn('amount', 'Amount (₹)', '') + K.field('reason', 'Reason', 'maxlength="300" placeholder="e.g. Discount agreed on the call on 20 Nov"') + '</form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Issue credit note</button>');
+  }
+  K.FORMS['o-credit'] = function (f, v) { v.planId = f.getAttribute('data-id'); return api('POST', 'admin/fin/credit-notes', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Credit note ' + d.number + ' issued.', 'ok'); K.render(); }); };
+  // ---- Finance: profit and loss with budgets
+  function finPnl(r) {
+    var y = r.q.year || K.todayIST().slice(0, 4);
+    page('office/fin/pnl', 'Profit and loss', 'Money in (payments less refunds) against approved expenses, by month, with your monthly budget for each expense category.', csvBtn('fin/reports/pnl.csv', 'CSV', '?year=' + y) + csvBtn('fin/reports/pnl.csv', 'PDF', '?year=' + y + '&format=pdf'), skeleton());
+    api('GET', 'admin/fin/pnl?year=' + enc(y)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var t = d.totals;
+      swap(yearSel(d.year) + kpis([kpi('Money in', t.income, { money: true, icon: 'check', tone: 'good' }), kpi('Expenses', t.expenses, { money: true, icon: 'rupee' }), kpi('Net', t.net, { money: true, icon: 'chart', tone: t.net < 0 ? 'bad' : 'good' }), kpi('Credit notes', t.credited, { money: true, icon: 'left' })]) +
+        '<div class="ocharts">' + timeChart('Money in, expenses and net by month', d.rows.map(function (x) { return x.key; }), [{ name: 'Money in', color: PAL[2], values: d.rows.map(function (x) { return x.income; }) }, { name: 'Expenses', color: PAL[1], values: d.rows.map(function (x) { return x.expenses; }) }], { fmt: money, short: moneyShort }) +
+          hbars('Expenses by category this year', d.categories.filter(function (c) { return c.actual; }).map(function (c) { return { key: c.key, label: c.label, value: c.actual }; }), money, PAL[1]) + '</div>' +
+        '<section class="panel"><h2>Budget against actual (' + e(d.year) + ', to date)</h2><form data-form="o-budget" data-year="' + e(d.year) + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+          table(['Category', 'Monthly budget (₹)', 'Budget to date', 'Spent', 'Left'], d.categories.map(function (c) {
+            return [e(c.label), '<input class="in sm" name="b_' + e(c.key) + '" inputmode="decimal" value="' + (c.monthlyBudget == null ? '' : c.monthlyBudget) + '" aria-label="Monthly budget for ' + e(c.label) + '">', c.budgetToDate == null ? '<span class="muted">Not set</span>' : money(c.budgetToDate), money(c.actual), c.variance == null ? '–' : c.variance < 0 ? '<b class="odue">' + money(-c.variance) + ' over</b>' : money(c.variance)];
+          }), 'No categories') + '<button class="btn sm" type="submit">Save budget</button></form></section>' +
+        '<section class="panel otw">' + table(['Month', 'Money in', 'Expenses', 'Net'], d.rows.map(function (m) { return ['<b>' + e(mon(m.key)) + '</b>', money(m.income), money(m.expenses), m.net < 0 ? '<b class="odue">' + money(m.net) + '</b>' : money(m.net)]; }), '') + '</section>');
+    });
+  }
+  K.FORMS['o-budget'] = function (f, v) { var b = {}; Object.keys(v).forEach(function (k) { if (k.indexOf('b_') === 0) b[k.slice(2)] = v[k]; }); return api('POST', 'admin/fin/pnl/budget?year=' + enc(f.getAttribute('data-year')), { budget: b }).then(function (d) { if (!d.ok) return d; K.toast('Budget saved.', 'ok'); K.render(); }); };
+
+  // ---- HR: payroll inputs
+  function hrPayroll(r) {
+    var m = r.q.month || K.todayIST().slice(0, 7);
+    page('office/hr/payroll', 'Payroll inputs', 'Days present, absent, on paid and unpaid leave and not marked, for each employee in a month: the figures payroll needs. Salaries are not calculated here.', csvBtn('hr/reports/payroll.csv', 'CSV', '?month=' + m) + csvBtn('hr/reports/payroll.csv', 'PDF', '?month=' + m + '&format=pdf'), K.loading(420));
+    api('GET', 'admin/hr/payroll?month=' + enc(m)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var unmarked = d.rows.reduce(function (n, x) { return n + x.unmarked; }, 0);
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>Month</span><input class="in" type="month" name="month" value="' + e(d.month) + '" data-act="o-auto"></label></form>' +
+        (unmarked ? '<p class="note small">' + icon('info') + '<span>' + unmarked + ' employee-days are not marked yet. Mark them in <a href="#/office/hr/attendance">Attendance</a> before sending the figures to payroll.</span></p>' : '') +
+        '<section class="panel otw">' + table(['Employee', 'Days', 'Present', 'Half days', 'Absent', 'Paid leave', 'Unpaid leave', 'Off / holidays', 'Not marked'], d.rows.map(function (x) {
+          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + ' · ' + e(x.roleName) + '</span>', num(x.daysInPeriod), num(x.present), num(x.halfDay), x.absent ? '<b class="odue">' + x.absent + '</b>' : '0', num(x.paidLeave), x.unpaidLeave ? '<b>' + x.unpaidLeave + '</b>' : '0', num(x.weekOff + x.holidays), x.unmarked ? '<span class="muted">' + x.unmarked + '</span>' : '0'];
+        }), 'No employees in this month') + '</section>');
+    });
+  }
+  // ---- HR: training plans
+  var TR_TONE = { done: 'good', overdue: 'bad', due: 'warn', planned: '' }, TR_NAME = { done: 'Done', overdue: 'Overdue', due: 'Due this week', planned: 'Planned' };
+  function hrTrainings(r) {
+    page('office/hr/trainings', 'Training plans', 'Plan mandatory and refresher training, see who has done it, and remind people before it is due. A completed training is kept on the employee\'s record.', '<button class="btn sm" data-act="o-tr-new">' + icon('plus') + 'Plan a training</button>' + csvBtn('hr/reports/trainings.csv', 'CSV') + csvBtn('hr/reports/trainings.csv', 'PDF', '?format=pdf'), K.loading(420));
+    api('GET', 'admin/hr/trainings').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.trainings = d;
+      swap(d.rows.length ? d.rows.map(function (t) {
+        return panel(t.title, (t.description ? '<p class="muted" style="margin-bottom:10px">' + e(t.description) + '</p>' : '') + '<p class="small" style="margin-bottom:10px">Due <b>' + e(K.date(t.dueDate)) + '</b> · ' + t.doneCount + ' of ' + t.assignees.length + ' done' + (t.overdue ? ' · <b class="odue">' + t.overdue + ' overdue</b>' : '') + '</p>' + bar(t.doneCount / Math.max(1, t.assignees.length) * 100, t.overdue ? 'bad' : 'good') +
+          table(['Employee', 'Status', ''], t.assignees.map(function (a) { return ['<b>' + e(a.name) + '</b><br><span class="muted small">' + e(a.roleName) + '</span>', pill(TR_NAME[a.status] + (a.completedOn ? ' ' + K.date(a.completedOn) : ''), TR_TONE[a.status]), a.done ? '<button class="btn sm ghost" data-act="o-tr-done" data-id="' + e(t.id) + '" data-u="' + e(a.userId) + '" data-undo="1">Undo</button>' : '<button class="btn sm" data-act="o-tr-done" data-id="' + e(t.id) + '" data-u="' + e(a.userId) + '">Mark done</button>']; }), ''),
+          '<button class="btn sm ghost" data-act="o-tr-cancel" data-id="' + e(t.id) + '">Cancel training</button>');
+      }).join('') : '<div class="empty"><b>No training planned</b>Plan a training and choose who must do it; they are reminded a week before it is due.</div>');
+    });
+  }
+  function trainingDialog() {
+    var go = function (d) {
+      var roles = { caregiver: 'All nurses / caregivers', finance: 'Finance', hr: 'HR', operations: 'Operations', sales: 'Sales', admin: 'Office admins' };
+      K.openDialog('Plan a training', '<form data-form="o-tr" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('title', 'Training', 'maxlength="120" placeholder="e.g. Infection control refresher"') + areaField('description', 'What it covers (optional)', '', 'maxlength="500"') + K.field('dueDate', 'To be done by', 'type="date" min="' + K.todayIST() + '"') +
+        '<div class="field"><span>Who must do it</span><div class="tcheckgrid">' + Object.keys(roles).map(function (k) { return '<label class="check"><input type="checkbox" name="role_' + k + '" value="1"> ' + e(roles[k]) + '</label>'; }).join('') + '</div></div>' +
+        '<details><summary class="small">Or choose people</summary><div class="tcheckgrid">' + d.employees.map(function (x) { return '<label class="check"><input type="checkbox" name="u_' + e(x.id) + '" value="1"> ' + e(x.name) + '</label>'; }).join('') + '</div></details><em class="err" data-err="userIds"></em></form>',
+        '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Plan training</button>');
+    };
+    if (S.cache.trainings) go(S.cache.trainings); else api('GET', 'admin/hr/trainings').then(function (d) { if (d.ok) { S.cache.trainings = d; go(d); } });
+  }
+  K.FORMS['o-tr'] = function (f, v) {
+    var roles = [], ids = []; Object.keys(v).forEach(function (k) { if (k.indexOf('role_') === 0 && v[k]) roles.push(k.slice(5)); if (k.indexOf('u_') === 0 && v[k]) ids.push(k.slice(2)); });
+    return api('POST', 'admin/hr/trainings', { title: v.title, description: v.description, dueDate: v.dueDate, roles: roles, userIds: ids }).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Training planned. Everyone on it has been told.', 'ok'); K.render(); });
+  };
+
+  // ---- Operations: on-time performance and visits by area
+  function opsTimeliness(r) {
+    page('office/ops/timeliness', 'On-time performance', 'Whether each nurse starts visits on time: the visit counts as on time when it is started within the grace period after its planned start.', csvBtn('ops/reports/timeliness.csv', 'CSV', qs(r, ['from', 'to'])) + csvBtn('ops/reports/timeliness.csv', 'PDF', (qs(r, ['from', 'to']) || '?') + (qs(r, ['from', 'to']) ? '&' : '') + 'format=pdf'), K.loading(420));
+    api('GET', 'admin/ops/timeliness' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters(r, [['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        '<section class="panel"><h2>Target</h2><form data-form="o-sla" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('graceMin', 'Minutes allowed after the planned start', 'type="number" min="0" max="240" value="' + (d.graceMin == null ? '' : d.graceMin) + '" placeholder="e.g. 30"') + K.field('targetPct', 'Target: visits on time (%)', 'type="number" min="1" max="100" value="' + (d.targetPct == null ? '' : d.targetPct) + '" placeholder="e.g. 90"') + '</div><button class="btn sm" type="submit">Save target</button></form></section>' +
+        (d.graceMin == null ? '<p class="note small">' + icon('info') + '<span>Set the minutes allowed to see who is on time. The average delay is shown already.</span></p>' : kpis([kpi('Visits started', d.totals.started, { icon: 'cal' }), kpi('On time', d.totals.pct == null ? 0 : d.totals.pct, { icon: 'clock', suffix: '%', tone: d.targetPct && d.totals.pct < d.targetPct ? 'warn' : 'good', sub: d.totals.onTime + ' of ' + d.totals.started + (d.targetPct ? ' · target ' + d.targetPct + '%' : '') })])) +
+        '<section class="panel otw">' + table(['Nurse', 'Visits started', 'On time', 'Average delay', 'Target'], d.rows.map(function (n) {
+          return ['<b>' + e(n.name) + '</b>', num(n.started), n.pct == null ? '<span class="muted">–</span>' : bar(n.pct, n.meetsTarget === false ? 'bad' : 'good') + '<span class="small">' + n.pct + '% (' + n.onTime + ')</span>', n.avgLateMin + ' min', n.meetsTarget == null ? '–' : n.meetsTarget ? pill('Meets target', 'good') : pill('Below target', 'bad')];
+        }), 'No visits were started in this period') + '</section>');
+    });
+  }
+  K.FORMS['o-sla'] = function (f, v) { return api('POST', 'admin/ops/timeliness/target', v).then(function (d) { if (!d.ok) return d; K.toast('Target saved.', 'ok'); K.render(); }); };
+  function opsAreas(r) {
+    var day = r.q.date || K.todayIST();
+    page('office/ops/areas', 'Visits by area', 'The day\'s visits grouped by the customer\'s area (PIN code or locality from the address), with the nurses going there: plan travel and spot areas without a nurse.', '', K.loading(420));
+    api('GET', 'admin/ops/areas?date=' + enc(day) + (r.q.to ? '&to=' + enc(r.q.to) : '')).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>From</span><input class="in" type="date" name="date" value="' + e(d.from) + '" data-act="o-auto"></label><label><span>To</span><input class="in" type="date" name="to" value="' + e(d.to) + '" data-act="o-auto"></label></form>' +
+        (d.rows.length ? '<div class="ogrid2">' + d.rows.map(function (a) {
+          return panel(a.area, '<p class="small" style="margin-bottom:8px">' + a.visits.length + ' visit' + (a.visits.length === 1 ? '' : 's') + ' · ' + a.customers + ' customer' + (a.customers === 1 ? '' : 's') + (a.nurses.length ? ' · ' + e(a.nurses.join(', ')) : '') + (a.unassigned ? ' · <b class="odue">' + a.unassigned + ' without a nurse</b>' : '') + '</p>' +
+            '<ul class="rlist">' + a.visits.map(function (v) { return '<li><span><b>' + e(v.start || v.slotName) + '</b> ' + e(v.customerName) + '<br><span class="muted small">' + e(K.date(v.date)) + ' · ' + e(v.serviceName) + ' · ' + e(v.nurseName || 'No nurse yet') + '</span></span>' + pill(VSTATUS[v.status] || v.status, VTONE[v.status]) + '</li>'; }).join('') + '</ul>');
+        }).join('') + '</div>' : '<div class="empty"><b>No visits</b>Choose another day.</div>') + '<p class="muted small">Areas come from the address on each customer\'s details. A map needs a maps service, which is not connected.</p>');
+    });
+  }
+
+  // ---- Sales: quotations, targets, lost reasons
+  var QT_TONE = { draft: '', sent: 'info', accepted: 'good', declined: 'bad', expired: 'warn' };
+  function salesQuotes(r) {
+    page('office/sales/quotes', 'Quotations', 'Price quotes for a package, with extras and a discount, as a PDF to send. Accepting a quote does not activate anything: the office admin still approves the package and confirms the payment.', '<button class="btn sm" data-act="o-quote-new">' + icon('plus') + 'New quotation</button>' + csvBtn('sales/reports/quotes.csv', 'CSV'), K.loading(420));
+    api('GET', 'admin/sales/quotes' + qs(r)).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(kpis([kpi('Quotations', d.rows.length, { icon: 'receipt' }), kpi('Open (sent, still valid)', d.totals.open, { money: true, icon: 'clock' }), kpi('Accepted', d.totals.accepted, { money: true, icon: 'check', tone: 'good' })]) +
+        '<section class="panel otw">' + table(['Quotation', 'For', 'Package', 'Total', 'Valid until', 'Status', ''], d.rows.map(function (x) {
+          var st = x.expired ? 'expired' : x.status, msg = 'Hello ' + K.first(x.name) + ', here is your KareIQ quotation ' + x.number + ' for ' + x.packageName + ': ' + money(x.total) + ', valid until ' + K.date(x.validUntil) + '. We will send the PDF here.';
+          var acts = '<a class="btn sm ghost" href="/api/app/admin/sales/quotes/' + enc(x.id) + '/pdf" download>' + icon('download') + 'PDF</a>';
+          if (x.phone && (st === 'draft' || st === 'sent')) acts += '<a class="btn sm ghost" href="' + e(waHref(x.phone, msg)) + '" target="_blank" rel="noopener">' + icon('wa') + 'WhatsApp</a>';
+          if (x.status === 'draft') acts += '<button class="btn sm" data-act="o-quote-st" data-id="' + e(x.id) + '" data-s="sent">Mark sent</button>';
+          if (x.status === 'sent') acts += '<button class="btn sm" data-act="o-quote-st" data-id="' + e(x.id) + '" data-s="accepted">Accepted</button><button class="btn sm ghost" data-act="o-quote-st" data-id="' + e(x.id) + '" data-s="declined">Declined</button>';
+          return ['<b>' + e(x.number) + '</b><br><span class="muted small">' + e(K.date(x.createdAt)) + ' · ' + e(x.byName) + '</span>', e(x.name) + (x.leadRef ? '<br><span class="muted small">Lead ' + e(x.leadRef) + '</span>' : ''), e(x.packageName) + (x.months ? '<br><span class="muted small">' + x.months + ' months</span>' : ''), '<b>' + money(x.total) + '</b>' + (x.discount ? '<br><span class="muted small">after ' + money(x.discount) + ' discount</span>' : ''), e(K.date(x.validUntil)), pill(QUOTE_ST[st] || st, QT_TONE[st]), acts];
+        }), 'No quotations yet') + '</section>');
+    });
+  }
+  var QUOTE_ST = { draft: 'Draft', sent: 'Sent', accepted: 'Accepted', declined: 'Declined', expired: 'Expired' };
+  function quoteDialog(lead) {
+    var packs = S.cache.salesPacks;
+    var go = function () {
+      var po = {}; (packs || []).forEach(function (p2) { po[p2.id] = p2.name + ' (' + p2.productName + (p2.priceText ? ', ' + p2.priceText : '') + ')'; });
+      K.openDialog('New quotation' + (lead ? ' for ' + lead.name : ''), '<form data-form="o-quote" data-lt="' + e(lead ? lead.type : '') + '" data-lid="' + e(lead ? lead.id : '') + '" novalidate><div class="alert bad" data-msg hidden></div>' +
+        (lead ? '' : '<div class="row2">' + K.field('name', 'For', 'maxlength="80"') + K.field('phone', 'Mobile number (optional)', 'type="tel"') + '</div>') +
+        '<div class="row2">' + selField('packageId', 'Package', po, lead && lead.package || '', 'Choose') + selField('months', 'Length (monthly packages)', { 1: '1 month', 3: '3 months', 6: '6 months', 12: '12 months' }, '12') + '</div>' +
+        moneyIn('amount', 'Amount (only for a package priced on call)', '') + '<div class="row2">' + K.field('extraLabel', 'Extra item (optional)', 'maxlength="80" placeholder="e.g. Blood test at home"') + moneyIn('extraAmount', 'Its amount (₹)', '') + '</div>' +
+        '<div class="row2">' + moneyIn('discount', 'Discount (₹, optional)', '') + K.field('validUntil', 'Valid until', 'type="date" min="' + K.todayIST() + '"') + '</div>' + K.field('careFor', 'Care is for (optional)', 'maxlength="80"') + areaField('notes', 'Notes on the quote (optional)', '', 'maxlength="500"') +
+        '<p class="muted small">The published price is used for the package. The office admin still approves the package and agrees the final amount.</p></form>',
+        '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Create quotation</button>');
+    };
+    if (packs) return go();
+    api('GET', 'admin/sales/packages').then(function (d) { if (d.ok) S.cache.salesPacks = packs = d.rows; go(); });
+  }
+  K.FORMS['o-quote'] = function (f, v) {
+    var body = { leadType: f.getAttribute('data-lt') || undefined, leadId: f.getAttribute('data-lid') || undefined, name: v.name, phone: v.phone, packageId: v.packageId, months: v.months, amount: v.amount, discount: v.discount, validUntil: v.validUntil, careFor: v.careFor, notes: v.notes, extras: v.extraLabel ? [{ label: v.extraLabel, amount: v.extraAmount }] : [] };
+    return api('POST', 'admin/sales/quotes', body).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Quotation ' + d.number + ' created.', 'ok'); K.go('#/office/sales/quotes'); K.render(); });
+  };
+  function salesTargets(r) {
+    var m = r.q.month || K.todayIST().slice(0, 7);
+    page('office/sales/targets', 'Targets', 'Each team member\'s monthly targets for leads, conversions and paid revenue, and how far along they are.' , '', K.loading(320));
+    api('GET', 'admin/sales/targets?month=' + enc(m)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var prog = function (v, t, isMoney) { if (t == null) return (isMoney ? money(v) : num(v)) + '<br><span class="muted small">No target</span>'; var pct = t ? Math.round(v / t * 100) : 100; return (isMoney ? money(v) : num(v)) + ' of ' + (isMoney ? money(t) : num(t)) + bar(pct, pct >= 100 ? 'good' : pct >= 60 ? 'warn' : 'bad'); };
+      var form = d.canSet ? '<section class="panel"><h2>Set the targets for ' + e(mon(d.month)) + '</h2><form data-form="o-targets" data-m="' + e(d.month) + '" novalidate><div class="alert bad" data-msg hidden></div>' + table(['Team member', 'Leads', 'Conversions', 'Paid revenue (₹)'], d.rows.map(function (x) {
+        return [e(x.name), '<input class="in sm" name="l_' + e(x.userId) + '" type="number" min="0" value="' + (x.target.leads == null ? '' : x.target.leads) + '">', '<input class="in sm" name="c_' + e(x.userId) + '" type="number" min="0" value="' + (x.target.conversions == null ? '' : x.target.conversions) + '">', '<input class="in sm" name="r_' + e(x.userId) + '" inputmode="decimal" value="' + (x.target.revenue == null ? '' : x.target.revenue) + '">'];
+      }), '') + '<button class="btn sm" type="submit">Save targets</button></form></section>' : '<p class="muted small" style="margin-bottom:12px">Targets are set by the office admin.</p>';
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>Month</span><input class="in" type="month" name="month" value="' + e(d.month) + '" data-act="o-auto"></label></form>' +
+        '<section class="panel otw">' + table(['Team member', 'Leads given', 'Conversions', 'Paid revenue'], d.rows.map(function (x) { return ['<b>' + e(x.name) + '</b>', prog(x.leads, x.target.leads), prog(x.conversions, x.target.conversions), prog(x.revenue, x.target.revenue, true)]; }), 'No team members') + '</section>' + form);
+    });
+  }
+  K.FORMS['o-targets'] = function (f, v) { var t = {}; Object.keys(v).forEach(function (k) { var id = k.slice(2); t[id] = t[id] || {}; t[id][{ l: 'leads', c: 'conversions', r: 'revenue' }[k[0]]] = v[k]; }); return api('POST', 'admin/sales/targets', { month: f.getAttribute('data-m'), targets: t }).then(function (d) { if (!d.ok) return d; K.toast('Targets saved.', 'ok'); K.render(); }); };
+  var LOST = { price: 'Price too high', location: 'Outside our area', competitor: 'Chose another provider', not_needed: 'No longer needed', no_response: 'Stopped responding', timing: 'Not the right time', family: 'Family decided against it', other: 'Other' };
+  function salesLost(r) {
+    page('office/sales/lost', 'Lost leads', 'Why leads were lost, so you can see what to change (price, area, follow-up).', csvBtn('sales/reports/lost.csv', 'CSV') + csvBtn('sales/reports/lost.csv', 'PDF', '?format=pdf'), K.loading(420));
+    api('GET', 'admin/sales/lost').then(function (d) {
+      if (!d.ok) return fail(d);
+      swap('<div class="ocharts">' + hbars('Lost leads by reason', d.byReason, num, PAL[7]) + donut('Share of each reason', d.byReason, num) + '</div>' +
+        '<section class="panel otw">' + table(['Lead', 'Package', 'Source', 'Reason', 'Assigned', ''], d.rows.map(function (l) { return ['<b>' + e(l.name) + '</b><br><span class="muted small">' + e(l.enquiryId) + '</span>', e(l.packageName || '–'), e(l.sourceName), e(l.lostReasonName) + (l.lostNote ? '<br><span class="muted small">' + e(l.lostNote) + '</span>' : ''), e(l.assignedName || '–'), '<button class="btn sm ghost" data-act="o-lead" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '">Open</button>']; }), 'No lost leads') + '</section>');
+    });
+  }
+  function lostDialog(type, id, sel) {
+    K.openDialog('Why was the lead lost?', '<form data-form="o-lost" data-type="' + e(type) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + selField('lostReason', 'Reason', LOST, '', 'Choose') + K.field('note', 'Note (optional)', 'maxlength="300"') + '</form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Mark as lost</button>');
+    S.cache.lostSel = sel || null;
+  }
+  K.FORMS['o-lost'] = function (f, v) { return api('PATCH', 'admin/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')), { status: 'lost', lostReason: v.lostReason, note: v.note }).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Marked as lost.', 'ok'); K.render(); }); };
+
+  // ---- every team: its activity log
+  function teamActivity(prefix, active, title) {
+    return function (r) {
+      page(active, title, 'What your team did, and when: who recorded, changed or decided what.', '', K.loading(420));
+      api('GET', 'admin/' + prefix + '/activity' + qs(r)).then(function (d) {
+        if (!d.ok) return fail(d);
+        var mem = {}; d.members.forEach(function (m2) { mem[m2.id] = m2.name; });
+        swap(filters(r, [['user', 'Who', 'select', mem]]) + (d.rows.length ? '<section class="panel"><ol class="tl">' + d.rows.map(function (a) { return '<li><div class="t">' + e(K.ACTIONS[a.action] || a.action.replace(/[._]/g, ' ')) + (a.customer ? ' · ' + e(a.customer) : '') + '</div><div class="m">' + e(K.dt(a.at)) + ' · ' + e(a.by) + (a.detail ? ' · ' + e(a.detail) : '') + '</div></li>'; }).join('') + '</ol></section>' : '<div class="empty"><b>Nothing yet</b>Your team\'s actions appear here.</div>'));
+      });
+    };
+  }
+
+  // ---- my leave and training (every office login; nurses have the same in their portal)
+  var LV_TONE = { pending: 'warn', approved: 'good', rejected: 'bad', cancelled: '' };
+  function myPage() {
+    page('office/me', 'My leave and training', 'Ask for leave, see your balance and your trainings.', '<button class="btn sm" data-act="o-me-leave">' + icon('plus') + 'Ask for leave</button>', K.loading(320));
+    Promise.all([api('GET', 'me/leave'), api('GET', 'me/trainings')]).then(function (x) {
+      var d = x[0], t = x[1];
+      if (!d.ok) return fail(d);
+      S.cache.myLeave = d;
+      swap('<div class="tbuckets">' + d.balances.filter(function (b) { return b.allowance != null || b.used || b.pending; }).map(function (b) { return '<div class="tbucket"><span>' + e(b.name) + '</span><b>' + (b.remaining != null ? b.remaining + ' left' : b.used + ' used') + '</b><small>' + (b.allowance != null ? b.used + ' of ' + b.allowance + ' used' : 'No allowance set') + (b.pending ? ' · ' + b.pending + ' waiting' : '') + '</small></div>'; }).join('') + '</div>' +
+        panel('My leave', table(['Dates', 'Type', 'Status', ''], d.rows.map(function (l) { return ['<b>' + e(K.date(l.from)) + (l.to !== l.from ? ' – ' + e(K.date(l.to)) : '') + '</b><br><span class="muted small">' + l.days + ' day' + (l.days === 1 ? '' : 's') + (l.reason ? ' · ' + e(l.reason) : '') + '</span>', e(l.typeName), pill(l.statusName, LV_TONE[l.status]) + (l.decisionNote ? '<br><span class="muted small">' + e(l.decisionNote) + '</span>' : ''), l.status === 'pending' ? '<button class="btn sm ghost" data-act="o-me-withdraw" data-id="' + e(l.id) + '">Withdraw</button>' : '']; }), 'No leave yet')) +
+        panel('My trainings', t.ok && t.rows.length ? '<ul class="rlist">' + t.rows.map(function (x) { return '<li><span><b>' + e(x.title) + '</b><br><span class="muted small">Due ' + e(K.date(x.dueDate)) + (x.description ? ' · ' + e(x.description) : '') + '</span></span>' + pill(TR_NAME[x.mine.status] || x.mine.status, TR_TONE[x.mine.status]) + '</li>'; }).join('') + '</ul>' : '<p class="muted">No training assigned to you.</p>'));
+    });
+  }
+  function myLeaveDialog() {
+    var types = (S.cache.myLeave && S.cache.myLeave.types) || { casual: 'Casual leave', sick: 'Sick leave', earned: 'Earned / annual leave', emergency: 'Emergency leave', unpaid: 'Unpaid leave', other: 'Other' };
+    K.openDialog('Ask for leave', '<form data-form="o-me-leave" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('from', 'First day', 'type="date" min="' + K.todayIST() + '"') + K.field('to', 'Last day', 'type="date" min="' + K.todayIST() + '"') + '</div>' + selField('type', 'Type of leave', types, '', 'Choose') + K.field('reason', 'Reason', 'maxlength="300"') + '<p class="muted small">HR or the office admin approves it; you are told either way.</p></form>',
+      '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Send request</button>');
+  }
+  K.FORMS['o-me-leave'] = function (f, v) { return api('POST', 'me/leave', v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Request sent to HR.', 'ok'); K.render(); }); };
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]'); if (!t) return;
+    var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
+    if (act === 'o-credit') creditDialog(id, t.getAttribute('data-n'), Number(t.getAttribute('data-o')));
+    else if (act === 'o-tr-new') trainingDialog();
+    else if (act === 'o-tr-done') { t.disabled = true; api('POST', 'admin/hr/trainings/' + enc(id) + '/complete', { userId: t.getAttribute('data-u'), undo: Boolean(t.getAttribute('data-undo')) }).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-tr-cancel') { if (!confirm('Cancel this training for everyone? Completed records stay on the employees\' records.')) return; api('POST', 'admin/hr/trainings/' + enc(id) + '/cancel', {}).then(function (d) { K.toast(d.ok ? 'Cancelled.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-quote-new') quoteDialog(null);
+    else if (act === 'o-quote-lead') quoteDialog({ type: t.getAttribute('data-type'), id: id, name: t.getAttribute('data-name'), package: t.getAttribute('data-pkg') });
+    else if (act === 'o-quote-st') { t.disabled = true; api('POST', 'admin/sales/quotes/' + enc(id) + '/status', { status: t.getAttribute('data-s') }).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-merge') {
+      var keep = t.getAttribute('data-keep'), others = (t.getAttribute('data-merge') || '').split(',').filter(Boolean);
+      if (!confirm('Merge ' + others.length + ' repeat enquir' + (others.length === 1 ? 'y' : 'ies') + ' into this lead? Their history is kept on this lead.')) return;
+      api('POST', 'admin/sales/leads/merge', { keep: keep, merge: others }).then(function (d) { K.toast(d.ok ? 'Merged.' : d.message, d.ok ? 'ok' : 'bad'); if (d.ok) { K.closeDialog(); K.render(); } });
+    }
+    else if (act === 'o-me-leave') myLeaveDialog();
+    else if (act === 'o-me-withdraw') { api('POST', 'me/leave/' + enc(id) + '/withdraw', {}).then(function (d) { K.toast(d.ok ? 'Withdrawn.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+  });
+
   // ---------------------------------------------------------------- menus for each role
   var TEAM_MENUS = {
     finance: [['office/fin', 'Dashboard', 'home'],
-      { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check']] },
-      ['office/fin/expenses', 'Expenses', 'receipt'], ['office/overview/revenue', 'Revenue analytics', 'chart'], ['office/fin/reports', 'Financial reports', 'download']],
+      { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/recon', 'Reconciliation', 'check']] },
+      ['office/fin/expenses', 'Expenses', 'receipt'],
+      { k: 'fana', label: 'Analysis', icon: 'chart', sub: [['office/overview/revenue', 'Revenue analytics', 'chart'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee']] },
+      ['office/fin/reports', 'Financial reports', 'download'], ['office/fin/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     hr: [['office/hr', 'Dashboard', 'home'],
       { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard'], ['office/hr/onboarding', 'Employee onboarding', 'user']] },
-      ['office/hr/credentials', 'Credentials', 'shield'],
-      { k: 'att', label: 'Attendance and leave', icon: 'cal', sub: [['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge']] },
-      ['office/hr/reports', 'HR reports', 'download']],
+      ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'],
+      { k: 'att', label: 'Attendance and leave', icon: 'cal', sub: [['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge'], ['office/hr/payroll', 'Payroll inputs', 'rupee']] },
+      ['office/hr/reports', 'HR reports', 'download'], ['office/hr/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     operations: [['office/ops', 'Dashboard', 'home'],
       { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard']] },
-      { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
-      ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download']],
+      { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/ops/timeliness', 'On-time performance', 'clock'], ['office/ops/areas', 'Visits by area', 'globe'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
+      ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download'], ['office/ops/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     sales: [['office/sales', 'Dashboard', 'home'],
-      { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/sales/followups', 'Follow-ups', 'clock']] },
-      ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download']]
+      { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/lost', 'Lost leads', 'x']] },
+      ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/targets', 'Targets', 'gauge'], ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download'], ['office/sales/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']]
   };
   // the office admin: the existing menu, with the new pages in their own groups (no separate team dashboards)
   (function () {
     var add = function (k, items) { MENU.forEach(function (g) { if (g.k === k) g.sub = g.sub.concat(items); }); };
-    add('leads', [['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
+    add('leads', [['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/targets', 'Sales targets', 'gauge'], ['office/sales/lost', 'Lost leads', 'x'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
     add('cust', [['office/ops/onboarding', 'Onboarding operations', 'idcard'], ['office/ops/quality', 'Service quality', 'star']]);
-    add('fin', [['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);
-    add('emp', [['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/hr/leave', 'Leave balances', 'gauge']]);
-    add('sch', [['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge']]);
+    add('fin', [['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);
+    add('emp', [['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'], ['office/hr/payroll', 'Payroll inputs', 'rupee'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/hr/leave', 'Leave balances', 'gauge']]);
+    add('sch', [['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/ops/timeliness', 'On-time performance', 'clock'], ['office/ops/areas', 'Visits by area', 'globe']]);
+    MENU.splice(MENU.length - 1, 0, ['office/me', 'My leave and training', 'cal']);
     MENU.splice(MENU.length - 1, 0, { k: 'rep', label: 'Reports', icon: 'download', sub: [['office/fin/reports', 'Financial reports', 'receipt'], ['office/hr/reports', 'HR reports', 'team'], ['office/ops/reports', 'Operations reports', 'cal'], ['office/sales/reports', 'Sales reports', 'funnel']] });
   })();
   // which office pages each team role may open (the server checks every call again)
   var TEAM_PAGES = {
-    finance: /^(fin(\/.*)?|finance(\/.*)?|overview\/revenue)$/,
-    hr: /^(hr(\/.*)?|employees(\/kyc)?|scheduler\/leave)$/,
-    operations: /^(ops(\/.*)?|customers|customer|scheduler(\/(leave|holidays))?)$/,
-    sales: /^(sales(\/.*)?|leads(\/(overview|list))?)$/
+    finance: /^(fin(\/.*)?|finance(\/.*)?|overview\/revenue|me)$/,
+    hr: /^(hr(\/.*)?|employees(\/kyc)?|scheduler\/leave|me)$/,
+    operations: /^(ops(\/.*)?|customers|customer|scheduler(\/(leave|holidays))?|me)$/,
+    sales: /^(sales(\/.*)?|leads(\/(overview|list))?|me)$/
   };
   // ---------------------------------------------------------------- team dashboard actions
   K.FORMS['o-exp-step'] = function (f, v) { return api('POST', 'admin/fin/expenses/' + enc(f.getAttribute('data-id')) + '/' + f.getAttribute('data-s'), v).then(function (d) { if (!d.ok) return d; K.closeDialog(); K.toast('Saved.', 'ok'); K.render(); }); };
@@ -1764,6 +2013,7 @@
     var t = ev.target, act = t.getAttribute && t.getAttribute('data-act');
     if (act === 'o-sum-sel') { S.cache.sumF[t.name] = t.value; summaryLoad(true); return; }
     if (act === 'o-auto') { var f = t.closest('form'); if (f) f.requestSubmit ? f.requestSubmit() : f.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); }
+    else if (act === 'o-lead-status' && t.value === 'lost') { lostDialog(t.getAttribute('data-type'), t.getAttribute('data-id')); t.value = t.getAttribute('data-was') || t.querySelector('option').value; return; }
     else if (act === 'o-lead-status') {
       api('PATCH', 'admin/leads/' + t.getAttribute('data-type') + '/' + enc(t.getAttribute('data-id')), { status: t.value }).then(function (d) { K.toast(d.ok ? 'Status saved.' : d.message, d.ok ? 'ok' : 'bad'); });
     } else if (act === 'o-assign-sel' && t.value) {
@@ -1796,6 +2046,10 @@
         employees: employeesPage, 'employees/kyc': kycPage,
         scheduler: boardPage, 'scheduler/nurses': nursesPage, 'scheduler/holidays': holidaysPage, 'scheduler/leave': leavePage, 'risk-rules': rulesPage,
         'contact-audit': auditPage, documents: docsPage,
+        me: myPage, 'fin/gst': finGst, 'fin/credit-notes': finCredits, 'fin/pnl': finPnl, 'fin/activity': teamActivity('fin', 'office/fin/activity', 'Finance team activity'),
+        'hr/payroll': hrPayroll, 'hr/trainings': hrTrainings, 'hr/activity': teamActivity('hr', 'office/hr/activity', 'HR team activity'),
+        'ops/timeliness': opsTimeliness, 'ops/areas': opsAreas, 'ops/activity': teamActivity('ops', 'office/ops/activity', 'Operations team activity'),
+        'sales/quotes': salesQuotes, 'sales/targets': salesTargets, 'sales/lost': salesLost, 'sales/activity': teamActivity('sales', 'office/sales/activity', 'Sales team activity'),
         fin: finDashboard, 'fin/receivables': finReceivables, 'fin/payments': finPayments, 'fin/recon': finRecon, 'fin/expenses': finExpenses, 'fin/reports': finReports,
         hr: hrDashboard, 'hr/onboarding': hrOnboarding, 'hr/employee': hrEmployee, 'hr/credentials': hrCredentials, 'hr/attendance': hrAttendance, 'hr/leave': hrLeave, 'hr/reports': hrReports,
         ops: opsDashboard, 'ops/visits': opsVisits, 'ops/capacity': opsCapacity, 'ops/onboarding': opsOnboarding, 'ops/quality': opsQuality, 'ops/reports': opsReports,

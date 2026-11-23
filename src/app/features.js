@@ -152,15 +152,17 @@ function create(ctx) {
   }
 
   // ================================================================ leave
+  // everyone with a staff login keeps leave here: nurses and the office team (one leave system)
+  const STAFF = ['caregiver', 'admin', 'finance', 'hr', 'operations', 'sales'];
   async function nurseRows() {
-    const list = await scheduler.nurses();
+    const list = (await docs.find('app_users')).filter((u) => STAFF.includes(u.role));
     const out = [];
-    for (const n of list) { const prof = await staff.profileOf(n.user.id); out.push({ user: n.user, prof }); }
+    for (const u of list) { const prof = await staff.profileOf(u.id); out.push({ user: u, prof }); }
     return out;
   }
   function leaveView(l, n, names) {
     const t = todayIST();
-    return { id: l.id, nurseId: n.user.id, nurseName: n.user.name, employeeId: n.prof.employeeId, from: l.from, to: l.to, days: daysIn(l.from, l.to), type: l.type || 'other', typeName: LEAVE_TYPES[l.type || 'other'],
+    return { id: l.id, nurseId: n.user.id, nurseName: n.user.name, employeeId: n.prof.employeeId, role: n.user.role, isNurse: n.user.role === 'caregiver', from: l.from, to: l.to, days: daysIn(l.from, l.to), type: l.type || 'other', typeName: LEAVE_TYPES[l.type || 'other'],
       status: l.status || 'approved', statusName: LEAVE_STATUS[l.status || 'approved'], reason: l.reason || '', createdAt: l.createdAt || null, createdBy: names[l.createdBy] || null,
       decidedAt: l.decidedAt || null, decidedBy: names[l.decidedBy] || null, decisionNote: l.decisionNote || null, affected: l.affected || [], history: (l.history || []).map((h) => ({ ...h, by: names[h.by] || null })),
       current: leaveCounts(l) && l.from <= t && t <= l.to, upcoming: leaveCounts(l) && l.from > t, legacy: !l.status };
@@ -486,6 +488,51 @@ function create(ctx) {
       return json(res, 200, { ok: true, person: { id: person.id, name: person.name }, rows: visits.map((v) => ({ id: v.id, at: v.at, by: (users.find((u) => u.id === v.by) || {}).name || 'Care team', note: v.note })) });
     }
 
+    // ================================================================ my own leave (every staff login)
+    // Request leave (it waits for HR or the office admin), see the balance and history, withdraw a request.
+    if (parts[0] === 'me' && parts[1] === 'leave') {
+      if (!STAFF.includes(user.role)) throw forbidden();
+      const prof = await staff.profileOf(user.id);
+      const list = prof.leave || [];
+      if (parts.length === 2 && req.method === 'GET') {
+        const year = todayIST().slice(0, 4);
+        const pol = (await docs.findOne('app_settings', { id: 'hr-leave-policy' })) || {};
+        const allow = pol.allowances || {};
+        const span = (l) => { const a = l.from > year + '-01-01' ? l.from : year + '-01-01', b = l.to < year + '-12-31' ? l.to : year + '-12-31'; return b >= a ? daysIn(a, b) : 0; };
+        const names = Object.fromEntries((await docs.find('app_users', { id: { $in: [...new Set(list.flatMap((l) => [l.createdBy, l.decidedBy]).filter(Boolean))] } })).map((u) => [u.id, u.name]));
+        return json(res, 200, { ok: true, types: LEAVE_TYPES, statuses: LEAVE_STATUS, year,
+          balances: Object.keys(LEAVE_TYPES).map((t) => { const used = list.filter((l) => leaveCounts(l) && (l.type || 'other') === t).reduce((n, l) => n + span(l), 0); const pending = list.filter((l) => l.status === 'pending' && (l.type || 'other') === t).reduce((n, l) => n + span(l), 0); return { type: t, name: LEAVE_TYPES[t], used, pending, allowance: Number.isFinite(allow[t]) ? allow[t] : null, remaining: Number.isFinite(allow[t]) ? allow[t] - used : null }; }),
+          rows: list.slice().sort((a, b) => (a.from < b.from ? 1 : -1)).map((l) => leaveView(l, { user, prof }, names)) });
+      }
+      if (parts.length === 2 && req.method === 'POST') {
+        const err = {};
+        if (!isDate(body.from) || body.from < todayIST()) err.from = 'Choose today or a later day';
+        if (!isDate(body.to)) err.to = 'Choose the last day';
+        if (!err.from && !err.to && body.to < body.from) err.to = 'The last day cannot be before the first day';
+        if (!LEAVE_TYPES[body.type]) err.type = 'Choose the type of leave';
+        const reason = clean(body.reason, 300);
+        if (reason.length < 3) err.reason = 'Say why (a few words is enough)';
+        if (Object.keys(err).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors: err });
+        const l = { id: uid(), from: body.from, to: body.to, type: body.type, status: 'pending', reason, createdBy: user.id, createdAt: now(), selfRequested: true, history: [{ at: now(), by: user.id, action: 'requested', note: reason }] };
+        const clash = overlapping(prof, l);
+        if (clash) return json(res, 400, { ok: false, message: `This overlaps your ${LEAVE_STATUS[clash.status || 'approved'].toLowerCase()} leave from ${clash.from} to ${clash.to}.`, errors: { from: 'Overlaps other leave' } });
+        await docs.update('app_staff', prof.id, { leave: [...list, l], updatedAt: now() });
+        const deciders = (await docs.find('app_users', { active: true })).filter((u) => (u.role === 'hr' || u.role === 'admin') && u.id !== user.id).map((u) => u.id);
+        await scheduler.notify(deciders, { kind: 'leave-request', title: 'Leave request', body: `${user.name}: ${LEAVE_TYPES[l.type]}, ${l.from} to ${l.to}.`, link: '#/office/scheduler/leave' });
+        await audit(user.id, 'leave.request', null, { employee: prof.employeeId, from: l.from, to: l.to });
+        return json(res, 201, { ok: true, id: l.id });
+      }
+      if (parts.length === 4 && parts[3] === 'withdraw' && req.method === 'POST') {
+        const l = list.find((x) => x.id === parts[2]);
+        if (!l) throw notFound();
+        if (l.status !== 'pending') return json(res, 400, { ok: false, message: 'Only a request that is still waiting can be withdrawn. Ask HR to cancel approved leave.' });
+        await docs.update('app_staff', prof.id, { leave: list.map((x) => (x.id === l.id ? { ...x, status: 'cancelled', decidedBy: user.id, decidedAt: now(), history: [...(x.history || []), { at: now(), by: user.id, action: 'withdrawn' }] } : x)), updatedAt: now() });
+        await audit(user.id, 'leave.withdraw', null, { employee: prof.employeeId });
+        return json(res, 200, { ok: true });
+      }
+      throw notFound();
+    }
+
     // ================================================================ office only from here
     if (parts[0] !== 'admin') return undefined;
     if (!require('./access').allows(user.role, parts.slice(1), req.method)) throw forbidden(); // HR: leave records; Operations: reading them
@@ -524,15 +571,15 @@ function create(ctx) {
       for (const n of rows) for (const l of n.prof.leave || []) list.push(leaveView(l, n, names));
       list.sort((a, b) => (a.from < b.from ? 1 : a.from > b.from ? -1 : 0));
       const t = todayIST();
-      return json(res, 200, { ok: true, types: LEAVE_TYPES, statuses: LEAVE_STATUS, nurses: rows.map((n) => ({ id: n.user.id, name: n.user.name, employeeId: n.prof.employeeId, active: n.user.active })),
+      return json(res, 200, { ok: true, types: LEAVE_TYPES, statuses: LEAVE_STATUS, nurses: rows.map((n) => ({ id: n.user.id, name: n.user.name, employeeId: n.prof.employeeId, active: n.user.active, role: n.user.role })),
         rows: list, onLeaveNow: list.filter((x) => x.current), upcoming: list.filter((x) => x.upcoming).sort((a, b) => (a.from < b.from ? -1 : 1)), pending: list.filter((x) => x.status === 'pending'), today: t,
         needsNurse: list.reduce((n, x) => n + x.affected.filter((a) => a.result === 'awaiting_assignment').length, 0) });
     }
     if (parts[1] === 'leave' && (parts.length === 2 || parts.length === 4 || parts.length === 5)) {
       const bad = (message, errors) => json(res, 400, { ok: false, message, errors });
       if (parts.length === 2 && req.method === 'POST') {
-        const nurse = await docs.findOne('app_users', { id: String(body.nurseId || ''), role: 'caregiver' });
-        if (!nurse) return bad('Choose a nurse.', { nurseId: 'Required' });
+        const nurse = await docs.findOne('app_users', { id: String(body.nurseId || '') });
+        if (!nurse || !STAFF.includes(nurse.role)) return bad('Choose an employee.', { nurseId: 'Required' });
         const err = {};
         if (!isDate(body.from)) err.from = 'Choose the first day';
         if (!isDate(body.to)) err.to = 'Choose the last day';
@@ -550,8 +597,8 @@ function create(ctx) {
         return json(res, 201, { ok: true, id: l.id, affected: l.affected || [] });
       }
       // admin/leave/:nurseId/:leaveId[/approve|reject|cancel]
-      const nurse = await docs.findOne('app_users', { id: String(parts[2] || ''), role: 'caregiver' });
-      if (!nurse) throw notFound();
+      const nurse = await docs.findOne('app_users', { id: String(parts[2] || '') });
+      if (!nurse || !STAFF.includes(nurse.role)) throw notFound();
       const prof = await staff.profileOf(nurse.id);
       const list = prof.leave || [];
       const l = list.find((x) => x.id === parts[3]);

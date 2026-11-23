@@ -115,6 +115,7 @@ function create(ctx) {
 
   async function notify(userIds, n) {
     for (const userId of [...new Set(userIds)]) await docs.insert('app_notifications', { id: uid(), userId, ...n, readAt: null, createdAt: now() });
+    if (ctx.mailCopy) await ctx.mailCopy(userIds, n); // e-mail copy for team logins when e-mail is set up
   }
   async function admins() { return (await docs.find('app_users', { role: 'admin', active: true })).map((u) => u.id); }
   // the office admins and the Operations Managers (scheduling notices)

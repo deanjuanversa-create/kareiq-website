@@ -512,6 +512,13 @@ all inside the same office interface (`app/office.js`) and on the same records:
 | Operations Manager (`operations`) | Customer directory (operational profile only), Nurse scheduler, leave records (read only) | Operations overview, visit tracking (missed, delayed, rescheduled), rescheduling through the scheduler, nurse capacity and conflicts, onboarding operations, service quality (issues and recorded feedback), reports |
 | Sales Executive (`sales`) | Lead management (overview, enquiry database, assigning, General Information) | Sales overview with pipeline value, follow-ups with reminders, contact history, packages and enquiries, sales reports |
 
+More for each role (`src/app/teamsplus.js`):
+- **Finance:** GST summary (rates set by Finance; GST = inclusive amount × rate ÷ (100 + rate)), credit notes (reduce what is owed everywhere), profit and loss with monthly category budgets.
+- **HR:** leave for every employee (one leave system), payroll inputs (days, attendance, paid and unpaid leave; no salary calculation), training plans with reminders.
+- **Operations:** on-time performance against a target, visits by area (from the customer's address; no map service), family feedback after each completed visit (a low rating opens a service issue).
+- **Sales:** lost reasons (required for Sales), quotations with PDF, monthly targets set by the office admin, merging repeat enquiries.
+- **Everyone:** "My leave and training" (request leave, see balances and trainings; nurses have it in their portal), the team's activity log, PDF versions of every report, e-mail copies of notifications for team logins when e-mail (SMTP) is set up.
+
 Permissions are enforced on the server (`src/app/access.js`): every `/api/app/admin/...` call checks the
 role first, and a team login cannot use any family or nurse route. Team roles never see health
 readings, medical records or risk results. Sales cannot approve packages or confirm payments.

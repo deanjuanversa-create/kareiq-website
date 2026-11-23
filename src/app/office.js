@@ -95,12 +95,12 @@ function create(ctx) {
     return {
       kpis: {
         collected: net(pr), thisMonth: net(pays.filter((p) => month(p.receivedAt) === today.slice(0, 7))), thisYear: net(pays.filter((p) => p.receivedAt.slice(0, 4) === today.slice(0, 4))),
-        billed: billedList.reduce((s, i) => s + i.amount, 0), outstanding, refunds: pr.filter((p) => p.kind === 'refund').reduce((s, p) => s + p.amount, 0),
+        billed: billedList.reduce((s, i) => s + i.amount - (i.credited || 0), 0), outstanding, refunds: pr.filter((p) => p.kind === 'refund').reduce((s, p) => s + p.amount, 0),
         successfulPayments: pr.filter((p) => p.kind === 'payment').length, pendingPayments: inv.filter((i) => i.outstanding > 0).length + orders.length,
         pendingAmount: outstanding + orders.reduce((s, o) => s + o.amount, 0)
       },
       byBrand: byKey('brand', (k) => BRAND_NAMES[k] || k), byPackage: byKey('packageId', (k) => planName(k)),
-      monthly: mlist.map((m) => ({ key: m, collected: net(pays.filter((p) => month(p.receivedAt) === m)), billed: inv.filter((i) => month(i.date) === m).reduce((s, i) => s + i.amount, 0) })),
+      monthly: mlist.map((m) => ({ key: m, collected: net(pays.filter((p) => month(p.receivedAt) === m)), billed: inv.filter((i) => month(i.date) === m).reduce((s, i) => s + i.amount - (i.credited || 0), 0) })),
       yearly: years.map((y) => ({ key: y, value: net(pays.filter((p) => p.receivedAt.slice(0, 4) === y)) })),
       methods: Object.keys(methods).map((k) => ({ key: k, label: (require('./orders').METHODS[k] || k), value: methods[k] })),
       payStatus: [{ key: 'paid', label: 'Paid', value: inv.filter((i) => i.status === 'paid').length }, { key: 'partial', label: 'Part paid', value: inv.filter((i) => i.status === 'partial').length }, { key: 'unpaid', label: 'Unpaid', value: inv.filter((i) => i.status === 'unpaid').length }, { key: 'orders', label: 'Orders awaiting payment', value: orders.length }],
@@ -111,7 +111,8 @@ function create(ctx) {
   // ---------------------------------------------------------------- leads (website bookings and enquiries, app plan requests)
   async function leadRows() {
     const [bookings, enquiries, plans, users] = await Promise.all([store.readAll('bookings'), store.readAll('enquiries'), docs.find('app_plans'), docs.find('app_users')]);
-    const rows = [...bookings.map((r) => ({ type: 'booking', r })), ...enquiries.filter((r) => !r.kind || r.kind === 'plan-request' || r.kind === 'order' || r.kind === 'enquiry').map((r) => ({ type: 'enquiry', r }))];
+    // a repeat enquiry merged into another lead (Sales) is kept but no longer listed on its own
+    const rows = [...bookings.filter((r) => !r.mergedInto).map((r) => ({ type: 'booking', r })), ...enquiries.filter((r) => !r.mergedInto && (!r.kind || r.kind === 'plan-request' || r.kind === 'order' || r.kind === 'enquiry')).map((r) => ({ type: 'enquiry', r }))];
     return rows.map(({ type, r }) => {
       const plan = r.appPlanId ? plans.find((p) => p.id === r.appPlanId) : null;
       const derived = r.leadStatus || (plan && plan.status === 'active' ? 'converted' : r.status === 'contacted' ? 'contacted' : r.status === 'scheduled' ? 'follow_up' : r.status === 'closed' ? 'lost' : 'new');
@@ -124,7 +125,7 @@ function create(ctx) {
         sourceName: SOURCES[r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq')] || r.source || 'Website', status: derived, statusName: LEAD_STATUS[derived],
         assignedTo: r.assignedTo || null, assignedName: who ? who.name : null, assignedAt: r.assignedAt || null, createdAt: r.createdAt, history: r.leadHistory || [], personId: r.personId || null,
         requestKind: r.kind === 'order' || r.kind === 'plan-request' ? r.kind : null, generalInfoAt: r.generalInfo ? r.generalInfo.at : null,
-        followUpAt: r.followUpAt || null, nextAction: r.nextAction || null, expectedValue: Number.isFinite(r.expectedValue) ? r.expectedValue : null, expectedMonths: r.expectedMonths || r.months || null, orderId: r.orderId || null, appPlanId: r.appPlanId || null
+        lostReason: r.lostReason || null, lostNote: r.lostNote || null, followUpAt: r.followUpAt || null, nextAction: r.nextAction || null, expectedValue: Number.isFinite(r.expectedValue) ? r.expectedValue : null, expectedMonths: r.expectedMonths || r.months || null, orderId: r.orderId || null, appPlanId: r.appPlanId || null
       };
     }).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }
@@ -282,8 +283,13 @@ function create(ctx) {
       if (parts.length === 3 && req.method === 'PATCH') {
         if (!LEAD_STATUS[body.status]) throw bad('Choose a status.');
         const note = clean(body.note, 300);
+        // a lost lead says why (the Sales reports count the reasons); the office admin may skip it
+        const LOST = require('./teamsplus').LOST_REASONS;
+        if (body.status === 'lost' && body.lostReason && !LOST[body.lostReason]) throw bad('Choose why the lead was lost.');
+        if (body.status === 'lost' && !body.lostReason && admin.role !== 'admin') return json(res, 400, { ok: false, message: 'Choose why the lead was lost.', errors: { lostReason: 'Required' } });
+        const lostFields = body.status === 'lost' ? { lostReason: body.lostReason || null, lostNote: note || null } : { lostReason: null, lostNote: null };
         const row = (await store.readAll(col)).find((r) => r.id === lead.id);
-        await store.update(col, lead.id, { leadStatus: body.status, status: { new: 'new', contacted: 'contacted', follow_up: 'scheduled', converted: 'closed', lost: 'closed' }[body.status], leadHistory: [...((row && row.leadHistory) || []), { at: now(), by: admin.name, action: 'status', to: body.status, note }] });
+        await store.update(col, lead.id, { ...lostFields, leadStatus: body.status, status: { new: 'new', contacted: 'contacted', follow_up: 'scheduled', converted: 'closed', lost: 'closed' }[body.status], leadHistory: [...((row && row.leadHistory) || []), { at: now(), by: admin.name, action: 'status', to: body.status, note: body.status === 'lost' && body.lostReason ? require('./teamsplus').LOST_REASONS[body.lostReason] + (note ? ': ' + note : '') : note }] });
         await audit(admin.id, 'lead.status', lead.personId, { lead: lead.enquiryId, status: body.status });
         return json(res, 200, { ok: true });
       }

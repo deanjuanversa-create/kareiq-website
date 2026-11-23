@@ -47,6 +47,41 @@ function csvCell(v) {
   if (/^[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?$/.test(s)) s = "'" + s;
   return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
 }
+// the same report as a PDF (landscape table, for sharing with management)
+async function sendPdf(res, name, header, rows) {
+  const { PDFDocument, StandardFonts, rgb } = require('pdf-lib');
+  const doc = await PDFDocument.create();
+  const font = await doc.embedFont(StandardFonts.Helvetica), bold = await doc.embedFont(StandardFonts.HelveticaBold);
+  const W = 842, H = 595, M = 32, size = 7.5, lh = 12;
+  const clean = (v) => String(v == null ? '' : v).replace(/\u20b9/g, 'Rs. ').replace(/[\u2013\u2014]/g, '-').replace(/\u00b7/g, '-').replace(/[^\x20-\x7E]/g, '');
+  const widthOf = (t, f) => (f || font).widthOfTextAtSize(t, size);
+  const natural = header.map((h, i) => Math.min(220, Math.max(widthOf(clean(h), bold), ...rows.slice(0, 300).map((r) => widthOf(clean(r[i]))))) + 10);
+  const scale = Math.min(1, (W - 2 * M) / natural.reduce((a, b) => a + b, 0));
+  const cols = natural.map((w) => w * scale);
+  const fit = (t, w, f) => { let s = clean(t); if (widthOf(s, f) <= w - 4) return s; while (s.length > 1 && widthOf(s + '..', f) > w - 4) s = s.slice(0, -1); return s + '..'; };
+  const title = name.replace(/-/g, ' ').replace(/^./, (c) => c.toUpperCase());
+  let page, y;
+  const head = () => {
+    page = doc.addPage([W, H]); y = H - M;
+    page.drawText(clean('KareIQ - ' + title), { x: M, y, size: 12, font: bold, color: rgb(0.09, 0.19, 0.35) }); y -= 18;
+    let x = M; header.forEach((h, i) => { page.drawText(fit(h, cols[i], bold), { x: x + 2, y, size, font: bold, color: rgb(0.2, 0.25, 0.32) }); x += cols[i]; });
+    y -= 5; page.drawLine({ start: { x: M, y }, end: { x: W - M, y }, thickness: 0.6, color: rgb(0.7, 0.72, 0.76) }); y -= lh;
+  };
+  head();
+  for (const r of rows) {
+    if (y < M + 14) head();
+    let x = M; r.forEach((c, i) => { page.drawText(fit(c, cols[i]), { x: x + 2, y, size, font, color: rgb(0.1, 0.12, 0.16) }); x += cols[i]; });
+    y -= lh;
+  }
+  if (!rows.length) page.drawText('No rows.', { x: M, y, size: 9, font });
+  const pages = doc.getPages();
+  pages.forEach((pg, i) => pg.drawText('Page ' + (i + 1) + ' of ' + pages.length + ' - printed ' + new Date().toISOString().slice(0, 10), { x: W - M - 150, y: 16, size: 7, font, color: rgb(0.45, 0.48, 0.53) }));
+  const buf = Buffer.from(await doc.save());
+  res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Disposition': `attachment; filename="${name}.pdf"`, 'Cache-Control': 'private, no-store' });
+  res.end(buf);
+  return true;
+}
+function sendReport(res, url, name, header, rows) { return url && url.searchParams.get('format') === 'pdf' ? sendPdf(res, name, header, rows) : sendCsv(res, name, header, rows); }
 function sendCsv(res, name, header, rows) {
   const body = '﻿' + [header, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
   res.writeHead(200, { 'Content-Type': 'text/csv; charset=utf-8', 'Content-Disposition': `attachment; filename="${name}.csv"`, 'Cache-Control': 'private, no-store' });
@@ -123,7 +158,7 @@ function create(ctx) {
     const collectedBy = (key, names) => group(pays, (p) => (invOf[p.planId] || {})[key], names, (p) => (p.kind === 'refund' ? -p.amount : p.amount));
     return {
       kpis: {
-        totalRevenue: billed.reduce((s, i) => s + i.amount, 0), collected: net(pays), outstanding: inv.reduce((s, i) => s + i.outstanding, 0),
+        totalRevenue: billed.reduce((s, i) => s + i.amount - (i.credited || 0), 0), credited: inv.reduce((s, i) => s + (i.credited || 0), 0), collected: net(pays), outstanding: inv.reduce((s, i) => s + i.outstanding, 0),
         overdueAmount: inv.filter((i) => i.overdueDays > 0).reduce((s, i) => s + i.outstanding, 0), overdueInvoices: inv.filter((i) => i.overdueDays > 0).length,
         pendingPayments: orders.length + inv.filter((i) => i.outstanding > 0).length, pendingAmount: orders.reduce((s, o) => s + (o.amount || 0), 0) + inv.reduce((s, i) => s + i.outstanding, 0),
         refunds: pays.filter((p) => p.kind === 'refund').reduce((s, p) => s + p.amount, 0), refundCount: pays.filter((p) => p.kind === 'refund').length,
@@ -132,11 +167,11 @@ function create(ctx) {
       },
       invoiceStatus: ['paid', 'partial', 'unpaid', 'refunded'].map((k) => ({ key: k, label: { paid: 'Paid', partial: 'Partly paid', unpaid: 'Unpaid', refunded: 'Refunded' }[k], value: inv.filter((i) => i.status === k).length }))
         .concat([{ key: 'overdue', label: 'Overdue', value: inv.filter((i) => i.overdueDays > 0).length }]),
-      monthly: months.map((m) => ({ key: m, collected: net(pays.filter((p) => month(p.receivedAt) === m)), billed: billed.filter((i) => month(i.date) === m).reduce((s, i) => s + i.amount, 0), expenses: live.filter((x) => month(x.date) === m).reduce((s, x) => s + x.amount, 0) })),
+      monthly: months.map((m) => ({ key: m, collected: net(pays.filter((p) => month(p.receivedAt) === m)), billed: billed.filter((i) => month(i.date) === m).reduce((s, i) => s + i.amount - (i.credited || 0), 0), expenses: live.filter((x) => month(x.date) === m).reduce((s, x) => s + x.amount, 0) })),
       yearly: [...new Set(pays.map((p) => p.receivedAt.slice(0, 4)).concat([today.slice(0, 4)]))].sort().map((y) => ({ key: y, collected: net(pays.filter((p) => p.receivedAt.slice(0, 4) === y)), expenses: live.filter((x) => String(x.date).slice(0, 4) === y).reduce((s, x) => s + x.amount, 0) })),
       byPackage: collectedBy('packageId', (k) => (k === 'none' ? 'Other' : planName(k))), byService: collectedBy('brand', (k) => BRAND_NAMES[k] || k),
       byMethod: group(pays.filter((p) => p.kind === 'payment'), (p) => p.method, (k) => require('./orders').METHODS[k] || k, (p) => p.amount),
-      packagePerformance: [...new Set(billed.map((i) => i.packageId))].map((k) => { const mine = billed.filter((i) => i.packageId === k); return { key: k, label: planName(k), invoices: mine.length, billed: mine.reduce((s, i) => s + i.amount, 0), collected: mine.reduce((s, i) => s + i.paid - i.refunded, 0), outstanding: mine.reduce((s, i) => s + i.outstanding, 0) }; }).sort((a, b) => b.billed - a.billed),
+      packagePerformance: [...new Set(billed.map((i) => i.packageId))].map((k) => { const mine = billed.filter((i) => i.packageId === k); return { key: k, label: planName(k), invoices: mine.length, billed: mine.reduce((s, i) => s + i.amount - (i.credited || 0), 0), collected: mine.reduce((s, i) => s + i.paid - i.refunded, 0), outstanding: mine.reduce((s, i) => s + i.outstanding, 0) }; }).sort((a, b) => b.billed - a.billed),
       lastRecon: recon[0] ? { id: recon[0].id, at: recon[0].createdAt, counts: recon[0].counts, source: recon[0].source } : null,
       todo: todo([
         { key: 'overdue', label: 'Overdue invoices to follow up', count: inv.filter((i) => i.overdueDays > 0).length, href: '#/office/fin/receivables?bucket=overdue', tone: 'bad' },
@@ -256,7 +291,7 @@ function create(ctx) {
         return json(res, 200, { ok: true, statuses: RECON_STATUS, run: { ...run, by: names[run.createdBy] || '', items: run.items.map((i) => ({ ...i, resolved: i.resolved ? { ...i.resolved, byName: names[i.resolved.by] || '' } : null })) } });
       }
       if (parts[3] === 'exceptions.csv' && req.method === 'GET') {
-        return sendCsv(res, 'reconciliation-' + run.reference + '-exceptions', ['Row', 'Status', 'Reference', 'Date', 'Statement amount', 'KareIQ amount', 'Invoice', 'Gateway status', 'Resolved', 'Resolution note'],
+        return sendReport(res, url, 'reconciliation-' + run.reference + '-exceptions', ['Row', 'Status', 'Reference', 'Date', 'Statement amount', 'KareIQ amount', 'Invoice', 'Gateway status', 'Resolved', 'Resolution note'],
           run.items.filter((i) => i.status !== 'matched').map((i) => [i.n, i.statusName, i.ref, i.date, i.amount, i.kareiqAmount, i.invoiceNo, i.gatewayStatus, i.resolved ? 'Yes' : 'No', i.resolved ? i.resolved.note : '']));
       }
       if (parts[3] === 'items' && parts[5] === 'resolve' && req.method === 'POST') {
@@ -322,24 +357,24 @@ function create(ctx) {
       const kind = parts[2].replace(/\.csv$/, '');
       const ov = await financeOverview(user);
       const today = todayIST();
-      if (kind === 'revenue-package') return sendCsv(res, 'revenue-by-package-' + today, ['Package', 'Invoices', 'Invoiced (INR)', 'Collected (INR)', 'Outstanding (INR)'], ov.packagePerformance.map((x) => [x.label, x.invoices, x.billed, x.collected, x.outstanding]));
-      if (kind === 'revenue-service') return sendCsv(res, 'revenue-by-service-' + today, ['Service line', 'Collected (INR)'], ov.byService.map((x) => [x.label, x.value]));
-      if (kind === 'revenue-method') return sendCsv(res, 'revenue-by-payment-method-' + today, ['Payment method', 'Received (INR)'], ov.byMethod.map((x) => [x.label, x.value]));
-      if (kind === 'monthly') return sendCsv(res, 'monthly-financial-summary-' + today, ['Month', 'Invoiced (INR)', 'Collected (INR)', 'Approved expenses (INR)', 'Collected minus expenses (INR)'], ov.monthly.map((m) => [m.key, m.billed, m.collected, m.expenses, m.collected - m.expenses]));
-      if (kind === 'yearly') return sendCsv(res, 'yearly-financial-summary-' + today, ['Year', 'Collected (INR)', 'Approved expenses (INR)'], ov.yearly.map((y) => [y.key, y.collected, y.expenses]));
+      if (kind === 'revenue-package') return sendReport(res, url, 'revenue-by-package-' + today, ['Package', 'Invoices', 'Invoiced (INR)', 'Collected (INR)', 'Outstanding (INR)'], ov.packagePerformance.map((x) => [x.label, x.invoices, x.billed, x.collected, x.outstanding]));
+      if (kind === 'revenue-service') return sendReport(res, url, 'revenue-by-service-' + today, ['Service line', 'Collected (INR)'], ov.byService.map((x) => [x.label, x.value]));
+      if (kind === 'revenue-method') return sendReport(res, url, 'revenue-by-payment-method-' + today, ['Payment method', 'Received (INR)'], ov.byMethod.map((x) => [x.label, x.value]));
+      if (kind === 'monthly') return sendReport(res, url, 'monthly-financial-summary-' + today, ['Month', 'Invoiced (INR)', 'Collected (INR)', 'Approved expenses (INR)', 'Collected minus expenses (INR)'], ov.monthly.map((m) => [m.key, m.billed, m.collected, m.expenses, m.collected - m.expenses]));
+      if (kind === 'yearly') return sendReport(res, url, 'yearly-financial-summary-' + today, ['Year', 'Collected (INR)', 'Approved expenses (INR)'], ov.yearly.map((y) => [y.key, y.collected, y.expenses]));
       if (kind === 'invoices' || kind === 'receivables') {
         const inv = (await finance.invoices()).filter((i) => kind === 'invoices' || i.outstanding > 0);
         const names = await people(inv.map((i) => i.personId));
-        return sendCsv(res, kind + '-' + today, ['Invoice', 'Date', 'Due', 'Customer', 'Customer ID', 'Package', 'Service line', 'Amount (INR)', 'Paid (INR)', 'Refunded (INR)', 'Outstanding (INR)', 'Status', 'Days overdue'],
+        return sendReport(res, url, kind + '-' + today, ['Invoice', 'Date', 'Due', 'Customer', 'Customer ID', 'Package', 'Service line', 'Amount (INR)', 'Paid (INR)', 'Refunded (INR)', 'Outstanding (INR)', 'Status', 'Days overdue'],
           inv.map((i) => [i.number, i.date, i.dueDate, names[i.personId] || '', i.personId, i.packageName, BRAND_NAMES[i.brand] || i.brand, i.amount, i.paid, i.refunded, i.outstanding, i.status, i.overdueDays]));
       }
       if (kind === 'payments' || kind === 'refunds') {
         const rows = (await paymentRows(url)).filter((x) => x.kind === (kind === 'payments' ? 'payment' : 'refund'));
-        return sendCsv(res, kind + '-' + today, ['Date', 'Reference', 'Invoice', 'Customer', 'Package', 'Method', 'Amount (INR)', 'Reason', 'Recorded by'], rows.map((x) => [ymd(x.receivedAt), x.ref, x.invoiceNo, x.customerName, x.packageName, x.method, x.amount, x.reason || '', x.recordedBy]));
+        return sendReport(res, url, kind + '-' + today, ['Date', 'Reference', 'Invoice', 'Customer', 'Package', 'Method', 'Amount (INR)', 'Reason', 'Recorded by'], rows.map((x) => [ymd(x.receivedAt), x.ref, x.invoiceNo, x.customerName, x.packageName, x.method, x.amount, x.reason || '', x.recordedBy]));
       }
       if (kind === 'expenses') {
         const rows = await expenseRows(url);
-        return sendCsv(res, 'expenses-' + today, ['Reference', 'Date', 'Category', 'Paid to', 'Description', 'Amount (INR)', 'Status', 'Recorded by', 'Decided by', 'Payment reference'], rows.map((x) => [x.reference, x.date, x.categoryName, x.vendor, x.description, x.amount, x.statusName, x.createdByName, x.decidedByName || '', x.paymentRef || '']));
+        return sendReport(res, url, 'expenses-' + today, ['Reference', 'Date', 'Category', 'Paid to', 'Description', 'Amount (INR)', 'Status', 'Recorded by', 'Decided by', 'Payment reference'], rows.map((x) => [x.reference, x.date, x.categoryName, x.vendor, x.description, x.amount, x.statusName, x.createdByName, x.decidedByName || '', x.paymentRef || '']));
       }
       throw notFound();
     }
@@ -535,7 +570,7 @@ function create(ctx) {
     if (p === 'hr/leave/balances' && req.method === 'GET') {
       const year = /^\d{4}$/.test(q(url, 'year')) ? q(url, 'year') : today.slice(0, 4);
       const allow = await leavePolicy();
-      const list = (await employees()).filter(({ user: u }) => u.role === 'caregiver');
+      const list = await employees(); // every employee: nurses and the office team share one leave system
       return json(res, 200, { ok: true, year, types: LEAVE_TYPES, allowances: allow, policySet: Object.keys(allow).length > 0, rows: list.map(({ user: u, prof }) => {
         const leave = prof.leave || [];
         const by = Object.fromEntries(Object.keys(LEAVE_TYPES).map((t) => {
@@ -557,23 +592,23 @@ function create(ctx) {
     if (parts[0] === 'hr' && parts[1] === 'reports' && parts.length === 3 && req.method === 'GET') {
       const kind = parts[2].replace(/\.csv$/, '');
       const list = await employees();
-      if (kind === 'headcount') return sendCsv(res, 'headcount-' + today, ['Employee ID', 'Name', 'Role', 'Department', 'Designation', 'Business unit', 'Location', 'Joined', 'Left', 'Status'],
+      if (kind === 'headcount') return sendReport(res, url, 'headcount-' + today, ['Employee ID', 'Name', 'Role', 'Department', 'Designation', 'Business unit', 'Location', 'Joined', 'Left', 'Status'],
         list.map(({ user: u, prof }) => { const v = empView(u, prof, today); return [v.employeeId, v.name, v.roleName, v.department, v.designation, v.businessUnitName, v.location, v.joinDate, v.exitDate || '', v.statusName]; }));
-      if (kind === 'onboarding') return sendCsv(res, 'onboarding-status-' + today, ['Employee ID', 'Name', 'Role', 'Status', 'Steps done', 'Missing'],
+      if (kind === 'onboarding') return sendReport(res, url, 'onboarding-status-' + today, ['Employee ID', 'Name', 'Role', 'Status', 'Steps done', 'Missing'],
         list.map(({ user: u, prof }) => { const o = onboarding(u, prof, today); return [prof.employeeId, u.name, ROLE_NAMES[u.role], o.status === 'complete' ? 'Complete' : 'In progress', o.done + ' of ' + o.total, o.steps.filter((s) => !s.ok).map((s) => s.label).join('; ')]; }));
-      if (kind === 'credentials') return sendCsv(res, 'credentials-expiry-' + today, ['Employee ID', 'Name', 'Kind', 'Name of record', 'Number', 'Issued by', 'Issued on', 'Expires on', 'Days left', 'Status'],
+      if (kind === 'credentials') return sendReport(res, url, 'credentials-expiry-' + today, ['Employee ID', 'Name', 'Kind', 'Name of record', 'Number', 'Issued by', 'Issued on', 'Expires on', 'Days left', 'Status'],
         list.flatMap(({ user: u, prof }) => (prof.credentials || []).map((c) => credView(c, today)).map((c) => [prof.employeeId, u.name, c.typeName, c.name, c.number || '', c.issuer || '', c.issuedOn || '', c.expiresOn || 'No expiry', c.daysLeft == null ? '' : c.daysLeft, c.statusName])));
       if (kind === 'attendance') {
         const m = isMonth(q(url, 'month')) ? q(url, 'month') : today.slice(0, 7);
         const att = (await docs.find('app_attendance')).filter((a) => month(a.date) === m);
-        return sendCsv(res, 'attendance-' + m, ['Employee ID', 'Name', 'Role', ...Object.values(ATTENDANCE), 'Days marked'],
+        return sendReport(res, url, 'attendance-' + m, ['Employee ID', 'Name', 'Role', ...Object.values(ATTENDANCE), 'Days marked'],
           list.map(({ user: u, prof }) => { const mine = att.filter((a) => a.userId === u.id); return [prof.employeeId, u.name, ROLE_NAMES[u.role], ...Object.keys(ATTENDANCE).map((k) => mine.filter((a) => a.status === k).length), mine.length]; }));
       }
       if (kind === 'leave') {
         const year = /^\d{4}$/.test(q(url, 'year')) ? q(url, 'year') : today.slice(0, 4);
         const rows = [];
         for (const { user: u, prof } of list) for (const l of prof.leave || []) if (overlapDays(l, year + '-01-01', year + '-12-31')) rows.push([prof.employeeId, u.name, LEAVE_TYPES[l.type] || l.type || 'Other', l.from, l.to, days(l.from, l.to) + 1, l.status || 'approved', l.reason || '']);
-        return sendCsv(res, 'leave-' + year, ['Employee ID', 'Name', 'Type', 'From', 'To', 'Days', 'Status', 'Reason'], rows);
+        return sendReport(res, url, 'leave-' + year, ['Employee ID', 'Name', 'Type', 'From', 'To', 'Days', 'Status', 'Reason'], rows);
       }
       throw notFound();
     }
@@ -770,7 +805,7 @@ function create(ctx) {
       const from = isDate(q(url, 'from')) ? q(url, 'from') : addDays(today, -30), to = isDate(q(url, 'to')) ? q(url, 'to') : today;
       if (kind === 'visits' || kind === 'missed-cancelled') {
         const rows = (await visitRows(from, to)).filter((v) => kind === 'visits' || v.missed || v.status === 'cancelled');
-        return sendCsv(res, kind + '-' + from + '-to-' + to, ['Reference', 'Date', 'Slot', 'Start', 'Service', 'Customer', 'Customer ID', 'Nurse', 'Status', 'Missed', 'Rescheduled', 'Booked', 'Assigned', 'Completed'],
+        return sendReport(res, url, kind + '-' + from + '-to-' + to, ['Reference', 'Date', 'Slot', 'Start', 'Service', 'Customer', 'Customer ID', 'Nurse', 'Status', 'Missed', 'Rescheduled', 'Booked', 'Assigned', 'Completed'],
           rows.map((v) => [v.reference, v.date, v.slotName, v.start || '', v.serviceName, v.customerName, v.personId || '', v.nurseName || '', v.statusName, v.missed ? 'Yes' : '', v.rescheduled ? 'Yes' : '', ymd(v.createdAt), v.assignedAt || '', v.completedAt || '']));
       }
       if (kind === 'summary') {
@@ -780,7 +815,7 @@ function create(ctx) {
         const cust = await customerOps();
         const onb = cust.filter((c) => c.onboardingDays != null).map((c) => c.onboardingDays).sort((a, b) => a - b);
         const med = (a) => (a.length ? Math.round(a[Math.floor(a.length / 2)] * 10) / 10 : '');
-        return sendCsv(res, 'operations-summary-' + from + '-to-' + to, ['Measure', 'Value'], [
+        return sendReport(res, url, 'operations-summary-' + from + '-to-' + to, ['Measure', 'Value'], [
           ['Period', from + ' to ' + to], ['Visits', rows.length], ['Completed', rows.filter((v) => v.status === 'completed').length], ['Visit completion rate (%)', done.length ? Math.round((done.filter((v) => v.status === 'completed').length / done.length) * 1000) / 10 : ''],
           ['Missed', rows.filter((v) => v.missed).length], ['Cancelled', rows.filter((v) => v.status === 'cancelled').length], ['Rescheduled', rows.filter((v) => v.rescheduled).length],
           ['Assigned automatically or by the office', assignedH.length], ['Median hours from booking to assignment', med(assignedH)],
@@ -788,15 +823,15 @@ function create(ctx) {
       }
       if (kind === 'utilisation') {
         const rows = await capacity(from, to);
-        return sendCsv(res, 'nurse-utilisation-' + from + '-to-' + to, ['Nurse', 'Available hours', 'Booked hours', 'Utilisation (%)', 'Visits', 'Completed', 'Leave days', 'Conflicts'], rows.map((r) => [r.name, Math.round(r.availableMinutes / 6) / 10, Math.round(r.bookedMinutes / 6) / 10, r.utilisation == null ? '' : r.utilisation, r.visits, r.completed, r.leaveDays, r.conflicts]));
+        return sendReport(res, url, 'nurse-utilisation-' + from + '-to-' + to, ['Nurse', 'Available hours', 'Booked hours', 'Utilisation (%)', 'Visits', 'Completed', 'Leave days', 'Conflicts'], rows.map((r) => [r.name, Math.round(r.availableMinutes / 6) / 10, Math.round(r.bookedMinutes / 6) / 10, r.utilisation == null ? '' : r.utilisation, r.visits, r.completed, r.leaveDays, r.conflicts]));
       }
       if (kind === 'onboarding') {
         const rows = await customerOps();
-        return sendCsv(res, 'customer-onboarding-' + today, ['Customer ID', 'Name', 'Packages', 'Stage', 'Package active since', 'Days waiting', 'Delayed', 'Onboarded on', 'Nurse assigned', 'Why not eligible'], rows.map((c) => [c.id, c.name, c.packages.join('; '), c.stageName, c.since || '', c.waitingDays == null ? '' : c.waitingDays, c.delayed ? 'Yes' : '', c.onboardedAt || '', c.hasNurse ? c.nurses.map((n) => n.name).join('; ') : 'No', c.reasons.join(' ')]));
+        return sendReport(res, url, 'customer-onboarding-' + today, ['Customer ID', 'Name', 'Packages', 'Stage', 'Package active since', 'Days waiting', 'Delayed', 'Onboarded on', 'Nurse assigned', 'Why not eligible'], rows.map((c) => [c.id, c.name, c.packages.join('; '), c.stageName, c.since || '', c.waitingDays == null ? '' : c.waitingDays, c.delayed ? 'Yes' : '', c.onboardedAt || '', c.hasNurse ? c.nurses.map((n) => n.name).join('; ') : 'No', c.reasons.join(' ')]));
       }
       if (kind === 'issues') {
         const rows = await issueRows(url);
-        return sendCsv(res, 'service-issues-' + today, ['Reference', 'Opened', 'Kind', 'Title', 'Customer', 'Visit', 'Priority', 'Status', 'Assigned to', 'Rating'], rows.map((x) => [x.reference, ymd(x.createdAt), x.typeName, x.title, x.customerName || '', x.visitRef || '', x.priority, x.statusName, x.assignedName || '', x.rating || '']));
+        return sendReport(res, url, 'service-issues-' + today, ['Reference', 'Opened', 'Kind', 'Title', 'Customer', 'Visit', 'Priority', 'Status', 'Assigned to', 'Rating'], rows.map((x) => [x.reference, ymd(x.createdAt), x.typeName, x.title, x.customerName || '', x.visitRef || '', x.priority, x.statusName, x.assignedName || '', x.rating || '']));
       }
       throw notFound();
     }
@@ -925,19 +960,19 @@ function create(ctx) {
     if (parts[0] === 'sales' && parts[1] === 'reports' && parts.length === 3 && req.method === 'GET') {
       const kind = parts[2].replace(/\.csv$/, '');
       const rows = await salesLeads(url, user);
-      if (kind === 'leads') return sendCsv(res, 'leads-' + today, ['Enquiry ID', 'Received', 'Name', 'Phone', 'Email', 'Source', 'Package', 'Status', 'Assigned to', 'Follow-up', 'Next action', 'Expected value (INR)', 'Contacts'],
+      if (kind === 'leads') return sendReport(res, url, 'leads-' + today, ['Enquiry ID', 'Received', 'Name', 'Phone', 'Email', 'Source', 'Package', 'Status', 'Assigned to', 'Follow-up', 'Next action', 'Expected value (INR)', 'Contacts'],
         rows.map((l) => [l.enquiryId, ymd(l.createdAt), l.name, l.phone, l.email, l.sourceName, l.packageName || 'Not chosen', l.statusName, l.assignedName || '', l.followUpAt || '', l.nextAction || '', l.expected || '', l.contacts]));
       if (kind === 'daily' || kind === 'monthly') {
         const key = kind === 'daily' ? ymd : month;
         const keys = [...new Set(rows.map((l) => key(l.createdAt)))].sort().reverse();
-        return sendCsv(res, kind + '-leads-' + today, [kind === 'daily' ? 'Day' : 'Month', 'Leads', 'Contacted', 'Follow-up', 'Converted', 'Lost'], keys.map((k) => { const m = rows.filter((l) => key(l.createdAt) === k); return [k, m.length, m.filter((l) => l.status === 'contacted').length, m.filter((l) => l.status === 'follow_up').length, m.filter((l) => l.status === 'converted').length, m.filter((l) => l.status === 'lost').length]; }));
+        return sendReport(res, url, kind + '-leads-' + today, [kind === 'daily' ? 'Day' : 'Month', 'Leads', 'Contacted', 'Follow-up', 'Converted', 'Lost'], keys.map((k) => { const m = rows.filter((l) => key(l.createdAt) === k); return [k, m.length, m.filter((l) => l.status === 'contacted').length, m.filter((l) => l.status === 'follow_up').length, m.filter((l) => l.status === 'converted').length, m.filter((l) => l.status === 'lost').length]; }));
       }
-      if (kind === 'conversions') return sendCsv(res, 'conversions-' + today, ['Enquiry ID', 'Name', 'Package', 'Source', 'Assigned to', 'Received', 'Order', 'Paid amount (INR)', 'Paid on'],
+      if (kind === 'conversions') return sendReport(res, url, 'conversions-' + today, ['Enquiry ID', 'Name', 'Package', 'Source', 'Assigned to', 'Received', 'Order', 'Paid amount (INR)', 'Paid on'],
         rows.filter((l) => l.status === 'converted' || l.purchase).map((l) => [l.enquiryId, l.name, l.packageName, l.sourceName, l.assignedName || '', ymd(l.createdAt), l.purchase ? l.purchase.reference : '', l.purchase ? l.purchase.amount : '', l.purchase ? ymd(l.purchase.at) : '']));
-      if (kind === 'followups') return sendCsv(res, 'follow-ups-' + today, ['Enquiry ID', 'Name', 'Phone', 'Status', 'Follow-up', 'State', 'Next action', 'Assigned to', 'Last contact'],
+      if (kind === 'followups') return sendReport(res, url, 'follow-ups-' + today, ['Enquiry ID', 'Name', 'Phone', 'Status', 'Follow-up', 'State', 'Next action', 'Assigned to', 'Last contact'],
         rows.filter((l) => l.open && l.followUpAt).sort((a, b) => (a.followUpAt < b.followUpAt ? -1 : 1)).map((l) => [l.enquiryId, l.name, l.phone, l.statusName, l.followUpAt, l.followUp, l.nextAction || '', l.assignedName || '', l.lastContactAt ? ymd(l.lastContactAt) : '']));
-      if (kind === 'packages') { const g = group(rows, (l) => l.package, (k) => (k === 'none' ? 'Not chosen' : planName(k))); return sendCsv(res, 'package-enquiries-' + today, ['Package', 'Enquiries', 'Converted', 'Paid purchases'], g.map((x) => [x.label, x.value, rows.filter((l) => (l.package || 'none') === x.key && l.status === 'converted').length, rows.filter((l) => (l.package || 'none') === x.key && l.purchase).length])); }
-      if (kind === 'pipeline') return sendCsv(res, 'pipeline-' + today, ['Enquiry ID', 'Name', 'Status', 'Package', 'Expected value (INR)', 'Value from', 'Assigned to', 'Follow-up'],
+      if (kind === 'packages') { const g = group(rows, (l) => l.package, (k) => (k === 'none' ? 'Not chosen' : planName(k))); return sendReport(res, url, 'package-enquiries-' + today, ['Package', 'Enquiries', 'Converted', 'Paid purchases'], g.map((x) => [x.label, x.value, rows.filter((l) => (l.package || 'none') === x.key && l.status === 'converted').length, rows.filter((l) => (l.package || 'none') === x.key && l.purchase).length])); }
+      if (kind === 'pipeline') return sendReport(res, url, 'pipeline-' + today, ['Enquiry ID', 'Name', 'Status', 'Package', 'Expected value (INR)', 'Value from', 'Assigned to', 'Follow-up'],
         rows.filter((l) => l.open).map((l) => [l.enquiryId, l.name, l.statusName, l.packageName || 'Not chosen', l.expected || '', l.expectedFrom === 'entered' ? 'Entered' : l.expectedFrom === 'price' ? 'Published price' : l.expectedFrom === 'quote' ? 'Priced on call' : '', l.assignedName || '', l.followUpAt || '']));
       throw notFound();
     }
@@ -986,4 +1021,4 @@ function create(ctx) {
   return { handle, remind, financeOverview, opsOverview };
 }
 
-module.exports = { create, EXPENSE_CATEGORIES, RECON_STATUS, CRED_TYPES, ATTENDANCE, ISSUE_TYPES, CONTACT_KINDS, statementRows, csvCell };
+module.exports = { create, sendReport, EXPENSE_CATEGORIES, RECON_STATUS, CRED_TYPES, ATTENDANCE, ISSUE_TYPES, CONTACT_KINDS, statementRows, csvCell };

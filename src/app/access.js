@@ -54,8 +54,8 @@ function allows(role, path, method) {
   return RULES[role].some((r) => r.re.test(p) && (!r.methods || r.methods.includes(String(method || 'GET').toUpperCase())));
 }
 
-// the only signed-in routes outside /admin/ a team login may use (its own account and notifications)
+// the only signed-in routes outside /admin/ a team login may use (its own account, notifications, leave and trainings)
 const TEAM_OPEN = ['logout', 'password', 'profile', 'notifications', 'notifications/read'];
-function teamMayUse(path) { return TEAM_OPEN.includes(path); }
+function teamMayUse(path) { return TEAM_OPEN.includes(path) || /^me\/(leave|trainings)(\/[^/]+){0,2}$/.test(path); } // their own leave and trainings
 
 module.exports = { TEAM_ROLES, OFFICE_ROLES, RULES, allows, isTeam, isOffice, teamMayUse };
