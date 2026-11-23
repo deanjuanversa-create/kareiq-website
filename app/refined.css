@@ -717,3 +717,18 @@ body[data-brand="kareiq"] .tblock.rblock.inner > .rsum{display:none}
 /* KPI figures stay on one line (large rupee amounts no longer break in the middle) */
 .okpi>div{min-width:0}
 .okpi b{white-space:nowrap;font-size:clamp(1.2rem,1.1vw + .55rem,1.65rem);overflow-wrap:normal}
+/* Team dashboards: charts two to a row, like the admin's analytics pages; never taller than 300px */
+.ocharts{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:14px;margin:0 0 16px;align-items:start}
+.ocharts>.och{height:100%}
+.ocharts .osvg{max-height:300px}
+/* summary cards and quick links split into even rows (6 → 3+3, 8 → 4+4, 10 → 5+5) instead of leaving one alone */
+@media (min-width:900px){
+  .okpis:has(> :nth-child(6):last-child),.tquick:has(> :nth-child(6):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}
+  .okpis:has(> :nth-child(8):last-child),.tquick:has(> :nth-child(8):last-child){grid-template-columns:repeat(4,minmax(0,1fr))}
+  .okpis:has(> :nth-child(10):last-child){grid-template-columns:repeat(5,minmax(0,1fr))}
+  .okpis:has(> :nth-child(4):last-child){grid-template-columns:repeat(4,minmax(0,1fr))}
+}
+.panel+.ocharts,.ogrid2+.ocharts{margin-top:16px}
+.otable td.tact{text-align:right;white-space:nowrap}
+.otable td.tact .oacts{display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;align-items:center}
+@media (max-width:760px){.otable td.tact{text-align:left;white-space:normal}.otable td.tact .oacts{justify-content:flex-start}}
