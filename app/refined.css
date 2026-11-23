@@ -581,3 +581,32 @@ body[data-brand="kareiq"] .ct-s.warn{--sc:var(--c-warn)}
 body[data-brand="kareiq"] .ct-s.bad{--sc:var(--c-bad)}
 body[data-brand="kareiq"] .ct-n{float:right;margin:8px 0 0 10px;font-size:.7rem;color:var(--muted)}
 @media (prefers-reduced-motion:reduce){body[data-brand="kareiq"] .ctip,body[data-brand="kareiq"] .chart2 .hr,body[data-brand="kareiq"] .chart2 .hl{transition:none;animation:none}}
+
+/* ---------- the customer picker in the top bar */
+body[data-brand="kareiq"] .tb-pp{display:flex;align-items:center;min-width:0;margin-left:clamp(8px,2vw,28px)}
+body[data-brand="kareiq"] .tb-pp:empty{display:none}
+body[data-brand="kareiq"] .tb-pp .pbar-l{flex-wrap:nowrap;gap:10px;min-width:0}
+body[data-brand="kareiq"] .tb-pp .pp{height:40px;padding:0 4px 0 4px;border-radius:999px;background:rgba(0,0,0,.045);text-transform:none;letter-spacing:-.01em;font-size:.95rem;font-weight:600;min-width:0;transition:background-color .2s}
+body[data-brand="kareiq"] .tb-pp .pp:hover{background:rgba(0,0,0,.07)}
+body[data-brand="kareiq"] .tb-pp .pp::before{content:attr(data-ini);flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#5ec2ae);color:#fff;font-size:.78rem;font-weight:700;letter-spacing:.02em}
+body[data-brand="kareiq"] .tb-pp .pp select{text-transform:none;letter-spacing:inherit;padding:8px 34px 8px 10px;max-width:min(320px,36vw);border-radius:999px;background:transparent}
+body[data-brand="kareiq"] .tb-pp .pp select:hover{background:transparent}
+body[data-brand="kareiq"] .tb-pp .pp select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+body[data-brand="kareiq"] .tb-pp .pp svg{right:12px;width:16px;height:16px;color:var(--muted)}
+body[data-brand="kareiq"] .tb-pp .pp.one{padding:0 16px 0 4px;gap:10px}
+body[data-brand="kareiq"] .tb-pp .ptags{flex-wrap:nowrap;overflow:hidden}
+body[data-brand="kareiq"] .tb-pp .ptags .tagb{white-space:nowrap}
+body[data-brand="kareiq"] .pbar{margin-bottom:18px}
+@media (max-width:1100px){ body[data-brand="kareiq"] .tb-pp .ptags{display:none} }
+@media (max-width:760px){
+  body[data-brand="kareiq"] .tb-pp{margin-left:4px;flex:1 1 auto}
+  body[data-brand="kareiq"] .tb-pp .pp{height:36px;font-size:.86rem;max-width:100%}
+  body[data-brand="kareiq"] .tb-pp .pp::before{width:26px;height:26px;font-size:.68rem}
+  body[data-brand="kareiq"] .tb-pp .pp select{max-width:34vw;padding:6px 26px 6px 8px}
+  body[data-brand="kareiq"] .tb-pp .pp svg{right:8px}
+  body[data-brand="kareiq"] .tb-pp + .sp{flex:0 0 0}
+  body[data-brand="kareiq"] .tb-logo img{height:28px}
+}
+/* the page bar after the picker moved up: only page buttons are left, on the right */
+body[data-brand="kareiq"] #mn .pbar:not(:has(.pbar-l)){justify-content:flex-end}
+body[data-brand="kareiq"] .head-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-left:auto}

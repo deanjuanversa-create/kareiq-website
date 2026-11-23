@@ -565,7 +565,7 @@
       '</div></div></nav>';
     var top = '<header class="tb"><button class="tb-menu" data-act="drawer" aria-controls="sb" aria-expanded="false" aria-label="Menu">' + icon('menu') + '</button>' +
       '<a class="tb-logo" href="#/"><img src="/img/kareiq-logo.png" alt="KareIQ" width="984" height="276"></a>' +
-      (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<span class="sp"></span><button type="button" class="tb-k" data-act="cmdk" aria-label="Search and jump to a page (Ctrl K)">' + icon('search') + '<span>Search</span><kbd>' + (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') + ' K</kbd></button>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
+      (mod && mod.label ? '<span class="tb-role">' + e(mod.label) + '</span>' : '') + '<div class="tb-pp" id="tbpp" aria-label="Who you are viewing"></div><span class="sp"></span><button type="button" class="tb-k" data-act="cmdk" aria-label="Search and jump to a page (Ctrl K)">' + icon('search') + '<span>Search</span><kbd>' + (/Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl') + ' K</kbd></button>' + (role !== 'family' ? bellHtml() : '') + meMenu() + '</header>';
     // phones: a tab bar for families, like a native app (the full menu stays one tap away)
     var tabs = '';
     if (role === 'family') {
@@ -652,11 +652,36 @@
   function personBar(p, people, right) {
     var label = function (x) { return x.name + (x.relation ? ' (' + x.relation + ')' : ''); };
     var pick = people.length > 1
-      ? '<label class="pp"><span class="sr">Showing</span><select data-act="person" aria-label="Choose who to show">' + people.map(function (x) { return '<option value="' + e(x.id) + '"' + (x.id === p.id ? ' selected' : '') + '>' + e(label(x)) + '</option>'; }).join('') + '</select>' + icon('down') + '</label>'
-      : '<span class="pp one">' + e(label(p)) + '</span>';
+      ? '<label class="pp" data-ini="' + e(initials(p.name)) + '"><span class="sr">Showing</span><select data-act="person" aria-label="Choose who to show">' + people.map(function (x) { return '<option value="' + e(x.id) + '"' + (x.id === p.id ? ' selected' : '') + '>' + e(label(x)) + '</option>'; }).join('') + '</select>' + icon('down') + '</label>'
+      : '<span class="pp one" data-ini="' + e(initials(p.name)) + '">' + e(label(p)) + '</span>';
     var tags = (p.plans || []).map(function (pl) { return '<span class="tagb ' + pl.product + '">' + e(pl.included ? pl.productName + ' (included)' : pl.name) + '</span>'; }).join('');
     return '<div class="pbar"><div class="pbar-l">' + pick + '<div class="ptags">' + tags + '</div></div>' + (right ? '<div class="pbar-r">' + right + '</div>' : '') + '</div>';
   }
+  // the customer picker (name, dropdown, package tags) lives in the top bar: any picker a page draws
+  // in its content moves there; the rest of the page bar (page buttons) stays where it is
+  function mountPerson() {
+    if (!S.me || S.me.user.role !== 'family') return; // customers only; nurses and the office keep it on the page
+    var slot = $('#tbpp'), pl = $('#mn .pbar-l');
+    if (!slot || !pl) return;
+    slot.innerHTML = ''; slot.appendChild(pl);
+    var pb = $('#mn .pbar');
+    if (pb) {
+      // page buttons left behind join the page heading (e.g. "Upload a document" next to "All assigned customers")
+      var pr = $('.pbar-r', pb), hd = $('#mn .head, #mn .pagehead');
+      if (pr && hd && pr.children.length) {
+        var box = hd.querySelector(':scope > .head-acts');
+        if (!box) {
+          box = document.createElement('div'); box.className = 'head-acts';
+          var last = hd.lastElementChild;
+          if (last && last !== hd.firstElementChild && /^(A|BUTTON)$/.test(last.tagName)) box.appendChild(last);
+          hd.appendChild(box);
+        }
+        while (pr.firstChild) box.appendChild(pr.firstChild);
+      }
+      if (!$('.pbar-r', pb) || !$('.pbar-r', pb).children.length) pb.remove();
+    }
+  }
+  if (window.MutationObserver) new MutationObserver(function () { if (S.me && S.me.user.role === 'family' && $('#mn .pbar-l')) mountPerson(); }).observe(root, { childList: true, subtree: true });
   function fill(html) { var el = $('#pv'); if (el) el.innerHTML = html; }
   var LV = { good: 'good', ok: 'ok', warn: 'warn', bad: 'bad' };
   function dotHtml(level) { return '<i class="dot ' + (LV[level] || 'none') + '" aria-hidden="true"></i>'; }

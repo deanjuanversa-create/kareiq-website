@@ -189,7 +189,7 @@
     }, fail);
   }
   function selectBar(list, pick) {
-    return '<div class="pbar"><div class="pbar-l">' + (list.length > 1 ? '<label class="pp"><span class="sr">Customer</span><select data-act="nc-pick" aria-label="Choose a customer">' + list.map(function (x) { return '<option value="' + e(x.id) + '"' + (x.id === pick.id ? ' selected' : '') + '>' + e(x.name) + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '<span class="pp one">' + e(pick.name) + '</span>') + '</div>' +
+    return '<div class="pbar"><div class="pbar-l">' + (list.length > 1 ? '<label class="pp" data-ini="' + e(K.initials(pick.name)) + '"><span class="sr">Customer</span><select data-act="nc-pick" aria-label="Choose a customer">' + list.map(function (x) { return '<option value="' + e(x.id) + '"' + (x.id === pick.id ? ' selected' : '') + '>' + e(x.name) + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '<span class="pp one" data-ini="' + e(K.initials(pick.name)) + '">' + e(pick.name) + '</span>') + '</div>' +
       '<div class="pbar-r"><a class="btn sm ghost" href="#/nurse/upload?p=' + e(pick.id) + '">' + icon('upload') + 'Upload a document</a></div></div>';
   }
   function masked(cat, key, val, label) {
