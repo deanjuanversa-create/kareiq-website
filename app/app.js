@@ -680,7 +680,22 @@
       }
       if (!$('.pbar-r', pb) || !$('.pbar-r', pb).children.length) pb.remove();
     }
+    alignPerson();
   }
+  // line the picker up with the start of the page content (after the side menu); with the side menu
+  // hidden (tablets, phones) it simply follows the logo
+  function alignPerson() {
+    var slot = $('#tbpp'), mn = $('#mn'), sb = $('#sb');
+    if (!slot || !mn || !slot.children.length) return;
+    slot.style.marginLeft = '';
+    if (!sb || window.innerWidth <= 980) return;
+    var cs = getComputedStyle(mn), first = mn.firstElementChild;
+    var target = (first ? first.getBoundingClientRect().left : mn.getBoundingClientRect().left + parseFloat(cs.paddingLeft || 0));
+    var now = slot.getBoundingClientRect().left;
+    var base = parseFloat(getComputedStyle(slot).marginLeft) || 0;
+    slot.style.marginLeft = Math.max(8, base + (target - now)) + 'px';
+  }
+  window.addEventListener('resize', function () { clearTimeout(alignPerson.t); alignPerson.t = setTimeout(alignPerson, 80); });
   if (window.MutationObserver) new MutationObserver(function () { if (S.me && S.me.user.role === 'family' && $('#mn .pbar-l')) mountPerson(); }).observe(root, { childList: true, subtree: true });
   function fill(html) { var el = $('#pv'); if (el) el.innerHTML = html; }
   var LV = { good: 'good', ok: 'ok', warn: 'warn', bad: 'bad' };
