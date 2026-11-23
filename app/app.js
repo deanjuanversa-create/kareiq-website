@@ -3117,6 +3117,120 @@
     return '<span class="phdue">' + icon('clock') + (pd.reason === 'missing' ? 'No photo yet' : 'Photo older than 6 months') + '</span>';
   }
 
+  // ================================================================ dropdowns (Apple-style)
+  // Every <select> keeps its own look as the button, but opens this list instead of the browser's: a
+  // frosted panel with a checkmark on the chosen item, a smooth open, keyboard support (arrows, Enter,
+  // Escape, Home/End, typing to jump) and a bottom sheet on phones. Choosing sets the select's value and
+  // fires the same "change" event as before, so every form and filter works unchanged.
+  // A select with "multiple", a size, or data-native keeps the browser's own list.
+  var XS = { el: null, sel: null, idx: -1, typed: '', typedAt: 0 };
+  function xsUsable(s) { return s && s.tagName === 'SELECT' && !s.multiple && !(s.size > 1) && !s.disabled && !s.hasAttribute('data-native'); }
+  function xsClose(focusBack) {
+    var el = XS.el, s = XS.sel; if (!el) return;
+    XS.el = null; XS.sel = null; XS.idx = -1;
+    if (s) { s.removeAttribute('aria-expanded'); s.classList.remove('xs-open'); }
+    el.classList.add('out');
+    var bd = el.previousElementSibling && el.previousElementSibling.classList.contains('xs-bd') ? el.previousElementSibling : null;
+    if (bd) bd.classList.add('out');
+    setTimeout(function () { el.remove(); if (bd) bd.remove(); }, reducedMotion() ? 0 : 160);
+    if (focusBack && s) s.focus({ preventScroll: true });
+  }
+  function xsChoose(i) {
+    var s = XS.sel; if (!s) return;
+    var o = s.options[i]; if (!o || o.disabled) return;
+    var changed = s.selectedIndex !== i;
+    s.selectedIndex = i;
+    xsClose(true);
+    if (changed) { s.dispatchEvent(new Event('input', { bubbles: true })); s.dispatchEvent(new Event('change', { bubbles: true })); }
+  }
+  function xsMark(i, scroll) {
+    var el = XS.el; if (!el) return;
+    var items = $$('.xs-o', el), cur = items.filter(function (x) { return Number(x.getAttribute('data-i')) === i; })[0];
+    items.forEach(function (x) { x.classList.toggle('hot', x === cur); });
+    XS.idx = i;
+    if (cur) { el.querySelector('.xs-list').setAttribute('aria-activedescendant', cur.id); if (scroll) cur.scrollIntoView({ block: 'nearest' }); }
+  }
+  function xsStep(dir) {
+    var s = XS.sel, i = XS.idx, n = s.options.length;
+    for (var k = 0; k < n; k++) { i = Math.min(n - 1, Math.max(0, i + dir)); if (!s.options[i].disabled && !s.options[i].hidden) break; }
+    xsMark(i, true);
+  }
+  function xsPlace() {
+    var el = XS.el, s = XS.sel; if (!el || !s || el.classList.contains('sheet')) return;
+    var r = s.getBoundingClientRect(), list = el, vw = window.innerWidth, vh = window.innerHeight;
+    var w = Math.max(r.width, Math.min(280, vw - 24));
+    list.style.minWidth = w + 'px';
+    var h = Math.min(list.scrollHeight, 340), below = vh - r.bottom - 12, above = r.top - 12;
+    var up = below < Math.min(h, 220) && above > below;
+    list.style.maxHeight = Math.max(140, Math.min(340, up ? above : below)) + 'px';
+    var left = Math.min(Math.max(12, r.left), vw - list.offsetWidth - 12);
+    list.style.left = left + 'px';
+    list.style.top = (up ? Math.max(12, r.top - Math.min(list.offsetHeight, above) - 6) : r.bottom + 6) + 'px';
+    list.classList.toggle('up', up);
+  }
+  function xsOpen(s) {
+    if (XS.sel === s) return xsClose(true);
+    xsClose(false);
+    var phone = window.innerWidth <= 640;
+    var host = s.closest('dialog[open]') || document.body;
+    var lab = s.getAttribute('aria-label') || (s.closest('label') && (s.closest('label').querySelector('span:not(.sr)') || {}).textContent) || '';
+    var uid = 'xs' + Date.now().toString(36);
+    var html = '', i = 0;
+    var opt = function (o) {
+      var k = i++;
+      if (o.hidden) return '';
+      return '<div class="xs-o' + (o.selected ? ' on' : '') + (o.disabled ? ' off' : '') + '" role="option" id="' + uid + '-' + k + '" data-i="' + k + '" aria-selected="' + o.selected + '"' + (o.disabled ? ' aria-disabled="true"' : '') + '>' +
+        '<svg class="xs-ck" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>' + e(o.textContent) + '</span></div>';
+    };
+    Array.prototype.forEach.call(s.children, function (c) {
+      if (c.tagName === 'OPTGROUP') { html += '<div class="xs-g" role="presentation">' + e(c.label) + '</div>'; Array.prototype.forEach.call(c.children, function (o) { html += opt(o); }); }
+      else html += opt(c);
+    });
+    var el = document.createElement('div');
+    el.className = 'xs' + (phone ? ' sheet' : '');
+    el.innerHTML = (phone ? '<div class="xs-h"><i aria-hidden="true"></i>' + (lab ? '<b>' + e(lab.trim()) + '</b>' : '') + '</div>' : '') + '<div class="xs-list" role="listbox" tabindex="-1"' + (lab ? ' aria-label="' + e(lab.trim()) + '"' : '') + '>' + html + '</div>';
+    if (phone) { var bd = document.createElement('div'); bd.className = 'xs-bd'; host.appendChild(bd); bd.addEventListener('click', function () { xsClose(true); }); }
+    host.appendChild(el);
+    XS.el = el; XS.sel = s;
+    s.setAttribute('aria-expanded', 'true'); s.classList.add('xs-open');
+    xsPlace();
+    xsMark(s.selectedIndex, true);
+    el.addEventListener('mousemove', function (ev) { var o = ev.target.closest('.xs-o'); if (o && !o.classList.contains('off')) xsMark(Number(o.getAttribute('data-i')), false); });
+    el.addEventListener('click', function (ev) { var o = ev.target.closest('.xs-o'); if (o && !o.classList.contains('off')) xsChoose(Number(o.getAttribute('data-i'))); });
+    el.addEventListener('mousedown', function (ev) { ev.preventDefault(); }); // keep focus on the select
+  }
+  // open on press (not the browser's list), close on a press elsewhere
+  document.addEventListener('mousedown', function (ev) {
+    var s = ev.target.closest && ev.target.closest('select');
+    if (xsUsable(s) && ev.button === 0) { ev.preventDefault(); s.focus({ preventScroll: true }); xsOpen(s); return; }
+    if (XS.el && !(ev.target.closest && ev.target.closest('.xs'))) xsClose(false);
+  }, true);
+  document.addEventListener('touchend', function (ev) {
+    var s = ev.target.closest && ev.target.closest('select');
+    if (xsUsable(s)) { ev.preventDefault(); s.focus({ preventScroll: true }); xsOpen(s); }
+  }, { capture: true, passive: false });
+  document.addEventListener('keydown', function (ev) {
+    var s = ev.target;
+    if (XS.el && XS.sel === s) {
+      if (ev.key === 'ArrowDown') { ev.preventDefault(); xsStep(1); }
+      else if (ev.key === 'ArrowUp') { ev.preventDefault(); xsStep(-1); }
+      else if (ev.key === 'Home') { ev.preventDefault(); XS.idx = -1; xsStep(1); }
+      else if (ev.key === 'End') { ev.preventDefault(); XS.idx = s.options.length; xsStep(-1); }
+      else if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); xsChoose(XS.idx); }
+      else if (ev.key === 'Escape' || ev.key === 'Tab') { if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); } xsClose(ev.key === 'Escape'); }
+      else if (ev.key.length === 1) {
+        // typing jumps to the first item starting with what was typed
+        var now = Date.now(); XS.typed = (now - XS.typedAt < 800 ? XS.typed : '') + ev.key.toLowerCase(); XS.typedAt = now;
+        for (var k = 0; k < s.options.length; k++) if (s.options[k].textContent.trim().toLowerCase().indexOf(XS.typed) === 0 && !s.options[k].disabled) { xsMark(k, true); break; }
+      }
+      return;
+    }
+    if (xsUsable(s) && (ev.key === ' ' || ev.key === 'Enter' || (ev.key === 'ArrowDown' && ev.altKey) || ev.key === 'F4')) { ev.preventDefault(); xsOpen(s); }
+  }, true);
+  window.addEventListener('resize', function () { if (XS.el) xsClose(false); });
+  document.addEventListener('scroll', function (ev) { if (XS.el && !(ev.target.closest && ev.target.closest('.xs'))) xsPlace(); }, true);
+  window.addEventListener('hashchange', function () { xsClose(false); });
+
   // ================================================================ forms
   function formData(form) {
     var o = {};

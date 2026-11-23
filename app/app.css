@@ -2024,3 +2024,43 @@ kbd{font:600 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;padding:4px 6px;
 .onb-photo-t{flex:1;min-width:200px;display:grid;gap:4px;justify-items:start}
 .onb-photo-t h2{font-size:1.05rem;margin:0}
 .onb-photo .btn svg{width:16px;height:16px;margin-right:6px;vertical-align:-3px}
+
+/* ---------- dropdowns: Apple-style list (see "dropdowns" in app.js) */
+select.xs-open{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#139b8c) 18%,transparent)}
+.xs{position:fixed;z-index:1000;display:flex;flex-direction:column;max-width:min(420px,calc(100vw - 24px));padding:6px;border-radius:14px;
+  background:rgba(255,255,255,.95);-webkit-backdrop-filter:saturate(180%) blur(22px);backdrop-filter:saturate(180%) blur(22px);
+  border:1px solid rgba(0,0,0,.08);box-shadow:0 1px 1px rgba(0,0,0,.04),0 10px 24px -6px rgba(0,0,0,.18),0 30px 60px -20px rgba(20,40,60,.35);
+  transform-origin:top left;animation:xs-in .2s cubic-bezier(.22,1,.36,1) both;font-size:.95rem;color:var(--ink,#1d1d1f)}
+.xs.up{transform-origin:bottom left}
+.xs.out{animation:xs-out .15s ease both}
+@keyframes xs-in{from{opacity:0;transform:scale(.96) translateY(-6px)}}
+@keyframes xs-out{to{opacity:0;transform:scale(.97) translateY(-4px)}}
+.xs.up{animation-name:xs-in-up}
+@keyframes xs-in-up{from{opacity:0;transform:scale(.96) translateY(6px)}}
+.xs-list{overflow:auto;overscroll-behavior:contain;outline:none;scrollbar-width:thin}
+.xs-o{position:relative;display:flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:9px;cursor:pointer;line-height:1.3;user-select:none;transition:background-color .12s ease,color .12s ease}
+.xs-o span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xs-o.hot{background:var(--accent,#139b8c);color:#fff}
+.xs-ck{flex:none;width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;opacity:0;transform:scale(.6);transition:opacity .15s,transform .2s cubic-bezier(.34,1.56,.64,1)}
+.xs-o.on .xs-ck{opacity:1;transform:none;color:var(--accent-d,#0e7466)}
+.xs-o.on.hot .xs-ck{color:#fff}
+.xs-o.on span{font-weight:600}
+.xs-o.off{opacity:.4;cursor:default}
+.xs-g{padding:8px 10px 4px 32px;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#6e6e73)}
+.xs-g:not(:first-child){margin-top:4px;border-top:1px solid rgba(0,0,0,.06);padding-top:10px}
+/* phones: a bottom sheet with large rows */
+.xs-bd{position:fixed;inset:0;z-index:999;background:rgba(0,0,0,.28);animation:xs-fade .2s ease both}
+.xs-bd.out{animation:xs-fade-out .15s ease both}
+@keyframes xs-fade{from{opacity:0}}
+@keyframes xs-fade-out{to{opacity:0}}
+.xs.sheet{left:8px!important;right:8px;bottom:calc(8px + env(safe-area-inset-bottom));top:auto!important;max-width:none;max-height:70vh;border-radius:20px;padding:6px 8px 10px;transform-origin:bottom center;animation:xs-sheet .3s cubic-bezier(.22,1,.36,1) both;background:rgba(255,255,255,.96)}
+.xs.sheet.out{animation:xs-sheet-out .18s ease both}
+@keyframes xs-sheet{from{opacity:.4;transform:translateY(40px)}}
+@keyframes xs-sheet-out{to{opacity:0;transform:translateY(30px)}}
+.xs-h{display:flex;flex-direction:column;align-items:center;gap:6px;padding:4px 0 8px}
+.xs-h i{width:36px;height:5px;border-radius:3px;background:rgba(0,0,0,.18)}
+.xs-h b{font-size:.92rem;color:var(--muted,#6e6e73);font-weight:600}
+.xs.sheet .xs-o{padding:14px 14px 14px 10px;font-size:1.02rem;border-radius:12px}
+.xs.sheet .xs-o.hot{background:rgba(0,0,0,.05);color:inherit}
+.xs.sheet .xs-o.on.hot .xs-ck{color:var(--accent-d,#0e7466)}
+@media (prefers-reduced-motion:reduce){.xs,.xs.out,.xs.sheet,.xs-bd,.xs-bd.out{animation:none}}
