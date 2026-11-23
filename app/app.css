@@ -2064,3 +2064,54 @@ select.xs-open{box-shadow:0 0 0 4px color-mix(in srgb,var(--accent,#139b8c) 18%,
 .xs.sheet .xs-o.hot{background:rgba(0,0,0,.05);color:inherit}
 .xs.sheet .xs-o.on.hot .xs-ck{color:var(--accent-d,#0e7466)}
 @media (prefers-reduced-motion:reduce){.xs,.xs.out,.xs.sheet,.xs-bd,.xs-bd.out{animation:none}}
+
+/* ---------- document preview (Quick Look style) */
+html.ql-lock{overflow:hidden}
+.ql{position:fixed;inset:0;z-index:1100;display:grid;place-items:center;padding:clamp(10px,3vw,40px)}
+.ql-bd{position:absolute;inset:0;background:rgba(20,22,28,.42);-webkit-backdrop-filter:blur(14px) saturate(140%);backdrop-filter:blur(14px) saturate(140%);opacity:0;transition:opacity .28s ease}
+.ql.on .ql-bd{opacity:1}
+.ql-win{position:relative;display:flex;flex-direction:column;width:min(1100px,100%);height:min(88vh,100%);border-radius:18px;overflow:hidden;background:#f5f5f7;
+  box-shadow:0 0 0 1px rgba(0,0,0,.08),0 30px 80px -20px rgba(0,0,0,.55);opacity:0;transform:scale(.6);
+  transition:transform .42s cubic-bezier(.22,1,.36,1),opacity .25s ease}
+.ql.on .ql-win{opacity:1;transform:none}
+.ql.out .ql-win{opacity:0;transform:scale(.92);transition:transform .22s ease,opacity .2s ease}
+.ql.out .ql-bd{opacity:0;transition:opacity .22s ease}
+.ql-h{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;background:rgba(255,255,255,.85);-webkit-backdrop-filter:saturate(180%) blur(20px);backdrop-filter:saturate(180%) blur(20px);border-bottom:1px solid rgba(0,0,0,.08)}
+.ql-t{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+.ql-i{flex:none;width:34px;height:34px;border-radius:10px;display:grid;place-items:center;background:var(--accent-soft,#e3f4f1);color:var(--accent-d,#0e7466)}
+.ql-i svg{width:18px;height:18px}
+.ql-tx{display:flex;flex-direction:column;min-width:0}
+.ql-tx b{font-size:.98rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ql-tx small{font-size:.78rem;color:var(--muted,#6e6e73)}
+.ql-a{display:flex;align-items:center;gap:6px;flex:none}
+.ql-n{font-size:.8rem;color:var(--muted,#6e6e73);margin-right:4px;white-space:nowrap}
+.ql-btn{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 12px;border-radius:999px;border:0;background:rgba(0,0,0,.05);color:var(--ink,#1d1d1f);font:inherit;font-size:.86rem;font-weight:600;text-decoration:none;cursor:pointer;transition:background-color .15s,transform .15s}
+.ql-btn:hover{background:rgba(0,0,0,.09)}
+.ql-btn:active{transform:scale(.95)}
+.ql-btn:disabled{opacity:.35;cursor:default}
+.ql-btn:focus-visible{outline:3px solid var(--accent,#139b8c);outline-offset:2px}
+.ql-btn svg{width:16px;height:16px}
+.ql-btn.ic{width:34px;padding:0;justify-content:center}
+.ql-btn.x{background:rgba(0,0,0,.08)}
+.ql-body{position:relative;flex:1;min-height:0;display:grid;place-items:center;background:#e9e9ed}
+.ql-body>*:not(.ql-spin){opacity:0;transition:opacity .3s ease}
+.ql-body.ready>*:not(.ql-spin){opacity:1}
+.ql-spin{position:absolute;width:30px;height:30px;border-radius:50%;border:3px solid rgba(0,0,0,.1);border-top-color:var(--accent,#139b8c);animation:ql-spin .8s linear infinite}
+.ql-body.ready .ql-spin{display:none}
+@keyframes ql-spin{to{transform:rotate(360deg)}}
+.ql-pdf{width:100%;height:100%;border:0;background:#fff}
+.ql-img{width:100%;height:100%;overflow:auto;display:grid;place-items:center;cursor:zoom-in}
+.ql-img img{max-width:100%;max-height:100%;object-fit:contain;transition:transform .3s cubic-bezier(.22,1,.36,1)}
+.ql-img.zoom{cursor:zoom-out;place-items:start center}
+.ql-img.zoom img{max-width:none;max-height:none}
+.ql-none{display:grid;justify-items:center;gap:6px;text-align:center;color:var(--ink-2,#444)}
+.ql-none svg{width:40px;height:40px;color:var(--muted,#6e6e73)}
+@media (max-width:640px){
+  .ql{padding:0;place-items:end stretch}
+  .ql-win{height:94vh;border-radius:20px 20px 0 0;transform:translateY(40%)}
+  .ql.out .ql-win{transform:translateY(30%)}
+  .ql-btn span{display:none}
+  .ql-btn{width:34px;padding:0;justify-content:center}
+  .ql-n{display:none}
+}
+@media (prefers-reduced-motion:reduce){.ql-win,.ql-bd,.ql-body>*{transition:none}.ql-spin{animation:none}}

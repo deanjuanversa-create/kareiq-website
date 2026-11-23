@@ -1984,7 +1984,7 @@
       return '<li><label class="rc"><input type="checkbox" data-act="rpick" value="' + e(x.id) + '"><span class="sr">Select ' + e(x.name) + '</span></label>' +
         '<div class="ri"><b>' + e(x.name) + '</b><span>' + recDateHtml(x) + ' · ' + e(d.categories[x.category] || x.category) + ' · ' + e(sizeText(x.size)) + ' · added by ' + e(x.by) + '</span>' + procChip(x) +
           (d.canReread && x.dateStatus === 'review' ? '<button class="link small" data-act="reread" data-id="' + e(x.id) + '">Read the date again</button>' + (x.dateNote ? ' <span class="muted small">' + e(x.dateNote) + '</span>' : '') : '') + '</div>' +
-        '<div class="ra"><a class="ib" href="/api/app/records/' + e(x.id) + '/file?view=1" target="_blank" rel="noopener" aria-label="Open ' + e(x.name) + '" title="Open">' + icon('eye') + '</a>' +
+        '<div class="ra"><a class="ib" href="/api/app/records/' + e(x.id) + '/file?view=1" data-preview data-id="' + e(x.id) + '" data-name="' + e(x.name) + '" data-mime="' + e(x.type || '') + '" data-meta="' + e((d.categories[x.category] || x.category) + ' · ' + sizeText(x.size)) + '" aria-label="Preview ' + e(x.name) + '" title="Preview">' + icon('eye') + '</a>' +
         '<a class="ib" href="/api/app/records/' + e(x.id) + '/file" download aria-label="Download ' + e(x.name) + '" title="Download">' + icon('download') + '</a>' +
         (x.canRemove ? '<button class="ib" data-act="rremove" data-id="' + e(x.id) + '" data-name="' + e(x.name) + '" aria-label="Remove ' + e(x.name) + '" title="Remove">' + icon('trash') + '</button>' : '') + '</div></li>';
     }).join('') + '</ul>';
@@ -3116,6 +3116,99 @@
     if (!pd || !pd.due) return pd && pd.dueOn ? '<span class="phdue ok">' + icon('check') + 'Next photo due ' + e(date(pd.dueOn)) + '</span>' : '';
     return '<span class="phdue">' + icon('clock') + (pd.reason === 'missing' ? 'No photo yet' : 'Photo older than 6 months') + '</span>';
   }
+
+  // ================================================================ document preview (Quick Look style)
+  // Preview opens the record over the page instead of a new tab: it zooms in from the document's row,
+  // PDFs and photos show inside, and the arrows (or the ← → keys) step through the other documents on
+  // the page. Download, open in a new tab, and close (×, Escape or a click outside) are at the top.
+  var QL = null;
+  function qlItems(a) {
+    var scope = a.closest('.recs, dialog, #mn') || document;
+    return $$('a[data-preview]', scope);
+  }
+  function qlBody(a) {
+    var url = a.getAttribute('href'), mime = a.getAttribute('data-mime') || '';
+    var name = a.getAttribute('data-name') || 'Document';
+    if (/^image\//.test(mime)) return '<div class="ql-img"><img src="' + e(url) + '" alt="' + e(name) + '" draggable="false"></div>';
+    if (mime === 'application/pdf' || /\.pdf$/i.test(name) || !mime) return '<iframe class="ql-pdf" src="' + e(url) + '#toolbar=0&navpanes=0&view=FitH" title="' + e(name) + '"></iframe>';
+    return '<div class="ql-none">' + icon('file') + '<b>No preview for this kind of file</b><span>Download it to open it on your device.</span></div>';
+  }
+  function qlShow(a, from) {
+    var list = qlItems(a), i = Math.max(0, list.indexOf(a));
+    var host = a.closest('dialog[open]') || document.body;
+    var el = QL && QL.el;
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'ql'; el.setAttribute('role', 'dialog'); el.setAttribute('aria-modal', 'true');
+      el.innerHTML = '<div class="ql-bd" data-ql="close"></div><div class="ql-win"><div class="ql-h"><span class="ql-t"><span class="ql-i">' + icon('file') + '</span><span class="ql-tx"><b></b><small></small></span></span>' +
+        '<span class="ql-a"><span class="ql-n"></span><button type="button" class="ql-btn ic" data-ql="prev" aria-label="Previous document">' + icon('left') + '</button><button type="button" class="ql-btn ic" data-ql="next" aria-label="Next document">' + icon('right') + '</button>' +
+        '<a class="ql-btn" data-ql="dl" download>' + icon('download') + '<span>Download</span></a><a class="ql-btn ic" data-ql="tab" target="_blank" rel="noopener" aria-label="Open in a new tab" title="Open in a new tab">' + icon('globe') + '</a>' +
+        '<button type="button" class="ql-btn ic x" data-ql="close" aria-label="Close preview">' + icon('x') + '</button></span></div><div class="ql-body" aria-busy="true"></div></div>';
+      host.appendChild(el);
+      QL = { el: el, back: a };
+      document.documentElement.classList.add('ql-lock');
+      el.addEventListener('click', function (ev) {
+        var t = ev.target.closest('[data-ql]'), k = t && t.getAttribute('data-ql');
+        if (k === 'close') qlClose();
+        else if (k === 'prev' || k === 'next') qlMove(k === 'next' ? 1 : -1);
+        var im = ev.target.closest('.ql-img img'); if (im) im.parentNode.classList.toggle('zoom');
+      });
+      // zoom in from where the document was
+      if (from) { var r = from.getBoundingClientRect(); el.querySelector('.ql-win').style.transformOrigin = Math.round(r.left + r.width / 2 - window.innerWidth * 0.04) + 'px ' + Math.round(r.top + r.height / 2 - 60) + 'px'; }
+      requestAnimationFrame(function () { el.classList.add('on'); });
+    }
+    QL.cur = a; QL.list = list; QL.i = i;
+    var name = a.getAttribute('data-name') || 'Document', url = a.getAttribute('href');
+    el.setAttribute('aria-label', 'Preview of ' + name);
+    $('.ql-tx b', el).textContent = name;
+    $('.ql-tx small', el).textContent = a.getAttribute('data-meta') || '';
+    $('[data-ql=dl]', el).href = url.replace(/\?view=1$/, '');
+    $('[data-ql=tab]', el).href = url;
+    $('.ql-n', el).textContent = list.length > 1 ? (i + 1) + ' of ' + list.length : '';
+    $$('[data-ql=prev],[data-ql=next]', el).forEach(function (b) { b.hidden = list.length < 2; });
+    $('[data-ql=prev]', el).disabled = i === 0; $('[data-ql=next]', el).disabled = i === list.length - 1;
+    var body = $('.ql-body', el);
+    body.setAttribute('aria-busy', 'true'); body.classList.remove('ready');
+    body.innerHTML = '<span class="ql-spin" aria-hidden="true"></span>' + qlBody(a);
+    var media = body.querySelector('img, iframe');
+    var ready = function () { body.removeAttribute('aria-busy'); body.classList.add('ready'); };
+    if (media) { media.addEventListener('load', ready); media.addEventListener('error', ready); setTimeout(ready, 6000); } else ready();
+    $('[data-ql=close]:not(.ql-bd)', el).focus({ preventScroll: true });
+  }
+  function qlMove(dir) {
+    if (!QL) return;
+    var j = QL.i + dir; if (j < 0 || j >= QL.list.length) return;
+    qlShow(QL.list[j]);
+  }
+  function qlClose() {
+    if (!QL) return;
+    var el = QL.el, back = QL.back; QL = null;
+    el.classList.remove('on'); el.classList.add('out');
+    document.documentElement.classList.remove('ql-lock');
+    setTimeout(function () { el.remove(); }, reducedMotion() ? 0 : 260);
+    if (back && back.isConnected) back.focus({ preventScroll: true });
+  }
+  document.addEventListener('click', function (ev) {
+    var a = ev.target.closest && ev.target.closest('a[data-preview]');
+    if (!a || ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.button !== 0) return; // ctrl/⌘-click still opens a new tab
+    ev.preventDefault(); ev.stopPropagation();
+    qlShow(a, a.closest('li') || a);
+  }, true);
+  document.addEventListener('keydown', function (ev) {
+    if (!QL) return;
+    if (ev.key === 'Escape') { ev.preventDefault(); ev.stopPropagation(); qlClose(); }
+    else if (ev.key === 'ArrowRight') { ev.preventDefault(); qlMove(1); }
+    else if (ev.key === 'ArrowLeft') { ev.preventDefault(); qlMove(-1); }
+    else if (ev.key === 'Tab') {
+      // keep the keyboard inside the preview
+      var f = $$('button:not([disabled]):not([hidden]), a[href]', QL.el).filter(function (x) { return x.offsetParent; });
+      if (!f.length) return;
+      var at = f.indexOf(document.activeElement);
+      if (ev.shiftKey && at <= 0) { ev.preventDefault(); f[f.length - 1].focus(); }
+      else if (!ev.shiftKey && at === f.length - 1) { ev.preventDefault(); f[0].focus(); }
+    }
+  }, true);
+  window.addEventListener('hashchange', function () { if (QL) qlClose(); });
 
   // ================================================================ dropdowns (Apple-style)
   // Every <select> keeps its own look as the button, but opens this list instead of the browser's: a
