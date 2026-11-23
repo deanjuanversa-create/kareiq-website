@@ -1193,13 +1193,7 @@
     var lv = LV[cur.level] || 'none', status = t ? t.direction : 'none';
     var span = date(d.range.from) + ' – ' + date(d.range.to);
     var html = '<div class="tblock rblock" id="t-risk-' + e(test) + '"><div class="rsum ' + lv + '"><span class="rg">' + e(x.groupName) + '</span><h3>' + e(x.title) + '</h3></div>' +
-      '<div class="vsum"><div class="avgbar ' + lv + '"><div><span>Latest score</span><b>' + e(cur.display) + '</b></div><span class="ast">● ' + e(cur.band) + '</span><span class="aspan">' + e(date(cur.at)) + (x.by ? ' · ' + e(x.by) : '') + '</span></div>' +
-      '<dl class="vfacts rfacts">' +
-        '<div><dt>Previous</dt><dd>' + (prev ? '<b>' + e(prev.display) + '</b><span class="rbv">' + dotHtml(prev.level) + e(prev.band) + '</span><span class="muted small">' + e(date(prev.at)) + '</span>' : '<span class="muted">No earlier assessment</span>') + '</dd></div>' +
-        '<div><dt>Change</dt><dd>' + (prev ? '<b>' + e(changeText(t) || (t.change === 0 ? 'No change' : 'Not calculable for this check')) + '</b>' : '<span class="muted">Needs two assessments</span>') + '</dd></div>' +
-        '<div><dt>Status</dt><dd><b class="rst ' + status + '">' + TREND_WORD[status] + '</b></dd></div>' +
-        '<div><dt>Assessments</dt><dd><b>' + rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div>' +
-      '</dl></div>';
+      '';
     if (d.range.clamped) html += '<p class="histline">' + icon('clock') + '<span>History begins on <b>' + e(date(d.range.registeredOn)) + '</b>, the first record. There is no earlier data.</span></p>';
     if (!rows.length) {
       html += '<div class="empty"><b>No ' + e(x.title) + ' assessments in this period</b>' +
@@ -1340,11 +1334,6 @@
     var last = m.rows[m.rows.length - 1];
     var lastVal = m.keys.map(function (x) { return last[x]; }).filter(function (v) { return v != null; }).join('/');
     return '<div class="tblock" id="t-' + m.metric + '"><h3>' + e(m.label) + '</h3>' +
-      '<div class="vsum vv"><div class="avgbar ' + (LV[m.level] || 'none') + '"><div><span>Average ' + e(m.label.toLowerCase()) + (m.averageNote ? ' (' + e(m.averageNote) + ')' : '') + '</span><b>' + e(m.average) + ' ' + e(m.unit) + '</b></div>' +
-        (m.status ? '<span class="ast">● ' + e(m.status) + '</span>' : '<span></span>') + '<span class="aspan">' + e(span) + '</span></div>' +
-      '<dl class="vfacts"><div><dt>Latest in this period</dt><dd><b>' + e(lastVal) + (m.unit ? ' ' + e(m.unit) : '') + '</b>' + (last.status ? ' ' + dotHtml(last.level) + e(last.status) : '') + '<span class="muted small">' + e(dt(last.at)) + '</span></dd></div>' +
-        (lat.range ? '<div><dt>Normal range</dt><dd><b>' + e(lat.range) + '</b></dd></div>' : '') +
-        '<div><dt>Readings</dt><dd><b>' + m.rows.length + '</b><span class="muted small">' + e(span) + '</span></dd></div></dl></div>' +
       '<div class="cwrap" data-chart="' + m.metric + '"></div>' +
       '<div class="legend2">' + m.keys.map(function (x, i) { return '<span><i class="s' + (i + 1) + '"></i>' + e(m.names[i]) + (m.unit ? ' (' + e(m.unit) + ')' : '') + '</span>'; }).join('') + '</div>' +
       '<button class="btn ghost block showall" data-act="showall" data-k="' + m.metric + '" aria-expanded="false">Show all data</button><div class="alldata" hidden></div></div>';
@@ -1498,7 +1487,7 @@
   var CHART_PTS = {};
   function chartSvg(m, range, width, anim) {
     var W = Math.max(300, Math.round(width || 640)), small = W < 560;
-    var H = small ? 200 : 230, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
+    var H = small ? 240 : 300, L = small ? 40 : 48, R = small ? 14 : 22, T = 18, B = 40, PAD = small ? 8 : 14;
     // x axis: from the first date the person can see (registration or period start) to now
     var start = Date.parse(range.from + 'T00:00:00+05:30');
     var end = Math.min(Date.parse(range.to + 'T23:59:59+05:30'), Date.now());
