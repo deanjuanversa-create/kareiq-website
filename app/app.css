@@ -1546,9 +1546,11 @@ a.ocust:hover b{text-decoration:underline}
 .needs summary{cursor:pointer;font-weight:600;color:var(--accent-d)}
 
 /* ---- KareIQ Policies */
-.ppage{max-width:980px}
+.ppage{max-width:none}
 .eyebrow{display:block;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-d);font-weight:700;margin-bottom:4px}
-.polnav{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 18px}
+.polnav{display:flex;gap:6px;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:thin;padding:2px 2px 4px;margin:0 0 16px}
+.polnav a{flex:1 1 auto;display:flex;align-items:center;justify-content:center;text-align:center;line-height:1.2;min-height:38px;white-space:normal}
+@media (max-width:760px){.polnav a{flex:none;white-space:nowrap}}
 .polnav a{padding:7px 12px;border-radius:999px;border:1px solid var(--line-2);color:var(--ink-2);text-decoration:none;font-size:.9rem}
 .polnav a[aria-current=page]{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
 .polbody{background:var(--bg);border:1px solid var(--line);border-radius:var(--r-lg);padding:26px 28px;line-height:1.65}
