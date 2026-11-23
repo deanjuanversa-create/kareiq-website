@@ -728,7 +728,7 @@
         '<div class="hlow">' +
           '<section class="hcard" aria-labelledby="h-care"><div class="hcard-h"><h2 id="h-care">' + icon('clip') + '<span>Your Care at a Glance</span></h2><a class="hcard-more" href="#/package' + q + '">View All' + icon('arrow') + '</a></div><div id="hcare" aria-busy="true">' + sk(1, 52) + '</div></section>' +
           '<section class="hcard hteam" aria-labelledby="h-team"><div class="hcard-h"><h2 id="h-team">' + icon('people') + '<span>Your KareIQ Care Team</span></h2></div><p class="muted small">Stay connected with your care team.</p><div id="hteam" aria-busy="true">' + sk(1, 44) + '</div>' +
-            '<div class="hteam-act"><a class="btn hbtn" href="' + e(waLink()) + '" target="_blank" rel="noopener">' + icon('wa') + '<span>Contact Your Care Team</span>' + icon('arrow') + '</a><a class="hcall" href="tel:+918129345178">' + icon('phone') + '<span>' + PHONE + '</span></a></div>' +
+            '<div class="hteam-act"><a class="btn hbtn" href="' + e(waLink()) + '" target="_blank" rel="noopener">' + icon('wa') + '<span>Contact Your Care Team</span>' + icon('arrow') + '</a></div>' +
             '<img class="hteam-img" src="/img/karehome-hero.jpg" alt="" width="1168" height="850" loading="lazy" decoding="async"></section>' +
           '<a class="hcard hexplore" href="#/packages' + q + '"><span class="hx-t"><b>Explore <em>KareNest</em> &amp; <em>Kare@Home</em></b><span>Wellness, community and care, all in one place.</span><span class="hx-btn">Learn More' + icon('arrow') + '</span></span><img src="/app/img/home-explore.webp" alt="" width="368" height="360" loading="lazy" decoding="async"></a>' +
         '</div>' +
