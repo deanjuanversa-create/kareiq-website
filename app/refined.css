@@ -610,3 +610,44 @@ body[data-brand="kareiq"] .pbar{margin-bottom:18px}
 /* the page bar after the picker moved up: only page buttons are left, on the right */
 body[data-brand="kareiq"] #mn .pbar:not(:has(.pbar-l)){justify-content:flex-end}
 body[data-brand="kareiq"] .head-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-left:auto}
+
+/* ---------- Home: tighter, aligned */
+body[data-brand="kareiq"] .home .glance{margin-top:4px;margin-bottom:22px}
+body[data-brand="kareiq"] .hhero{margin-bottom:18px}
+body[data-brand="kareiq"] .hgrid{align-items:stretch}
+body[data-brand="kareiq"] .hnavs{align-items:stretch}
+body[data-brand="kareiq"] .hnav{min-height:0;gap:12px;padding:22px}
+body[data-brand="kareiq"] .hnav-go{margin-top:6px}
+body[data-brand="kareiq"] .hnav::after{width:120px;height:120px;right:-34px;bottom:-34px}
+/* bottom row: three cards of the same height */
+body[data-brand="kareiq"] .hlow{align-items:stretch}
+body[data-brand="kareiq"] .hlow>.hcard{display:flex;flex-direction:column;min-height:0}
+body[data-brand="kareiq"] .hteam .teaml{margin:8px 0 12px}
+body[data-brand="kareiq"] .hteam-act{flex-direction:row;flex-wrap:wrap;align-items:center;gap:10px 14px;margin-top:auto}
+body[data-brand="kareiq"] .hteam-img{width:38%;height:56%}
+body[data-brand="kareiq"] .tav.nest{display:grid;place-items:center}
+body[data-brand="kareiq"] .tav.nest svg{width:18px;height:18px}
+body[data-brand="kareiq"] .hexplore{min-height:0}
+body[data-brand="kareiq"] .hx-t{height:100%}
+body[data-brand="kareiq"] .hnav-go{margin-top:auto}
+body[data-brand="kareiq"] .hrec .hrec-c{flex-basis:100%;display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+body[data-brand="kareiq"] .hrec .hrec-c a{display:inline-flex;align-items:baseline;gap:4px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid color-mix(in srgb,var(--hc) 22%,transparent);color:var(--ink-2);font-size:.82rem;text-decoration:none;transition:border-color .2s,background-color .2s}
+body[data-brand="kareiq"] .hrec .hrec-c a b{color:var(--hc);font-size:.88rem}
+body[data-brand="kareiq"] .hrec .hrec-c a:hover{border-color:var(--hc)}
+body[data-brand="kareiq"] .hteam .teaml{max-width:66%}
+/* health cards: icon beside the title, less height */
+body[data-brand="kareiq"] .hnav-a{flex-direction:row;align-items:flex-start;gap:14px}
+body[data-brand="kareiq"] .hnav-i{width:48px;height:48px;border-radius:15px;flex:none}
+body[data-brand="kareiq"] .hnav-i svg{width:24px;height:24px}
+body[data-brand="kareiq"] .hnav-t b{font-size:1.2rem}
+body[data-brand="kareiq"] .hnav-t span{font-size:.92rem}
+body[data-brand="kareiq"] .hnav{gap:14px}
+body[data-brand="kareiq"] .hrec{padding:12px 14px}
+@media (max-width:760px){ body[data-brand="kareiq"] .hnav-a{flex-direction:column;gap:10px} body[data-brand="kareiq"] .hnav-i{width:42px;height:42px} }
+@media (max-width:760px){
+  body[data-brand="kareiq"] .hnavs{grid-template-columns:1fr;gap:12px}
+  body[data-brand="kareiq"] .hnav{padding:16px 18px}
+  body[data-brand="kareiq"] .hnav-a{flex-direction:row;gap:12px}
+  body[data-brand="kareiq"] .hnav-t span{font-size:.88rem}
+  body[data-brand="kareiq"] .hnav-go{display:none}
+}

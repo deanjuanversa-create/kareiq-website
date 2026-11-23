@@ -717,7 +717,7 @@
         '<section class="hhero" aria-labelledby="h-hi"><div class="hhero-t"><p class="eyebrow">' + e(today) + '</p><h1 id="h-hi">Good ' + greeting() + ', ' + e(first(u.name)) + '!</h1>' +
           '<p class="hhero-s">' + e(first(cur.name)) + '\'s health journey, at a glance.</p><p class="hpill" id="hpill" aria-live="polite"><span class="skel" style="width:220px;height:18px;display:inline-block"></span></p></div>' +
           '<div class="hhero-img" id="hheroImg"><img src="/app/img/home-hero.webp" alt="" width="751" height="262" decoding="async"></div></section>' +
-        '<section aria-labelledby="h-glance"><h2 class="sec" id="h-glance">At a glance</h2><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
+        '<section aria-label="At a glance"><div class="glance" id="glance" aria-busy="true">' + '<div class="gl skel"></div><div class="gl skel"></div><div class="gl skel"></div>' + '</div></section>' +
         '<div class="hgrid">' +
           '<section class="hnavs" aria-label="Health sections">' +
             navCard('#/health/vitals' + q, 'heart', 'Health Details', 'Vitals, body composition, wellbeing, risk trends and notes', 'rose', healthLinks) +
@@ -808,7 +808,15 @@
         var rr = rec.ok ? (rec.rows || []) : null;
         var newest = rr && rr.slice().sort(function (a, b) { return String(b.uploadedAt || '').localeCompare(String(a.uploadedAt || '')); })[0];
         rb.innerHTML = rr == null ? '<span class="muted small">Could not load the records just now.</span>'
-          : rr.length ? '<b>' + rr.length + '</b><span>document' + (rr.length === 1 ? '' : 's') + ' kept safely</span>' + (newest ? '<span class="hrec-n">' + icon('clock') + 'Latest: ' + e(newest.name) + (newest.uploadedAt ? ', ' + e(date(newest.uploadedAt)) : '') + '</span>' : '')
+          : rr.length ? '<b>' + rr.length + '</b><span>document' + (rr.length === 1 ? '' : 's') + ' kept safely</span>' + (newest ? '<span class="hrec-n">' + icon('clock') + 'Latest: ' + e(newest.name) + (newest.uploadedAt ? ', ' + e(date(newest.uploadedAt)) : '') + '</span>' : '') +
+            // how many of each kind (the same categories as Medical records)
+            (function () {
+              var cats = rec.categories || {}, n = {};
+              rr.forEach(function (x) { n[x.category] = (n[x.category] || 0) + 1; });
+              var keys = Object.keys(n).sort(function (a, b) { return n[b] - n[a]; });
+              return keys.length ? '<span class="hrec-c">' + keys.slice(0, 3).map(function (k) { return '<a href="#/records' + q + '&cat=' + encodeURIComponent(k) + '"><b>' + n[k] + '</b> ' + e(cats[k] || k) + '</a>'; }).join('') +
+                (keys.length > 3 ? '<a href="#/records' + q + '">+' + (keys.length - 3) + ' more</a>' : '') + '</span>' : '';
+            })()
           : '<span class="muted small">No documents yet. Upload reports and prescriptions from Medical Records.</span>';
       }
 
@@ -819,7 +827,7 @@
         var list = window.KQInsights ? window.KQInsights.build(dash, { q: q }) : [];
         S.cache.insights = { pid: p.id, list: list };
         ins.innerHTML = list.length
-          ? '<ul class="insl">' + list.slice(0, 3).map(function (it) {
+          ? '<ul class="insl">' + list.slice(0, 2).map(function (it) {
               return '<li><a class="ins ' + it.tone + '" href="#/health/insights' + q + '&i=' + encodeURIComponent(it.id) + '"><span class="ins-i" aria-hidden="true">' + icon(it.tone === 'good' ? 'check' : 'info') + '</span><span class="ins-t"><b>' + e(it.title) + '</b><span>' + e(it.summary) + '</span></span>' + icon('right') + '</a></li>';
             }).join('') + '</ul><a class="hcard-more c" href="#/health/insights' + q + '">View All Insights' + (list.length > 3 ? ' (' + list.length + ')' : '') + icon('arrow') + '</a>'
           : '<div class="hempty">' + icon('heart') + '<span><b>No insights yet</b>Insights appear here once the care team records ' + e(first(p.name)) + '\'s readings.</span></div>';
@@ -831,12 +839,19 @@
       var planRow = act ? row('#/package' + q, 'clip', 'My Care Plan', act.productName + ' · ' + act.name, '<span class="hpillx ' + (act.status === 'paused' ? 'warn' : 'good') + '">' + (act.status === 'paused' ? 'Paused' : 'Active') + '</span>')
         : pend ? row('#/package' + q, 'clip', 'My Care Plan', (pend.productName || 'Package') + ' · being set up', '<span class="hpillx info">Pending</span>')
         : row('#/packages' + q, 'clip', 'My Care Plan', pk.ok ? 'No active care plan yet' : 'Could not load just now', '');
-      hc.innerHTML = planRow;
+      var validRow = '';
+      if (act && act.endDate) {
+        var dl = Math.round((new Date(act.endDate + 'T12:00:00+05:30') - new Date(today + 'T12:00:00+05:30')) / 864e5);
+        validRow = row('#/package' + q, 'cal', 'Valid until ' + date(act.endDate), dl > 0 ? dl + ' day' + (dl === 1 ? '' : 's') + ' left' + (dl <= 30 ? ' · renew soon' : '') : 'Ended', dl <= 30 ? '<span class="hpillx warn">Renew</span>' : '');
+      } else if (pend) validRow = row('#/package' + q, 'cal', 'Starting soon', 'Our team will confirm the start date', '');
+      hc.innerHTML = planRow + validRow;
 
       // ---- Care team: the nurses assigned to this person (names only)
       var ht = $('#hteam'); ht.removeAttribute('aria-busy');
       var team = care.ok ? care.team || [] : null;
+      var nest = act && act.product === 'karenest';
       ht.innerHTML = team == null ? retryHtml('the care team')
+        : nest ? '<ul class="teaml"><li><span class="tav nest" aria-hidden="true">' + icon('people') + '</span><span><b>KareNest care team</b><span class="muted small">The nurses on duty look after ' + e(first(p.name)) + '</span></span></li></ul>'
         : team.length ? '<ul class="teaml">' + team.map(function (m) { return '<li><span class="tav" aria-hidden="true">' + e(initials(m.name)) + '</span><span><b>' + e(m.name) + '</b><span class="muted small">' + e(m.role) + '</span></span></li>'; }).join('') + '</ul>'
         : '<p class="muted small">' + (act ? 'A nurse is assigned to ' + e(first(p.name)) + ' shortly. Our care coordinators are here for anything you need.' : 'Your care team is assigned once a package is active.') + '</p>';
     });
@@ -1948,6 +1963,7 @@
 
   // ================================================================ Medical records
   function recordsView(r) {
+    if (r.q && r.q.cat && /^[a-z_-]{1,30}$/.test(r.q.cat)) S.cache.rcat = r.q.cat; // opened from a Home category chip
     withPerson(r, 'records', function (p, people) {
       fill(personBar(p, people) + loading(320));
       api('GET', 'people/' + encodeURIComponent(p.id) + '/records').then(function (d) {
