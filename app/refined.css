@@ -651,3 +651,39 @@ body[data-brand="kareiq"] .hrec{padding:12px 14px}
   body[data-brand="kareiq"] .hnav-t span{font-size:.88rem}
   body[data-brand="kareiq"] .hnav-go{display:none}
 }
+
+/* Risk trends by purpose: the tests inside a purpose (Liver Risk, Geriatric Fall Risk) as boxes */
+body[data-brand="kareiq"] .vc-dots{display:flex;gap:6px;align-items:center;height:24px;margin-top:4px}
+body[data-brand="kareiq"] .vc-dots i{width:10px;height:10px;border-radius:50%;background:var(--c-good)}
+body[data-brand="kareiq"] .vc-dots i.ok{background:var(--c-ok)}body[data-brand="kareiq"] .vc-dots i.warn{background:var(--c-warn)}body[data-brand="kareiq"] .vc-dots i.bad{background:var(--c-bad)}
+body[data-brand="kareiq"] .vc-dots i.none{background:#c9ced6}body[data-brand="kareiq"] .vc-dots i.off{background:transparent;border:1.5px dashed #b8bec8}
+body[data-brand="kareiq"] .pblock .rsum{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px}
+body[data-brand="kareiq"] .pblock .rsum h3{flex:1 1 auto}
+body[data-brand="kareiq"] .pblock .rsum .rg{flex-basis:100%}
+body[data-brand="kareiq"] .poverall{padding:5px 12px;border-radius:999px;font-weight:700;font-size:.86rem;background:#eef0f3;color:var(--muted)}
+body[data-brand="kareiq"] .poverall.green{background:var(--good-soft);color:var(--good)}
+body[data-brand="kareiq"] .poverall.amber{background:var(--warn-soft);color:var(--warn)}
+body[data-brand="kareiq"] .poverall.red{background:var(--bad-soft);color:var(--bad)}
+body[data-brand="kareiq"] .pnote{margin:10px 0 12px}
+body[data-brand="kareiq"] .tgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+body[data-brand="kareiq"] .tgrid:has(> :nth-child(3):last-child){grid-template-columns:repeat(3,minmax(0,1fr))}
+body[data-brand="kareiq"] .tbox{--tc:#c9ced6;display:flex;flex-direction:column;gap:3px;text-align:left;padding:12px 14px;border:1px solid rgba(0,0,0,.08);border-left:4px solid var(--tc);border-radius:14px;background:#fff;font:inherit;color:inherit;cursor:pointer;transition:box-shadow .2s,transform .2s,border-color .2s}
+body[data-brand="kareiq"] .tbox.good{--tc:var(--c-good)}body[data-brand="kareiq"] .tbox.ok{--tc:var(--c-ok)}body[data-brand="kareiq"] .tbox.warn{--tc:var(--c-warn)}body[data-brand="kareiq"] .tbox.bad{--tc:var(--c-bad)}
+body[data-brand="kareiq"] button.tbox:not(:disabled):hover{box-shadow:0 6px 18px rgba(0,0,0,.08);transform:translateY(-1px)}
+body[data-brand="kareiq"] button.tbox[aria-pressed="true"]{border-color:var(--tc);box-shadow:0 0 0 2px var(--tc) inset,0 6px 18px rgba(0,0,0,.06)}
+body[data-brand="kareiq"] .tbox.off{background:#f7f8fa;cursor:default;border-left-style:dashed}
+body[data-brand="kareiq"] .tbox:focus-visible{outline:3px solid var(--brand,#2563eb);outline-offset:2px}
+body[data-brand="kareiq"] .tb-n{font-size:.78rem;font-weight:600;color:var(--muted)}
+body[data-brand="kareiq"] .tb-v{font-size:1.2rem;font-weight:700;line-height:1.2}
+body[data-brand="kareiq"] .tbox.off .tb-v{font-size:.95rem;color:var(--muted)}
+body[data-brand="kareiq"] .tb-b{display:flex;gap:6px;align-items:baseline;font-size:.8rem}
+body[data-brand="kareiq"] .tb-b .dot{flex:none;transform:translateY(-1px)}
+body[data-brand="kareiq"] .tb-c{align-self:flex-start;margin-top:4px;padding:2px 9px;border-radius:999px;font-size:.74rem;font-weight:700;background:#eef0f3;color:var(--muted)}
+body[data-brand="kareiq"] .tb-c.green{background:var(--good-soft);color:var(--good)}body[data-brand="kareiq"] .tb-c.amber{background:var(--warn-soft);color:var(--warn)}body[data-brand="kareiq"] .tb-c.red{background:var(--bad-soft);color:var(--bad)}
+body[data-brand="kareiq"] .tgrid.sm{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin:6px 0}
+body[data-brand="kareiq"] .tgrid.sm .tbox{padding:7px 9px;border-radius:10px;cursor:default}
+body[data-brand="kareiq"] .tgrid.sm .tb-v{font-size:.92rem}
+body[data-brand="kareiq"] .tgrid.sm .tb-c{display:none}
+body[data-brand="kareiq"] .tblock.rblock.inner{margin-top:14px;padding-top:4px;border-top:1px solid rgba(0,0,0,.06)}
+body[data-brand="kareiq"] .tblock.rblock.inner > .rsum{display:none}
+@media (max-width:820px){body[data-brand="kareiq"] .tgrid,body[data-brand="kareiq"] .tgrid:has(> :nth-child(3):last-child){grid-template-columns:repeat(2,minmax(0,1fr))}}

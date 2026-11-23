@@ -949,11 +949,11 @@
         var hint = '<p class="muted small phint">' + icon('info') + '<span>Point to an item, or tap its ' + '<b>i</b>' + ', to see its summary. Choose the item to show its chart.</span></p>';
         if (kind === 'risks') {
           var rgroup = S.cache.riskGroup || 'all';
-          var groups = []; (d.risks || []).forEach(function (x) { if (groups.indexOf(x.groupName) === -1) groups.push(x.groupName); });
+          var groups = riskFilters(d);
           if (rgroup !== 'all' && groups.indexOf(rgroup) === -1) rgroup = S.cache.riskGroup = 'all';
-          var gsel = groups.length > 1 ? '<label class="sumsel"><span class="sr">Show</span><select data-act="rgroup">' + [['all', 'All indicators']].concat(groups.map(function (g) { return [g, g]; })).map(function (o) { return '<option value="' + e(o[0]) + '"' + (o[0] === rgroup ? ' selected' : '') + '>' + e(o[1]).toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '';
+          var gsel = groups.length > 1 ? '<label class="sumsel"><span class="sr">Show</span><select data-act="rgroup">' + [['all', 'All risks']].concat(groups.map(function (g) { return [g, g]; })).map(function (o) { return '<option value="' + e(o[0]) + '"' + (o[0] === rgroup ? ' selected' : '') + '>' + e(o[1]).toUpperCase() + '</option>'; }).join('') + '</select>' + icon('down') + '</label>' : '';
           fill(personBar(p, people) + head('Risk trends', 'The overall risk, then each indicator and the history of the one you choose.') +
-            '<section class="hsec" aria-labelledby="h-rall"><div class="hsec-h"><h2 id="h-rall">Overall risk</h2><span class="muted small">Calculated automatically from the recorded vitals and assessments</span></div>' + riskHeroHtml(d.riskStatus, { history: role !== 'caregiver', pid: p.id }) + '</section>' +
+            '<section class="hsec" aria-labelledby="h-rall"><div class="hsec-h"><h2 id="h-rall">Overall risk</h2><span class="muted small">Calculated from the 12 purposes of the risk sheet</span></div>' + riskHeroHtml(d.riskStatus, { history: role !== 'caregiver', pid: p.id }) + '</section>' +
             '<section class="hsec trends" aria-labelledby="h-rtr"><div class="hsec-h"><h2 id="h-rtr">Indicators</h2><div class="hsec-tools">' + gsel + periodChips(d) + '</div></div>' + (d.risks && d.risks.length ? hint : '') + rangeNote(d) + '<div id="rcharts">' + riskChartsHtml(d, rgroup) + '</div></section>' + guide);
           drawCharts(true);
           return;
@@ -1172,42 +1172,133 @@
     if (x.category) return '<span class="rcat sm ' + x.category + '"><i aria-hidden="true">' + CAT_ICON[x.category] + '</i>' + e(x.categoryName) + '</span>';
     return '<span class="rtag">' + (x.band && x.band !== 'Between workbook bands' ? 'No category in the workbook' : 'No workbook band') + '</span>';
   }
-  // right side: one button per check (category-colour border), then the chosen check's history
+  // Risk trends by purpose, as in the "Risk and Other Indicators" sheet: one card per purpose.
+  // A purpose with several tests (Liver Risk, Geriatric Fall Risk) shows its overall risk, the
+  // highest among its tests' latest results, and a box per test with its score. Single vitals follow.
+  var PURPOSES = [
+    { k: 'sleep', name: 'Sleep Quality', tests: ['psqi'], icon: ['moon', 'violet'] },
+    { k: 'heart', name: 'Cardiovascular Issues', tests: ['cvd'], icon: ['heart', 'rose'] },
+    { k: 'breast', name: 'Breast Cancer (Women)', tests: ['snehita'], icon: ['ribbon', 'rose'] },
+    { k: 'weight', name: 'Obesity', tests: ['bmi'], icon: ['scale', 'teal'] },
+    { k: 'kidney', name: 'Kidney Issues', tests: ['kidney'], icon: ['kidney', 'violet'] },
+    { k: 'diabetes', name: 'Diabetes Risk', tests: ['idrs'], icon: ['drop', 'blue'] },
+    { k: 'lungs', name: 'COPD Risk', tests: ['copd'], icon: ['lungs', 'green'] },
+    { k: 'liver', name: 'Liver Risk', tests: ['fib4', 'nfs', 'elf'], icon: ['liver', 'amber'] },
+    { k: 'depression', name: 'Depression', tests: ['phq9'], icon: ['smile', 'green'] },
+    { k: 'anxiety', name: 'Anxiety', tests: ['gad7'], icon: ['smile', 'blue'] },
+    { k: 'memory', name: 'Dementia / Cognitive Impairment', tests: ['mmse'], icon: ['brain', 'violet'] },
+    { k: 'falls', name: 'Geriatric Fall Risk', tests: ['tug', 'balance4', 'reach', 'chair30'], icon: ['walk', 'amber'] }
+  ];
+  var SHEET_NAME = { psqi: 'PSQI', cvd: '10-Year CVD Risk', snehita: 'Snehita Breast Cancer Risk', bmi: 'BMI', kidney: 'Kidney Failure Risk', idrs: 'IDRS', copd: 'Asthma/COPD Score',
+    fib4: 'Fibrosis-4 (FIB-4) index', nfs: 'NAFLD Fibrosis Score', elf: 'Enhanced Liver Fibrosis (ELF) score', phq9: 'PHQ-9', gad7: 'GAD-7', mmse: 'MMSE',
+    tug: 'TUG Test', balance4: '4-Stage Balance', reach: 'Functional Reach', chair30: '30-Second Chair Stand' };
+  var CAT_LV = { red: 'bad', amber: 'warn', green: 'good' }, CAT_SAY = { red: 'Critical', amber: 'Moderate', green: 'Good' };
+  var CAT_RANK = { red: 3, amber: 2, green: 1 };
+  // the cards in sheet order: purposes with at least one result, then the single vitals
+  function riskCards(d) {
+    var items = riskItems(d), by = {}, used = {};
+    items.forEach(function (it) { by[it.r.test] = it; });
+    var st = {}; ((d.riskStatus && d.riskStatus.indicators) || []).forEach(function (i) { st[i.id] = i; });
+    var cards = [];
+    PURPOSES.forEach(function (pp) {
+      pp.tests.forEach(function (t) { used[t] = true; });
+      var tests = pp.tests.filter(function (t) { return by[t] || !st[t] || st[t].status !== 'not_applicable'; });
+      if (!tests.length) return; // Breast Cancer (Women) for a man
+      var worst = null;
+      tests.forEach(function (t) { var x = by[t] && by[t].r; if (x && x.counts && x.category && (!worst || CAT_RANK[x.category] > CAT_RANK[worst])) worst = x.category; });
+      cards.push({ k: 'pp-' + pp.k, purpose: pp, multi: pp.tests.length > 1, tests: tests, by: by, st: st, cat: worst, level: worst ? CAT_LV[worst] : null,
+        done: tests.filter(function (t) { return by[t]; }).length, filter: pp.name });
+    });
+    return cards; // only the sheet's purposes; single vitals are in Health details
+  }
+  function riskFilters(d) { var f = []; riskCards(d).forEach(function (c) { if (f.indexOf(c.filter) === -1) f.push(c.filter); }); return f; }
+  // one test inside a purpose: its latest score, band and category, or why there is none
+  function testBox(c, t, on, act) {
+    var it = c.by[t], x = it && it.r, s = c.st[t] || {};
+    var lv = x ? LV[x.level] || 'none' : 'none';
+    var val = x ? x.display || '—' : s.status === 'missing' ? 'Not done yet' : s.status === 'unresolved' ? 'Not calculated yet' : s.status === 'blocked' ? 'Not available' : 'Not done yet';
+    var cat = x ? (x.legacy ? 'Earlier manual check' : x.counts && x.category ? CAT_SAY[x.category] : x.expired ? 'Out of date' : 'No category yet') : '';
+    var inner = '<span class="tb-n">' + e(SHEET_NAME[t] || t) + '</span><span class="tb-v">' + e(val) + '</span>' +
+      (x ? '<span class="tb-b">' + dotHtml(x.level) + '<span>' + e(x.band || '') + '</span></span><span class="tb-c ' + (x.counts && x.category ? x.category : 'none') + '">' + e(cat) + '</span>' : '<span class="tb-b muted">' + e(s.status === 'missing' ? 'The nurse records it on a visit' : s.status === 'unresolved' ? 'Waiting for a rule decision in Settings' : 'Nothing recorded') + '</span>');
+    if (!act) return '<span class="tbox ' + lv + (x ? '' : ' off') + '">' + inner + '</span>';
+    return '<button type="button" class="tbox ' + lv + (x ? '' : ' off') + '" data-act="' + act + '" data-k="' + e(t) + '" data-p="' + e(c.k) + '" aria-pressed="' + Boolean(on) + '"' + (x ? '' : ' disabled') + (s.message && !x ? ' title="' + e(s.message) + '"' : '') + '>' + inner + '</button>';
+  }
+  function riskCardHtml(d, c, sel, p) {
+    if (c.single) {
+      var it = c.single, x = it.r, hist = it.t ? it.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }) : [], n = hist.length, prev = it.t && it.t.previous, lv = LV[x.level] || 'none';
+      var pop = '<span class="pop-g">' + e(x.groupName) + '</span><span class="pop-t ' + lv + '">' + e(x.title) + '</span><span class="pop-v">' + e(x.display) + '</span><span class="pop-s"><b class="' + lv + '">' + e(x.band) + '</b></span>' +
+        '<span class="pop-c">' + catWord(x) + '</span><span class="pop-l">' + (x.legacy ? 'Entered on ' : 'From results of ') + e(date(x.at)) + '</span>' +
+        '<span class="pop-l">' + trendChip(x.trend) + (prev ? ' <span class="muted">vs ' + e(prev.display) + ' on ' + e(date(prev.at)) + '</span>' : '') + '</span>' + (x.message ? '<span class="pop-m">' + e(x.message) + '</span>' : '');
+      return vcardHtml({ act: 'rsel', k: c.k, on: c.k === sel, controls: 'rdetail', level: x.level, icon: RICON[x.group] || ['gauge', 'teal'], label: shortTitle(x.title), value: x.display || '—', unit: '',
+        sub: (x.band || '') + (x.band ? ' · ' : '') + (n ? n + ' result' + (n === 1 ? '' : 's') : 'none in this period'), spark: hist.slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (h) { return h.value; }).filter(function (v) { return typeof v === 'number'; }), popId: 'rp-' + c.k, pop: pop });
+    }
+    var pp = c.purpose, lvp = LV[c.level] || 'none';
+    if (!c.multi && !c.done) {
+      var s0 = c.st[pp.tests[0]] || {};
+      return vcardHtml({ act: 'rsel', k: c.k, on: c.k === sel, controls: 'rdetail', level: null, icon: pp.icon, label: pp.name, value: '—', unit: '',
+        sub: SHEET_NAME[pp.tests[0]] + ' · ' + (s0.status === 'unresolved' ? 'not calculated yet' : s0.status === 'blocked' ? 'not available yet' : 'not done yet'), spark: [], popId: 'rp-' + c.k,
+        pop: '<span class="pop-g">' + e(SHEET_NAME[pp.tests[0]]) + '</span><span class="pop-t none">' + e(pp.name) + '</span><span class="pop-v">No result yet</span>' + (s0.message ? '<span class="pop-m">' + e(s0.message) + '</span>' : '') });
+    }
+    if (!c.multi) {
+      var t0 = pp.tests[0], it0 = c.by[t0], x0 = it0.r, h0 = it0.t ? it0.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }) : [], n0 = h0.length, prev0 = it0.t && it0.t.previous, lv0 = LV[x0.level] || 'none';
+      var pop0 = '<span class="pop-g">' + e(SHEET_NAME[t0]) + '</span><span class="pop-t ' + lv0 + '">' + e(pp.name) + '</span><span class="pop-v">' + e(x0.display) + '</span><span class="pop-s"><b class="' + lv0 + '">' + e(x0.band) + '</b></span>' +
+        '<span class="pop-c">' + catWord(x0) + '</span><span class="pop-l">' + (x0.legacy ? 'Entered on ' : 'From results of ') + e(date(x0.at)) + '</span>' +
+        '<span class="pop-l">' + trendChip(x0.trend) + (prev0 ? ' <span class="muted">vs ' + e(prev0.display) + ' on ' + e(date(prev0.at)) + '</span>' : '') + '</span>' + (x0.message ? '<span class="pop-m">' + e(x0.message) + '</span>' : '');
+      return vcardHtml({ act: 'rsel', k: c.k, on: c.k === sel, controls: 'rdetail', level: x0.level, icon: pp.icon, label: pp.name, value: x0.display || '—', unit: '',
+        sub: SHEET_NAME[t0] + (x0.band ? ' · ' + x0.band : ''), spark: h0.slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (h) { return h.value; }).filter(function (v) { return typeof v === 'number'; }), popId: 'rp-' + c.k, pop: pop0 });
+    }
+    var popm = '<span class="pop-g">Overall from ' + c.tests.length + ' tests</span><span class="pop-t ' + lvp + '">' + e(pp.name) + '</span>' +
+      '<span class="pop-v">' + e(c.cat ? CAT_SAY[c.cat] : 'Not calculated yet') + '</span>' +
+      '<span class="tgrid sm">' + c.tests.map(function (t) { return testBox(c, t); }).join('') + '</span>' +
+      '<span class="pop-l">The overall risk is the highest risk among these tests\' latest results.</span>';
+    return vcardHtml({ act: 'rsel', k: c.k, on: c.k === sel, controls: 'rdetail', level: c.level, icon: pp.icon, label: pp.name, value: c.cat ? CAT_SAY[c.cat] : '—', unit: '',
+      sub: c.done + ' of ' + c.tests.length + ' tests done', dots: c.tests.map(function (t) { var x = c.by[t] && c.by[t].r; return [SHEET_NAME[t], x ? x.level : null, Boolean(x)]; }), popId: 'rp-' + c.k, pop: popm });
+  }
+  function riskSel(d, cards) {
+    var sel = S.cache.riskSel;
+    if (!cards.some(function (c) { return c.k === sel; })) sel = S.cache.riskSel = cards.length ? cards[0].k : null;
+    return sel;
+  }
   function riskChartsHtml(d, group) {
-    var items = riskItems(d).filter(function (it) { return !group || group === 'all' || it.r.groupName === group; });
-    if (!items.length) return '<div class="empty"><b>No indicator results yet</b>Indicator results appear here once the nurse has recorded the vitals and assessments they need.</div>';
-    var sel = riskSelected(d);
-    if (!items.some(function (it) { return it.r.test === sel; })) sel = S.cache.riskSel = items[0].r.test;
-    var p = periodMs(d);
-    // compact items, the same as the Vitals filter: dot, short name, latest value; the rest is in the popover
-    var cards = items.map(function (it) {
-      var x = it.r, lv = LV[x.level] || 'none', prev = it.t && it.t.previous;
-      var hist = it.t ? it.t.history.filter(function (h) { return h.ms >= p[0] && h.ms <= p[1]; }) : [];
-      var n = hist.length;
-      var pop = '<span class="pop-g">' + e(x.groupName) + '</span><span class="pop-t ' + lv + '">' + e(x.title) + '</span>' +
-        '<span class="pop-v">' + e(x.display) + '</span><span class="pop-s"><b class="' + lv + '">' + e(x.band) + '</b></span>' +
-        '<span class="pop-c">' + catWord(x) + '</span>' +
-        '<span class="pop-l">' + (x.legacy ? 'Entered on ' : 'From results of ') + e(date(x.at)) + '</span>' +
-        '<span class="pop-l">' + trendChip(x.trend) + (prev ? ' <span class="muted">vs ' + e(prev.display) + ' on ' + e(date(prev.at)) + '</span>' : '') + '</span>' +
-        '<span class="pop-l">' + (n ? n + ' result' + (n === 1 ? '' : 's') + ' in this period' : 'No results in this period') + '</span>' +
-        (x.message ? '<span class="pop-m">' + e(x.message) + '</span>' : '');
-      var vals = hist.slice().sort(function (a, b) { return a.ms - b.ms; }).map(function (h) { return h.value; }).filter(function (v) { return typeof v === 'number'; });
-      return vcardHtml({ act: 'rsel', k: x.test, on: x.test === sel, controls: 'rdetail', level: x.level, icon: RICON[x.group] || ['gauge', 'teal'],
-        label: shortTitle(x.title), value: x.display || '—', unit: '', sub: (x.band || '') + (x.band ? ' · ' : '') + (n ? n + ' result' + (n === 1 ? '' : 's') : 'none in this period'), spark: vals, popId: 'rp-' + x.test, pop: pop });
-    }).join('');
-    var picker = sliderHtml(cards, 'Choose an indicator to show', 'r');
-    return picker + '<div id="rdetail" aria-live="polite">' + riskBlockHtml(d, sel) + '</div>';
+    var cards = riskCards(d).filter(function (c) { return !group || group === 'all' || c.filter === group; });
+    if (!cards.length) return '<div class="empty"><b>No indicator results yet</b>Indicator results appear here once the nurse has recorded the vitals and assessments they need.</div>';
+    var sel = riskSel(d, cards), p = periodMs(d);
+    var picker = sliderHtml(cards.map(function (c) { return riskCardHtml(d, c, sel, p); }).join(''), 'Choose a risk to show', 'r');
+    return picker + '<div id="rdetail" aria-live="polite">' + purposeBlockHtml(d, sel) + '</div>';
+  }
+  // the chosen card: a single test's history, or a purpose's overall, its test boxes and the chosen test's history
+  function purposeBlockHtml(d, key) {
+    var c = riskCards(d).filter(function (x) { return x.k === key; })[0];
+    if (!c) return '';
+    if (c.single) return riskBlockHtml(d, c.single.r.test);
+    var pp = c.purpose;
+    if (!c.multi && c.done) return riskBlockHtml(d, pp.tests[0], { title: pp.name, sub: SHEET_NAME[pp.tests[0]] });
+    if (!c.multi) {
+      var s1 = c.st[pp.tests[0]] || {};
+      return '<div class="tblock pblock"><div class="rsum none"><span class="rg">' + e(SHEET_NAME[pp.tests[0]]) + '</span><h3>' + e(pp.name) + '</h3></div>' +
+        '<div class="empty"><b>No ' + e(SHEET_NAME[pp.tests[0]]) + ' result yet</b>' + e(s1.status === 'unresolved' ? 'The test is recorded, but the sheet gives two different rules for it, so it is waiting for a decision in Settings > Risk rules.' : s1.status === 'blocked' ? 'The sheet has no formula for this score yet, so it cannot be calculated.' : 'It appears here once the nurse records it on a visit.') + '</div></div>';
+    }
+    S.cache.riskSub = S.cache.riskSub || {};
+    var sub = S.cache.riskSub[c.k];
+    if (!c.by[sub]) sub = S.cache.riskSub[c.k] = c.tests.filter(function (t) { return c.by[t]; })[0];
+    var lv = LV[c.level] || 'none';
+    return '<div class="tblock pblock" id="t-risk-' + e(c.k) + '"><div class="rsum ' + lv + '"><span class="rg">' + c.done + ' of ' + c.tests.length + ' tests done</span><h3>' + e(pp.name) + '</h3>' +
+      '<span class="poverall ' + (c.cat || 'none') + '">' + (c.cat ? 'Overall: ' + CAT_SAY[c.cat] : 'Overall: not calculated yet') + '</span></div>' +
+      '<p class="muted small pnote">The overall ' + e(pp.name.toLowerCase()) + ' is the highest risk among the latest results of these ' + c.tests.length + ' tests. Choose a test to see its history.</p>' +
+      '<div class="tgrid" role="group" aria-label="' + e(pp.name) + ' tests">' + c.tests.map(function (t) { return testBox(c, t, t === sub, 'psub'); }).join('') + '</div>' +
+      '<div id="pdetail" aria-live="polite">' + (sub ? riskBlockHtml(d, sub, { title: SHEET_NAME[sub], sub: pp.name, inner: true }) : '') + '</div></div>';
   }
   // a short name for the buttons ("Heart disease risk (Reynolds Risk Score)" -> "Heart disease risk")
   function shortTitle(t) { var s = String(t || '').replace(/\s*\([^)]*\)\s*$/, ''); return s || t; }
   // the chosen check, shaped like a vital: coloured latest-score bar, facts, chart, all assessments
-  function riskBlockHtml(d, test) {
+  function riskBlockHtml(d, test, o) {
+    o = o || {};
     var it = riskItems(d).filter(function (x) { return x.r.test === test; })[0];
     if (!it) return '';
     var x = it.r, t = it.t, rows = riskInPeriod(d, t), cur = t ? t.current : x, prev = t ? t.previous : null;
     var lv = LV[cur.level] || 'none', status = t ? t.direction : 'none';
     var span = date(d.range.from) + ' – ' + date(d.range.to);
-    var html = '<div class="tblock rblock" id="t-risk-' + e(test) + '"><div class="rsum ' + lv + '"><span class="rg">' + e(x.groupName) + '</span><h3>' + e(x.title) + '</h3></div>' +
+    var html = '<div class="tblock rblock' + (o.inner ? ' inner' : '') + '" id="t-risk-' + e(test) + '"><div class="rsum ' + lv + '"><span class="rg">' + e(o.sub || x.groupName) + '</span><h3>' + e(o.title || x.title) + '</h3></div>' +
       '';
     if (d.range.clamped) html += '<p class="histline">' + icon('clock') + '<span>History begins on <b>' + e(date(d.range.registeredOn)) + '</b>, the first record. There is no earlier data.</span></p>';
     if (!rows.length) {
@@ -1274,7 +1365,7 @@
       '<span class="vc-row"><span class="vc-v">' + e(o.value) + (o.unit ? ' <small>' + e(o.unit) + '</small>' : '') + '</span>' +
       (PILL[o.level] ? '<span class="vc-pill ' + lv + '">' + PILL[o.level] + '</span>' : '') + '</span>' +
       '<span class="vc-sub">' + dotHtml(o.level) + e(o.sub) + '</span>' +
-      '<span class="vc-foot">' + miniSpark(o.spark, null, lv) + '<span class="vc-go">View trend' + icon('arrow') + '</span></span></button>';
+      '<span class="vc-foot">' + (o.dots ? '<span class="vc-dots" aria-hidden="true">' + o.dots.map(function (x) { return '<i class="' + (x[2] ? LV[x[1]] || 'none' : 'off') + '" title="' + e(x[0]) + '"></i>'; }).join('') + '</span>' : miniSpark(o.spark, null, lv)) + '<span class="vc-go">View trend' + icon('arrow') + '</span></span></button>';
     return popItem(o.popId, btn, o.label, o.pop).replace('<div class="pitem">', '<div class="pitem vci">');
   }
   function sliderHtml(cards, label, id) {
@@ -3759,8 +3850,17 @@
         if (t.getAttribute('aria-pressed') === 'true') { if (t.getAttribute('data-jump') && window.innerWidth < 1100) { var rc0 = $('#rcharts'); if (rc0) rc0.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); } break; } // already showing
         S.cache.riskSel = rk; closePops();
         $$('[data-act=rsel]').forEach(function (b) { var on = b.getAttribute('data-k') === rk; b.setAttribute('aria-pressed', String(on)); b.classList.toggle('on', on); });
-        swapPanel($('#rdetail'), riskBlockHtml(dd3, rk), function () { drawCharts(true); });
+        swapPanel($('#rdetail'), purposeBlockHtml(dd3, rk), function () { drawCharts(true); });
         if (t.getAttribute('data-jump')) { var rc = $('#rcharts'); if (rc && window.innerWidth < 1100) rc.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' }); }
+        break;
+      }
+      case 'psub': {
+        // a test inside a purpose (Liver Risk, Geriatric Fall Risk): show its history below the boxes
+        var pk = t.getAttribute('data-p'), tk = t.getAttribute('data-k'), dd4 = S.cache.dash; if (!dd4 || t.getAttribute('aria-pressed') === 'true') break;
+        S.cache.riskSub = S.cache.riskSub || {}; S.cache.riskSub[pk] = tk;
+        $$('[data-act=psub][data-p="' + pk + '"]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.getAttribute('data-k') === tk)); });
+        var pp4 = PURPOSES.filter(function (x) { return 'pp-' + x.k === pk; })[0];
+        swapPanel($('#pdetail'), riskBlockHtml(dd4, tk, { title: SHEET_NAME[tk], sub: pp4 ? pp4.name : '', inner: true }), function () { drawCharts(true); });
         break;
       }
       case 'photo-pick': { var pin = $('#photoIn'); if (pin) pin.click(); break; }

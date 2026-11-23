@@ -143,6 +143,19 @@ async function seed() {
   await addRisk('P-DEMO05', 'fib4', { age: 82, ast: 32, alt: 28, plt: 210 }, 35, ids.admin);
   await addRisk('P-DEMO05', 'reach', { cm: 27 }, 15, ids.nest);
 
+  // assessments the nurse recorded for Lakshmi (the engine calculates her risk purposes from these):
+  // the four fall tests, the questionnaires and a liver panel
+  const addInputs = async (personId, values, ago, by) => {
+    const at = day0(ago);
+    for (const [metric, value] of Object.entries(values)) {
+      await docs.insert('app_readings', { id: `demo-a-${personId}-${metric}-${ago}`, personId, metric, value, kind: 'assessment', measuredAt: at, measuredMs: Date.parse(at),
+        source: 'caregiver_assessment', enteredBy: by, enteredAt: at, assessmentId: `demo-a-${personId}-${ago}`, voided: false });
+    }
+  };
+  await addInputs('P-DEMO01', { tug: 14.5, balanceSeconds: 24, reach: 25, chair30: 11 }, 12, ids.nurse);
+  await addInputs('P-DEMO01', { psqi: 7, phq9: 6, gad7: 4, idrs: 60, mmse: 27 }, 30, ids.nurse);
+  await addInputs('P-DEMO01', { ast: 32, alt: 28, plt: 210, alb: 4 }, 20, ids.admin);
+
   // a few sample medical records (small PDFs)
   const pdf = (title) => Buffer.from(`%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj\n2 0 obj<</Type/Pages/Kids[3 0 R]/Count 1>>endobj\n3 0 obj<</Type/Page/Parent 2 0 R/MediaBox[0 0 595 842]/Contents 4 0 R/Resources<</Font<</F1 5 0 R>>>>>>endobj\n4 0 obj<</Length ${44 + title.length}>>stream\nBT /F1 18 Tf 60 760 Td (${title} - sample) Tj ET\nendstream endobj\n5 0 obj<</Type/Font/Subtype/Type1/BaseFont/Helvetica>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n`, 'latin1');
   const addRecord = async (personId, key, name, category, ago, by) => {

@@ -508,7 +508,20 @@ function consensus(ind, x, choices) {
   }).map((d) => d.id) };
 }
 
+// The owner confirmed (23 Nov 2026) that risk follows the "Risk and Other Indicators" sheet. Where
+// the workbook's sheets disagree and that sheet decides it, its answer is the default; the office
+// can still record another answer in Settings > Risk rules (a recorded answer always wins).
+//   tug-bands      Indicators sheet: under 10 normal, 10-19 good, 20-30 possible, more than 30 high
+//   balance-method seconds held: under 10 s high fall risk, over 21 s low fall risk
+//   reach-method   inches: over 10 low, 6-10 moderate, under 6 high
+//   fib4-formula   (Age x AST) / (Platelets x square root of ALT), as written in D9
+const SHEET_CHOICES = { 'tug-bands': 'a', 'balance-method': 'seconds', 'reach-method': 'inches', 'fib4-formula': 'divide' };
+// The overall risk is calculated from the sheet's purposes only (sleep, heart, breast, weight,
+// kidney, diabetes, COPD, liver, depression, anxiety, memory, falls). Single vitals keep their
+// colours on the charts but do not decide the overall category.
+const IN_OVERALL = (ind) => !ind.vital;
+
 const CATEGORIES = { red: 'Red – Very High Risk', amber: 'Amber – Lower Risk / Needs Attention', green: 'Green – No Risk', grey: 'Grey – Not Assessed' };
 const RANK = { red: 3, amber: 2, green: 1, grey: 0 };
 
-module.exports = { INPUTS, INPUT_GROUPS, FACTS, DECISIONS, DECISION, INDICATORS, BY_ID, GROUPS, CATEGORIES, RANK, bandsOf, inputsOf, decisionsOf, pickBand, consensus, yes };
+module.exports = { SHEET_CHOICES, IN_OVERALL, INPUTS, INPUT_GROUPS, FACTS, DECISIONS, DECISION, INDICATORS, BY_ID, GROUPS, CATEGORIES, RANK, bandsOf, inputsOf, decisionsOf, pickBand, consensus, yes };

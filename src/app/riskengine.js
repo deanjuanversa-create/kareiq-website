@@ -9,7 +9,7 @@
 // 3. Office > Settings > Risk rules can record an answer to a workbook inconsistency, a category
 //    for a band the workbook leaves uncategorised, how long a result stays valid, and whether an
 //    indicator is required before a customer can be Green. Every change is kept (app_risk_rules).
-// 4. Overall category, worst case first:
+// 4. Overall category from the sheet's purposes only (single vitals are shown, not counted), worst case first:
 //      Red   - any counting indicator is Red
 //      Amber - otherwise any counting indicator is Amber
 //      Green - otherwise every REQUIRED applicable indicator for this person counts and is Green
@@ -27,7 +27,7 @@ const BASE_METRIC = { sbp: 'bp', chol: 'chol', bmi: 'bmi', bp: 'bp', hr: 'hr', s
 const BASE_LABEL = { sex: 'Sex', age: 'Age', sbp: 'Systolic blood pressure', chol: 'Total cholesterol', bmi: 'BMI (weight and height)', bp: 'Blood pressure', hr: 'Pulse', spo2: 'Oxygen level', pi: 'Perfusion index', glucose: 'Blood sugar' };
 const LEVEL = { red: 'bad', amber: 'warn', green: 'good' };
 // Changing this makes every customer recalculate once (the rules version includes it).
-const ENGINE = 'workbook-approved-2';
+const ENGINE = 'workbook-approved-3'; // 3: Risk and Other Indicators sheet defaults, overall from its purposes only
 // Defaults while the owner has recorded nothing for an indicator: results do not expire (the
 // workbook gives no validity period) and every applicable indicator is required for Green (so a
 // customer is only Green when everything the workbook can assess for them is done and clear).
@@ -47,7 +47,7 @@ function create(ctx) {
     const latest = {};
     for (const r of rows) if (!latest[r.indicator]) latest[r.indicator] = r;
     const recorded = Object.fromEntries(Object.entries(latest).filter(([, r]) => r.approved));
-    const choices = {};
+    const choices = { ...R.SHEET_CHOICES };
     for (const r of Object.values(recorded)) Object.assign(choices, r.choices || {});
     const config = {};
     for (const ind of R.INDICATORS) config[ind.id] = effective(ind, recorded[ind.id], choices);
@@ -167,12 +167,13 @@ function create(ctx) {
     const g = await gather(person);
     const indicators = R.INDICATORS.map((ind) => {
       const r = evalIndicator(ind, person, g, rs);
-      r.required = !ind.blocked && requiredFor(rs.config[ind.id], g) && r.status !== 'not_applicable';
+      r.inOverall = R.IN_OVERALL(ind);
+      r.required = r.inOverall && !ind.blocked && requiredFor(rs.config[ind.id], g) && r.status !== 'not_applicable';
       r.level = r.counts ? LEVEL[r.category] : null;
       r.categoryName = r.category ? R.CATEGORIES[r.category] : null;
       return r;
     });
-    const counting = indicators.filter((i) => i.counts);
+    const counting = indicators.filter((i) => i.counts && i.inOverall);
     const reds = counting.filter((i) => i.category === 'red');
     const ambers = counting.filter((i) => i.category === 'amber');
     const required = indicators.filter((i) => i.required);
@@ -352,7 +353,7 @@ function view(st, role) {
   if (!st) return null;
   const base = { category: st.category, categoryName: st.categoryName || R.CATEGORIES[st.category], reason: st.reason || null, responsible: st.responsible || [], at: st.at || null, checkedAt: st.checkedAt || null, validUntil: st.validUntil || null, error: st.error ? st.error.message || st.error : null };
   const indicators = (st.indicators || []).map((i) => ({ id: i.id, title: i.title, short: i.short, group: i.group, groupName: i.groupName, vital: i.vital, status: i.status, value: i.value ?? null, display: i.display || null, unit: i.unit || '',
-    band: i.band ? i.band.label : null, gap: i.gap || null, gapQuestion: i.gapQuestion || null, category: i.category || null, categoryName: i.categoryName || null, level: i.level || null, counts: Boolean(i.counts), approved: Boolean(i.approved), required: Boolean(i.required),
+    band: i.band ? i.band.label : null, gap: i.gap || null, gapQuestion: i.gapQuestion || null, category: i.category || null, categoryName: i.categoryName || null, level: i.level || null, counts: Boolean(i.counts), inOverall: i.inOverall !== false, approved: Boolean(i.approved), required: Boolean(i.required),
     at: i.at || null, validUntil: i.validUntil || null, expired: Boolean(i.expired), message: i.message || null, note: i.note || null, missing: i.missing || [], decisions: i.decisions || [],
     inputs: role === 'caregiver' ? undefined : i.inputs }));
   return { ...base, indicators };

@@ -65,5 +65,12 @@ for (const i of R.INDICATORS) for (const b of i.bands) {
   const exp = /very[ -]high/.test(w) ? 'red' : /elevated|moderate|medium|intermediate|high|risky|at or above the attention|under 10/.test(w) && !/high pi/.test(w) ? 'amber' : 'green';
   ok(b.proposed === exp, 'agreed wording for ' + i.id + '/' + b.key + ' (' + b.label + '): ' + b.proposed + ' expected ' + exp);
 }
+// ---- the owner's choice: the "Risk and Other Indicators" sheet decides where the sheets disagree
+const SC = R.SHEET_CHOICES;
+ok(SC['tug-bands'] === 'a' && SC['balance-method'] === 'seconds' && SC['reach-method'] === 'inches' && SC['fib4-formula'] === 'divide', 'sheet defaults: TUG bands, balance in seconds, reach in inches, FIB-4 divided');
+ok(R.consensus(tugI, { tug: 25 }, SC).bandKey === 'potential' && R.consensus(tugI, { tug: 31 }, SC).bandKey === 'high', 'TUG with the sheet: 25 s possible fall risk, 31 s high');
+ok(R.consensus(R.BY_ID.balance4, { balanceSeconds: 24 }, SC).bandKey === 'low' && R.consensus(R.BY_ID.balance4, { balanceSeconds: 8 }, SC).bandKey === 'highrisk', 'balance with the sheet: 24 s low, 8 s high');
+ok(R.consensus(R.BY_ID.reach, { reach: 25 }, SC).bandKey === 'moderate', 'reach with the sheet: 25 cm (9.8 in) moderate');
+ok(!R.INDICATORS.filter((i) => i.vital).some(R.IN_OVERALL) && R.INDICATORS.filter((i) => !i.vital).every(R.IN_OVERALL), 'the overall uses the sheet purposes only, not single vitals');
 console.log(`check-risk: PASS ${pass} FAIL ${fail}`);
 process.exit(fail ? 1 : 0);
