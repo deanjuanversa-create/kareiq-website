@@ -98,6 +98,7 @@ async function setup() {
     await require('./demo').seed();
     return;
   }
+  if (demo) await require('./demo').topUp(); // an older demo database gets demo logins added since
   if (!admins && process.env.ADMIN_PASSWORD) {
     await docs.insert('app_users', {
       id: uid(), name: 'Office admin', email: adminEmail(), phone: null, role: 'admin',

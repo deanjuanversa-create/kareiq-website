@@ -304,4 +304,21 @@ async function seedOperations(ids, pdf, day0) {
   await scheduler.notify([ids.nurse], { kind: 'visit-assigned', title: 'Welcome to the nurse portal', body: 'Your visits, schedule and customers are here. Accept each new visit when it arrives.', link: '#/nurse/visits' });
 }
 
-module.exports = { seed, PASSWORD, USERS };
+// A demo database filled before a demo login was added (the four team dashboards, 23 Nov 2026)
+// gets the missing demo logins when the server starts. Only in demo mode, only on a database the
+// demo filled itself (it has the demo-seed record); nothing else in it is changed.
+async function topUp() {
+  if (!(await docs.findOne('app_audit', { id: 'demo-seed' }))) return 0;
+  const hash = auth.hashPassword(PASSWORD);
+  let added = 0;
+  for (const [role, name, email, phone] of USERS) {
+    const id = 'demo-u-' + email.split('@')[0];
+    if (await docs.findOne('app_users', { id }) || await docs.findOne('app_users', { email })) continue;
+    await docs.insert('app_users', { id, name, email, phone, role, passwordHash: hash, active: true, createdAt: new Date().toISOString() });
+    added++;
+  }
+  if (added) console.log('[app] demo: added ' + added + ' missing demo login(s) (password: ' + PASSWORD + ')');
+  return added;
+}
+
+module.exports = { seed, topUp, PASSWORD, USERS };
