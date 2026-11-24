@@ -780,3 +780,11 @@ a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
 .opage>.head .hacts{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:flex-end;flex:none}
 .opage>.head .hacts .oacts{display:flex;gap:8px;flex-wrap:wrap}
 @media (max-width:760px){.opage>.head .hacts{justify-content:flex-start}}
+/* phones: page-head buttons and the risk-trend tools wrap instead of pushing the page sideways */
+@media (max-width:760px){
+  .opage>.head .hacts{flex:1 1 100%;min-width:0}
+  .hsec-tools{flex:1 1 100%;min-width:0;margin-left:0}
+  .hsec-tools .pchips{flex-wrap:wrap;max-width:100%}
+  .hsec-tools .sumsel{max-width:100%;min-width:0}
+  .hsec-tools .sumsel select{max-width:100%}
+}

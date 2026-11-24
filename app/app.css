@@ -1171,7 +1171,7 @@ body[data-brand="kareiq"]{
 .bell>button svg{width:22px;height:22px}
 .bell>button[aria-expanded="true"] svg{animation:kq-ring .6s ease}
 .bdot{position:absolute;top:5px;right:4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:var(--bad);color:#fff;font-size:.7rem;display:grid;place-items:center;box-shadow:0 0 0 2px var(--cream)}
-.bdot.pop{animation:kq-pop .45s cubic-bezier(.34,1.56,.64,1)}
+.bdot.bdot-pop{animation:kq-pop .45s cubic-bezier(.34,1.56,.64,1)}
 .bellp{position:absolute;right:0;top:calc(100% + 8px);width:min(360px,calc(100vw - 24px));background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 60px -28px rgba(10,26,48,.55);z-index:40;overflow:hidden;animation:kq-drop .22s var(--ease)}
 .bellh{display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line)}
 .blist{list-style:none;margin:0;padding:0;max-height:360px;overflow:auto}
@@ -1422,7 +1422,7 @@ a.ocust:hover b{text-decoration:underline}
   .caltitle{width:100%;margin:6px 0 0}
 }
 @media (prefers-reduced-motion:reduce){
-  .npage>*,.opage>*,.bellp,.bell>button svg,.bdot.pop,.mval.open,.och.anim *,.toast.out{animation:none!important;transition:none!important}
+  .npage>*,.opage>*,.bellp,.bell>button svg,.bdot.bdot-pop,.mval.open,.och.anim *,.toast.out{animation:none!important;transition:none!important}
   .nkpi,.vcard2,.ncard,.okpi,.ovr,.vchip,.mo-c,.ntabs a::after,.seg3 a{transition:none}
   .nkpi:hover,.vcard2:hover,.ncard:hover,.okpi:hover,.ovr:hover,.vchip:hover,.mo-c:hover{transform:none}
   .och.anim .oln{stroke-dashoffset:0}

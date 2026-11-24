@@ -598,7 +598,7 @@
       var b = $('.bell>button'); if (!b) return;
       var dot = $('.bdot', b); dot.hidden = !d.unread; dot.textContent = d.unread > 9 ? '9+' : d.unread;
       b.setAttribute('aria-label', 'Notifications' + (d.unread ? ', ' + d.unread + ' unread' : ''));
-      if (d.unread) { dot.classList.remove('pop'); void dot.offsetWidth; dot.classList.add('pop'); }
+      if (d.unread) { dot.classList.remove('bdot-pop'); void dot.offsetWidth; dot.classList.add('bdot-pop'); }
       var p = $('.bellp'); if (p && !p.hidden) p.innerHTML = bellList();
     });
   }
