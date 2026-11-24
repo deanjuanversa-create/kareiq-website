@@ -11,7 +11,7 @@ const { POLICIES, CATEGORIES } = require('./nursing');
 const care = require('./care');
 
 const LEAD_STATUS = { new: 'New', contacted: 'Contacted', follow_up: 'Follow-up pending', converted: 'Converted', lost: 'Lost / closed' };
-const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office', phone: 'Phone call', 'walk-in': 'Walk-in', referral: 'Referral', event: 'Health camp or event' };
+const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office', phone: 'Phone call', 'walk-in': 'Walk-in', referral: 'Referral', event: 'Health camp or event', renewal: 'Package renewal' };
 const PAGE = 25;
 // everyone with a staff login is an employee: nurses, the office admins and the four team roles
 const STAFF_ROLES = ['admin', 'caregiver', 'finance', 'hr', 'operations', 'sales'];
@@ -125,7 +125,7 @@ function create(ctx) {
         sourceName: SOURCES[r.source || (type === 'booking' ? 'kare-at-home' : 'kareiq')] || r.source || 'Website', status: derived, statusName: LEAD_STATUS[derived],
         assignedTo: r.assignedTo || null, assignedName: who ? who.name : null, assignedAt: r.assignedAt || null, createdAt: r.createdAt, history: r.leadHistory || [], personId: r.personId || null,
         requestKind: r.kind === 'order' || r.kind === 'plan-request' ? r.kind : null, generalInfoAt: r.generalInfo ? r.generalInfo.at : null,
-        lostReason: r.lostReason || null, lostNote: r.lostNote || null, followUpAt: r.followUpAt || null, nextAction: r.nextAction || null, expectedValue: Number.isFinite(r.expectedValue) ? r.expectedValue : null, expectedMonths: r.expectedMonths || r.months || null, orderId: r.orderId || null, appPlanId: r.appPlanId || null
+        lostReason: r.lostReason || null, lostNote: r.lostNote || null, followUpAt: r.followUpAt || null, nextAction: r.nextAction || null, expectedValue: Number.isFinite(r.expectedValue) ? r.expectedValue : null, expectedMonths: r.expectedMonths || r.months || null, orderId: r.orderId || null, appPlanId: r.appPlanId || null, renewalOf: r.renewalOf || null
       };
     }).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
   }

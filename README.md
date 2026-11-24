@@ -519,10 +519,16 @@ More for each role (`src/app/teamsplus.js`):
 - **Sales:** lost reasons (required for Sales), quotations with PDF, monthly targets set by the office admin, merging repeat enquiries.
 - **Everyone:** "My leave and training" (request leave, see balances and trainings; nurses have it in their portal), the team's activity log, PDF versions of every report, e-mail copies of notifications for team logins when e-mail (SMTP) is set up.
 
+The last round (`src/app/teamsmore.js`):
+- **Finance:** package renewals (packages ending in 30 days), supplier bills with part payments and overdue alerts, the accounts export (double-entry journal as CSV/PDF and Tally XML; create the listed ledgers in Tally first).
+- **HR:** salaries (earnings and fixed deductions entered by HR; KareIQ does not work out PF, ESI or tax) and payslips (loss-of-pay days from attendance and leave, editable before issuing; PDF; every employee downloads their own under "My leave and training"), recruitment to employee in one step, probation and yearly reviews, the exit checklist (the login is switched off on or after the last day).
+- **Operations:** nurse suggestions for visits waiting for a nurse (free nurses ranked by who already cares for the customer, area and load; one click assigns), supplies with low-stock alerts, actual visit times from the nurses' Start and Complete taps.
+- **Sales:** pipeline board (drag a card to change the status), renewal leads made automatically for packages ending soon, message templates filled in per lead (WhatsApp, email, SMS), commission on paid revenue at the rate the office admin sets.
+
 Permissions are enforced on the server (`src/app/access.js`): every `/api/app/admin/...` call checks the
 role first, and a team login cannot use any family or nurse route. Team roles never see health
 readings, medical records or risk results. Sales cannot approve packages or confirm payments.
 The office admin keeps every permission and reaches the new pages from its own menu groups (Financials, Employees, Customer management, Nurse scheduler, Lead management, Reports).
-Create team logins under Settings > Logins. Checks: `npm run check:teams` and `npm run check:teams-ui`
+Create team logins under Settings > Logins. Checks: `npm run check:teams`, `npm run check:teams-ui`, `npm run check:teams-more` and `npm run check:teams-more-ui`
 (Python Playwright) against a fresh demo server.
 

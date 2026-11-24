@@ -124,6 +124,7 @@ function create(ctx) {
   const { docs, uid, now, todayIST, json, notFound, bad, forbidden, clean, audit, store, scheduler, staff, finance, namesFor, office, lifecycle, normalisePhone, welcomeLink } = ctx;
   // "Needs your attention": what is waiting for this person, each with where to go; only items that are not zero
   const todo = (list) => list.filter((x) => x.count > 0);
+  const moreTodo = async (role) => (ctx.more && ctx.more.attention ? ctx.more.attention(role) : []);
   // who to contact about a customer: the family logins linked to them, then the phone on the details form
   async function contactsOf(personIds) {
     const ids = [...new Set(personIds.filter(Boolean))];
@@ -179,7 +180,7 @@ function create(ctx) {
         { key: 'pay', label: 'Approved expenses to pay', count: exps.filter((x) => x.status === 'approved').length, href: '#/office/fin/expenses?status=approved', tone: 'warn' },
         { key: 'recon', label: 'Reconciliation exceptions not resolved', count: (await docs.find('app_recon')).reduce((n, r) => n + (r.items || []).filter((i) => i.status !== 'matched' && !i.resolved).length, 0), href: '#/office/fin/recon', tone: 'warn' },
         { key: 'orders', label: 'Approved packages waiting for the customer\'s payment', count: orders.length, href: '#/office/finance/due', tone: '' }
-      ]),
+      ].concat(await moreTodo('finance'))),
       note: 'Collected = verified payments minus refunds. Revenue = invoiced amounts of confirmed packages (packages priced on call are left out until a price is agreed).'
     };
   }
@@ -442,7 +443,7 @@ function create(ctx) {
           { key: 'expiring', label: 'Credentials expiring within 30 days', count: creds.filter((c) => c.status === 'expiring').length, href: '#/office/hr/credentials?status=expiring', tone: 'warn' },
           { key: 'onboarding', label: 'Employees with onboarding steps left', count: list.filter((x) => x.v.status !== 'inactive' && x.v.onboarding.status !== 'complete').length, href: '#/office/hr/onboarding?status=in_progress', tone: '' },
           { key: 'attendance', label: 'Employees not marked in today\'s attendance', count: Math.max(0, list.filter((x) => x.u.active && x.v.status !== 'inactive').length - att.length), href: '#/office/hr/attendance', tone: '' }
-        ]) });
+        ].concat(await moreTodo('hr'))) });
     }
     // HR adds a new nurse / caregiver: the login, the employee record and the welcome link to set a password.
     // Office logins (admin, Finance, HR, Operations, Sales) are given by the office admin under Settings > Logins.
@@ -704,7 +705,7 @@ function create(ctx) {
         { key: 'onboarding', label: 'Customers waiting too long for onboarding', count: cust.filter((c) => c.delayed).length, href: '#/office/ops/onboarding?stage=delayed', tone: 'warn' },
         { key: 'nonurse', label: 'Active customers without a nurse', count: cust.filter((c) => c.status === 'active' && !c.hasNurse).length, href: '#/office/ops/onboarding?stage=no_nurse', tone: 'warn' },
         { key: 'issues', label: 'Open service issues', count: issues.filter((x) => x.status === 'open' || x.status === 'in_progress').length, href: '#/office/ops/quality?status=open_all', tone: '' }
-      ]),
+      ].concat(await moreTodo('operations'))),
       daily: daysIn(addDays(today, -13), today).map((d) => ({ key: d, completed: vis.filter((v) => v.date === d && v.status === 'completed').length, missed: vis.filter((v) => v.date === d && v.missed).length, cancelled: vis.filter((v) => v.date === d && v.status === 'cancelled').length }))
     };
   }
@@ -889,7 +890,7 @@ function create(ctx) {
           { key: 'today', label: 'Follow-ups due today', count: rows.filter((l) => l.open && l.followUp === 'today' && (!l.assignedTo || l.assignedTo === user.id || user.role === 'admin')).length, href: '#/office/sales/followups', tone: 'warn' },
           { key: 'new', label: 'New leads not contacted yet', count: rows.filter((l) => l.status === 'new').length, href: '#/office/leads/list?status=new', tone: 'warn' },
           { key: 'nofollow', label: 'Open leads without a follow-up date', count: rows.filter((l) => l.open && !l.followUpAt && l.status !== 'new').length, href: '#/office/sales/followups', tone: '' }
-        ]),
+        ].concat(await moreTodo('sales'))),
         note: 'Expected values come from the published package prices (or the amount a team member entered); packages priced on call are not counted until a value is entered. A purchase is counted only when its payment is verified.' });
     }
     // a lead from a phone call, walk-in, referral or event: added to the same enquiry database as the websites'

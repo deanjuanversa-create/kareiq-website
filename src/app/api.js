@@ -46,6 +46,7 @@ const featuresMod = require('./features');
 const access = require('./access');
 const teamsMod = require('./teams');
 const teamsPlusMod = require('./teamsplus');
+const teamsMoreMod = require('./teamsmore');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin', ...access.TEAM_ROLES };
 const RELATIONS_MAX = 40;
@@ -1392,6 +1393,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     // the Finance, HR, Operations and Sales dashboards (src/app/teams.js)
     const plusDone = await plusApi.handle(req, res, parts, url, admin, body);
     if (plusDone !== undefined) return plusDone;
+    const moreDone = await moreApi.handle(req, res, parts, url, admin, body);
+    if (moreDone !== undefined) return moreDone;
     const teamDone = await teamsApi.handle(req, res, parts, url, admin, body);
     if (teamDone !== undefined) return teamDone;
     const p = parts.join('/');
@@ -1941,12 +1944,15 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   modCtx.nursing = nursingApi;
   const officeApi = officeMod.create(modCtx);
   const featuresApi = featuresMod.create({ ...modCtx, visiblePerson, careTeam, canRecord, historyAllowed, readJson, risk: shared.risk });
-  const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi, welcomeLink });
+  const moreRef = {}; // filled below: the dashboards' last round (src/app/teamsmore.js), read by teams.js for "Needs your attention"
+  const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi, welcomeLink, more: moreRef });
   const plusApi = teamsPlusMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle });
+  const moreApi = teamsMoreMod.create({ ...modCtx, office: officeApi, plus: plusApi, auth, welcomeLink });
+  Object.assign(moreRef, moreApi);
   // HR credential expiry and sales follow-up reminders: shortly after start, then every hour
   if (!global.__kqTeamTimer && process.env.APP_STATELESS !== 'true') {
     global.__kqTeamTimer = true;
-    const tick = () => ensureReady().then(async () => { await teamsApi.remind(); await plusApi.remind(); }).catch((e) => console.error('[teams] reminders failed:', e.message));
+    const tick = () => ensureReady().then(async () => { await teamsApi.remind(); await plusApi.remind(); await moreApi.remind(); }).catch((e) => console.error('[teams] reminders failed:', e.message));
     setTimeout(tick, 25000).unref();
     setInterval(tick, 3600000).unref();
   }
@@ -2017,6 +2023,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
         const done = await nursingApi.handle(req, res, p, parts, url, signed.user, req.method === 'GET' ? {} : await readJson(req));
         if (done !== undefined) return;
         return json(res, 404, { ok: false, message: 'Not found.' });
+      }
+      // my payslips (every staff login sees only their own)
+      if (parts[0] === 'me' && parts[1] === 'payslips' && req.method === 'GET' && (parts.length === 2 || (parts.length === 4 && parts[3] === 'pdf'))) {
+        if (!['caregiver', 'admin', ...Object.keys(access.TEAM_ROLES)].includes(signed.user.role)) throw forbidden();
+        if (parts.length === 4) return await moreApi.myPayslipPdf(signed.user, parts[2], res);
+        return json(res, 200, { ok: true, rows: await moreApi.myPayslips(signed.user) });
       }
       // my trainings (every staff login)
       if (p === 'me/trainings' && req.method === 'GET') {

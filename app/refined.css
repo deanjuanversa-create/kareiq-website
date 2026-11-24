@@ -788,3 +788,29 @@ a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
   .hsec-tools .sumsel{max-width:100%;min-width:0}
   .hsec-tools .sumsel select{max-width:100%}
 }
+/* ---- team dashboards, last round: pipeline board, suggestions, exits, templates */
+.kanban{display:grid;grid-template-columns:repeat(5,minmax(190px,1fr));gap:12px;overflow-x:auto;padding-bottom:6px;align-items:start}
+.kcol{background:#f3f5f8;border:1px solid var(--line);border-radius:14px;padding:10px;min-height:180px;transition:background .15s,border-color .15s}
+.kcol.over{background:var(--accent-soft);border-color:var(--accent)}
+.kcol>header{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:2px 4px 10px;border-bottom:3px solid #c9d2de;margin-bottom:10px}
+.kcol.contacted>header{border-color:#5598e7}.kcol.follow_up>header{border-color:#eda100}.kcol.converted>header{border-color:var(--good)}.kcol.lost>header{border-color:var(--bad)}
+.kcol,.kcards,.kcard{min-width:0}
+.kcards{display:grid;gap:8px}
+.kcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px;display:grid;gap:8px;cursor:grab;box-shadow:0 1px 2px rgba(16,24,40,.04)}
+.kcard.drag{opacity:.5}.kcard:active{cursor:grabbing}
+.kopen{all:unset;display:grid;gap:2px;cursor:pointer;min-width:0}.kopen:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px}
+.kopen b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.kmeta{display:flex;flex-wrap:wrap;gap:6px 10px;font-size:.8rem;align-items:center}.kmeta span{display:inline-flex;align-items:center;gap:3px}.kmeta svg{width:13px;height:13px}
+.kcard>*{min-width:0}.kopen,.kmeta{overflow-wrap:anywhere}
+.kacts{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center}.kacts select{width:100%;min-width:0;padding-top:4px;padding-bottom:4px;font-size:.86rem}.kacts .btn{padding-left:9px;padding-right:9px}.kacts select:only-child{grid-column:1/-1}.kacts .btn svg{margin:0}
+.kempty{text-align:center;padding:18px 0}
+@media (max-width:760px){.kanban{grid-template-columns:repeat(5,82vw);scroll-snap-type:x mandatory}.kcol{scroll-snap-align:start}}
+.tsugg,.texits,.ttpls{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:14px}
+.tsugg .panel,.texits .panel,.ttpls .panel{margin:0}
+.tsug{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.tsug li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid var(--line);border-radius:12px}
+.tsug li>div{display:grid;gap:2px;min-width:0}
+.texit{margin-top:12px}.texit li{justify-content:space-between}.texit li>span{flex:1}
+.ttxt{white-space:pre-wrap;background:#f6f8fa;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:.92rem}
+.tstars{letter-spacing:1px;color:#cfd6df;font-style:normal}.tstars i{font-style:normal}.tstars i.on{color:#eda100}
+.tinline{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.tinline .field{margin:0}

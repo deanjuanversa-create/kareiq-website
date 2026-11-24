@@ -56,6 +56,6 @@ function allows(role, path, method) {
 
 // the only signed-in routes outside /admin/ a team login may use (its own account, notifications, leave and trainings)
 const TEAM_OPEN = ['logout', 'password', 'profile', 'notifications', 'notifications/read'];
-function teamMayUse(path) { return TEAM_OPEN.includes(path) || /^me\/(leave|trainings)(\/[^/]+){0,2}$/.test(path); } // their own leave and trainings
+function teamMayUse(path) { return TEAM_OPEN.includes(path) || /^me\/(leave|trainings|payslips)(\/[^/]+){0,2}$/.test(path); } // their own leave, trainings and payslips
 
 module.exports = { TEAM_ROLES, OFFICE_ROLES, RULES, allows, isTeam, isOffice, teamMayUse };

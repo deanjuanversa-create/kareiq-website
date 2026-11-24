@@ -141,7 +141,12 @@
       play: '<path d="M8 5.5v13l10-6.5Z"/>',
       x: '<path d="M6 6l12 12M18 6 6 18"/>',
       left: '<path d="m15 6-6 6 6 6"/>',
-      right: '<path d="m9 6 6 6-6 6"/>'
+      right: '<path d="m9 6 6 6-6 6"/>',
+      copy: '<rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6a1.5 1.5 0 0 0-1.5-1.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/>',
+      mail: '<rect x="3.5" y="5.5" width="17" height="13" rx="2"/><path d="m4 7 8 6 8-6"/>',
+      board: '<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M9.2 4.5v15M14.8 4.5v15M5.5 8h2M11 8h2M16.5 8h2M5.5 11h2M11 11h2"/>',
+      door: '<path d="M14 4.5H7.5A1.5 1.5 0 0 0 6 6v12a1.5 1.5 0 0 0 1.5 1.5H14"/><path d="M11 12h9M17 9l3 3-3 3"/>',
+      bag: '<path d="M5.5 8.5h13l-1 11h-11Z"/><path d="M9 8.5V7a3 3 0 0 1 6 0v1.5"/>'
     }[name] || '';
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + p + '</svg>';
   }
