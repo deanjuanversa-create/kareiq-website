@@ -817,3 +817,21 @@ a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
 .tchips.tight{margin:0;gap:4px}
 .tfind{list-style:none;margin:-6px 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
 .tperf{display:grid;gap:4px;padding:10px 12px;margin:0 0 12px;border-radius:10px;background:#f3f5f8}
+/* ---- friendlier: in-app confirmation, find in a table, the setup checklist */
+.oask{position:absolute;inset:0;background:rgba(255,255,255,.82);display:grid;place-items:center;padding:20px;z-index:5;border-radius:inherit;animation:kq-rise .2s ease-out}
+dialog:has(.oask){position:fixed}
+.oask-card{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 12px 32px rgba(16,24,40,.16);padding:18px;max-width:420px;display:grid;gap:14px}
+.oask-card .oacts{justify-content:flex-end}
+.tfind-w{display:flex;align-items:center;gap:12px;margin:0 0 10px;flex-wrap:wrap}
+.tfind-in{display:flex;align-items:center;gap:8px;flex:1 1 240px;max-width:360px;padding:0 12px;border:1px solid var(--line-2);border-radius:999px;background:#fff}
+.tfind-in svg{width:16px;height:16px;color:var(--muted);flex:none}
+.tfind-in input{border:0;outline:0;background:transparent;padding:9px 0;font:inherit;width:100%}
+.tfind-in:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+tr[hidden]{display:none}
+.tsetup{background:#fff;border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin:0 0 16px}
+.tsetup summary{display:flex;align-items:center;gap:12px;cursor:pointer;flex-wrap:wrap}
+.tsetup summary .tbar{flex:1 1 120px;max-width:220px}
+.tsetup ul{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:8px}
+.tsetup li{display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.tsetup li>span{flex:1;display:grid;gap:2px}
+.tsetup li svg{width:18px;height:18px;flex:none;color:#eda100}.tsetup li.ok svg{color:var(--good)}.tsetup li.ok b{font-weight:600;color:var(--muted)}

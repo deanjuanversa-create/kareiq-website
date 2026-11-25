@@ -525,6 +525,8 @@ The last round (`src/app/teamsmore.js`):
 - **Operations:** nurse suggestions for visits waiting for a nurse (free nurses ranked by who already cares for the customer, area and load; one click assigns), supplies with low-stock alerts, actual visit times from the nurses' Start and Complete taps.
 - **Sales:** pipeline board (drag a card to change the status), renewal leads made automatically for packages ending soon, message templates filled in per lead (WhatsApp, email, SMS), commission on paid revenue at the rate the office admin sets.
 
+Each landing page shows "Get your dashboard ready": the business settings that team enters once (GST rates, budgets, add-on prices; leave allowances, salaries, nurse skills, probation; the on-time grace period, visits per package, holidays, reorder levels; message templates, and the targets, commission rate and referral reward the office admin sets), each with a link, until all are done. Confirmations use the app's own dialog, and tables longer than 8 rows have a "Find in this table" box.
+
 Business growth (`src/app/teamsgrowth.js`):
 - **Finance:** add-on services (a paid extra service is charged once its visit is done, at Finance's price less the package's add-on discount; billed per family with a PDF; free package sessions are never charged), package income month by month (active, new, renewed, ended without renewal, spend per paying family), every discount given (quotations, credit notes, package add-on discounts) with who gave it.
 - **HR:** nurse skills (services a nurse can be booked for, which the scheduler and nurse suggestions follow, and the package checks they are trained for), each nurse's work in the last 12 months (visits, on time, family ratings) beside their review.
@@ -535,6 +537,6 @@ Permissions are enforced on the server (`src/app/access.js`): every `/api/app/ad
 role first, and a team login cannot use any family or nurse route. Team roles never see health
 readings, medical records or risk results. Sales cannot approve packages or confirm payments.
 The office admin keeps every permission and reaches the new pages from its own menu groups (Financials, Employees, Customer management, Nurse scheduler, Lead management, Reports).
-Create team logins under Settings > Logins. Checks: `npm run check:teams`, `npm run check:teams-ui`, `npm run check:teams-more`, `npm run check:teams-more-ui`, `npm run check:teams-growth` and `npm run check:teams-growth-ui`
+Create team logins under Settings > Logins. Checks: `npm run check:teams`, `npm run check:teams-ui`, `npm run check:teams-more`, `npm run check:teams-more-ui`, `npm run check:teams-growth`, `npm run check:teams-growth-ui` and `npm run check:teams-friendly-ui`
 (Python Playwright) against a fresh demo server.
 

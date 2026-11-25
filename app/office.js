@@ -1029,13 +1029,29 @@
   // a landing page: greeting for the person whose dashboard it is; the dashboard's name for the office admin
   function landing(active, roleKey, sub, right) {
     var mine = role() === roleKey;
+    SETUP_FOR = SETUP_KEY[roleKey] || null;
     page(active, mine ? hello() : ROLE_LABEL[roleKey] + ' dashboard', (mine ? ROLE_LABEL[roleKey] + ' dashboard · ' : 'As the ' + ROLE_LABEL[roleKey] + ' sees it · ') + e(K.date(K.todayIST())) + '. ' + sub, right ? '<div class="oacts">' + right + '</div>' : '', skeleton());
   }
   function tiles(list) {
     return '<div class="gotiles osm tquick">' + list.map(function (q) { return '<a class="gotile sm" href="#/' + q[0] + '"><span class="gt-i">' + icon(q[2]) + '</span><span class="gt-t"><b>' + e(q[1]) + '</b>' + (q[3] ? '<span>' + e(q[3]) + '</span>' : '') + '</span>' + icon('arrow') + '</a>'; }).join('') + '</div>';
   }
   // "Needs your attention": the work waiting for this person, each a link straight to it
+  // "Get your dashboard ready": the settings this team enters once (shown on its landing page until all are done)
+  var SETUP_KEY = { finance: 'fin', hr: 'hr', operations: 'ops', sales: 'sales' };
+  function loadSetup() {
+    var box = $('[data-setup]'); if (!box) return;
+    var k = box.getAttribute('data-setup');
+    api('GET', 'admin/' + k + '/setup').then(function (d) {
+      if (!d.ok || d.done === d.total || !document.body.contains(box)) return;
+      var mine = role() === 'admin';
+      box.innerHTML = '<details class="tsetup" open><summary><b>Get your dashboard ready</b><span class="muted small">' + d.done + ' of ' + d.total + ' done</span>' + bar(d.done / d.total * 100, 'good') + '</summary><ul>' + d.items.map(function (x) {
+        return '<li class="' + (x.done ? 'ok' : '') + '">' + icon(x.done ? 'check' : 'clock') + '<span><b>' + e(x.label) + '</b>' + (x.detail ? '<span class="muted small">' + e(x.detail) + '</span>' : '') + '</span>' + (x.done ? '' : x.by === 'admin' && !mine ? '<span class="muted small">The office admin sets this</span>' : '<a class="btn sm ghost" href="' + e(x.href) + '">Set up</a>') + '</li>';
+      }).join('') + '</ul></details>';
+    });
+  }
+  var SETUP_FOR = null;
   function todoHtml(list) {
+    if (SETUP_FOR) { var sk = SETUP_FOR; SETUP_FOR = null; setTimeout(loadSetup, 0); return todoHtml(list) + '<div data-setup="' + sk + '"></div>'; }
     if (!list || !list.length) return '<section class="ttodo clear">' + icon('check') + '<div><b>All clear</b><span class="muted small">Nothing is waiting for you right now.</span></div></section>';
     return '<section class="ttodo" aria-labelledby="h-todo"><h2 id="h-todo">Needs your attention</h2><ul>' + list.map(function (x) {
       return '<li><a class="' + e(x.tone || '') + '" href="' + e(x.href) + '"><b>' + num(x.count) + '</b><span>' + e(x.label) + '</span>' + icon('arrow') + '</a></li>';
@@ -1051,9 +1067,35 @@
   function bar(pct, tone) { var v = Math.max(0, Math.min(100, Number(pct) || 0)); return '<span class="tbar ' + (tone || '') + '" role="img" aria-label="' + v + '%"><i style="width:' + v + '%"></i></span>'; }
   function hours(min) { return (Math.round((min || 0) / 6) / 10).toLocaleString('en-IN') + ' h'; }
   function panel(title, body, right) { return '<section class="panel"><div class="panel-h"><h2>' + e(title) + '</h2>' + (right || '') + '</div>' + body + '</section>'; }
+  // ---- a confirmation in the app's own style (inside an open dialog it covers that dialog); the action runs again once confirmed
+  var ASKED = null;
+  function ask(el, text, okLabel) {
+    if (el.__asked) { el.__asked = false; return true; }
+    ASKED = el;
+    var host = $('dialog[open]');
+    var card = '<p>' + e(text) + '</p><div class="oacts"><button type="button" class="btn ghost" data-act="o-ask-no">Cancel</button><button type="button" class="btn" data-act="o-ask-yes">' + e(okLabel || 'Yes, go ahead') + '</button></div>';
+    if (host) { var ov = document.createElement('div'); ov.className = 'oask'; ov.innerHTML = '<div class="oask-card" role="alertdialog" aria-label="Please confirm">' + card + '</div>'; host.appendChild(ov); $('[data-act=o-ask-yes]', ov).focus(); }
+    else K.openDialog('Please confirm', '<p>' + e(text) + '</p>', '<button class="btn ghost" data-act="o-ask-no">Cancel</button><button class="btn" data-act="o-ask-yes">' + e(okLabel || 'Yes, go ahead') + '</button>');
+    return false;
+  }
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act=o-ask-yes],[data-act=o-ask-no]'); if (!t) return;
+    var ov = t.closest('.oask'), yes = t.getAttribute('data-act') === 'o-ask-yes', el = ASKED;
+    ASKED = null;
+    if (ov) ov.remove(); else K.closeDialog();
+    if (yes && el && document.body.contains(el)) { el.__asked = true; if (el.tagName === 'FORM') { if (el.requestSubmit) el.requestSubmit(); else el.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true })); } else el.click(); }
+  });
+  // ---- tables: a "find in this table" box once a table has more than 8 rows
+  document.addEventListener('input', function (ev) {
+    var t = ev.target; if (!t.getAttribute || t.getAttribute('data-act') !== 'o-tfind') return;
+    var box = t.closest('.tfind-w'), tw = box && box.nextElementSibling, q = t.value.trim().toLowerCase(), shown = 0, all = 0;
+    if (!tw) return;
+    $$('tbody tr', tw).forEach(function (tr) { all++; var hit = !q || tr.textContent.toLowerCase().indexOf(q) > -1; tr.hidden = !hit; if (hit) shown++; });
+    var c = $('.tfind-c', box); if (c) c.textContent = q ? shown + ' of ' + all : all + ' rows';
+  });
   function table(head, rows, emptyText) {
     if (!rows.length) return '<div class="empty"><b>' + e(emptyText || 'Nothing to show') + '</b>Try other filters or another period.</div>';
-    return '<div class="tw"><table class="stackable otable"><thead><tr>' + head.map(function (h) { return '<th>' + e(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    return (rows.length > 8 && head[0] !== 'Month' ? '<div class="tfind-w"><label class="tfind-in">' + icon('search') + '<input type="search" data-act="o-tfind" placeholder="Find in this table" aria-label="Find in this table"></label><span class="tfind-c muted small">' + rows.length + ' rows</span></div>' : '') + '<div class="tw"><table class="stackable otable"><thead><tr>' + head.map(function (h) { return '<th>' + e(h) + '</th>'; }).join('') + '</tr></thead><tbody>' +
       rows.map(function (r) { return '<tr>' + r.map(function (c, i) { return '<td data-l="' + e(head[i] || '') + '"' + (head[i] === '' ? ' class="tact"' : '') + '>' + (head[i] === '' && c ? '<div class="oacts">' + c + '</div>' : c) + '</td>'; }).join('') + '</tr>'; }).join('') + '</tbody></table></div>';
   }
   function opts(map, sel, blank) { return (blank ? '<option value="">' + e(blank) + '</option>' : '') + Object.keys(map).map(function (k) { return '<option value="' + e(k) + '"' + (k === sel ? ' selected' : '') + '>' + e(map[k]) + '</option>'; }).join(''); }
@@ -1072,7 +1114,7 @@
           kpi('Outstanding receivables', k.outstanding, { money: true, icon: 'clock', tone: k.outstanding ? 'warn' : '', sub: k.overdueInvoices ? k.overdueInvoices + ' overdue (' + money(k.overdueAmount) + ')' : 'Nothing overdue', href: '#/office/fin/receivables' }),
           kpi('Pending payments', k.pendingPayments, { icon: 'inbox', sub: money(k.pendingAmount) + ' waiting', href: '#/office/finance/due' }), kpi('Refunds', k.refunds, { money: true, icon: 'left', sub: k.refundCount + ' refund' + (k.refundCount === 1 ? '' : 's'), href: '#/office/fin/payments?kind=refund' }),
           kpi('Expenses this month', k.expensesThisMonth, { money: true, icon: 'rupee', sub: k.expensesWaiting ? k.expensesWaiting + ' waiting for approval' : 'None waiting', href: '#/office/fin/expenses' })]) +
-        tiles([['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check', d.lastRecon ? 'Last run ' + K.date(d.lastRecon.at) : 'Not run yet'], ['office/fin/expenses', 'Expenses', 'receipt'], ['office/fin/reports', 'Financial reports', 'download']]) +
+        tiles([['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/addons', 'Add-on services', 'plus'], ['office/fin/renewals', 'Package renewals', 'cal'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check', d.lastRecon ? 'Last run ' + K.date(d.lastRecon.at) : 'Not run yet'], ['office/fin/bills', 'Supplier bills', 'file'], ['office/fin/growth', 'Package income', 'up']]) +
         '<div class="ocharts">' +
           timeChart('Revenue trend: invoiced, collected and expenses', d.monthly.map(function (x) { return x.key; }), [{ name: 'Invoiced', color: PAL[0], values: d.monthly.map(function (x) { return x.billed; }) }, { name: 'Collected', color: PAL[2], values: d.monthly.map(function (x) { return x.collected; }) }, { name: 'Expenses', color: PAL[1], values: d.monthly.map(function (x) { return x.expenses; }) }], { fmt: money, short: moneyShort }) +
           donut('Invoices by payment status', d.invoiceStatus.filter(function (x) { return x.key !== 'overdue'; }), num) +
@@ -1214,7 +1256,7 @@
       swap(todoHtml(d.todo) + kpis([kpi('Total employees', k.total, { icon: 'team', sub: k.active + ' active · ' + k.inactive + ' inactive', href: '#/office/employees' }), kpi('On leave today', k.onLeave, { icon: 'cal', href: '#/office/scheduler/leave' }), kpi('New employees', k.joined, { icon: 'plus', sub: 'joined in the last 30 days', href: '#/office/hr/onboarding' }),
           kpi('Departures', k.left, { icon: 'out', sub: 'last 30 days · ' + k.leftThisYear + ' this year', href: '#/office/employees?status=inactive' }), kpi('Onboarding in progress', k.onboarding, { icon: 'idcard', tone: k.onboarding ? 'warn' : '', href: '#/office/hr/onboarding?status=in_progress' }),
           kpi('Credentials expiring', k.expiring + k.expired, { icon: 'shield', tone: k.expired ? 'bad' : k.expiring ? 'warn' : '', sub: k.expired + ' expired · ' + k.expiring + ' within 30 days', href: '#/office/hr/credentials' }), kpi('Leave requests to decide', k.pendingLeave, { icon: 'clip', tone: k.pendingLeave ? 'warn' : '', href: '#/office/scheduler/leave' }), kpi('Attendance marked today', k.markedToday, { icon: 'check', href: '#/office/hr/attendance' })]) +
-        tiles([['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and documents', 'idcard'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge'], ['office/hr/reports', 'HR reports', 'download']]) +
+        tiles([['office/employees', 'Employee overview', 'chart'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/payslips', 'Payslips', 'receipt'], ['office/hr/recruitment', 'Recruitment', 'inbox'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/skills', 'Nurse skills', 'check'], ['office/hr/reviews', 'Probation and reviews', 'star']]) +
         '<div class="ocharts">' + hbars('Employees by department', d.byDepartment, num) + donut('Employees by role', d.byRole, num) +
           timeChart('Joiners and departures', d.joining.map(function (x) { return x.key; }), [{ name: 'Joined', color: PAL[2], values: d.joining.map(function (x) { return x.joined; }) }, { name: 'Left', color: PAL[7], values: d.joining.map(function (x) { return x.left; }) }]) +
           donut('Onboarding of active employees', [{ key: 'done', label: 'Complete', value: Math.max(0, k.active - k.onboarding), color: PAL[2] }, { key: 'open', label: 'In progress', value: k.onboarding, color: PAL[3] }], num, function (it) { return it.color; }) + '</div>' +
@@ -1396,7 +1438,7 @@
           kpi('Today\'s visits', k.today, { icon: 'cal', sub: k.todayDone + ' completed', href: '#/office/scheduler' }), kpi('Upcoming visits', k.upcoming, { icon: 'right', sub: 'next 7 days', href: '#/office/ops/visits?from=' + t0 + '&to=' + in7 }), kpi('Completed', k.completed30, { icon: 'check', tone: 'good', sub: 'last 30 days' + (k.completionRate != null ? ' · ' + k.completionRate + '% completion' : ''), href: '#/office/ops/visits?status=completed&from=' + ago30 + '&to=' + t0 }),
           kpi('Cancelled', k.cancelled30, { icon: 'x', sub: 'last 30 days · ' + k.rescheduled30 + ' rescheduled', href: '#/office/ops/visits?status=cancelled&from=' + ago30 + '&to=' + t0 }), kpi('Unassigned visits', k.unassigned, { icon: 'inbox', tone: k.unassigned ? 'warn' : '', href: '#/office/scheduler?status=awaiting_assignment' }), kpi('Missed or delayed', k.missed + k.delayed, { icon: 'clock', tone: k.missed ? 'bad' : k.delayed ? 'warn' : '', sub: k.missed + ' missed · ' + k.delayed + ' delayed now', href: '#/office/ops/visits?flag=missed&from=' + ago30 + '&to=' + t0 }),
           kpi('Open service issues', k.openIssues, { icon: 'star', tone: k.openIssues ? 'warn' : '', href: '#/office/ops/quality?status=open_all' })]) +
-        tiles([['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard'], ['office/scheduler', 'Visit board', 'cal'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download']]) +
+        tiles([['office/scheduler', 'Visit board', 'cal'], ['office/ops/suggestions', 'Nurse suggestions', 'user'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/visits-used', 'Package visits', 'cal'], ['office/customers', 'Customer directory', 'people'], ['office/ops/supplies', 'Supplies', 'bag'], ['office/ops/quality', 'Service quality', 'star'], ['office/ops/capacity', 'Nurse capacity', 'gauge']]) +
         panel('Needs attention: missed and delayed visits', table(['Date', 'Service', 'Customer', 'Nurse', 'Status', ''], d.attention.map(visitRow), 'No missed or delayed visits'), '<a class="btn sm ghost" href="#/office/ops/visits?flag=missed">All missed visits</a>') +
         panel('Today', table(['Date', 'Service', 'Customer', 'Nurse', 'Status', ''], d.today.map(visitRow), 'No visits today'), '<a class="btn sm ghost" href="#/office/scheduler">Visit board</a>') +
         '<div class="ocharts">' + timeChart('Visits in the last 14 days', d.daily.map(function (x) { return x.key; }), [{ name: 'Completed', color: PAL[2], values: d.daily.map(function (x) { return x.completed; }) }, { name: 'Missed', color: PAL[7], values: d.daily.map(function (x) { return x.missed; }) }, { name: 'Cancelled', color: PAL[3], values: d.daily.map(function (x) { return x.cancelled; }) }], { label: function (x) { return K.date(x).replace(/ \d{4}$/, ''); } }) +
@@ -1508,7 +1550,7 @@
           kpi('Converted', k.converted, { icon: 'check', tone: 'good', href: '#/office/leads/list?status=converted' }), kpi('Lost', k.lost, { icon: 'x', href: '#/office/leads/list?status=lost' }), kpi('Conversion rate', k.conversion, { icon: 'gauge', suffix: '%', href: '#/office/sales/reports' }),
           kpi('Pipeline value', k.pipeline, { money: true, icon: 'rupee', sub: k.pipelineLeads + ' open lead' + (k.pipelineLeads === 1 ? '' : 's') + ' with a value' + (k.unpriced ? ' · ' + k.unpriced + ' priced on call' : '') }),
           kpi('Follow-ups due', k.overdue + k.dueToday, { icon: 'cal', tone: k.overdue ? 'bad' : k.dueToday ? 'warn' : '', sub: k.overdue + ' overdue · ' + k.dueToday + ' today · ' + k.upcoming + ' later', href: '#/office/sales/followups' }), kpi('Confirmed purchases', k.purchaseValue, { money: true, icon: 'receipt', tone: 'good', sub: k.purchases + ' paid package' + (k.purchases === 1 ? '' : 's') })]) +
-        tiles([['office/leads/overview', 'Lead overview', 'chart'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download']]) +
+        tiles([['office/sales/pipeline', 'Pipeline board', 'board'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/sales/upgrades', 'Upgrade suggestions', 'up'], ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/campaigns', 'Campaigns', 'star'], ['office/sales/targets', 'Targets', 'gauge'], ['office/sales/packages', 'Packages and enquiries', 'box']]) +
         '<div class="ocharts">' + funnel('Conversion by stage', d.stageConversion.map(function (x) { return { key: x.key, label: x.key === 'new' ? 'All leads' : x.label, value: x.value }; })) +
           timeChart('Leads, conversions and purchases by month', d.monthly.map(function (x) { return x.key; }), [{ name: 'Leads', color: PAL[0], values: d.monthly.map(function (x) { return x.leads; }) }, { name: 'Converted', color: PAL[2], values: d.monthly.map(function (x) { return x.converted; }) }, { name: 'Paid purchases', color: PAL[6], values: d.monthly.map(function (x) { return x.purchases; }) }]) +
           hbars('Leads by source', d.bySource, num) + hbars('Leads by package', d.byPackage, num, PAL[2]) +
@@ -1836,13 +1878,13 @@
     if (act === 'o-credit') creditDialog(id, t.getAttribute('data-n'), Number(t.getAttribute('data-o')));
     else if (act === 'o-tr-new') trainingDialog();
     else if (act === 'o-tr-done') { t.disabled = true; api('POST', 'admin/hr/trainings/' + enc(id) + '/complete', { userId: t.getAttribute('data-u'), undo: Boolean(t.getAttribute('data-undo')) }).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
-    else if (act === 'o-tr-cancel') { if (!confirm('Cancel this training for everyone? Completed records stay on the employees\' records.')) return; api('POST', 'admin/hr/trainings/' + enc(id) + '/cancel', {}).then(function (d) { K.toast(d.ok ? 'Cancelled.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-tr-cancel') { if (!ask(t, 'Cancel this training for everyone? Completed records stay on the employees\' records.', 'Cancel the training')) return; api('POST', 'admin/hr/trainings/' + enc(id) + '/cancel', {}).then(function (d) { K.toast(d.ok ? 'Cancelled.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
     else if (act === 'o-quote-new') quoteDialog(null);
     else if (act === 'o-quote-lead') quoteDialog({ type: t.getAttribute('data-type'), id: id, name: t.getAttribute('data-name'), package: t.getAttribute('data-pkg') });
     else if (act === 'o-quote-st') { t.disabled = true; api('POST', 'admin/sales/quotes/' + enc(id) + '/status', { status: t.getAttribute('data-s') }).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
     else if (act === 'o-merge') {
       var keep = t.getAttribute('data-keep'), others = (t.getAttribute('data-merge') || '').split(',').filter(Boolean);
-      if (!confirm('Merge ' + others.length + ' repeat enquir' + (others.length === 1 ? 'y' : 'ies') + ' into this lead? Their history is kept on this lead.')) return;
+      if (!ask(t, 'Merge ' + others.length + ' repeat enquir' + (others.length === 1 ? 'y' : 'ies') + ' into this lead? Their history is kept on this lead.', 'Merge')) return;
       api('POST', 'admin/sales/leads/merge', { keep: keep, merge: others }).then(function (d) { K.toast(d.ok ? 'Merged.' : d.message, d.ok ? 'ok' : 'bad'); if (d.ok) { K.closeDialog(); K.render(); } });
     }
     else if (act === 'o-me-leave') myLeaveDialog();
@@ -1947,7 +1989,7 @@
     Object.keys(v).forEach(function (k) { if (k.indexOf('u_') === 0) ids.push(k.slice(2)); });
     $$('input[name^="lop_"]', f).forEach(function (i) { lop[i.name.slice(4)] = i.value; });
     if (!ids.length) return Promise.resolve({ ok: false, message: 'Tick at least one employee.' });
-    if (!confirm('Issue ' + ids.length + ' payslip' + (ids.length === 1 ? '' : 's') + ' for ' + mon(f.getAttribute('data-m')) + '? Each employee is told.')) return Promise.resolve();
+    if (!ask(f, 'Issue ' + ids.length + ' payslip' + (ids.length === 1 ? '' : 's') + ' for ' + mon(f.getAttribute('data-m')) + '? Each employee is told.', 'Issue payslips')) return Promise.resolve();
     return api('POST', 'admin/hr/payslips/issue', { month: f.getAttribute('data-m'), userIds: ids, lop: lop }).then(function (d) { if (!d.ok) return d; K.toast(d.issued + ' payslip' + (d.issued === 1 ? '' : 's') + ' issued.', 'ok'); K.render(); });
   };
   K.FORMS['o-ps-wd'] = function (f, v) { return api('POST', 'admin/hr/payslips/' + enc(f.getAttribute('data-id')) + '/withdraw', v).then(done('Payslip withdrawn. You can issue a corrected one.')); };
@@ -2211,10 +2253,10 @@
         '<div class="row2">' + K.field('exitDate', 'Last working day', 'type="date"') + selField('reason', 'Reason', ex.reasons, '', 'Choose') + '</div>' + K.field('note', 'Note (optional)', 'maxlength="300"') + '<p class="muted small">If a nurse is leaving, Operations is told about visits after the last day.</p></form>', submitBtn('Start exit'));
     } else if (act === 'o-exit-step') {
       var undo = t.getAttribute('data-undo'), stp = t.getAttribute('data-s');
-      if (stp === 'login' && !confirm('Switch off this login now? They are signed out everywhere. Only the office admin can switch it on again.')) return;
+      if (stp === 'login' && !ask(t, 'Switch off this login now? They are signed out everywhere. Only the office admin can switch it on again.', 'Switch off')) return;
       t.disabled = true;
       api('POST', 'admin/hr/exits/' + enc(id) + '/step', { step: stp, undo: Boolean(undo) }).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
-    } else if (act === 'o-exit-cancel') { if (!confirm('Withdraw this exit? The last working day is cleared.')) return; api('POST', 'admin/hr/exits/' + enc(id) + '/cancel', {}).then(function (d) { K.toast(d.ok ? 'Exit withdrawn.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    } else if (act === 'o-exit-cancel') { if (!ask(t, 'Withdraw this exit? The last working day is cleared.', 'Withdraw the exit')) return; api('POST', 'admin/hr/exits/' + enc(id) + '/cancel', {}).then(function (d) { K.toast(d.ok ? 'Exit withdrawn.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
     else if (act === 'o-cand-new') {
       var cd = S.cache.cands;
       K.openDialog('Add a candidate', '<form data-form="o-cand-new" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('name', 'Name', 'maxlength="80"') + '<div class="row2">' + K.field('phone', 'Mobile number', 'type="tel" inputmode="tel"') + K.field('email', 'Email (optional)', 'type="email"') + '</div>' +
@@ -2265,7 +2307,7 @@
       t.disabled = true;
       api('POST', 'admin/sales/renewal-leads', {}).then(function (d) { t.disabled = false; K.toast(d.ok ? (d.made ? d.made + ' renewal lead' + (d.made === 1 ? '' : 's') + ' added.' : 'No new renewal leads: every package ending soon already has one.') : d.message, d.ok ? 'ok' : 'bad'); if (d.ok && d.made) K.render(); });
     } else if (act === 'o-tpl') tplDialog(id);
-    else if (act === 'o-tpl-del') { if (!confirm('Remove this template?')) return; api('POST', 'admin/sales/templates/' + enc(id) + '/archive', {}).then(function (d) { K.toast(d.ok ? 'Removed.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
+    else if (act === 'o-tpl-del') { if (!ask(t, 'Remove this template?', 'Remove')) return; api('POST', 'admin/sales/templates/' + enc(id) + '/archive', {}).then(function (d) { K.toast(d.ok ? 'Removed.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); }); }
     else if (act === 'o-msg') msgDialog(t.getAttribute('data-type'), id);
     else if (act === 'o-msg-copy') { var ta = $('dialog[open] [name=text]'); if (ta && navigator.clipboard) navigator.clipboard.writeText(ta.value).then(function () { K.toast('Copied.', 'ok'); }); }
     else if (act === 'o-msg-send') {
@@ -2470,7 +2512,7 @@
     var t = ev.target.closest('[data-act]'); if (!t) return;
     var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
     if (act === 'o-ao-bill') {
-      if (!confirm('Bill ' + t.getAttribute('data-n') + ' ' + money(t.getAttribute('data-a')) + ' for their add-on services?')) return;
+      if (!ask(t, 'Bill ' + t.getAttribute('data-n') + ' ' + money(t.getAttribute('data-a')) + ' for their add-on services?', 'Make the bill')) return;
       t.disabled = true;
       api('POST', 'admin/fin/addons/bill', { personId: id }).then(function (d) { K.toast(d.ok ? 'Bill ' + d.number + ' made. Download the PDF to send it.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     } else if (act === 'o-ao-waive') K.openDialog('Don\'t charge this service', '<form data-form="o-ao-waive" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('reason', 'Why', 'maxlength="200" placeholder="e.g. Goodwill after a late visit"') + '</form>', submitBtn('Don\'t charge'));
@@ -2613,7 +2655,7 @@
     else if (act === 'o-leave-edit') leaveDialog(leaveOf(t.getAttribute('data-u'), id));
     else if (act === 'o-leave-visits') leaveVisitsDialog(leaveOf(t.getAttribute('data-u'), id));
     else if (act === 'o-leave-approve') {
-      if (!confirm('Approve this leave? The nurse becomes unavailable for these days and their visits are moved to a free nurse where possible.')) return;
+      if (!ask(t, 'Approve this leave? The nurse becomes unavailable for these days and their visits are moved to a free nurse where possible.', 'Approve leave')) return;
       t.disabled = true;
       api('POST', 'admin/leave/' + enc(t.getAttribute('data-u')) + '/' + enc(id) + '/approve', {}).then(function (d) {
         t.disabled = false; if (!d.ok) return K.toast(d.message, 'bad');
@@ -2640,7 +2682,7 @@
       var s = t.getAttribute('data-s'); t.disabled = true;
       api('POST', 'admin/employees/' + enc(t.getAttribute('data-u')) + '/kyc/' + enc(id), { status: s }).then(function (d) { if (!d.ok) { t.disabled = false; return K.toast(d.message, 'bad'); } K.toast(s === 'verified' ? 'Marked as verified.' : 'Marked as rejected.', 'ok'); K.render(); });
     } else if (act === 'o-leave-del') {
-      if (!confirm('Cancel this leave? It stays in the leave history. Visits already moved to other nurses are not moved back.')) return;
+      if (!ask(t, 'Cancel this leave? It stays in the leave history. Visits already moved to other nurses are not moved back.', 'Cancel leave')) return;
       api('DELETE', 'admin/scheduler/nurses/' + enc(t.getAttribute('data-u')) + '/leave/' + enc(id)).then(function (d) { K.toast(d.ok ? 'Leave cancelled.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     } else if (act === 'o-hol-del') {
       var day = t.getAttribute('data-d');
@@ -2652,7 +2694,7 @@
       if (ok && fields && !fields.length) { t.disabled = false; K.toast('Tick at least one of the requested details to approve.', 'bad'); return; }
       api('POST', 'admin/contact-audit/' + enc(id) + '/decide', { approve: ok, minutes: mins ? Number(mins.value) : 120, fields: fields }).then(function (d) { K.toast(d.ok ? (ok ? 'Approved. The nurse has been told.' : 'Declined.') : d.message, d.ok ? 'ok' : 'bad'); S.cache.countsAt = 0; K.render(); });
     } else if (act === 'o-revoke') {
-      if (!confirm('End this access now? The nurse is told, and the numbers are hidden again.')) return;
+      if (!ask(t, 'End this access now? The nurse is told, and the numbers are hidden again.', 'End access')) return;
       t.disabled = true;
       api('POST', 'admin/contact-audit/' + enc(id) + '/revoke', {}).then(function (d) { K.toast(d.ok ? 'Access revoked.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
     }

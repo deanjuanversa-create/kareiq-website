@@ -490,7 +490,54 @@ function create(ctx) {
     return undefined;
   }
 
+  // ---- "Get your dashboard ready": the business settings each team enters once, with where to enter them
+  async function setup(role) {
+    const today = todayIST(), year = today.slice(0, 4);
+    const item = (label, done, href, detail, by) => ({ label, done: Boolean(done), href, detail: detail || null, by: by || null });
+    if (role === 'finance') {
+      const [gst, bud, pr, recon] = await Promise.all([setting('fin-gst'), setting('fin-budget'), setting('fin-addon-prices'), docs.find('app_recon', {}, { limit: 1 })]);
+      const lines = Object.keys(BRAND_NAMES), rates = gst.rates || {}, prices = pr.prices || {};
+      const noRate = lines.filter((b) => !Number.isFinite(rates[b])).length, noPrice = ADDON_SERVICES.filter((k) => !(prices[k] > 0)).length;
+      return [item('GST rate for each service line', !noRate, '#/office/fin/gst', noRate ? noRate + ' not set' : null),
+        item('Monthly budgets for ' + year, bud.years && bud.years[year] && Object.keys(bud.years[year]).length, '#/office/fin/pnl'),
+        item('Prices of add-on services', !noPrice, '#/office/fin/addons', noPrice ? noPrice + ' of ' + ADDON_SERVICES.length + ' not set' : null),
+        item('First reconciliation with a gateway or bank statement', recon.length, '#/office/fin/recon')];
+    }
+    if (role === 'hr') {
+      const [pol, list] = await Promise.all([setting('hr-leave-policy'), docs.find('app_users', { active: true })]);
+      const staffUsers = list.filter((u) => STAFF_ROLES.includes(u.role));
+      const profs = await docs.find('app_staff', { userId: { $in: staffUsers.map((u) => u.id) } });
+      const prof = (u) => profs.find((x) => x.userId === u.id) || {};
+      const noSalary = staffUsers.filter((u) => !prof(u).salary).length, nurses = staffUsers.filter((u) => u.role === 'caregiver');
+      const noSkills = nurses.filter((u) => !prof(u).skills).length, noProb = staffUsers.filter((u) => !prof(u).probation).length;
+      return [item('Leave allowances for each kind of leave', pol.allowances && Object.keys(pol.allowances).length, '#/office/hr/leave'),
+        item('A salary for every employee', !noSalary, '#/office/hr/salaries', noSalary ? noSalary + ' without a salary' : null),
+        item('Skills for every nurse', !noSkills, '#/office/hr/skills', noSkills ? noSkills + ' nurse' + (noSkills === 1 ? '' : 's') + ' not recorded' : null),
+        item('Probation recorded for every employee', !noProb, '#/office/hr/reviews', noProb ? noProb + ' not recorded' : null)];
+    }
+    if (role === 'operations') {
+      const [sla, allow, sched, sup, plans] = await Promise.all([setting('ops-sla'), setting('ops-visit-allowance'), scheduler.settings(), docs.find('app_supplies'), docs.find('app_plans')]);
+      const used = [...new Set(plans.filter((p) => isRealPlan(p) && (!p.endDate || p.endDate >= today)).map((p) => p.planId))];
+      const noAllow = used.filter((k) => !Number.isFinite((allow.perMonth || {})[k])).length;
+      const items = sup.filter((x) => !x.archived), noLevel = items.filter((x) => x.reorderLevel == null).length;
+      return [item('On-time grace period and target', Number.isFinite(sla.graceMin) && Number.isFinite(sla.targetPct), '#/office/ops/timeliness'),
+        item('Visits each package includes a month', used.length && !noAllow, '#/office/ops/visits-used', noAllow ? noAllow + ' package' + (noAllow === 1 ? '' : 's') + ' not set' : null),
+        item('Holidays for ' + year, sched.holidays.some((h) => String(h.date).slice(0, 4) === year), '#/office/scheduler/holidays'),
+        item('Supplies with a reorder level', items.length && !noLevel, '#/office/ops/supplies', !items.length ? 'No supplies added yet' : noLevel ? noLevel + ' without a reorder level' : null)];
+    }
+    if (role === 'sales') {
+      const [tpl, tg, cm, rf] = await Promise.all([setting('sales-templates'), setting('sales-targets'), setting('sales-commission'), setting('sales-referral')]);
+      return [item('At least one message template', (tpl.rows || []).some((t) => !t.archived), '#/office/sales/templates'),
+        item('Targets for this month', tg.months && tg.months[today.slice(0, 7)] && Object.keys(tg.months[today.slice(0, 7)]).length, '#/office/sales/targets', null, 'admin'),
+        item('Commission rate', Number.isFinite(cm.ratePct), '#/office/sales/commission', null, 'admin'),
+        item('Referral reward', rf.text, '#/office/sales/referrals', null, 'admin')];
+    }
+    return [];
+  }
+
   async function handle(req, res, parts, url, user, body) {
+    const team = { fin: 'finance', hr: 'hr', ops: 'operations', sales: 'sales' }[parts[0]];
+    if (team && parts[1] === 'setup' && parts.length === 2 && req.method === 'GET') { const items = await setup(team); return json(res, 200, { ok: true, items, done: items.filter((x) => x.done).length, total: items.length }); }
     if (['fin', 'hr', 'ops', 'sales'].includes(parts[0]) && parts[1] === 'reports' && parts.length === 3 && req.method === 'GET') { const r = await reports(req, res, parts, url); if (r !== undefined) return r; }
     if (parts[0] === 'fin') return financeRoute(req, res, parts, url, user, body);
     if (parts[0] === 'hr') return hrRoute(req, res, parts, url, user, body);
