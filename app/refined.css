@@ -814,3 +814,6 @@ a.okpi:hover .ok-go,a.okpi:focus-visible .ok-go{opacity:1}
 .ttxt{white-space:pre-wrap;background:#f6f8fa;border-radius:10px;padding:10px 12px;margin:8px 0;font-size:.92rem}
 .tstars{letter-spacing:1px;color:#cfd6df;font-style:normal}.tstars i{font-style:normal}.tstars i.on{color:#eda100}
 .tinline{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.tinline .field{margin:0}
+.tchips.tight{margin:0;gap:4px}
+.tfind{list-style:none;margin:-6px 0 12px;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.tperf{display:grid;gap:4px;padding:10px 12px;margin:0 0 12px;border-radius:10px;background:#f3f5f8}

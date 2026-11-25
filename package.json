@@ -21,6 +21,8 @@
     "check:teams-ui": "python3 tools/check-teams-ui.py http://localhost:3000",
     "check:teams-more": "node tools/check-teams-more.js http://localhost:3000",
     "check:teams-more-ui": "python3 tools/check-teams-more-ui.py http://localhost:3000",
+    "check:teams-growth": "node tools/check-teams-growth.js http://localhost:3000",
+    "check:teams-growth-ui": "python3 tools/check-teams-growth-ui.py http://localhost:3000",
     "check:trends": "node tools/check-trends.js http://localhost:3000"
   },
   "engines": {

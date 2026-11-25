@@ -47,6 +47,7 @@ const access = require('./access');
 const teamsMod = require('./teams');
 const teamsPlusMod = require('./teamsplus');
 const teamsMoreMod = require('./teamsmore');
+const teamsGrowthMod = require('./teamsgrowth');
 
 const ROLES = { family: 'Family', caregiver: 'Caregiver', admin: 'Office admin', ...access.TEAM_ROLES };
 const RELATIONS_MAX = 40;
@@ -1395,6 +1396,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
     if (plusDone !== undefined) return plusDone;
     const moreDone = await moreApi.handle(req, res, parts, url, admin, body);
     if (moreDone !== undefined) return moreDone;
+    const growthDone = await growthApi.handle(req, res, parts, url, admin, body);
+    if (growthDone !== undefined) return growthDone;
     const teamDone = await teamsApi.handle(req, res, parts, url, admin, body);
     if (teamDone !== undefined) return teamDone;
     const p = parts.join('/');
@@ -1948,7 +1951,8 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   const teamsApi = teamsMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle, features: featuresApi, welcomeLink, more: moreRef });
   const plusApi = teamsPlusMod.create({ ...modCtx, office: officeApi, lifecycle: shared.lifecycle });
   const moreApi = teamsMoreMod.create({ ...modCtx, office: officeApi, plus: plusApi, auth, welcomeLink });
-  Object.assign(moreRef, moreApi);
+  const growthApi = teamsGrowthMod.create({ ...modCtx, office: officeApi });
+  moreRef.attention = async (role) => [...(await moreApi.attention(role)), ...(await growthApi.attention(role))];
   // HR credential expiry and sales follow-up reminders: shortly after start, then every hour
   if (!global.__kqTeamTimer && process.env.APP_STATELESS !== 'true') {
     global.__kqTeamTimer = true;

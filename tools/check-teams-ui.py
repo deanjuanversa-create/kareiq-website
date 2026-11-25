@@ -16,11 +16,11 @@ def ok(c, m):
 ROLES = {
   'finance': ('office/fin', 'Finance Manager', ['Dashboard', 'Financials', 'Spending', 'Analysis', 'Reports and export', 'Team activity', 'My leave and training'],
               ['fin/receivables', 'fin/payments', 'fin/credit-notes', 'fin/recon', 'fin/expenses', 'fin/pnl', 'fin/gst', 'fin/reports', 'fin/activity', 'me', 'finance/invoices', 'finance/due', 'overview/revenue']),
-  'hr': ('office/hr', 'HR', ['Dashboard', 'Employees', 'Credentials', 'Training plans', 'Attendance and leave', 'Payroll', 'HR reports', 'Team activity', 'My leave and training'],
+  'hr': ('office/hr', 'HR', ['Dashboard', 'Employees', 'Nurse skills', 'Credentials', 'Training plans', 'Attendance and leave', 'Payroll', 'HR reports', 'Team activity', 'My leave and training'],
          ['hr/onboarding', 'hr/credentials', 'hr/trainings', 'hr/attendance', 'hr/attendance?view=month', 'hr/leave', 'hr/payroll', 'hr/reports', 'hr/activity', 'me', 'employees', 'employees/kyc', 'scheduler/leave']),
   'ops': ('office/ops', 'Operations Manager', ['Dashboard', 'Customer management', 'Nurse scheduler', 'Supplies', 'Service quality', 'Operations reports', 'Team activity', 'My leave and training'],
           ['ops/visits', 'ops/capacity', 'ops/timeliness', 'ops/areas', 'ops/onboarding', 'ops/quality', 'ops/reports', 'ops/activity', 'me', 'customers', 'customer?p=P-DEMO01', 'scheduler', 'scheduler/leave', 'scheduler/holidays']),
-  'sales': ('office/sales', 'Sales Executive', ['Dashboard', 'Lead management', 'Quotations', 'Message templates', 'Targets and commission', 'Packages and enquiries', 'Sales reports', 'Team activity', 'My leave and training'],
+  'sales': ('office/sales', 'Sales Executive', ['Dashboard', 'Lead management', 'Growth', 'Quotations', 'Message templates', 'Targets and commission', 'Packages and enquiries', 'Sales reports', 'Team activity', 'My leave and training'],
             ['sales/followups', 'sales/quotes', 'sales/targets', 'sales/lost', 'sales/packages', 'sales/reports', 'sales/activity', 'me', 'leads/overview', 'leads/list']),
 }
 

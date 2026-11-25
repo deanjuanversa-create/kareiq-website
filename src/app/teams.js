@@ -905,10 +905,14 @@ function create(ctx) {
       if (body.package && !pk) errors.package = 'Choose a package.';
       let followUpAt = null;
       if (body.followUpAt) { if (!isDate(String(body.followUpAt).slice(0, 10)) || String(body.followUpAt).slice(0, 10) < today) errors.followUpAt = 'Choose today or a later date.'; else followUpAt = String(body.followUpAt).slice(0, 16); }
+      const campaign = body.campaignId ? await docs.findOne('app_campaigns', { id: String(body.campaignId) }) : null;
+      if (body.campaignId && !campaign) errors.campaignId = 'Choose a campaign.';
+      const referrer = body.referredBy ? await docs.findOne('app_people', { id: String(body.referredBy) }) : null;
+      if (body.referredBy && !referrer) errors.referredBy = 'Choose the family who referred them.';
       if (Object.keys(errors).length) return fail(res, null, errors);
       const note = clean(body.note, 500);
       const at = now();
-      const rec = await store.add('enquiries', 'KQ', { name, phone, email: email || '', interest: pk ? pk.product : 'kareiq', interestName: pk ? pk.name : 'Enquiry', package: pk ? pk.id : 'undecided', message: note, source, kind: 'enquiry', careForName: clean(body.careFor, 80) || null,
+      const rec = await store.add('enquiries', 'KQ', { campaignId: campaign ? campaign.id : null, referredBy: referrer ? referrer.id : null, name, phone, email: email || '', interest: pk ? pk.product : 'kareiq', interestName: pk ? pk.name : 'Enquiry', package: pk ? pk.id : 'undecided', message: note, source, kind: 'enquiry', careForName: clean(body.careFor, 80) || null,
         createdAt: at, assignedTo: user.id, assignedAt: at, leadStatus: note ? 'contacted' : 'new', status: note ? 'contacted' : 'new', followUpAt, nextAction: clean(body.nextAction, 200) || null, addedBy: user.id,
         leadHistory: [{ at, by: user.name, byId: user.id, action: 'added', note: 'Added by ' + user.name + ' (' + (SOURCES[source] || source) + ')' }].concat(note ? [{ at, by: user.name, byId: user.id, action: 'contact', channel: source === 'walk-in' ? 'meeting' : 'call', outcome: null, note }] : []) });
       await audit(user.id, 'lead.add', null, { lead: rec.reference, source });

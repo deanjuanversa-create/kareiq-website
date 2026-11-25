@@ -1200,7 +1200,8 @@
       ['fin/reports/expenses.csv', 'Expenses', 'Every expense with its approval and payment.', 'receipt'],
       ['fin/reports/gst.csv', 'GST summary', 'GST in the invoiced amounts by month and service line (this year).', 'rupee'], ['fin/reports/pnl.csv', 'Profit and loss', 'Money in, expenses and net by month (this year).', 'gauge'],
       ['fin/reports/credit-notes.csv', 'Credit notes', 'Every credit note with its reason.', 'left'],
-      ['fin/reports/renewals.csv', 'Package renewals', 'Packages ending in the next 30 days, with their renewal leads.', 'cal'], ['fin/reports/bills.csv', 'Supplier bills', 'Every supplier bill with what is paid and owed.', 'file']]);
+      ['fin/reports/renewals.csv', 'Package renewals', 'Packages ending in the next 30 days, with their renewal leads.', 'cal'], ['fin/reports/bills.csv', 'Supplier bills', 'Every supplier bill with what is paid and owed.', 'file'],
+      ['fin/reports/growth.csv', 'Package income', 'Active, new, renewed and lost packages and income, month by month.', 'up'], ['fin/reports/discounts.csv', 'Discounts', 'Every discount in the last 90 days, with who gave it.', 'left'], ['fin/reports/addons.csv', 'Add-on bills', 'Every add-on services bill with what is paid.', 'plus']]);
   }
 
   // ---------------------------------------------------------------- HR
@@ -1492,7 +1493,8 @@
       ['ops/reports/onboarding.csv', 'Customer onboarding', 'Every customer with a package, where onboarding stands and how long they waited (all time).', 'idcard'],
       ['ops/reports/issues.csv', 'Service issues', 'Complaints, exceptions, incidents and feedback (all time).', 'star'],
       ['ops/reports/timeliness.csv' + q, 'On-time performance', 'Visits started on time for each nurse.', 'clock'], ['ops/reports/feedback.csv', 'Customer feedback', 'Every rating, from families and recorded by the office.', 'smile'],
-      ['ops/reports/visit-times.csv' + q, 'Visit times', 'Planned and actual start, finish and length of each visit.', 'clock'], ['ops/reports/supplies.csv', 'Supplies', 'Stock of each item and its reorder level.', 'bag']]);
+      ['ops/reports/visit-times.csv' + q, 'Visit times', 'Planned and actual start, finish and length of each visit.', 'clock'], ['ops/reports/supplies.csv', 'Supplies', 'Stock of each item and its reorder level.', 'bag'],
+      ['ops/reports/visits-used.csv', 'Package visits this month', 'Visits done and left against what each package includes.', 'cal'], ['ops/reports/continuity.csv', 'Same nurse', 'Share of each family\'s visits by their regular nurse (90 days).', 'user']]);
   }
 
   // ---------------------------------------------------------------- Sales Executive
@@ -1536,7 +1538,7 @@
     if (v.followUpAt) body.followUpAt = v.followUpAt; if (v.package) body.package = v.package; if (v.expectedValue) body.expectedValue = v.expectedValue;
     return api('POST', 'admin/sales/leads/' + f.getAttribute('data-type') + '/' + enc(f.getAttribute('data-id')) + '/activity', body).then(function (d) { if (!d.ok) return d; K.closeDialog(); S.cache.dirtyLead = false; K.toast('Saved.', 'ok'); K.render(); });
   };
-  function leadNewDialog() {
+  function leadNewDialog(src) {
     var packs = S.cache.salesPacks;
     var go = function () {
       var po = {}; (packs || []).forEach(function (p2) { po[p2.id] = p2.name + ' (' + p2.productName + ')'; });
@@ -1546,6 +1548,8 @@
         areaField('note', 'What they asked (optional)', '', 'maxlength="500"') + '<div class="row2">' + K.field('followUpAt', 'Follow up on (optional)', 'type="datetime-local" min="' + K.todayIST() + 'T00:00"') + K.field('nextAction', 'Next action (optional)', 'maxlength="200"') + '</div>' +
         '<p class="muted small">The lead is added to the enquiry database and assigned to you. If the same number has enquired before, it is marked as a repeat.</p></form>',
         '<button class="btn ghost" data-act="close">Cancel</button><button class="btn" data-act="submit-dialog">Add lead</button>');
+      var lf = $('dialog[open] form[data-form=o-lead-new]');
+      if (lf && src) { lf.querySelector('[name=source]').value = src; leadExtras(lf); }
     };
     if (packs) return go();
     api('GET', 'admin/sales/packages').then(function (d) { if (d.ok) S.cache.salesPacks = packs = d.rows; go(); });
@@ -1583,7 +1587,8 @@
       ['sales/reports/packages.csv', 'Package enquiry report', 'Enquiries, conversions and paid purchases for each package.', 'box'], ['sales/reports/pipeline.csv', 'Sales pipeline report', 'Open leads with their expected value.', 'rupee'],
       ['sales/reports/leads.csv', 'All leads', 'Every lead with its source, package, status, follow-up and contacts.', 'inbox'],
       ['sales/reports/lost.csv', 'Lost leads', 'Lost leads with the reason.', 'x'], ['sales/reports/quotes.csv', 'Quotations', 'Every quotation with its status.', 'receipt'],
-      ['sales/reports/commission.csv', 'Commission this month', 'Paid revenue and commission for each executive.', 'rupee']]);
+      ['sales/reports/commission.csv', 'Commission this month', 'Paid revenue and commission for each executive.', 'rupee'],
+      ['sales/reports/campaigns.csv', 'Campaigns', 'Leads, joined, revenue and cost per lead of each campaign.', 'star'], ['sales/reports/upgrades.csv', 'Upgrade suggestions', 'Customers who could move up a package.', 'up']]);
   }
 
   // ---------------------------------------------------------------- the Operations Manager's customer profile (no clinical information)
@@ -2024,19 +2029,25 @@
   var PROB_TONE = { on: 'warn', extended: 'warn', confirmed: 'good', none: '' };
   function hrReviews() {
     page('office/hr/reviews', 'Probation and reviews', 'Who is on probation and when it ends, and each employee\'s yearly review. HR is reminded two weeks before a probation ends.', '', K.loading(320));
-    api('GET', 'admin/hr/reviews').then(function (d) {
+    Promise.all([api('GET', 'admin/hr/reviews'), api('GET', 'admin/hr/performance')]).then(function (x) {
+      var d = x[0], pf = x[1].ok ? x[1].rows : [];
       if (!d.ok) return fail(d);
+      d.rows.forEach(function (r0) { r0.perf = pf.filter(function (y) { return y.userId === r0.userId; })[0] || null; });
       S.cache.reviews = d;
       var t = d.totals, me = S.me.user.id;
       swap(kpis([kpi('On probation', t.onProbation, { icon: 'user' }), kpi('Probation ending in 14 days', t.endingSoon, { icon: 'clock', tone: t.endingSoon ? 'warn' : '' }), kpi('Reviews overdue', t.reviewsOverdue, { icon: 'star', tone: t.reviewsOverdue ? 'warn' : '', sub: 'more than a year since joining or the last review' })]) +
-        '<section class="panel otw">' + table(['Employee', 'Joined', 'Probation', 'Last review', 'Next review', ''], d.rows.map(function (x) {
+        '<section class="panel otw">' + table(['Employee', 'Joined', 'Work (12 months)', 'Probation', 'Last review', 'Next review', ''], d.rows.map(function (x) {
           var p = x.probation;
-          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + ' · ' + e(x.designation || x.roleName) + '</span>', x.joinDate ? e(K.date(x.joinDate)) : '–',
+          return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + ' · ' + e(x.designation || x.roleName) + '</span>', x.joinDate ? e(K.date(x.joinDate)) : '–', perfHtml(x.perf),
             p ? pill(p.statusName, p.overdue ? 'bad' : PROB_TONE[p.status]) + (p.endDate && p.status !== 'confirmed' && p.status !== 'none' ? '<br><span class="muted small">ends ' + e(K.date(p.endDate)) + '</span>' : p.confirmedOn ? '<br><span class="muted small">' + e(K.date(p.confirmedOn)) + '</span>' : '') : '<span class="muted">Not recorded</span>',
             x.lastReview ? stars(x.lastReview.rating) + '<br><span class="muted small">' + e(x.lastReview.period) + ' · ' + e(x.lastReview.byName) + '</span>' : '<span class="muted">None yet</span>', x.reviewOverdue ? '<b class="odue">' + e(K.date(x.reviewDue)) + '</b>' : e(K.date(x.reviewDue)),
             x.userId === me ? '<span class="muted small">Recorded by someone else</span>' : '<button class="btn sm ghost" data-act="o-prob" data-id="' + e(x.userId) + '">Probation</button><button class="btn sm" data-act="o-rev" data-id="' + e(x.userId) + '">Add review</button>' + (x.reviews.length ? '<button class="btn sm ghost" data-act="o-rev-hist" data-id="' + e(x.userId) + '">Reviews</button>' : '')];
         }), 'No employees') + '</section>');
     });
+  }
+  function perfHtml(pf) {
+    if (!pf) return '<span class="muted">–</span>';
+    return '<span class="small">' + num(pf.completed) + ' visit' + (pf.completed === 1 ? '' : 's') + (pf.missed ? ' · <b class="odue">' + pf.missed + ' missed</b>' : '') + '<br>' + (pf.onTimePct == null ? '<span class="muted">' + (pf.graceSet ? 'no starts yet' : 'on time: set the grace period') + '</span>' : pf.onTimePct + '% on time') + '<br>' + (pf.avgRating == null ? '<span class="muted">no family ratings</span>' : stars(Math.round(pf.avgRating)) + ' ' + pf.avgRating + ' (' + pf.ratings + ')') + '</span>';
   }
   function revOf(id) { return ((S.cache.reviews && S.cache.reviews.rows) || []).filter(function (x) { return x.userId === id; })[0]; }
   K.FORMS['o-prob'] = function (f, v) { return api('POST', 'admin/hr/reviews/' + enc(f.getAttribute('data-id')) + '/probation', v).then(done('Saved.')); };
@@ -2223,7 +2234,7 @@
       K.openDialog('Probation: ' + pr.name, '<form data-form="o-prob" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('status', 'Status', S.cache.reviews.probation, pp.status || 'on') + K.field('endDate', 'Ends on (on probation or extended)', 'type="date" value="' + e(pp.endDate || '') + '"') + '</div>' + K.field('note', 'Note (optional)', 'maxlength="300"') + '<p class="muted small">Confirming tells the employee.</p></form>', submitBtn('Save'));
     } else if (act === 'o-rev') {
       var rv = revOf(id);
-      K.openDialog('Review: ' + rv.name, '<form data-form="o-rev" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + K.field('period', 'Period', 'maxlength="40" value="' + K.todayIST().slice(0, 4) + '"') + selField('rating', 'Overall rating', { 5: '5 – Outstanding', 4: '4 – Very good', 3: '3 – Good', 2: '2 – Needs improvement', 1: '1 – Unsatisfactory' }, '', 'Choose') + '</div>' +
+      K.openDialog('Review: ' + rv.name, '<form data-form="o-rev" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + (rv.perf ? '<div class="tperf"><b>Their work in the last 12 months</b>' + perfHtml(rv.perf) + '</div>' : '') + '<div class="row2">' + K.field('period', 'Period', 'maxlength="40" value="' + K.todayIST().slice(0, 4) + '"') + selField('rating', 'Overall rating', { 5: '5 – Outstanding', 4: '4 – Very good', 3: '3 – Good', 2: '2 – Needs improvement', 1: '1 – Unsatisfactory' }, '', 'Choose') + '</div>' +
         area('strengths', 'What went well', 'rows="3" maxlength="600"') + area('improve', 'What to improve', 'rows="3" maxlength="600"') + area('goals', 'Goals for the next period (optional)', 'rows="2" maxlength="600"') + '</form>', submitBtn('Save review'));
     } else if (act === 'o-rev-hist') {
       var rh = revOf(id);
@@ -2270,34 +2281,253 @@
     else if (act === 'o-msg-tpl') fillMsg(t.getAttribute('data-type'), t.getAttribute('data-id'), t.value);
   });
 
+  // ================================================================ growth: add-ons, package income, discounts, skills,
+  // performance, package visits, same nurse, upgrades, referrals, campaigns
+  // ---- Finance: add-on services
+  function finAddons() {
+    page('office/fin/addons', 'Add-on services', 'Paid extra services families book (physiotherapy, teleconsultation, dressing and others) are charged once the visit is done, at your price less the family\'s package discount. Free sessions from the package are never charged.', csvBtn('fin/reports/addons.csv', 'Bills CSV'), skeleton());
+    api('GET', 'admin/fin/addons').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.addons = d;
+      var t = d.totals;
+      swap(kpis([kpi('To bill', t.unbilled, { money: true, icon: 'receipt', tone: t.unbilledCount ? 'warn' : '', sub: t.unbilledCount + ' service' + (t.unbilledCount === 1 ? '' : 's') }), kpi('Billed, not paid yet', t.owed, { money: true, icon: 'clock', tone: t.owed ? 'warn' : '' }), kpi('Collected', t.collected, { money: true, icon: 'check', tone: 'good' }), kpi('Done, waiting for a price', t.waitingPrice, { icon: 'rupee', tone: t.waitingPrice ? 'bad' : '' })]) +
+        '<section class="panel"><h2>Prices</h2><form data-form="o-ao-prices" novalidate><div class="alert bad" data-msg hidden></div><div class="tgrid4">' + Object.keys(d.services).map(function (k) { return moneyIn('p_' + k, d.services[k] + ' (₹)', d.prices[k]); }).join('') + '</div><p class="muted small">The price before the package discount (HomeStart 10%, HomePlus 15%, HomeElite 20% off add-ons). A service done before its price is set is charged when you set it.</p><button class="btn sm" type="submit" style="margin-top:10px">Save prices</button></form></section>' +
+        (d.waitingPrice.length ? panel('Done, waiting for a price', table(['Service', 'Customer', 'Visit'], d.waitingPrice.map(function (w) { return [e(w.serviceName), e(w.customer), e(K.date(w.date)) + '<br><span class="muted small">' + e(w.reference) + '</span>']; }), '')) : '') +
+        panel('To bill', d.families.length ? table(['Customer', 'Services', 'Amount', ''], d.families.map(function (f) {
+          return ['<b>' + e(f.customer) + '</b><br><span class="muted small">' + e(f.personId) + '</span>', '<ul class="rlist small">' + f.charges.map(function (c) { return '<li><span>' + e(c.serviceName) + ' · ' + e(K.date(c.date)) + (c.discountPct ? ' · ' + money(c.listPrice) + ' less ' + c.discountPct + '%' : '') + '</span><span>' + money(c.amount) + ' <button class="btn sm ghost" data-act="o-ao-waive" data-id="' + e(c.id) + '">Don\'t charge</button></span></li>'; }).join('') + '</ul>', '<b>' + money(f.amount) + '</b>',
+            '<button class="btn sm" data-act="o-ao-bill" data-id="' + e(f.personId) + '" data-n="' + e(f.customer) + '" data-a="' + f.amount + '">Bill now</button>' + contactBtns(f.contact, 'Hello ' + K.first((f.contact && f.contact.name) || '') + ', the add-on services for ' + f.customer + ' come to ' + money(f.amount) + '. KareIQ')];
+        }), '') : '<p class="muted">Nothing to bill.</p>') +
+        panel('Bills', d.bills.length ? table(['Bill', 'Customer', 'Amount', 'Owed', ''], d.bills.map(function (b) {
+          return ['<b>' + e(b.number) + '</b><br><span class="muted small">' + e(K.date(b.date)) + ' · ' + b.lines.length + ' service' + (b.lines.length === 1 ? '' : 's') + '</span>', e(b.customer), money(b.amount), b.due ? '<b>' + money(b.due) + '</b>' + (b.overdueDays ? '<br><b class="odue">' + b.overdueDays + ' days overdue</b>' : '') : pill('Paid', 'good'),
+            '<a class="btn sm ghost" href="/api/app/admin/fin/addons/bills/' + e(b.id) + '/pdf" download>' + icon('download') + 'PDF</a>' + (b.due ? '<button class="btn sm" data-act="o-ao-pay" data-id="' + e(b.id) + '">Record payment</button>' : '')];
+        }), '') : '<p class="muted">No add-on bills yet.</p>'));
+    });
+  }
+  K.FORMS['o-ao-prices'] = function (f, v) { var pr = {}; Object.keys(v).forEach(function (k) { if (k.indexOf('p_') === 0) pr[k.slice(2)] = v[k]; }); return api('POST', 'admin/fin/addons/prices', { prices: pr }).then(function (d) { if (!d.ok) return d; K.toast('Prices saved.', 'ok'); K.render(); }); };
+  K.FORMS['o-ao-waive'] = function (f, v) { return api('POST', 'admin/fin/addons/charges/' + enc(f.getAttribute('data-id')) + '/waive', v).then(done('Not charged.')); };
+  K.FORMS['o-ao-pay'] = function (f, v) { return api('POST', 'admin/fin/addons/bills/' + enc(f.getAttribute('data-id')) + '/pay', v).then(done('Payment recorded.')); };
+  // ---- Finance: package income
+  function finGrowth() {
+    page('office/fin/growth', 'Package income', 'Is the business growing? Active packages, new and renewed packages, packages that ended without renewal, and what families spend, month by month.', csvBtn('fin/reports/growth.csv', 'CSV') + csvBtn('fin/reports/growth.csv', 'PDF', '?format=pdf'), skeleton());
+    api('GET', 'admin/fin/growth').then(function (d) {
+      if (!d.ok) return fail(d);
+      var c = d.current, pv = d.previous || {};
+      var diff = function (a, b) { if (b == null) return ''; var x = a - b; return x === 0 ? 'same as last month' : (x > 0 ? '+' : '') + num(x) + ' on last month'; };
+      swap(kpis([kpi('Active packages', c.active, { icon: 'box', sub: diff(c.active, pv.active) }), kpi('Package income this month', c.income, { money: true, icon: 'rupee', sub: pv.income != null ? (c.income >= pv.income ? '+' + money(c.income - pv.income) : '−' + money(pv.income - c.income)) + ' on last month' : '' }), kpi('Spend per paying family', c.perFamily, { money: true, icon: 'people', sub: c.payingFamilies + ' paid this month' }), kpi('Renewed when they ended', d.renewalRate == null ? 0 : d.renewalRate, { icon: 'check', suffix: '%', sub: d.renewalRate == null ? 'no package has ended yet' : 'over the last 12 months' })]) +
+        '<div class="ocharts">' + timeChart('Package income by month', d.months.map(function (m) { return m.key; }), [{ name: 'Income', color: PAL[2], values: d.months.map(function (m) { return m.income; }) }], { fmt: money, short: moneyShort }) +
+          timeChart('New, renewed and lost packages', d.months.map(function (m) { return m.key; }), [{ name: 'New', color: PAL[0], values: d.months.map(function (m) { return m.new; }) }, { name: 'Renewed', color: PAL[2], values: d.months.map(function (m) { return m.renewed; }) }, { name: 'Ended without renewal', color: PAL[7], values: d.months.map(function (m) { return m.lost; }) }], { fmt: num }) + '</div>' +
+        '<div class="ocharts">' + hbars('Active packages by package', d.byPackage.map(function (x) { return { key: x.key, label: x.label, value: x.active }; }), num, PAL[0]) +
+          panel('Month by month', table(['Month', 'Active', 'New', 'Renewed', 'Lost', 'Income', 'Per family'], d.months.slice().reverse().map(function (m) { return ['<b>' + e(mon(m.key)) + '</b>', num(m.active), num(m.new), num(m.renewed), m.lost ? '<b class="odue">' + num(m.lost) + '</b>' : '0', money(m.income), m.perFamily ? money(m.perFamily) : '–']; }), '')) + '</div>' +
+        '<p class="muted small">Income is payments on package invoices less refunds, in the month received. "Lost" is a package that ended with no later package for the same family and service.</p>');
+    });
+  }
+  // ---- Finance: discounts
+  function finDiscounts(r) {
+    var from = r.q.from || addDays(K.todayIST(), -90), to = r.q.to || K.todayIST(), q0 = '?from=' + enc(from) + '&to=' + enc(to);
+    page('office/fin/discounts', 'Discounts', 'Every price reduction: discounts on quotations, credit notes, and the package discount on add-on services, with who gave each one.', csvBtn('fin/reports/discounts.csv', 'CSV', q0) + csvBtn('fin/reports/discounts.csv', 'PDF', q0 + '&format=pdf'), skeleton());
+    api('GET', 'admin/fin/discounts' + q0).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters({ q: { from: from, to: to }, parts: r.parts }, [['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        kpis([kpi('Discounts given', d.total, { money: true, icon: 'left' }), kpi('Number', d.rows.length, { icon: 'receipt' })].concat(d.byKind.map(function (k) { return kpi(k.label, k.value, { money: true, icon: 'rupee', sub: k.count + ' time' + (k.count === 1 ? '' : 's') }); }).slice(0, 2))) +
+        '<div class="ocharts">' + hbars('By who gave them', d.byPerson, money, PAL[1]) + hbars('By package', d.byPackage, money, PAL[0]) + '</div>' +
+        '<section class="panel otw">' + table(['Date', 'Kind', 'For', 'Package', 'Discount', 'Given by'], d.rows.map(function (x) {
+          return [e(K.date(x.date)), e(x.kindName) + '<br><span class="muted small">' + e(x.ref) + '</span>', e(x.who), e(x.packageName || '–'), '<b>' + money(x.amount) + '</b>' + (x.pct ? '<br><span class="muted small">' + x.pct + '% off</span>' : ''), e(x.by) + (x.note ? '<br><span class="muted small">' + e(x.note) + '</span>' : '')];
+        }), 'No discounts in this period') + '</section>');
+    });
+  }
+
+  // ---- HR: nurse skills
+  function hrSkills() {
+    page('office/hr/skills', 'Nurse skills', 'Which services each nurse can be booked for, and which package checks they are trained to do. The visit board, automatic assignment and nurse suggestions offer only nurses with the right skill.', '', K.loading(320));
+    api('GET', 'admin/hr/skills').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.skills = d;
+      var sv = Object.keys(d.services), as = Object.keys(d.assessments);
+      swap('<section class="panel otw">' + table(['Nurse', 'Services', 'Package checks', ''], d.rows.map(function (x) {
+        return ['<b>' + e(x.name) + '</b><br><span class="muted small">' + e(x.employeeId) + (x.updatedAt ? ' · updated ' + e(K.ago(x.updatedAt)) + ' by ' + e(x.updatedByName) : '') + '</span>',
+          x.allServices ? pill('Every service', 'good') : '<div class="tchips tight">' + x.services.map(function (k) { return '<span class="tpill">' + e(d.services[k]) + '</span>'; }).join('') + '</div>',
+          x.assessments.length ? '<div class="tchips tight">' + x.assessments.map(function (k) { return '<span class="tpill info">' + e(d.assessments[k]) + '</span>'; }).join('') + '</div>' : '<span class="muted">None recorded</span>',
+          '<button class="btn sm ghost" data-act="o-skill" data-id="' + e(x.userId) + '">Change</button>'];
+      }), 'No nurses') + '</section>');
+      void sv; void as;
+    });
+  }
+  K.FORMS['o-skill'] = function (f, v) {
+    var s = [], a = [];
+    Object.keys(v).forEach(function (k) { if (k.indexOf('s_') === 0) s.push(k.slice(2)); if (k.indexOf('a_') === 0) a.push(k.slice(2)); });
+    return api('POST', 'admin/hr/skills/' + enc(f.getAttribute('data-id')), { services: s, assessments: a }).then(done('Skills saved.'));
+  };
+
+  // ---- Operations: package visits used
+  var VU_TONE = { over: 'bad', short: 'warn', ok: 'good', not_set: '' }, VU_NAME = { over: 'More than included', short: 'Visits left this month', ok: 'On track', not_set: 'Included visits not set' };
+  function opsVisitsUsed(r) {
+    var m = r.q.month || K.todayIST().slice(0, 7);
+    page('office/ops/visits-used', 'Package visits', 'Home visits done and planned this month for each customer, against the visits their package includes, and the free sessions left this year. Nobody should get fewer visits than they paid for, or extra ones nobody billed.', csvBtn('ops/reports/visits-used.csv', 'CSV', '?month=' + m) + csvBtn('ops/reports/visits-used.csv', 'PDF', '?month=' + m + '&format=pdf'), skeleton());
+    api('GET', 'admin/ops/visits-used?month=' + enc(m)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var t = d.totals;
+      swap('<form class="ofilters" data-form="o-filter" novalidate><label><span>Month</span><input class="in" type="month" name="month" value="' + e(d.month) + '" data-act="o-auto"></label></form>' +
+        kpis([kpi('Customers with a package', t.customers, { icon: 'people' }), kpi('Visits done', t.done, { icon: 'check' }), kpi('Given more than included', t.over, { icon: 'x', tone: t.over ? 'bad' : '' }), kpi('Short of their visits', t.short, { icon: 'clock', tone: t.short ? 'warn' : '', sub: 'in the last week of the month' })]) +
+        '<section class="panel"><h2>Visits each package includes a month</h2><form data-form="o-allow" novalidate class="tinline"><div class="alert bad" data-msg hidden></div>' + d.packages.map(function (p2) { return K.field('a_' + p2.key, p2.label, 'type="number" min="0" max="62" style="max-width:110px" value="' + (p2.perMonth == null ? '' : p2.perMonth) + '"'); }).join('') + '<button class="btn sm" type="submit">Save</button></form><p class="muted small" style="margin-top:8px">Home visits a month in each package, as sold. Until it is set, a customer shows "not set".</p></section>' +
+        '<section class="panel otw">' + table(['Customer', 'Package', 'This month', 'Left', 'Free sessions this year'], d.rows.map(function (x) {
+          return ['<b>' + e(x.customer) + '</b><br><span class="muted small">' + e(x.personId) + '</span>', e(x.packageName), num(x.done) + ' done · ' + num(x.planned) + ' planned' + (x.cancelled ? '<br><span class="muted small">' + x.cancelled + ' cancelled</span>' : '') + (x.included != null ? bar((x.done + x.planned) / Math.max(1, x.included) * 100, x.state === 'over' ? 'bad' : 'good') : ''),
+            x.included == null ? pill(VU_NAME.not_set, '') : pill((x.left < 0 ? -x.left + ' over' : x.left + ' of ' + x.included + ' left'), VU_TONE[x.state]), x.free ? x.free.left + ' of ' + x.free.total + ' left' : '–'];
+        }), 'No customers with a package this month') + '</section>');
+    });
+  }
+  K.FORMS['o-allow'] = function (f, v) { var pm = {}; Object.keys(v).forEach(function (k) { if (k.indexOf('a_') === 0) pm[k.slice(2)] = v[k]; }); return api('POST', 'admin/ops/visits-used/allowance', { perMonth: pm }).then(function (d) { if (!d.ok) return d; K.toast('Saved.', 'ok'); K.render(); }); };
+  // ---- Operations: same nurse for each family
+  function opsContinuity(r) {
+    var from = r.q.from || addDays(K.todayIST(), -90), to = r.q.to || K.todayIST(), q0 = '?from=' + enc(from) + '&to=' + enc(to);
+    page('office/ops/continuity', 'Same nurse', 'How often each family gets their regular nurse (the nurse linked to them, or the one who visits most). Families notice when it keeps changing.', csvBtn('ops/reports/continuity.csv', 'CSV') + csvBtn('ops/reports/continuity.csv', 'PDF', '?format=pdf'), skeleton());
+    api('GET', 'admin/ops/continuity' + q0).then(function (d) {
+      if (!d.ok) return fail(d);
+      swap(filters({ q: { from: from, to: to }, parts: r.parts }, [['from', 'From', 'date'], ['to', 'To', 'date']]) +
+        kpis([kpi('Visits by the regular nurse', d.overallPct == null ? 0 : d.overallPct, { icon: 'user', suffix: '%', tone: d.overallPct != null && d.overallPct < 70 ? 'warn' : 'good' }), kpi('Families visited', d.families, { icon: 'people' }), kpi('Families often seeing a different nurse', d.lowFamilies, { icon: 'clock', tone: d.lowFamilies ? 'warn' : '', sub: 'under 60%, 3 visits or more' })]) +
+        '<section class="panel otw">' + table(['Family', 'Visits', 'Regular nurse', 'By the regular nurse', 'Others'], d.rows.map(function (x) {
+          return ['<b>' + e(x.customer) + '</b>', num(x.visits), x.regular ? e(x.regular.name) + (x.regular.assigned ? '<br><span class="muted small">linked nurse</span>' : '') : '–', x.sharePct + '%' + bar(x.sharePct, x.sharePct >= 80 ? 'good' : x.sharePct >= 60 ? 'warn' : 'bad'), x.others.length ? e(x.others.map(function (o) { return o.name + ' (' + o.visits + ')'; }).join(', ')) : '<span class="muted">None</span>'];
+        }), 'No completed visits in this period') + '</section>');
+    });
+  }
+
+  // ---- Sales: upgrade suggestions
+  function salesUpgrades(r) {
+    var min = r.q.min || '3';
+    page('office/sales/upgrades', 'Upgrade suggestions', 'Customers who could move up a package (HomeStart to HomePlus, HomePlus to HomeElite, HomeElite to KareNest), chosen only by their package and how long they have been with KareIQ. No health information is used.', csvBtn('sales/reports/upgrades.csv', 'CSV'), skeleton());
+    api('GET', 'admin/sales/upgrades?min=' + enc(min)).then(function (d) {
+      if (!d.ok) return fail(d);
+      var t = d.totals;
+      swap(selFilter('min', 'With KareIQ for at least', { 0: 'Any time', 1: '1 month', 3: '3 months', 6: '6 months', 12: '12 months' }, String(d.minMonths)) +
+        kpis([kpi('Customers to offer an upgrade', t.candidates, { icon: 'up' }), kpi('Already a lead', t.withLead, { icon: 'funnel' }), kpi('Extra value if all upgrade', t.extra, { money: true, icon: 'rupee', sub: 'at the same length of package' })]) +
+        '<section class="panel otw">' + table(['Customer', 'Now', 'Suggest', 'With KareIQ', 'Price difference', ''], d.rows.map(function (x) {
+          return ['<b>' + e(x.customer) + '</b>' + (x.contact && x.contact.name ? '<br><span class="muted small">' + e(x.contact.name) + '</span>' : ''), e(x.fromName) + '<br><span class="muted small">ends ' + e(x.endDate ? K.date(x.endDate) : '–') + '</span>', '<b>' + e(x.toName) + '</b>',
+            x.months + ' month' + (x.months === 1 ? '' : 's'), x.extra != null ? '+' + money(x.extra) + '<br><span class="muted small">' + money(x.nowPrice) + ' → ' + money(x.toPrice) + '</span>' : '<span class="muted">Priced on call</span>',
+            x.lead ? '<span class="small"><b>' + e(x.lead.enquiryId) + '</b><br>' + e(x.lead.statusName) + '</span>' : '<button class="btn sm" data-act="o-upg" data-id="' + e(x.planId) + '">Make a lead</button>' + contactBtns(x.contact, 'Hello ' + K.first((x.contact && x.contact.name) || '') + ', this is KareIQ. ')];
+        }), 'No customers to suggest an upgrade to') + '</section>');
+    });
+  }
+  // ---- Sales: referrals
+  function salesReferrals() {
+    page('office/sales/referrals', 'Family referrals', 'Families who recommended KareIQ to friends: who they referred, who joined, and the reward given. Choose "Referral" and the family when you add a lead.', '<button class="btn sm" data-act="o-lead-new" data-src="referral">' + icon('plus') + 'Add a referred lead</button>', K.loading(320));
+    api('GET', 'admin/sales/referrals').then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.refs = d;
+      var t = d.totals;
+      swap(kpis([kpi('Families who referred', t.families, { icon: 'people' }), kpi('Referred', t.referred, { icon: 'funnel' }), kpi('Joined', t.joined, { icon: 'check', tone: 'good' }), kpi('Rewards to give', t.rewardsDue, { icon: 'star', tone: t.rewardsDue ? 'warn' : '' })]) +
+        '<section class="panel"><h2>Reward</h2>' + (d.canSetReward ? '<form data-form="o-ref-rule" novalidate class="tinline"><div class="alert bad" data-msg hidden></div>' + K.field('text', 'What a family gets when a friend joins', 'maxlength="200" style="min-width:min(100%,420px)" value="' + e(d.reward || '') + '" placeholder="e.g. ₹500 off the next renewal"') + '<button class="btn sm" type="submit">Save</button></form>' : '<p>' + (d.reward ? e(d.reward) : '<span class="muted">Not set by the office admin yet.</span>') + '</p>') + '</section>' +
+        (d.rows.length ? d.rows.map(function (g) {
+          return '<section class="panel"><div class="panel-h"><h2>' + e(g.customer) + '</h2><span class="muted small">' + g.referred + ' referred · ' + g.joined + ' joined</span></div>' + table(['Referred', 'Status', 'Reward'], g.leads.map(function (l) {
+            return ['<b>' + e(l.name) + '</b><br><span class="muted small">' + e(l.enquiryId) + (l.packageName ? ' · ' + e(l.packageName) : '') + '</span>', l.joined ? pill('Joined', 'good') : e(l.statusName),
+              l.reward ? e(l.reward.what) + '<br><span class="muted small">' + e(l.reward.byName) + ', ' + e(K.date(l.reward.at.slice(0, 10))) + '</span>' : l.joined ? '<button class="btn sm" data-act="o-ref-reward" data-type="' + e(l.type) + '" data-id="' + e(l.id) + '" data-n="' + e(l.name) + '">Record reward</button>' : '<span class="muted">After they join</span>'];
+          }), '') + '</section>';
+        }).join('') : '<div class="empty"><b>No referrals yet</b>When a lead says a family recommended KareIQ, choose Referral and find the family.</div>'));
+    });
+  }
+  K.FORMS['o-ref-rule'] = function (f, v) { return api('POST', 'admin/sales/referrals/reward-rule', v).then(function (d) { if (!d.ok) return d; K.toast('Saved.', 'ok'); K.render(); }); };
+  K.FORMS['o-ref-reward'] = function (f, v) { v.type = f.getAttribute('data-type'); v.id = f.getAttribute('data-id'); return api('POST', 'admin/sales/referrals/reward', v).then(done('Reward recorded.')); };
+  // ---- Sales: campaigns
+  function salesCampaigns(r) {
+    page('office/sales/campaigns', 'Campaigns', 'Health camps, housing society drives, events and ads: the leads each brought, how many joined, the revenue and the cost per lead. Choose the campaign when you add a lead from it.', '<button class="btn sm" data-act="o-camp" data-id="">' + icon('plus') + 'Add a campaign</button>' + csvBtn('sales/reports/campaigns.csv', 'CSV'), skeleton());
+    api('GET', 'admin/sales/campaigns' + (r.q.all ? '?all=1' : '')).then(function (d) {
+      if (!d.ok) return fail(d);
+      S.cache.camps = d;
+      var t = d.totals;
+      swap(kpis([kpi('Campaigns', t.campaigns, { icon: 'star' }), kpi('Leads from campaigns', t.leads, { icon: 'funnel' }), kpi('Joined', t.won, { icon: 'check', tone: 'good' }), kpi('Paid revenue', t.revenue, { money: true, icon: 'rupee', sub: t.cost ? money(t.cost) + ' spent' : '' })]) +
+        '<section class="panel otw">' + table(['Campaign', 'Leads', 'Joined', 'Revenue', 'Cost', ''], d.rows.map(function (c) {
+          return ['<b>' + e(c.name) + '</b><br><span class="muted small">' + e(c.kindName) + ' · ' + e(K.date(c.date)) + (c.place ? ' · ' + e(c.place) : '') + (c.archived ? ' · archived' : '') + '</span>', num(c.leads) + (c.open ? '<br><span class="muted small">' + c.open + ' open</span>' : ''), num(c.won) + (c.conversionPct != null ? '<br><span class="muted small">' + c.conversionPct + '%</span>' : ''), money(c.revenue),
+            c.cost == null ? '<span class="muted">Not entered</span>' : money(c.cost) + (c.costPerLead != null ? '<br><span class="muted small">' + money(c.costPerLead) + ' a lead</span>' : ''), '<button class="btn sm ghost" data-act="o-camp" data-id="' + e(c.id) + '">Edit</button><button class="btn sm ghost" data-act="o-camp-arch" data-id="' + e(c.id) + '">' + (c.archived ? 'Restore' : 'Archive') + '</button>'];
+        }), 'No campaigns yet') + '</section>' + (r.q.all ? '' : '<p class="muted small"><a href="#/office/sales/campaigns?all=1">Show archived campaigns</a></p>'));
+    });
+  }
+  K.FORMS['o-camp'] = function (f, v) { v.id = f.getAttribute('data-id') || undefined; return api('POST', 'admin/sales/campaigns', v).then(done('Campaign saved.')); };
+  // the "Add a lead" dialog: the campaign for an event, the referring family for a referral
+  function leadExtras(form) {
+    var src = form.querySelector('[name=source]'); if (!src) return;
+    var box = form.querySelector('[data-lead-extra]');
+    if (!box) { src.closest('.row2').insertAdjacentHTML('afterend', '<div data-lead-extra></div>'); box = form.querySelector('[data-lead-extra]'); }
+    if (src.value === 'event') {
+      var go = function (c) { box.innerHTML = c.length ? selField('campaignId', 'Which campaign', c.reduce(function (m, x) { m[x.id] = x.name + ' (' + K.date(x.date) + ')'; return m; }, {}), '', 'Not one of these') : '<p class="muted small">No campaigns yet: add it under Sales → Campaigns to see its results.</p>'; };
+      if (S.cache.campList) go(S.cache.campList); else api('GET', 'admin/sales/campaigns').then(function (d) { S.cache.campList = d.ok ? d.rows : []; go(S.cache.campList); });
+    } else if (src.value === 'referral') {
+      box.innerHTML = '<label class="field"><span>Referred by (find the family)</span><input class="in" data-act="o-ref-find" placeholder="Customer or family name, or phone" autocomplete="off"><input type="hidden" name="referredBy"><em class="err" data-err="referredBy"></em></label><ul class="tfind" data-ref-res></ul>';
+    } else box.innerHTML = '';
+  }
+  var refTimer;
+  document.addEventListener('input', function (ev) {
+    var t = ev.target; if (!t.getAttribute || t.getAttribute('data-act') !== 'o-ref-find') return;
+    var f = t.form; f.querySelector('[name=referredBy]').value = '';
+    clearTimeout(refTimer);
+    refTimer = setTimeout(function () {
+      api('GET', 'admin/sales/referrers?q=' + enc(t.value)).then(function (d) {
+        var ul = f.querySelector('[data-ref-res]'); if (!ul) return;
+        ul.innerHTML = d.ok && d.rows.length ? d.rows.map(function (x) { return '<li><button type="button" class="btn sm ghost" data-act="o-ref-pick" data-id="' + e(x.personId) + '" data-n="' + e(x.customer + (x.family ? ' (' + x.family + ')' : '')) + '">' + e(x.customer) + (x.family ? ' · ' + e(x.family) : '') + '</button></li>'; }).join('') : (t.value.length >= 3 ? '<li class="muted small">No family found.</li>' : '');
+      });
+    }, 250);
+  });
+
+  // ---- clicks for this part
+  document.addEventListener('click', function (ev) {
+    var t = ev.target.closest('[data-act]'); if (!t) return;
+    var act = t.getAttribute('data-act'), id = t.getAttribute('data-id');
+    if (act === 'o-ao-bill') {
+      if (!confirm('Bill ' + t.getAttribute('data-n') + ' ' + money(t.getAttribute('data-a')) + ' for their add-on services?')) return;
+      t.disabled = true;
+      api('POST', 'admin/fin/addons/bill', { personId: id }).then(function (d) { K.toast(d.ok ? 'Bill ' + d.number + ' made. Download the PDF to send it.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+    } else if (act === 'o-ao-waive') K.openDialog('Don\'t charge this service', '<form data-form="o-ao-waive" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('reason', 'Why', 'maxlength="200" placeholder="e.g. Goodwill after a late visit"') + '</form>', submitBtn('Don\'t charge'));
+    else if (act === 'o-ao-pay') {
+      var b = S.cache.addons.bills.filter(function (x) { return x.id === id; })[0];
+      K.openDialog('Payment for ' + b.number, '<form data-form="o-ao-pay" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><p class="muted" style="margin-bottom:12px">' + money(b.due) + ' owed by ' + e(b.customer) + '.</p><div class="row2">' + moneyIn('amount', 'Amount received (₹)', b.due) + selField('method', 'How', S.cache.addons.methods, 'upi') + '</div>' + K.field('ref', 'Transaction or receipt number', 'maxlength="60"') + '</form>', submitBtn('Record payment'));
+    } else if (act === 'o-skill') {
+      var sd = S.cache.skills, x = sd.rows.filter(function (y) { return y.userId === id; })[0];
+      var box = function (pre, map, on) { return '<div class="tcheckgrid">' + Object.keys(map).map(function (k) { return '<label class="check"><input type="checkbox" name="' + pre + k + '" value="1"' + (on.indexOf(k) > -1 ? ' checked' : '') + '> ' + e(map[k]) + '</label>'; }).join('') + '</div>'; };
+      K.openDialog('Skills: ' + x.name, '<form data-form="o-skill" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><h3 class="small">Services the nurse can be booked for</h3>' + box('s_', sd.services, x.services) + '<em class="err" data-err="services"></em><h3 class="small" style="margin-top:12px">Package checks the nurse is trained for</h3>' + box('a_', sd.assessments, x.assessments) + '<p class="muted small">Visits already given to this nurse stay as they are.</p></form>', submitBtn('Save skills'));
+    } else if (act === 'o-upg') {
+      t.disabled = true;
+      api('POST', 'admin/sales/upgrades', { planId: id }).then(function (d) { K.toast(d.ok ? 'Lead ' + d.reference + ' added and assigned to you.' : d.message, d.ok ? 'ok' : 'bad'); K.render(); });
+    } else if (act === 'o-ref-reward') K.openDialog('Reward for referring ' + t.getAttribute('data-n'), '<form data-form="o-ref-reward" data-type="' + e(t.getAttribute('data-type')) + '" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('reward', 'What was given', 'maxlength="120" value="' + e((S.cache.refs && S.cache.refs.reward) || '') + '"') + K.field('note', 'Note (optional)', 'maxlength="200"') + '</form>', submitBtn('Save'));
+    else if (act === 'o-camp') {
+      var c = ((S.cache.camps && S.cache.camps.rows) || []).filter(function (y) { return y.id === id; })[0] || {};
+      K.openDialog(c.id ? 'Edit campaign' : 'Add a campaign', '<form data-form="o-camp" data-id="' + e(c.id || '') + '" novalidate><div class="alert bad" data-msg hidden></div>' + K.field('name', 'Name', 'maxlength="80" value="' + e(c.name || '') + '" placeholder="e.g. Kakkanad senior health camp"') +
+        '<div class="row2">' + selField('kind', 'Kind', (S.cache.camps && S.cache.camps.kinds) || {}, c.kind || 'camp') + K.field('date', 'Date', 'type="date" value="' + e(c.date || K.todayIST()) + '"') + '</div><div class="row2">' + K.field('place', 'Place (optional)', 'maxlength="120" value="' + e(c.place || '') + '"') + moneyIn('cost', 'Cost (₹, optional)', c.cost) + '</div>' + K.field('note', 'Note (optional)', 'maxlength="300" value="' + e(c.note || '') + '"') + '</form>', submitBtn('Save campaign'));
+    } else if (act === 'o-camp-arch') api('POST', 'admin/sales/campaigns/' + enc(id) + '/archive', {}).then(function (d) { K.toast(d.ok ? 'Saved.' : d.message, d.ok ? 'ok' : 'bad'); S.cache.campList = null; K.render(); });
+    else if (act === 'o-ref-pick') {
+      var f = t.closest('form'); f.querySelector('[name=referredBy]').value = id; f.querySelector('[data-act=o-ref-find]').value = t.getAttribute('data-n'); f.querySelector('[data-ref-res]').innerHTML = '';
+    }
+  });
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.name === 'source' && t.form && t.form.getAttribute('data-form') === 'o-lead-new') leadExtras(t.form);
+  });
+
   // ---------------------------------------------------------------- menus for each role
   var TEAM_MENUS = {
     finance: [['office/fin', 'Dashboard', 'home'],
-      { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/renewals', 'Package renewals', 'cal'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/recon', 'Reconciliation', 'check']] },
+      { k: 'fin', label: 'Financials', icon: 'receipt', sub: [['office/finance/invoices', 'Invoices', 'receipt'], ['office/fin/addons', 'Add-on services', 'plus'], ['office/fin/renewals', 'Package renewals', 'cal'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/recon', 'Reconciliation', 'check']] },
       { k: 'fexp', label: 'Spending', icon: 'bag', sub: [['office/fin/expenses', 'Expenses', 'receipt'], ['office/fin/bills', 'Supplier bills', 'file']] },
-      { k: 'fana', label: 'Analysis', icon: 'chart', sub: [['office/overview/revenue', 'Revenue analytics', 'chart'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee']] },
+      { k: 'fana', label: 'Analysis', icon: 'chart', sub: [['office/fin/growth', 'Package income', 'up'], ['office/overview/revenue', 'Revenue analytics', 'chart'], ['office/fin/discounts', 'Discounts', 'left'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee']] },
       { k: 'frep', label: 'Reports and export', icon: 'download', sub: [['office/fin/reports', 'Financial reports', 'download'], ['office/fin/export', 'Accounts export (Tally)', 'layers']] }, ['office/fin/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     hr: [['office/hr', 'Dashboard', 'home'],
       { k: 'emp', label: 'Employees', icon: 'team', sub: [['office/employees', 'Employee overview', 'chart'], ['office/employees/kyc', 'KYC and details', 'idcard'], ['office/hr/recruitment', 'Recruitment', 'inbox'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/reviews', 'Probation and reviews', 'star'], ['office/hr/exits', 'Exits', 'door']] },
-      ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'],
+      ['office/hr/skills', 'Nurse skills', 'check'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'],
       { k: 'att', label: 'Attendance and leave', icon: 'cal', sub: [['office/hr/attendance', 'Attendance', 'cal'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/hr/leave', 'Leave balances', 'gauge']] },
       { k: 'pay', label: 'Payroll', icon: 'rupee', sub: [['office/hr/payroll', 'Payroll inputs', 'clip'], ['office/hr/salaries', 'Salaries', 'rupee'], ['office/hr/payslips', 'Payslips', 'receipt']] },
       ['office/hr/reports', 'HR reports', 'download'], ['office/hr/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     operations: [['office/ops', 'Dashboard', 'home'],
-      { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard']] },
+      { k: 'cust', label: 'Customer management', icon: 'people', sub: [['office/customers', 'Customer directory', 'people'], ['office/ops/onboarding', 'Onboarding', 'idcard'], ['office/ops/visits-used', 'Package visits', 'cal'], ['office/ops/continuity', 'Same nurse', 'user']] },
       { k: 'sch', label: 'Nurse scheduler', icon: 'cal', sub: [['office/scheduler', 'Visit board', 'cal'], ['office/ops/suggestions', 'Nurse suggestions', 'user'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/visit-times', 'Visit times', 'clock'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/ops/timeliness', 'On-time performance', 'clock'], ['office/ops/areas', 'Visits by area', 'globe'], ['office/scheduler/leave', 'Leave records', 'clip'], ['office/scheduler/holidays', 'Holidays', 'star']] },
       ['office/ops/supplies', 'Supplies', 'bag'], ['office/ops/quality', 'Service quality', 'star'], ['office/ops/reports', 'Operations reports', 'download'], ['office/ops/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']],
     sales: [['office/sales', 'Dashboard', 'home'],
       { k: 'leads', label: 'Lead management', icon: 'funnel', sub: [['office/leads/overview', 'Lead overview', 'chart'], ['office/sales/pipeline', 'Pipeline board', 'board'], ['office/leads/list', 'Enquiry database', 'inbox'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/lost', 'Lost leads', 'x']] },
+      { k: 'grow', label: 'Growth', icon: 'up', sub: [['office/sales/upgrades', 'Upgrade suggestions', 'up'], ['office/sales/referrals', 'Family referrals', 'people'], ['office/sales/campaigns', 'Campaigns', 'star']] },
       ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/templates', 'Message templates', 'chat'], { k: 'perf', label: 'Targets and commission', icon: 'gauge', sub: [['office/sales/targets', 'Targets', 'gauge'], ['office/sales/commission', 'Commission', 'rupee']] }, ['office/sales/packages', 'Packages and enquiries', 'box'], ['office/sales/reports', 'Sales reports', 'download'], ['office/sales/activity', 'Team activity', 'clock'], ['office/me', 'My leave and training', 'cal']]
   };
   // the office admin: the existing menu, with the new pages in their own groups (no separate team dashboards)
   (function () {
     var add = function (k, items) { MENU.forEach(function (g) { if (g.k === k) g.sub = g.sub.concat(items); }); };
-    add('leads', [['office/sales/pipeline', 'Pipeline board', 'board'], ['office/sales/templates', 'Message templates', 'chat'], ['office/sales/commission', 'Commission', 'rupee'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/targets', 'Sales targets', 'gauge'], ['office/sales/lost', 'Lost leads', 'x'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
-    add('cust', [['office/ops/onboarding', 'Onboarding operations', 'idcard'], ['office/ops/quality', 'Service quality', 'star']]);
-    add('fin', [['office/fin/renewals', 'Package renewals', 'cal'], ['office/fin/bills', 'Supplier bills', 'file'], ['office/fin/export', 'Accounts export (Tally)', 'layers'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);
-    add('emp', [['office/hr/recruitment', 'Recruitment', 'inbox'], ['office/hr/reviews', 'Probation and reviews', 'star'], ['office/hr/exits', 'Exits', 'door'], ['office/hr/salaries', 'Salaries', 'rupee'], ['office/hr/payslips', 'Payslips', 'receipt'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'], ['office/hr/payroll', 'Payroll inputs', 'rupee'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/hr/leave', 'Leave balances', 'gauge']]);
+    add('leads', [['office/sales/upgrades', 'Upgrade suggestions', 'up'], ['office/sales/referrals', 'Family referrals', 'people'], ['office/sales/campaigns', 'Campaigns', 'star'], ['office/sales/pipeline', 'Pipeline board', 'board'], ['office/sales/templates', 'Message templates', 'chat'], ['office/sales/commission', 'Commission', 'rupee'], ['office/sales/followups', 'Follow-ups', 'clock'], ['office/sales/quotes', 'Quotations', 'receipt'], ['office/sales/targets', 'Sales targets', 'gauge'], ['office/sales/lost', 'Lost leads', 'x'], ['office/sales/packages', 'Packages and enquiries', 'box']]);
+    add('cust', [['office/ops/visits-used', 'Package visits', 'cal'], ['office/ops/continuity', 'Same nurse', 'user'], ['office/ops/onboarding', 'Onboarding operations', 'idcard'], ['office/ops/quality', 'Service quality', 'star']]);
+    add('fin', [['office/fin/addons', 'Add-on services', 'plus'], ['office/fin/growth', 'Package income', 'up'], ['office/fin/discounts', 'Discounts', 'left'], ['office/fin/renewals', 'Package renewals', 'cal'], ['office/fin/bills', 'Supplier bills', 'file'], ['office/fin/export', 'Accounts export (Tally)', 'layers'], ['office/fin/receivables', 'Receivables and reminders', 'clock'], ['office/fin/credit-notes', 'Credit notes', 'left'], ['office/fin/pnl', 'Profit and loss', 'gauge'], ['office/fin/gst', 'GST summary', 'rupee'], ['office/fin/payments', 'Payments and refunds', 'rupee'], ['office/fin/recon', 'Reconciliation', 'check'], ['office/fin/expenses', 'Expenses', 'receipt']]);
+    add('emp', [['office/hr/skills', 'Nurse skills', 'check'], ['office/hr/recruitment', 'Recruitment', 'inbox'], ['office/hr/reviews', 'Probation and reviews', 'star'], ['office/hr/exits', 'Exits', 'door'], ['office/hr/salaries', 'Salaries', 'rupee'], ['office/hr/payslips', 'Payslips', 'receipt'], ['office/hr/onboarding', 'Employee onboarding', 'user'], ['office/hr/credentials', 'Credentials', 'shield'], ['office/hr/trainings', 'Training plans', 'star'], ['office/hr/payroll', 'Payroll inputs', 'rupee'], ['office/hr/attendance', 'Attendance', 'cal'], ['office/hr/leave', 'Leave balances', 'gauge']]);
     add('sch', [['office/ops/suggestions', 'Nurse suggestions', 'user'], ['office/ops/visit-times', 'Visit times', 'clock'], ['office/ops/supplies', 'Supplies', 'bag'], ['office/ops/visits', 'Visit tracking', 'pulse'], ['office/ops/capacity', 'Nurse capacity', 'gauge'], ['office/ops/timeliness', 'On-time performance', 'clock'], ['office/ops/areas', 'Visits by area', 'globe']]);
     MENU.splice(MENU.length - 1, 0, ['office/me', 'My leave and training', 'cal']);
     MENU.splice(MENU.length - 1, 0, { k: 'rep', label: 'Reports', icon: 'download', sub: [['office/fin/reports', 'Financial reports', 'receipt'], ['office/hr/reports', 'HR reports', 'team'], ['office/ops/reports', 'Operations reports', 'cal'], ['office/sales/reports', 'Sales reports', 'funnel']] });
@@ -2334,7 +2564,7 @@
     else if (act === 'o-issue-new') issueDialog({ type: t.getAttribute('data-type'), visit: t.getAttribute('data-visit'), title: t.getAttribute('data-title'), personId: t.getAttribute('data-person') });
     else if (act === 'o-issue-open') { var x = (S.cache.issues || []).filter(function (i) { return i.id === id; })[0]; if (x) issueUpdateDialog(x); }
     else if (act === 'o-contact') contactDialog(t.getAttribute('data-type'), id, t.getAttribute('data-name') || '');
-    else if (act === 'o-lead-new') leadNewDialog();
+    else if (act === 'o-lead-new') leadNewDialog(t.getAttribute('data-src'));
     else if (act === 'o-hr-new') hrNewDialog();
     else if (act === 'o-remind') {
       K.openDialog('Log a reminder: ' + t.getAttribute('data-n'), '<form data-form="o-remind" data-id="' + e(id) + '" novalidate><div class="alert bad" data-msg hidden></div><div class="row2">' + selField('channel', 'How', { whatsapp: 'WhatsApp', call: 'Phone call', email: 'Email', sms: 'SMS', visit: 'In person' }, 'whatsapp') + K.field('promisedOn', 'Promised to pay on (optional)', 'type="date" min="' + K.todayIST() + '"') + '</div>' + K.field('note', 'Note (optional)', 'maxlength="300" placeholder="e.g. Son will pay by UPI on Friday"') + '</form>',
@@ -2488,7 +2718,9 @@
         'fin/renewals': finRenewals, 'fin/bills': finBills, 'fin/export': finExport,
         'hr/payslips': hrPayslips, 'hr/salaries': hrSalaries, 'hr/exits': hrExits, 'hr/recruitment': hrRecruitment, 'hr/reviews': hrReviews,
         'ops/suggestions': opsSuggestions, 'ops/supplies': opsSupplies, 'ops/visit-times': opsVisitTimes,
-        'sales/pipeline': salesPipeline, 'sales/templates': salesTemplates, 'sales/commission': salesCommission
+        'sales/pipeline': salesPipeline, 'sales/templates': salesTemplates, 'sales/commission': salesCommission,
+        'fin/addons': finAddons, 'fin/growth': finGrowth, 'fin/discounts': finDiscounts, 'hr/skills': hrSkills, 'ops/visits-used': opsVisitsUsed, 'ops/continuity': opsContinuity,
+        'sales/upgrades': salesUpgrades, 'sales/referrals': salesReferrals, 'sales/campaigns': salesCampaigns
       };
       if (p === 'customer' && rl === 'operations') return opsCustomerProfile(r), true;
       (pages[p] || function () { K.go('#/' + (LANDING[rl] || 'office/overview/summary'), true); })(r);
