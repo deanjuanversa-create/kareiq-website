@@ -112,6 +112,7 @@ async function partTwo(URL0) {
   const FP = (await fam('GET', 'people')).body.people.map((x) => x.id).find((x) => x === 'P-DEMO01') || (await fam('GET', 'people')).body.people[0].id;
   const upload = (who, pid, name, mime) => who('POST', 'people/' + pid + '/records', null, { headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(name), 'X-Category': 'general' }, body: file(name) });
   const base = (n) => n.replace(/\.[^.]+$/, ''); // the record keeps the name without the extension
+  const dt = (d) => (d && d.record && d.record.dates) || {}; // a document that failed before its dates were read has none
   const findDoc = async (pid, name) => (await office('GET', 'admin/documents?status=all')).body.rows.filter((r) => r.personId === pid && r.name === base(name));
   const settled = async (pid, name, ms) => {
     const t0 = Date.now();
@@ -135,15 +136,17 @@ async function partTwo(URL0) {
   ok(r.status === 201 && r.body.receipt && !r.body.id && !('processing' in r.body) && !/"value"|"values"/.test(r.text), 'nurse upload: a receipt with the processing status, no values (' + r.status + ')');
   let doc = await settled(NP, 'lab_text.pdf');
   const ex = doc.extractions;
-  ok(doc.record.status.status === 'completed', 'lab report Completed (' + doc.record.status.status + ')');
-  ok(doc.record.docType === 'Laboratory report' && doc.record.dates.measured === D.d1 && doc.record.dates.report.date === D.d1r, 'type, collection date ' + D.d1 + ' and report date ' + D.d1r + ' kept apart');
+  ok(doc.record.status.status === 'completed', 'lab report Completed (' + doc.record.status.status + (doc.record.processing && doc.record.processing.lastError ? ': ' + doc.record.processing.lastError : '') + ')');
+  ok(doc.record.docType === 'Laboratory report' && dt(doc).measured === D.d1 && dt(doc).report?.date === D.d1r, 'type, collection date ' + D.d1 + ' and report date ' + D.d1r + ' kept apart');
   const want = { hdl: 48, chol: 190, ast: 32, alt: 28, alb: 4.2, plt: 250, hba1c: 6.1, glucose: 104, crp: 1.8, egfr: 72, acr: 25 };
-  ok(Object.entries(want).every(([k, v]) => ex.some((x) => x.field === k && x.value === v && x.status === 'accepted')), 'all 11 values extracted and stored, with units converted (2.5 lakhs/cumm platelets = 250 x10^9/L)');
-  ok(ex.every((x) => x.page === 1 && x.line > 0 && x.rawLine && x.confidence >= 0.85 && x.measuredDate === D.d1), 'each value traceable to page and line, with its confidence and test date');
-  ok(ex.find((x) => x.field === 'glucose').context === 'fasting' && ex.find((x) => x.field === 'hdl').section === 'LIPID PROFILE', 'fasting sugar recognised; section recorded');
+  const missing = Object.entries(want).filter(([k, v]) => !ex.some((x) => x.field === k && x.value === v && x.status === 'accepted')).map(([k]) => k);
+  ok(!missing.length, 'all 11 values extracted and stored, with units converted (2.5 lakhs/cumm platelets = 250 x10^9/L)' + (missing.length ? ' (missing: ' + missing.join(', ') + ')' : ''));
+  ok(ex.length >= 11 && ex.every((x) => x.page === 1 && x.line > 0 && x.rawLine && x.confidence >= 0.85 && x.measuredDate === D.d1), 'each value traceable to page and line, with its confidence and test date');
+  const exGlu = ex.find((x) => x.field === 'glucose'), exHdl = ex.find((x) => x.field === 'hdl');
+  ok(exGlu && exGlu.context === 'fasting' && exHdl && exHdl.section === 'LIPID PROFILE', 'fasting sugar recognised; section recorded (glucose ' + (exGlu ? 'context ' + exGlu.context : 'not extracted') + ', hdl ' + (exHdl ? 'section ' + exHdl.section : 'not extracted') + ')');
   const after1 = await readingsOf(NP);
   const chol = after1.series.find((m) => m.metric === 'chol'), glu = after1.series.find((m) => m.metric === 'glucose');
-  ok(chol && chol.rows.some((x) => x.value === 190 && istDay(new Date(x.at)) === D.d1) && glu.rows.some((x) => x.value === 104 && x.context === 'fasting'), 'Vitals: cholesterol and fasting sugar appear on ' + D.d1 + ' (the collection date, not the upload date)');
+  ok(chol && chol.rows.some((x) => x.value === 190 && istDay(new Date(x.at)) === D.d1) && glu && glu.rows.some((x) => x.value === 104 && x.context === 'fasting'), 'Vitals: cholesterol and fasting sugar appear on ' + D.d1 + ' (the collection date, not the upload date)');
   let rk = (await office('GET', 'people/' + NP + '/risk')).body.status;
   const kid = rk.indicators.find((i) => i.id === 'kidney');
   ok(kid && kid.status === 'calculated' && kid.inputs.some((x) => x.k === 'egfr' && x.value === 72) && kid.inputs.some((x) => x.k === 'acr' && x.value === 25), 'Risk Trends: the kidney indicator calculated by the engine from the extracted eGFR and ACR');
@@ -169,14 +172,14 @@ async function partTwo(URL0) {
   doc = await settled(NP, 'vitals_scan.png');
   const ocr = doc.extractions;
   ok(doc.record.processing.engine && doc.record.processing.engine.sources.includes('ocr') && /tesseract/i.test(doc.record.processing.engine.tesseract || ''), 'scan read by OCR (' + (doc.record.processing.engine && doc.record.processing.engine.tesseract) + ')');
-  ok(doc.record.dates.measured === D.d2, 'visit date read from the scan: ' + doc.record.dates.measured);
+  ok(dt(doc).measured === D.d2, 'visit date read from the scan: ' + dt(doc).measured);
   const bp = ocr.find((x) => x.field === 'bp');
   ok(bp && bp.systolic === 134 && bp.diastolic === 86 && ocr.some((x) => x.field === 'hr' && x.value === 78), 'blood pressure 134/86 and pulse 78 read from the image');
   ok(ocr.every((x) => x.status === 'accepted' || x.status === 'duplicate' || x.status === 'captured'), 'OCR values: all stored, none waiting for review');
   ok(ocr.filter((x) => x.confidence < 0.85 && x.status === 'accepted').every((x) => x.notes.some((n) => /confidence/.test(n))), 'values read with less than 85% confidence carry a note');
   ok(doc.record.status.status === 'completed', 'scan Completed (' + doc.record.status.status + ')');
   const after2 = await readingsOf(NP);
-  if (bp.status === 'accepted') ok(after2.series.find((m) => m.metric === 'bp').rows.some((x) => x.systolic === 134 && istDay(new Date(x.at)) === D.d2), 'Vitals: blood pressure from the scan on ' + D.d2);
+  if (bp && bp.status === 'accepted') ok((after2.series.find((m) => m.metric === 'bp') || { rows: [] }).rows.some((x) => x.systolic === 134 && istDay(new Date(x.at)) === D.d2), 'Vitals: blood pressure from the scan on ' + D.d2);
   const tempx = ocr.find((x) => x.field === 'temp');
   ok(!tempx || (tempx.value === 37 && /°F converted/.test(tempx.conversion || '')), '98.6 °F stored as 37 °C, with the conversion recorded');
 
@@ -195,14 +198,14 @@ async function partTwo(URL0) {
   await upload(nurse, NP, 'no_date.pdf');
   doc = await settled(NP, 'no_date.pdf');
   const upDay = istDay(new Date());
-  ok(doc.record.status.status === 'completed' && doc.record.dates.measured === upDay && doc.record.dates.measuredBasis === 'upload', 'no date in the document: stored on the upload day, Completed (' + doc.record.dates.measured + ')');
+  ok(doc.record.status.status === 'completed' && dt(doc).measured === upDay && dt(doc).measuredBasis === 'upload', 'no date in the document: stored on the upload day, Completed (' + dt(doc).measured + ')');
   ok(doc.extractions.every((x) => x.status === 'accepted' && x.readingId && x.notes.some((y) => /uploaded/.test(y))), 'each value says it was stored on the upload day');
   await upload(nurse, NP, 'report_only.pdf');
   doc = await settled(NP, 'report_only.pdf');
-  ok(doc.record.dates.measured === D.d3 && doc.record.dates.measuredBasis === 'report' && doc.extractions.every((x) => x.readingId && x.notes.some((y) => /report date/.test(y))), 'only a report date: values stored on the report date, with a note');
+  ok(dt(doc).measured === D.d3 && dt(doc).measuredBasis === 'report' && doc.extractions.every((x) => x.readingId && x.notes.some((y) => /report date/.test(y))), 'only a report date: values stored on the report date, with a note');
   await upload(nurse, NP, 'two_dates.pdf');
   doc = await settled(NP, 'two_dates.pdf');
-  ok(doc.record.dates.measuredStatus === 'ambiguous' && doc.record.dates.measured === [D.d4, D.d5].sort()[1] && doc.extractions.every((x) => x.status === 'accepted' && x.notes.some((y) => /more than one test date/.test(y))), 'two collection dates: stored on the latest, with a note');
+  ok(dt(doc).measuredStatus === 'ambiguous' && dt(doc).measured === [D.d4, D.d5].sort()[1] && doc.extractions.every((x) => x.status === 'accepted' && x.notes.some((y) => /more than one test date/.test(y))), 'two collection dates: stored on the latest, with a note');
 
   // ---- unusual values: stored with a note; values that are not that reading are kept as written
   await upload(nurse, NP, 'invalid.pdf');
@@ -262,7 +265,7 @@ async function partTwo(URL0) {
   const phq = famRisk.indicators.find((i) => i.id === 'phq9');
   ok(phq && phq.status === 'calculated' && phq.value === 12 && phq.band === 'Moderate depression' && phq.category === 'amber', 'Risk Trends for the customer: PHQ-9 12 calculated by the engine (Moderate depression, Amber)');
   const famDash = (await fam('GET', 'people/' + FP + '/dashboard?period=1y')).body;
-  ok(famDash.series.find((m) => m.metric === 'bp').rows.some((x) => x.systolic === 118 && x.diastolic === 76 && istDay(new Date(x.at)) === D.d7), 'customer Vitals: blood pressure 118/76 on the test date');
+  ok((famDash.series.find((m) => m.metric === 'bp') || { rows: [] }).rows.some((x) => x.systolic === 118 && x.diastolic === 76 && istDay(new Date(x.at)) === D.d7), 'customer Vitals: blood pressure 118/76 on the test date');
   ok(famDash.risks.some((x) => x.test === 'phq9' && x.value === 12), 'customer Risk Trends lists the PHQ-9 result');
   ok(famBefore.series.every((m) => m.rows.every((x) => famDash.series.find((y) => y.metric === m.metric).rows.some((z) => z.id === x.id))), 'the customer\'s earlier readings are all kept');
   ok([403, 404].includes((await fam('GET', 'people/' + NP + '/records/' + (await findDoc(NP, 'lab_text.pdf'))[0].id + '/extraction')).status), 'a customer cannot open another person\'s document');
@@ -273,10 +276,10 @@ async function partTwo(URL0) {
   r = await upload(fam, FP, 'old_report.pdf');
   doc = await settled(FP, 'old_report.pdf');
   const oldEx = doc.extractions;
-  ok(doc.record.status.status === 'completed' && doc.record.dates.measured === D.d9, 'two-digit year read as ' + doc.record.dates.measured + ' and stored automatically');
+  ok(doc.record.status.status === 'completed' && dt(doc).measured === D.d9, 'two-digit year read as ' + dt(doc).measured + ' and stored automatically');
   ok(oldEx.every((x) => x.notes.some((n) => /Two-digit year/.test(n))), 'the two-digit year is noted on each value');
   const allDash = (await fam('GET', 'people/' + FP + '/dashboard?period=all')).body;
-  ok(allDash.range.registeredOn === D.d9 && allDash.series.find((m) => m.metric === 'glucose').rows.some((x) => x.value === 98 && istDay(new Date(x.at)) === D.d9), 'Vitals "All": history now starts at the old report (' + allDash.range.registeredOn + ') and shows its fasting sugar');
+  ok(allDash.range.registeredOn === D.d9 && (allDash.series.find((m) => m.metric === 'glucose') || { rows: [] }).rows.some((x) => x.value === 98 && istDay(new Date(x.at)) === D.d9), 'Vitals "All": history now starts at the old report (' + allDash.range.registeredOn + ') and shows its fasting sugar');
   const oldRisk = (await fam('GET', 'people/' + FP + '/risk')).body.status.indicators.find((i) => i.id === 'psqi');
   // the engine uses the newest PSQI: the demo customer's own assessment (30 days ago) is newer than this old report
   ok(oldRisk && oldRisk.status === 'calculated' && oldRisk.value === 7 && oldRisk.band === 'Poor sleep quality', 'Risk: the newest PSQI is used; the old report does not replace a newer assessment');

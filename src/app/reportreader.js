@@ -10,9 +10,14 @@ const crypto = require('crypto');
 const { findReportDate } = require('./reportdate');
 
 const SCRIPT = path.join(__dirname, '..', '..', 'ocr', 'report_reader.py');
-const PY = process.env.OCR_PYTHON || 'python3';
+// The Python that runs the reader: OCR_PYTHON if set, else the project's own virtual environment
+// (.venv, where OpenCV is installed for local development) when there is one, else python3 on the
+// PATH (the Docker image). Without this a server started outside the venv (e.g. plain `npm start`)
+// picked up a system python3 without OpenCV and every document failed.
+const VENV_PY = path.join(__dirname, '..', '..', '.venv', process.platform === 'win32' ? 'Scripts' : 'bin', process.platform === 'win32' ? 'python.exe' : 'python3');
+const PY = process.env.OCR_PYTHON || (fs.existsSync(VENV_PY) ? VENV_PY : 'python3');
 const TIMEOUT = Number(process.env.OCR_TIMEOUT_MS || 150000);
-let ready = null; // Promise<{ ok, why }>
+let ready = null; // Promise<{ ok, why }>; only a successful check is kept
 
 function exec(cmd, args, opts) {
   return new Promise((resolve) => {
@@ -32,6 +37,14 @@ function available() {
       if (t.err) return { ok: false, why: 'Automatic reading is not available on this server yet (the OCR engine is not installed).' };
       return { ok: true, opencv: cv.stdout.trim() };
     })();
+    // a missing reader is retryable (docintel retries it): check again next time instead of
+    // remembering the failure for the life of the process
+    const check = ready;
+    check.then((r) => {
+      if (r.ok) return;
+      console.warn('[reportreader] reading unavailable with ' + PY + ': ' + r.why);
+      if (ready === check) ready = null;
+    });
   }
   return ready;
 }
