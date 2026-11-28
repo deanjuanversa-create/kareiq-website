@@ -69,9 +69,26 @@ async function sendMail(to, subject, text) {
     await personalTransport.sendMail({ from: process.env.SMTP_FROM || process.env.SMTP_USER, to, subject, text });
     return true;
   } catch (err) {
-    console.error(`[mail] to ${to} failed: ${err.message}`);
+    console.error(`[mail] "${subject}" failed: ${err.message}`); // the recipient's address stays out of the logs
     return false;
   }
 }
 
-module.exports = { notify, sendMail, emailEnabled: enabled, mailReady };
+// What is missing or inconsistent in the email settings (variable names only, never values).
+// The server prints these at start in production and staging: without SMTP, booking alerts and the
+// sign-in / password-reset emails are not sent, and the office has to share those links by hand.
+function mailWarnings(env = process.env) {
+  const w = [];
+  const port = Number(env.SMTP_PORT || 587), secure = String(env.SMTP_SECURE || 'false') === 'true';
+  if (!env.SMTP_HOST) { w.push('SMTP_HOST is not set: booking alerts and sign-in / password-reset emails are off.'); return w; }
+  if (!nodemailer) w.push('SMTP_HOST is set but the nodemailer package is not installed (npm ci).');
+  if (!env.NOTIFY_EMAIL) w.push('NOTIFY_EMAIL is not set: no booking or enquiry alerts are sent to the office.');
+  if (!env.SMTP_FROM && !env.SMTP_USER) w.push('Neither SMTP_FROM nor SMTP_USER is set: emails have no sender address.');
+  if (env.SMTP_USER && !env.SMTP_PASS) w.push('SMTP_USER is set without SMTP_PASS.');
+  if (!Number.isInteger(port) || port < 1 || port > 65535) w.push('SMTP_PORT is not a valid port number.');
+  else if (port === 465 && !secure) w.push('SMTP_PORT is 465 but SMTP_SECURE is not true (port 465 expects TLS from the start).');
+  else if (port !== 465 && secure) w.push('SMTP_SECURE=true is usually only right with port 465 (587 upgrades with STARTTLS).');
+  return w;
+}
+
+module.exports = { notify, sendMail, emailEnabled: enabled, mailReady, mailWarnings };

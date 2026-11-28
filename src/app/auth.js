@@ -9,6 +9,9 @@
 
 const crypto = require('crypto');
 const docs = require('../docs');
+const runtime = require('../runtime');
+// a demo login (published password) is never a valid session outside demo mode
+const usable = (u) => Boolean(u && u.active && !(runtime.isDemoAccount(u) && !runtime.demoAllowed()));
 
 const IDLE_MS = Number(process.env.APP_IDLE_MINUTES || 15) * 60 * 1000;
 const MAX_MS = Number(process.env.APP_MAX_HOURS || 4) * 3600 * 1000;
@@ -100,7 +103,7 @@ async function sessionOf(req) {
     if (!d || !d.u) return null;
     if (Date.now() - d.c > MAX_MS) return { expired: true };
     const u = await docs.findOne('app_users', { id: d.u });
-    if (!u || !u.active) return null;
+    if (!usable(u)) return null;
     return { session: { id: sha(t), userId: d.u, csrf: d.x, createdAt: d.c, lastSeen: Date.now() }, user: u };
   }
   if (!t || t.length > 100) return null;
@@ -112,7 +115,7 @@ async function sessionOf(req) {
     return { expired: true };
   }
   const user = await docs.findOne('app_users', { id: s.userId });
-  if (!user || !user.active) { await docs.remove('app_sessions', s.id); return null; }
+  if (!usable(user)) { await docs.remove('app_sessions', s.id); return null; }
   if (now - s.lastSeen > 30 * 1000) { s.lastSeen = now; await docs.update('app_sessions', s.id, { lastSeen: now }); }
   sweep().catch(() => {});
   return { session: s, user };
@@ -144,7 +147,7 @@ async function readLink(t) {
   const row = await docs.findOne('app_tokens', { id: sha(t) });
   if (!row || row.expiresAt < Date.now()) return null;
   const user = await docs.findOne('app_users', { id: row.userId });
-  if (!user || !user.active) return null;
+  if (!usable(user)) return null;
   return { row, user };
 }
 

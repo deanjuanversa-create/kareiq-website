@@ -110,6 +110,35 @@ async function update(col, id, changes) {
   });
 }
 
+// Compare-and-set: apply changes only if the record still matches the filter (e.g. its status is
+// still { $in: ['awaiting_payment'] }), atomically on every storage mode: MongoDB findOneAndUpdate,
+// the serialised file queue, and a short Redis lock (HSETNX). Returns the updated record, or null
+// when the record is missing or no longer matches (someone else changed it first).
+async function updateIf(col, id, filter, changes) {
+  if (db.mode === 'mongo') {
+    return (await db.col(col)).findOneAndUpdate({ ...filter, _id: id }, { $set: changes }, { returnDocument: 'after', projection: { _id: 0 } });
+  }
+  if (db.mode === 'redis') {
+    const lock = col + ':' + id;
+    let got = false;
+    for (let i = 0; i < 50 && !(got = await db.hashSetNX('__cas_locks', lock, { at: Date.now() })); i++) await new Promise((r) => setTimeout(r, 20));
+    if (!got) throw Object.assign(new Error('This record is being changed. Please try again in a moment.'), { status: 409 });
+    try {
+      const row = await db.hashGet(col, id);
+      if (!row || !matches(row, filter)) return null;
+      Object.assign(row, changes);
+      await db.hashSet(col, id, row);
+      return row;
+    } finally { await db.hashDel('__cas_locks', lock); }
+  }
+  return mutate(col, (rows) => {
+    const row = rows.find((r) => r.id === id);
+    if (!row || !matches(row, filter)) return null;
+    Object.assign(row, clone(changes));
+    return clone(row);
+  });
+}
+
 async function remove(col, id) {
   if (db.mode === 'mongo') { await (await db.col(col)).deleteOne({ _id: id }); return; }
   if (db.mode === 'redis') { await db.hashDel(col, id); return; }
@@ -163,4 +192,4 @@ async function ensureIndexes() {
   } catch (e) { indexed = false; console.error('[app] index setup failed:', e.message); }
 }
 
-module.exports = { find, findOne, insert, insertOnce, update, remove, removeWhere, count, matches, ensureIndexes };
+module.exports = { find, findOne, insert, insertOnce, update, updateIf, remove, removeWhere, count, matches, ensureIndexes };

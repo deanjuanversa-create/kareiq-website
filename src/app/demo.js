@@ -1,9 +1,15 @@
-// Demo accounts for trying the app on your own computer (files mode only, or APP_DEMO=true).
+// Demo accounts for trying the app (only in demo mode: APP_ENV=demo, or APP_DEMO=true while developing).
 // Never runs when a real admin already exists.
 
 const crypto = require('crypto');
 const docs = require('../docs');
 const auth = require('./auth');
+const runtime = require('../runtime');
+
+// demo logins have a published password: refuse to create them anywhere but an explicit demo
+function refuseOutsideDemo() {
+  if (!runtime.demoAllowed()) throw new Error('Demo accounts can only be created in demo mode (APP_ENV=demo, or APP_DEMO=true while developing).');
+}
 
 const PASSWORD = 'demo-pass-123';
 const USERS = [
@@ -24,6 +30,7 @@ const USERS = [
 function rand(seed) { let s = seed; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; }
 
 async function seed() {
+  refuseOutsideDemo();
   const now = new Date();
   const iso = () => new Date().toISOString();
   const hash = auth.hashPassword(PASSWORD);
@@ -308,6 +315,7 @@ async function seedOperations(ids, pdf, day0) {
 // gets the missing demo logins when the server starts. Only in demo mode, only on a database the
 // demo filled itself (it has the demo-seed record); nothing else in it is changed.
 async function topUp() {
+  refuseOutsideDemo();
   if (!(await docs.findOne('app_audit', { id: 'demo-seed' }))) return 0;
   const hash = auth.hashPassword(PASSWORD);
   let added = 0;

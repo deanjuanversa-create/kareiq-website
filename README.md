@@ -38,17 +38,19 @@ Open http://localhost:3000 in your browser.
 
 - **Kare@Home "Book a Service"** (header, hero, every service tile, every package button) opens a 2-step form. It is sent to `POST /api/bookings`, checked on the server, saved, and the visitor sees a reference like `KH-7F3K2Q`.
 - **KareIQ "Get in Touch" / "Let's Talk" / KareNest / KareWellness** open the enquiry form, sent to `POST /api/enquiries` (reference like `KQ-DBFEWW`).
-- **Admin page** (`/admin`, sign in with the `ADMIN_PASSWORD` from `.env`): see every booking and enquiry, call or WhatsApp the person in one tap, set status (New, Contacted, Scheduled, Closed), add internal notes, search, and export to CSV for Excel.
+- **Admin page** (`/admin`, opened by an office admin's own KareIQ login, see below): see every booking and enquiry, call or WhatsApp the person in one tap, set status (New, Contacted, Scheduled, Closed), add internal notes, search, and export to CSV for Excel.
 - **Spam and abuse protection**: hidden honeypot field, 8 submissions per device per 10 minutes, 20 KB request limit, strict security headers.
 - **Storage**: `data/bookings.json` and `data/enquiries.json`. Back up the `data` folder.
 
 ### Admin page
 
-Open `/admin`. You'll see the sign-in page; enter the `ADMIN_PASSWORD` from your `.env` file. You stay signed in for 12 hours on that device, and "Sign out" is at the bottom of the side menu. Restarting the server signs everyone out.
+Open `/admin` and choose **Sign in with my KareIQ login**: every office admin has their own account and password in the app (`/app`), and signing in there opens `/admin` as well. There is no shared admin password any more (28 Nov 2026). `ADMIN_PASSWORD` in `.env` only creates the **first** office admin account (`ADMIN_EMAIL`) when there is none yet; add further admins under **Logins** in the app. Changes made in `/admin` record which admin made them.
+
+For local work only, `ADMIN_SHARED_LOGIN=true` brings back the old shared `ADMIN_PASSWORD` sign-in; it is always off in production and staging.
 
 **If sign-in doesn't work:**
-- The sign-in page says "Admin sign-in is turned off": your `.env` file is missing or has no `ADMIN_PASSWORD` line. Create it (`cp .env.example .env`), set the password, and restart `node server.js`.
-- "That password is not right": the password must match the `ADMIN_PASSWORD=` line exactly. After editing `.env`, restart the server.
+- Sign in to the app first (`/app`, with `ADMIN_EMAIL` and `ADMIN_PASSWORD` the first time), then open `/admin` again.
+- "Sign in with your own KareIQ office login": the shared password is off; use your own login.
 - After 8 wrong tries from one device, sign-in pauses for 10 minutes.
 
 - **Enquiries, bookings and Bystander requests** are handled in the dashboard (`/app`, Office ▸ Lead management), where each one has an owner, a status and a history. The link in the side menu goes there.
@@ -143,7 +145,7 @@ Walk-ins and phone bookings: **Office → Add a family**. New caregivers and off
 
 **Safety rules carried over from the dashboard spec:** families only ever see their own people (anything else answers "not found"); health readings are never deleted, a wrong one is removed with a reason and kept in the record; no "normal/high" labels until the doctors approve the reference ranges; signed out after 15 minutes without activity (4 hours at most); every action is in **Office → Activity**.
 
-**Try it on your computer:** `node server.js`, open http://localhost:3000/app. Without a database, demo logins are created (password `demo-pass-123`): `family@demo.kareiq` (mother on Kare@Home, father at KareNest), `arjun@demo.kareiq` (Kare@Home only), `meena@demo.kareiq` (KareNest, so also Kare@Home), `rahul@demo.kareiq` (plan being set up), `nurse@demo.kareiq`, `nest@demo.kareiq`, `admin@demo.kareiq`. The four team dashboards: `finance@demo.kareiq` (Finance Manager), `hr@demo.kareiq` (HR), `ops@demo.kareiq` (Operations Manager), `sales@demo.kareiq` (Sales Executive). Delete the `data` folder to start again. With the server running, `npm run check:app` runs the end-to-end checks.
+**Try it on your computer:** `APP_DEMO=true node server.js`, open http://localhost:3000/app. Demo logins exist only in demo mode, which must be asked for (`APP_DEMO=true` on your computer, `APP_ENV=demo` on a demo server); they are never created by default, in production or staging, or because a database is missing (`src/runtime.js`). The demo logins (password `demo-pass-123`): `family@demo.kareiq` (mother on Kare@Home, father at KareNest), `arjun@demo.kareiq` (Kare@Home only), `meena@demo.kareiq` (KareNest, so also Kare@Home), `rahul@demo.kareiq` (plan being set up), `nurse@demo.kareiq`, `nest@demo.kareiq`, `admin@demo.kareiq`. The four team dashboards: `finance@demo.kareiq` (Finance Manager), `hr@demo.kareiq` (HR), `ops@demo.kareiq` (Operations Manager), `sales@demo.kareiq` (Sales Executive). Delete the `data` folder to start again. With the server running, `npm run check:app` runs the end-to-end checks.
 
 **Where things are:** `app/` (the screens), `src/app/` (sign-in, permissions, plans, readings), `src/docs.js` (storage for MongoDB, Redis or files). Plan names per brand are in `src/app/products.js`. KareNest plans are the website packages (KarePlus, KarePremium, Bloom, Flourish, Thrive, KareBalance and KareMind) listed in `src/catalog.js`.
 
@@ -240,7 +242,7 @@ kareiq-website/
 - Admin-edited text and prices load in the background (`js/api.js`), so pages never wait for the server.
   If it is asleep or down, pages show the built-in text and forms show a "call or WhatsApp us" message.
 - **Render** builds the `Dockerfile` (`runtime: docker` in `render.yaml`), which installs Node plus the report-reading tools and runs `node server.js`. An existing Node-runtime service can't switch runtime: create a new Docker web service from the same repo with the same environment variables (or apply the Blueprint). Environment variables:
-  `MONGODB_URI`, `ADMIN_PASSWORD`, `SESSION_SECRET`, `TRUST_PROXY=true`,
+  `APP_ENV=production`, `MONGODB_URI`, `ADMIN_PASSWORD` (first office admin), `SESSION_SECRET`, `TRUST_PROXY=true`, `TRUST_PROXY_HOPS=1`,
   `SITE_URL` (where people who open the API address in a browser are sent) and
   `ALLOWED_ORIGINS` (websites allowed to send forms, e.g. `https://karenest.co.in,https://www.karenest.co.in,https://kareiq-website-full.vercel.app`).
   Every website address that has forms must be in `ALLOWED_ORIGINS`, or the browser blocks its forms.
@@ -375,18 +377,24 @@ The project is ready for Vercel: `vercel.json` serves the pages, images, CSS and
 
 Notes for Vercel:
 - Admin edits to prices or text appear on the live site within about 30 seconds (the CDN keeps a 30-second copy so pages stay fast).
-- Sign-in uses a signed cookie, so it works across Vercel's servers. Changing `ADMIN_PASSWORD` signs everyone out.
+- App sign-in uses a session cookie; office admins open `/admin` with their own app login.
 - To use your own domain (e.g. kareiq.co.in), add it under **Settings → Domains**.
 - Data from your computer's `data` folder is not uploaded. Bookings start fresh on Vercel.
+
+## Deployment safety, staging and backups
+
+- **Environments** (`APP_ENV`: production, staging, demo, development, test) and what each refuses at start: `docs/DEPLOYMENT.md`. Production deploys by hand (`autoDeploy: false` in `render.yaml`); staging deploys from the `staging` branch to its own database.
+- **Backups and restore tests**: `docs/BACKUP-RESTORE.md` and `node tools/db-backup.js`.
+- **Security checks**: `npm run check:hardening` (environments, demo logins, proxy addresses, HSTS, logs, booking de-duplication, admin logins, email) and `npm run check:payments` (payments under concurrency, against a fresh demo server).
 
 ## Hosting elsewhere
 
 Any host that runs Node.js works (Render, Railway, a VPS with PM2, Hostinger Node hosting…).
 
 - Start command: `node server.js`
-- Set `ADMIN_PASSWORD` (and email settings) as environment variables on the host.
-- Set `TRUST_PROXY=true` when the host puts a proxy in front of your app.
-- The `data` folder must be on persistent storage, or bookings are lost when the host restarts. On hosts without persistent disks, attach a volume.
+- Set `APP_ENV=production`, `SESSION_SECRET` and `ADMIN_PASSWORD` (the first office admin), and email settings, as environment variables on the host.
+- Set `TRUST_PROXY=true` when the host puts a proxy in front of your app, and `TRUST_PROXY_HOPS` to the number of proxies that append to `X-Forwarded-For` (usually 1).
+- Use MongoDB (`MONGODB_URI`). A `data` folder is accepted in production only on persistent storage and only when you say so: `FILE_STORAGE_CONFIRMED=true` and `DATA_DIR=/path/on/the/volume`. Without them the server refuses to start rather than losing bookings on a restart.
 
 ## Report dates (automatic) and package purchases
 

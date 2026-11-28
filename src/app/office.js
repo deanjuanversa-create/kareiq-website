@@ -9,6 +9,7 @@ const { KYC_KINDS, DEPARTMENTS, UNITS } = require('./staff');
 const { BRAND_OF, BRAND_NAMES } = require('./finance');
 const { POLICIES, CATEGORIES } = require('./nursing');
 const care = require('./care');
+const orderlock = require('./orderlock');
 
 const LEAD_STATUS = { new: 'New', contacted: 'Contacted', follow_up: 'Follow-up pending', converted: 'Converted', lost: 'Lost / closed' };
 const SOURCES = { 'kare-at-home': 'Kare@Home website', karehome: 'Kare@Home website', karenest: 'KareNest website', kareiq: 'KareIQ website', app: 'KareIQ app', admin: 'Office', phone: 'Phone call', 'walk-in': 'Walk-in', referral: 'Referral', event: 'Health camp or event', renewal: 'Package renewal', upgrade: 'Upgrade suggestion' };
@@ -228,8 +229,10 @@ function create(ctx) {
           const note = clean(body.note, 300);
           if (note.length < 3) return json(res, 400, { ok: false, message: 'Say why the request is declined.', errors: { note: 'Required' } });
           const rej = { status: 'rejected', by: admin.id, byName: admin.name, at, note };
-          if (st.order) await docs.update('app_orders', st.order.id, { status: 'rejected', rejectedNote: note, approval: rej, updatedAt: at });
-          else await docs.update('app_plans', st.plan.id, { status: 'ended', endDate: todayIST(), endedReason: 'Request declined: ' + note, approval: rej, updatedAt: at });
+          // only while it is still waiting for approval (compare-and-set: never over a paid or cancelled order)
+          if (st.order) {
+            if (!(await docs.updateIf('app_orders', st.order.id, { status: { $in: ['awaiting_approval'] } }, { status: 'rejected', rejectedNote: note, approval: rej, updatedAt: at }))) return json(res, 409, { ok: false, message: 'This request was changed by someone else. Refresh and check it.' });
+          } else await docs.update('app_plans', st.plan.id, { status: 'ended', endDate: todayIST(), endedReason: 'Request declined: ' + note, approval: rej, updatedAt: at });
           await store.update(col, lead.id, { leadStatus: 'lost', status: 'closed', leadHistory: [...((raw && raw.leadHistory) || []), { at, by: admin.name, action: 'declined', note }] });
           await audit(admin.id, 'package.declined', lead.personId, { enquiry: lead.enquiryId });
           return json(res, 200, { ok: true });
@@ -239,7 +242,8 @@ function create(ctx) {
         const appr = { status: 'approved', by: admin.id, byName: admin.name, at, note: clean(body.note, 300) || null };
         let orderRef;
         if (st.order) {
-          await docs.update('app_orders', st.order.id, { status: 'awaiting_payment', approval: appr, updatedAt: at });
+          // only while it is still waiting for approval (compare-and-set: a cancelled order stays cancelled)
+          if (!(await docs.updateIf('app_orders', st.order.id, { status: { $in: ['awaiting_approval'] } }, { status: 'awaiting_payment', approval: appr, updatedAt: at }))) return json(res, 409, { ok: false, message: 'This request was changed by someone else. Refresh and check it.' });
           orderRef = st.order.reference;
         } else {
           // a plan request: the order (price from the published prices) is made now and waits for the payment
@@ -369,35 +373,50 @@ function create(ctx) {
     }
     if (p === 'finance/payments' && req.method === 'POST') {
       // the office records a payment it has checked in the bank or payment account
-      const inv = (await finance.invoices()).find((i) => i.planId === String(body.planId || ''));
-      if (!inv) throw notFound();
-      const method = require('./orders').METHODS[body.method] ? body.method : null, ref = clean(body.ref, 60);
-      const amount = Math.round(Number(String(body.amount || '').replace(/[^0-9.]/g, '')));
-      const errors = {};
-      if (!method) errors.method = 'Choose how it was paid.';
-      if (ref.length < 4) errors.ref = 'Enter the transaction or receipt number.';
-      if (!(amount > 0)) errors.amount = 'Enter the amount received.';
-      else if (amount > inv.outstanding) errors.amount = `Only ${care.fmt(inv.outstanding)} is outstanding on this invoice.`;
-      if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-      if (await docs.findOne('app_payments', { ref, kind: 'payment' })) return json(res, 409, { ok: false, message: 'This transaction number is already recorded.', errors: { ref: 'Already used' } });
-      await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, amount, method, ref, receivedAt: now(), recordedBy: admin.id });
-      if (ctx.lifecycle) await ctx.lifecycle.announce(inv.personId);
-      await audit(admin.id, 'payment.recorded', inv.personId, { invoice: inv.number, amount });
-      return json(res, 201, { ok: true });
+      if (!(await finance.invoices()).some((i) => i.planId === String(body.planId || ''))) throw notFound();
+      // one payment or refund at a time per invoice: two clicks, or two admins, cannot both pass the
+      // "outstanding" check and overpay it; a transaction number is reserved for one payment only
+      const done = await orderlock.withLock('invoice:' + String(body.planId), async () => {
+        const inv = (await finance.invoices()).find((i) => i.planId === String(body.planId || '')); // read again under the lock
+        const method = require('./orders').METHODS[body.method] ? body.method : null, ref = clean(body.ref, 60);
+        const amount = Math.round(Number(String(body.amount || '').replace(/[^0-9.]/g, '')));
+        const errors = {};
+        if (!method) errors.method = 'Choose how it was paid.';
+        if (ref.length < 4) errors.ref = 'Enter the transaction or receipt number.';
+        if (!(amount > 0)) errors.amount = 'Enter the amount received.';
+        else if (amount > inv.outstanding) errors.amount = `Only ${care.fmt(inv.outstanding)} is outstanding on this invoice.`;
+        if (Object.keys(errors).length) return [400, { ok: false, message: 'Please check the highlighted fields.', errors }];
+        const used = [409, { ok: false, message: 'This transaction number is already recorded.', errors: { ref: 'Already used' } }];
+        if (await docs.findOne('app_payments', { ref, kind: 'payment' })) return used;
+        if (!(await orderlock.claimRef(ref, 'invoice:' + inv.planId))) return used;
+        try {
+          await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, amount, method, ref, receivedAt: now(), recordedBy: admin.id });
+        } catch (e) { await orderlock.releaseRef(ref, 'invoice:' + inv.planId); throw e; }
+        if (ctx.lifecycle) await ctx.lifecycle.announce(inv.personId);
+        await audit(admin.id, 'payment.recorded', inv.personId, { invoice: inv.number, amount });
+        return [201, { ok: true }];
+      });
+      if (done.busy) return json(res, 409, { ok: false, message: 'A payment for this invoice is being recorded right now. Wait a moment and refresh.' });
+      return json(res, done.value[0], done.value[1]);
     }
     if (p === 'finance/refunds' && req.method === 'POST') {
-      const inv = (await finance.invoices()).find((i) => i.planId === String(body.planId || ''));
-      if (!inv) throw notFound();
-      const amount = Math.round(Number(String(body.amount || '').replace(/[^0-9.]/g, ''))), ref = clean(body.ref, 60), reason = clean(body.reason, 200);
-      const errors = {};
-      if (!(amount > 0)) errors.amount = 'Enter the amount refunded.';
-      else if (amount > inv.paid - inv.refunded) errors.amount = 'A refund cannot be more than what was paid.';
-      if (ref.length < 4) errors.ref = 'Enter the refund transaction number.';
-      if (reason.length < 3) errors.reason = 'Say why.';
-      if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-      await docs.insert('app_payments', { id: uid(), kind: 'refund', planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, amount, method: 'refund', ref, reason, receivedAt: now(), recordedBy: admin.id });
-      await audit(admin.id, 'payment.refund', inv.personId, { invoice: inv.number, amount });
-      return json(res, 201, { ok: true });
+      if (!(await finance.invoices()).some((i) => i.planId === String(body.planId || ''))) throw notFound();
+      // under the same per-invoice lock: simultaneous refunds cannot add up to more than was paid
+      const done = await orderlock.withLock('invoice:' + String(body.planId), async () => {
+        const inv = (await finance.invoices()).find((i) => i.planId === String(body.planId || ''));
+        const amount = Math.round(Number(String(body.amount || '').replace(/[^0-9.]/g, ''))), ref = clean(body.ref, 60), reason = clean(body.reason, 200);
+        const errors = {};
+        if (!(amount > 0)) errors.amount = 'Enter the amount refunded.';
+        else if (amount > inv.paid - inv.refunded) errors.amount = 'A refund cannot be more than what was paid.';
+        if (ref.length < 4) errors.ref = 'Enter the refund transaction number.';
+        if (reason.length < 3) errors.reason = 'Say why.';
+        if (Object.keys(errors).length) return [400, { ok: false, message: 'Please check the highlighted fields.', errors }];
+        await docs.insert('app_payments', { id: uid(), kind: 'refund', planId: inv.planId, personId: inv.personId, invoiceNo: inv.number, amount, method: 'refund', ref, reason, receivedAt: now(), recordedBy: admin.id });
+        await audit(admin.id, 'payment.refund', inv.personId, { invoice: inv.number, amount });
+        return [201, { ok: true }];
+      });
+      if (done.busy) return json(res, 409, { ok: false, message: 'A payment for this invoice is being recorded right now. Wait a moment and refresh.' });
+      return json(res, done.value[0], done.value[1]);
     }
     if (parts[0] === 'finance' && parts[1] === 'invoices' && parts[3] === 'pdf' && req.method === 'GET') {
       const inv = (await finance.invoices()).find((i) => i.planId === parts[2]);

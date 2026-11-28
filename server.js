@@ -5,7 +5,7 @@
 // - Serves the websites in /public  (KareIQ at /, Kare@Home at /kare-at-home, KareNest at /karenest,
 //                                    KareWellness at /karewellness)
 // - Saves bookings and enquiries      (POST /api/bookings, POST /api/enquiries)
-// - Password-protected admin page     (/admin, set ADMIN_PASSWORD in .env)
+// - Admin page (/admin): opened by an office admin's own KareIQ login (individual accounts)
 // - The KareIQ dashboard                (/app: families, nurses and the office team sign in here;
 //                                       the websites hand over to it through window.KARE_APP in public/js/sites.js)
 //
@@ -20,27 +20,45 @@ const path = require('path');
 const crypto = require('crypto');
 
 loadEnv(path.join(__dirname, '.env'));
+// personal data (phone numbers, email addresses) never reaches the logs (src/logsafe.js)
+require('./src/logsafe').install();
+
+// Refuse to start with an unsafe configuration (src/runtime.js): production or staging without its
+// database, demo mode outside a demo, staging on the live database... Fails closed.
+const runtime = require('./src/runtime');
+const startup = runtime.validate();
+if (startup.problems.length) {
+  const msg = `KareIQ will not start (${startup.env.name} environment, from ${startup.env.source}):\n  - ` + startup.problems.join('\n  - ');
+  console.error(msg);
+  throw new Error(msg);
+}
 
 const store = require('./src/store');
+const docs = require('./src/docs');
 const catalog = require('./src/catalog');
 const { validateBooking, validateEnquiry, validateBystander } = require('./src/validate');
 const { createAppApi } = require('./src/app/api');
 const appAuth = require('./src/app/auth');
-const { notify, emailEnabled } = require('./src/notify');
+const { notify, emailEnabled, mailWarnings } = require('./src/notify');
 const db = require('./src/db');
-// A demo (APP_DEMO=true) must never run on the live database: demo logins and sample people would be added to it.
-if (String(process.env.APP_DEMO || '') === 'true' && db.mode === 'mongo' && (process.env.MONGODB_DB || 'kareiq') === 'kareiq') {
-  throw new Error('APP_DEMO=true needs its own database: set MONGODB_DB to a demo name such as kareiq-demo (never the live "kareiq").');
-}
+// (a demo on the live database is refused above by src/runtime.js, with the other unsafe setups)
 const content = require('./src/content');
 
 const PORT = Number(process.env.PORT || 3000);
 const HOST = process.env.HOST || '0.0.0.0';
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || '';
+// The website editor (/admin) is opened by an office admin's OWN KareIQ login (individual accounts,
+// each with its own scrypt password; signing in at /app opens /admin too). The old shared
+// ADMIN_PASSWORD sign-in stays off; ADMIN_SHARED_LOGIN=true turns it back on for local work only,
+// never in production or staging. ADMIN_PASSWORD still creates the first office admin account
+// (ADMIN_EMAIL) when there is none, so the owner always has a way in.
+const SHARED_ADMIN_LOGIN = Boolean(ADMIN_PASSWORD) && String(process.env.ADMIN_SHARED_LOGIN || '') === 'true' && !startup.env.shared;
 // Vercel always sits behind its own proxy, so its forwarded headers are trusted there
-const ON_VERCEL = Boolean(process.env.VERCEL);
-const TRUST_PROXY = ON_VERCEL || String(process.env.TRUST_PROXY || 'false') === 'true';
+// (which forwarded headers are trusted, and how many proxies: src/net.js, TRUST_PROXY / TRUST_PROXY_HOPS)
+// Strict-Transport-Security max-age in seconds (default 1 day while HTTPS is confirmed everywhere;
+// raise to 31536000 later). 0 turns it off. Values outside 0..2 years fall back to the default.
+const HSTS_MAX_AGE = (() => { const n = Math.floor(Number(process.env.HSTS_MAX_AGE ?? 86400)); return Number.isFinite(n) && n >= 0 && n <= 63072000 ? n : 86400; })();
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const APP_DIR = path.join(__dirname, 'app');
 const ADMIN_DIR = path.join(__dirname, 'admin');
@@ -100,10 +118,9 @@ function json(res, status, data) {
   send(res, status, JSON.stringify(data), { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
 }
 
-function clientIp(req) {
-  if (TRUST_PROXY && req.headers['x-forwarded-for']) return String(req.headers['x-forwarded-for']).split(',')[0].trim();
-  return req.socket.remoteAddress || 'unknown';
-}
+// the client's address and HTTPS, believing forwarded headers only from trusted proxies (src/net.js)
+const net = require('./src/net');
+function clientIp(req) { return net.clientIp(req); }
 
 function readJson(req) {
   // On Vercel the platform may already have read and parsed the body
@@ -180,9 +197,7 @@ function readCookie(req, name) {
   }
   return null;
 }
-function isHttps(req) {
-  return Boolean(req.socket.encrypted) || (TRUST_PROXY && String(req.headers['x-forwarded-proto'] || '').startsWith('https'));
-}
+function isHttps(req) { return net.isHttps(req); }
 function sessionOf(req) {
   const t = readCookie(req, COOKIE);
   if (!t) return null;
@@ -202,7 +217,7 @@ async function appAdmin(req) {
 
 // For pages: redirect to the sign-in page. For the API: a JSON 401 the admin page understands.
 async function isAdmin(req, res, { page = false } = {}) {
-  if (ADMIN_PASSWORD && sessionOf(req)) return true;
+  if (SHARED_ADMIN_LOGIN && sessionOf(req)) return true;
   if (await appAdmin(req)) return true;
   if (page) { send(res, 302, '', { Location: '/admin/login', 'Cache-Control': 'no-store' }); return false; }
   json(res, 401, { ok: false, signedOut: true, message: 'Please sign in again.' });
@@ -210,7 +225,7 @@ async function isAdmin(req, res, { page = false } = {}) {
 }
 
 async function handleLogin(req, res) {
-  if (!ADMIN_PASSWORD) return json(res, 503, { ok: false, message: 'Admin sign-in is turned off. Add ADMIN_PASSWORD=your-password to the .env file and restart the server.' });
+  if (!SHARED_ADMIN_LOGIN) return json(res, 403, { ok: false, individual: true, message: 'Sign in with your own KareIQ office login at /app, then open /admin again.' });
   if (limited(req, 'login')) return json(res, 429, { ok: false, message: 'Too many attempts. Wait a few minutes and try again.' });
   const body = await readJson(req);
   const password = typeof body.password === 'string' ? body.password : '';
@@ -277,6 +292,38 @@ async function notFound(req, res) {
 const COLLECTIONS = { bookings: 'bookings', enquiries: 'enquiries' };
 const STATUSES = ['new', 'contacted', 'scheduled', 'closed'];
 
+// Booking de-duplication. A booking whose every validated field is identical to one received in the
+// last BOOKING_DEDUP_MINUTES (default 10) is the same booking sent twice: the visitor gets the
+// first booking's reference back and nothing is stored or scheduled again. Any difference (another
+// date, time, service, person or note), or a later repeat, is a new booking, so real repeat
+// bookings are never refused. The key is claimed atomically (docs.insertOnce), so two identical
+// requests at the same moment also make one booking. Existing bookings are never touched.
+const DEDUP_MS = Math.max(0, Number(process.env.BOOKING_DEDUP_MINUTES ?? 10)) * 60 * 1000;
+const stable = (v) => JSON.stringify(Object.keys(v).sort().reduce((o, k) => { o[k] = v[k]; return o; }, {}));
+async function claimBooking(prefix, value) {
+  if (!DEDUP_MS) return null;
+  const key = 'bk:' + crypto.createHash('sha256').update(prefix + '|' + stable(value)).digest('hex').slice(0, 40);
+  const at = Date.now();
+  let claimed = await docs.insertOnce('booking_keys', { id: key, at, reference: null });
+  if (!claimed) {
+    const held = await docs.findOne('booking_keys', { id: key });
+    if (!held || at - held.at > DEDUP_MS) { // an old key: this is a new booking
+      if (held) await docs.remove('booking_keys', key);
+      claimed = await docs.insertOnce('booking_keys', { id: key, at, reference: null });
+    }
+  }
+  if (claimed) return { key };
+  // the first request may still be saving: wait briefly for its reference
+  for (let i = 0; i < 50; i++) {
+    const held = await docs.findOne('booking_keys', { id: key });
+    if (held && held.reference) return { duplicate: true, reference: held.reference };
+    // the first request failed and let go: this one becomes the booking
+    if (!held && await docs.insertOnce('booking_keys', { id: key, at: Date.now(), reference: null })) return { key };
+    await new Promise((r) => setTimeout(r, 100));
+  }
+  return { busy: true };
+}
+
 async function handleSubmit(req, res, kind) {
   if (limited(req, kind)) {
     return json(res, 429, { ok: false, message: 'Too many requests from this device. Please wait a few minutes, or call us directly.' });
@@ -289,16 +336,25 @@ async function handleSubmit(req, res, kind) {
   const isBystander = isBooking && body.service === 'bystander' && body.form === 'bystander';
   const { errors, value } = isBystander ? validateBystander(body) : isBooking ? validateBooking(body) : validateEnquiry(body);
   if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-  const row = isBystander
-    ? await store.add('bookings', 'BY', value)
-    : isBooking
-      ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
-      : await store.add('enquiries', 'KQ', value);
+  // the same booking sent twice (double-click, a retry, the browser re-sending) is one booking
+  const dup = isBooking ? await claimBooking(isBystander ? 'BY' : 'KH', value) : null;
+  if (dup && dup.duplicate) return json(res, 200, { ok: true, reference: dup.reference, duplicate: true });
+  if (dup && dup.busy) return json(res, 409, { ok: false, message: 'Your booking is still being saved. Please wait a moment before sending it again.' });
+  let row;
+  try {
+    row = isBystander
+      ? await store.add('bookings', 'BY', value)
+      : isBooking
+        ? await store.add('bookings', 'KH', { ...value, page: 'kare-at-home' })
+        : await store.add('enquiries', 'KQ', value);
+  } catch (e) { if (dup) await docs.remove('booking_keys', dup.key).catch(() => {}); throw e; }
+  if (dup) await docs.update('booking_keys', dup.key, { reference: row.reference });
   // a Kare@Home booking with a preferred day becomes a first visit, given to an available nurse
   // (Bystander requests are arranged by the office: half days, full days and round-the-clock care)
   if (isBooking && !isBystander && row.date && appApi && appApi.websiteBooking) appApi.websiteBooking(row).catch(() => {});
   notify(kind, row);
-  console.log(`[${kind}] ${row.reference} ${row.name} ${row.phone} ${isBooking ? row.serviceName : row.interestName + (row.planName ? ' / ' + row.planName : '')}`);
+  // the reference finds the record in the admin page; names and phone numbers stay out of the logs
+  console.log(`[${kind}] ${row.reference} ${isBooking ? row.serviceName : row.interestName + (row.planName ? ' / ' + row.planName : '')}`);
   json(res, 201, { ok: true, reference: row.reference });
 }
 
@@ -355,6 +411,10 @@ async function handleAdminApi(req, res, parts) {
       changes.status = body.status;
     }
     if (typeof body.adminNote === 'string') changes.adminNote = body.adminNote.slice(0, 1000);
+    // who changed it: the office admin's own account (or "shared" for the local shared password)
+    const who = await appAuth.sessionOf(req).catch(() => null);
+    changes.updatedBy = who && who.user ? who.user.id : 'shared-admin';
+    changes.updatedAt = new Date().toISOString();
     const row = await store.update(name, parts[1], changes);
     if (!row) return json(res, 404, { ok: false, message: 'That entry no longer exists.' });
     return json(res, 200, { ok: true, row });
@@ -395,6 +455,12 @@ async function route(req, res) {
     req.url = url.pathname + url.search;
   }
   const p = url.pathname;
+  // HSTS only on a request that really arrived over HTTPS (TLS here, or https reported by the
+  // trusted proxy), never on plain HTTP. Starts short; no includeSubDomains/preload (see README).
+  if (HSTS_MAX_AGE > 0 && isHttps(req)) res.setHeader('Strict-Transport-Security', `max-age=${HSTS_MAX_AGE}`);
+  // the same security headers on EVERY answer, also those written directly by the app (document and
+  // photo downloads, PDF/CSV exports); a route that sets its own value for a header still wins
+  for (const [k, v] of Object.entries(SECURITY_HEADERS)) res.setHeader(k, v);
 
   if (p.startsWith('/api/')) {
     if (cors(req, res, p)) return; // answered a browser permission check
@@ -419,7 +485,7 @@ async function route(req, res) {
     if (p === '/api/enquiries' && req.method === 'POST') return handleSubmit(req, res, 'enquiry');
     if (p === '/api/admin/login' && req.method === 'POST') return handleLogin(req, res);
     if (p === '/api/admin/logout' && req.method === 'POST') return handleLogout(req, res);
-    if (p === '/api/admin/session' && req.method === 'GET') return json(res, 200, { ok: true, configured: Boolean(ADMIN_PASSWORD), signedIn: Boolean(ADMIN_PASSWORD && sessionOf(req)) || await appAdmin(req), storage: db.mode });
+    if (p === '/api/admin/session' && req.method === 'GET') return json(res, 200, { ok: true, configured: SHARED_ADMIN_LOGIN, sharedLogin: SHARED_ADMIN_LOGIN, signedIn: Boolean(SHARED_ADMIN_LOGIN && sessionOf(req)) || await appAdmin(req), storage: db.mode });
     if (p.startsWith('/api/app/')) return appApi(req, res, p.slice('/api/app/'.length).split('/').filter(Boolean), url);
     if (p.startsWith('/api/admin/')) return handleAdminApi(req, res, p.slice('/api/admin/'.length).split('/').filter(Boolean));
     return json(res, 404, { ok: false, message: 'Not found.' });
@@ -430,7 +496,7 @@ async function route(req, res) {
   if (p === '/admin' || p.startsWith('/admin/')) {
     // the sign-in page and its files are public
     if (p === '/admin/login' || p === '/admin/login/') {
-      if ((ADMIN_PASSWORD && sessionOf(req)) || await appAdmin(req)) return send(res, 302, '', { Location: '/admin/', 'Cache-Control': 'no-store' });
+      if ((SHARED_ADMIN_LOGIN && sessionOf(req)) || await appAdmin(req)) return send(res, 302, '', { Location: '/admin/', 'Cache-Control': 'no-store' });
       if (await serveFile(req, res, ADMIN_DIR, '/login.html', { cache: false })) return;
     }
     if (p === '/admin/login.js' || p === '/admin/login.css') {
@@ -507,10 +573,13 @@ if (require.main === module) {
     console.log(`  KareNest:    ${base}/karenest`);
     console.log(`  KareWellness: ${base}/karewellness`);
     console.log(`  Dashboard:   ${base}/app   (families, nurses and the office team sign in here)`);
-    if (db.mode === 'file' && String(process.env.APP_DEMO || 'true') === 'true') console.log('               demo logins (password demo-pass-123): family@demo.kareiq  nurse@demo.kareiq  admin@demo.kareiq');
-    console.log(`  Admin:       ${base}/admin  ${ADMIN_PASSWORD ? '(sign in with ADMIN_PASSWORD from .env)' : '(off: add ADMIN_PASSWORD to .env, then restart)'}`);
+    if (startup.env.demo) console.log('               demo logins (password demo-pass-123): family@demo.kareiq  nurse@demo.kareiq  admin@demo.kareiq');
+    console.log(`  Admin:       ${base}/admin  (office admins sign in with their own KareIQ login${SHARED_ADMIN_LOGIN ? '; shared ADMIN_PASSWORD sign-in is also on (ADMIN_SHARED_LOGIN=true, local only)' : ''})`);
+    console.log(`  Environment: ${startup.env.name}${startup.env.demo ? ' (demo mode)' : ''}`);
     console.log(`  Storage:     ${{ mongo: 'MongoDB Atlas', redis: 'Upstash Redis', temporary: 'temporary (data will be lost)', file: 'files in the data folder' }[db.mode]}`);
     console.log(`  Email alerts: ${emailEnabled ? 'on' : 'off (optional, see README)'}\n`);
+    // email readiness (names only): printed where it matters, on production and staging servers
+    if (startup.env.shared) for (const w of mailWarnings()) console.warn('[email] ' + w);
   });
   const shutdown = () => { server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref(); };
   process.on('SIGINT', shutdown);

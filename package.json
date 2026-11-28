@@ -10,6 +10,9 @@
     "check:app": "node tools/check-app.js http://localhost:3000",
     "check:assess": "node tools/check-assess.js http://localhost:3000",
     "check:docs": "node tools/check-docs.js http://localhost:3000",
+    "check:hardening": "node tools/check-hardening.js",
+    "check:payments": "node tools/check-payments.js http://localhost:3000",
+    "check:backup": "node tools/db-backup.js selftest",
     "check:lifecycle": "node tools/check-lifecycle.js http://localhost:3000",
     "check:home": "node tools/check-home.js http://localhost:3000",
     "check:photos": "node tools/check-photos.js http://localhost:3000",
@@ -27,13 +30,13 @@
     "check:trends": "node tools/check-trends.js http://localhost:3000"
   },
   "engines": {
-    "node": ">=18"
+    "node": ">=22"
   },
   "dependencies": {
     "mongodb": "^6.10.0",
     "pdf-lib": "1.17.1"
   },
   "optionalDependencies": {
-    "nodemailer": "6.9.16"
+    "nodemailer": "10.6.1"
   }
 }

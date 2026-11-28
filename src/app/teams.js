@@ -334,7 +334,9 @@ function create(ctx) {
       const x = await docs.findOne('app_expenses', { id: parts[2] });
       if (!x) throw notFound();
       const action = parts[3], note = clean(body.note, 300);
-      const step = async (changes, act) => { await docs.update('app_expenses', x.id, { ...changes, updatedAt: now(), history: [...(x.history || []), { at: now(), by: user.id, action: act, note: note || null }] }); await audit(user.id, 'expense.' + act, null, { expense: x.reference }); return json(res, 200, { ok: true }); };
+      // each step only from the status it was checked against (compare-and-set): an approval racing a
+      // withdrawal, or two "paid" clicks, cannot both apply
+      const step = async (changes, act) => { const done = await docs.updateIf('app_expenses', x.id, { status: x.status }, { ...changes, updatedAt: now(), history: [...(x.history || []), { at: now(), by: user.id, action: act, note: note || null }] }); if (!done) return json(res, 409, { ok: false, message: 'This expense was changed by someone else. Refresh and check it.' }); await audit(user.id, 'expense.' + act, null, { expense: x.reference }); return json(res, 200, { ok: true }); };
       if (action === 'approve' || action === 'reject') {
         if (x.status !== 'submitted') return fail(res, 'Only an expense waiting for approval can be ' + (action === 'approve' ? 'approved' : 'rejected') + '.');
         if (x.createdBy === user.id) return json(res, 403, { ok: false, message: 'Someone else must approve an expense you recorded.' });

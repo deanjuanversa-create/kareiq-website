@@ -7,7 +7,8 @@
 
   fetch('/api/admin/session', { credentials: 'same-origin' }).then(function (r) { return r.json(); }).then(function (s) {
     if (s.signedIn) { location.replace('/admin/'); return; }
-    if (!s.configured) { document.getElementById('notConfigured').hidden = false; pw.disabled = true; btn.disabled = true; }
+    // individual office logins only, unless the shared password is switched on for local work
+    if (s.sharedLogin) { document.getElementById('shared').hidden = false; document.getElementById('individual').hidden = true; pw.focus(); }
   }).catch(function () { err.textContent = 'Could not reach the server. Make sure it is running with node server.js.'; });
 
   eye.addEventListener('click', function () {
@@ -34,5 +35,4 @@
       })
       .catch(function () { err.textContent = 'Could not reach the server. Make sure it is running.'; btn.disabled = false; btn.textContent = 'Sign in'; });
   });
-  pw.focus();
 })();

@@ -54,6 +54,8 @@ edit('public/js/sites.js', (s) => s
 edit('app/app.js', (s) => s.replace(/var SITES = \{[^}]*\};/, "var SITES = { kareiq: '/', karehome: '/kare-at-home', karenest: '/karenest', karewellness: '/karewellness/' };"));
 // the server turns on the demo logins for this copy
 edit('api/index.js', (s) => s.replace("const { handler }", [
+  "// a demo environment (src/runtime.js): demo logins are allowed here and nowhere else",
+  "process.env.APP_ENV = process.env.APP_ENV || 'demo';",
   "process.env.APP_DEMO = process.env.APP_DEMO || 'true';",
   "// no database: every copy of the server builds the same sample data and sign-ins live in the cookie",
   "if (!process.env.MONGODB_URI && !process.env.KV_REST_API_URL && !process.env.UPSTASH_REDIS_REST_URL) process.env.APP_STATELESS = 'true';",

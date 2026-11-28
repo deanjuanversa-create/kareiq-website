@@ -23,7 +23,16 @@
   <form class="card" id="loginForm" novalidate>
     <img class="mark" src="/img/kareiq-icon.svg" alt="" width="266" height="266">
     <h1>Sign in</h1>
-    <p class="sub">Enter your admin password from the <code>.env</code> file.</p>
+    <p class="sub" id="sub">Office admins sign in with their own KareIQ login.</p>
+
+    <div id="individual">
+      <p class="foot">Each office admin has their own account and password. Sign in to the KareIQ app; this website editor then opens without another password.</p>
+      <a class="btn" id="appSignin" href="/app/#/signin">Sign in with my KareIQ login</a>
+      <p class="foot">No office login yet? Ask an existing office admin to add you under Logins in the app.</p>
+    </div>
+
+    <div id="shared" hidden>
+    <p class="foot">Shared admin password sign-in (local development only).</p>
 
     <div class="notice" id="notConfigured" hidden>
       <b>Admin sign-in is turned off.</b>
@@ -40,10 +49,10 @@
     <p class="err" id="err" role="alert"></p>
 
     <button class="btn" id="submit" type="submit">Sign in</button>
+    </div>
     <p class="foot">Private area for the KareIQ team. You stay signed in for 12 hours on this device.</p>
-    <p class="foot">Office admins can also <a href="/app/#/signin">sign in with their KareIQ app login</a>; the website editor then opens without this password.</p>
   </form>
 </main>
-<script src="/admin/login.js?v=20261017d"></script>
+<script src="/admin/login.js?v=20261128a"></script>
 </body>
 </html>

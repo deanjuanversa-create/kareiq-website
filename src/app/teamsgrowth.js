@@ -10,6 +10,7 @@
 const { planName } = require('./products');
 const packinfo = require('./packinfo');
 const care = require('./care');
+const orderlock = require('./orderlock');
 const { BRAND_NAMES } = require('./finance');
 
 const ymd = (s) => String(s || '').slice(0, 10);
@@ -199,15 +200,26 @@ function create(ctx) {
         return res.end(buf);
       }
       if (parts[4] === 'pay' && req.method === 'POST') {
-        const errors = {};
-        const amount = money(body.amount); if (!(amount > 0)) errors.amount = 'Enter the amount received.'; else if (amount > b.due + 0.001) errors.amount = 'At most ' + care.fmt(b.due) + ' is owed.';
-        const METHODS = require('./orders').METHODS;
-        if (!METHODS[body.method]) errors.method = 'Choose how it was paid.';
-        const ref = clean(body.ref, 60); if (ref.length < 3) errors.ref = 'Enter the transaction or receipt number.';
-        if (!errors.ref && await docs.findOne('app_payments', { ref, kind: 'payment' })) errors.ref = 'This transaction number is already recorded.';
-        if (Object.keys(errors).length) return fail(res, null, errors);
-        await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: null, addonBillId: b.id, personId: b.personId, invoiceNo: b.number, amount, method: body.method, ref, receivedAt: now(), recordedBy: user.id });
-        await audit(user.id, 'payment.recorded', b.personId, { invoice: b.number, amount });
+        // one payment at a time per bill (two clicks cannot both pass the "owed" check and overpay it),
+        // and a transaction number is reserved for one payment only (src/app/orderlock.js)
+        const done = await orderlock.withLock('addon:' + b.id, async () => {
+          const bill = (await addonBills()).find((x) => x.id === b.id) || b; // read again under the lock
+          const errors = {};
+          const amount = money(body.amount); if (!(amount > 0)) errors.amount = 'Enter the amount received.'; else if (amount > bill.due + 0.001) errors.amount = 'At most ' + care.fmt(bill.due) + ' is owed.';
+          const METHODS = require('./orders').METHODS;
+          if (!METHODS[body.method]) errors.method = 'Choose how it was paid.';
+          const ref = clean(body.ref, 60); if (ref.length < 3) errors.ref = 'Enter the transaction or receipt number.';
+          if (!errors.ref && await docs.findOne('app_payments', { ref, kind: 'payment' })) errors.ref = 'This transaction number is already recorded.';
+          if (!Object.keys(errors).length && !(await orderlock.claimRef(ref, 'addon:' + bill.id))) errors.ref = 'This transaction number is already recorded.';
+          if (Object.keys(errors).length) return { errors };
+          try {
+            await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: null, addonBillId: bill.id, personId: bill.personId, invoiceNo: bill.number, amount, method: body.method, ref, receivedAt: now(), recordedBy: user.id });
+          } catch (e) { await orderlock.releaseRef(ref, 'addon:' + bill.id); throw e; }
+          await audit(user.id, 'payment.recorded', bill.personId, { invoice: bill.number, amount });
+          return { ok: true };
+        });
+        if (done.busy) return json(res, 409, { ok: false, message: 'A payment for this bill is being recorded right now. Wait a moment and refresh.' });
+        if (done.value.errors) return fail(res, null, done.value.errors);
         return json(res, 201, { ok: true });
       }
     }

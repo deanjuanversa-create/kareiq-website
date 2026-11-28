@@ -24,6 +24,7 @@ const { PRODUCTS, INCLUDES, PLAN_STATUS, planName, plansFor, productOfRequest } 
 const { normalisePhone } = require('../validate');
 const { sendMail, mailReady } = require('../notify');
 const db = require('../db');
+const runtime = require('../runtime');
 const content = require('../content');
 const catalog = require('../catalog');
 const { createOAuth, safeNext } = require('./oauth');
@@ -34,6 +35,7 @@ const risk = require('./risk');
 const care = require('./care');
 const packinfo = require('./packinfo');
 const orders = require('./orders');
+const orderlock = require('./orderlock');
 const reportreader = require('./reportreader');
 const schedulerMod = require('./scheduler');
 const staffMod = require('./staff');
@@ -95,8 +97,12 @@ function ensureReady() {
 }
 async function setup() {
   await docs.ensureIndexes();
-  const admins = await docs.count('app_users', { role: 'admin' });
-  const demo = String(process.env.APP_DEMO || (db.mode === 'file' ? 'true' : 'false')) === 'true';
+  // demo admins do not count outside demo mode (they cannot sign in there), so ADMIN_PASSWORD still
+  // creates the real first office admin on a database that holds old demo logins
+  const admins = (await docs.find('app_users', { role: 'admin' })).filter((u) => runtime.demoAllowed() || !runtime.isDemoAccount(u)).length;
+  // demo logins only in an explicit demo (APP_ENV=demo, or APP_DEMO=true while developing or
+  // testing) - never by default, never in production or staging, never because a database is missing
+  const demo = runtime.demoAllowed();
   if (!admins && demo && !(await docs.count('app_users'))) {
     await require('./demo').seed();
     return;
@@ -111,7 +117,7 @@ async function setup() {
   }
 }
 // On a public demo site (APP_DEMO=true) the shared demo logins cannot be changed or turned off
-const demoLocked = (u) => String(process.env.APP_DEMO || '') === 'true' && /@demo\.kareiq$/i.test(String((u && u.email) || ''));
+const demoLocked = (u) => runtime.demoAllowed() && runtime.isDemoAccount(u);
 const DEMO_LOCKED = 'This is a shared demo login, so its details cannot be changed here. Add a new login to try this.';
 const adminEmail = () => cleanEmail(process.env.ADMIN_EMAIL || 'admin@karenest.co.in');
 
@@ -691,10 +697,13 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
   async function findUserByLogin(id) {
     const v = clean(id, 120);
     if (!v) return null;
-    if (v.toLowerCase() === 'admin') return docs.findOne('app_users', { email: adminEmail() });
-    if (v.includes('@')) return docs.findOne('app_users', { email: v.toLowerCase() });
-    const phone = normalisePhone(v);
-    return phone ? docs.findOne('app_users', { phone }) : null;
+    let u;
+    if (v.toLowerCase() === 'admin') u = await docs.findOne('app_users', { email: adminEmail() });
+    else if (v.includes('@')) u = await docs.findOne('app_users', { email: v.toLowerCase() });
+    else { const phone = normalisePhone(v); u = phone ? await docs.findOne('app_users', { phone }) : null; }
+    // demo logins (published password) do not exist outside demo mode, even if a database holds them
+    if (u && runtime.isDemoAccount(u) && !runtime.demoAllowed()) return null;
+    return u;
   }
 
   async function findRequest(reference) {
@@ -1329,8 +1338,12 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       if (!o) throw notFound();
       await visiblePerson(user, o.personId);
       if (user.role !== 'family' && user.role !== 'admin') throw forbidden();
-      if (!['awaiting_approval', 'awaiting_payment'].includes(o.status)) return json(res, 409, { ok: false, message: 'Only a request waiting for approval or payment can be cancelled.' });
-      await docs.update('app_orders', o.id, { status: 'cancelled', cancelledBy: user.id, updatedAt: now() });
+      const notOpen = { ok: false, message: 'Only a request waiting for approval or payment can be cancelled.' };
+      if (!['awaiting_approval', 'awaiting_payment'].includes(o.status)) return json(res, 409, notOpen);
+      // never while a payment is being recorded, and never over a paid order (compare-and-set)
+      const locked = await orderlock.withOrderLock(o.id, () => docs.updateIf('app_orders', o.id, { status: { $in: ['awaiting_approval', 'awaiting_payment'] } }, { status: 'cancelled', cancelledBy: user.id, updatedAt: now() }));
+      if (locked.busy) return json(res, 409, { ok: false, message: 'This order is being updated right now. Please refresh in a moment.' });
+      if (!locked.value) return json(res, 409, notOpen);
       await audit(user.id, 'order.cancelled', o.personId, { reference: o.reference });
       return json(res, 200, { ok: true });
     }
@@ -1445,53 +1458,73 @@ function createAppApi({ json, readJson, limited, isHttps, clientIp }) {
       return json(res, 200, { ok: true, methods: orders.METHODS, rows: rows.map((o) => orders.view(o, { personName: (people.find((x) => x.id === o.personId) || {}).name || o.personId, buyer: users[o.userId] || '', paymentRef: (o.payment && o.payment.ref) || null })) });
     }
     if (parts[0] === 'orders' && parts.length === 3 && req.method === 'POST') {
-      const o = await docs.findOne('app_orders', { id: String(parts[1]) });
-      if (!o) throw notFound();
-      if (o.status === 'awaiting_approval' && parts[2] === 'verify') return json(res, 409, { ok: false, message: 'Approve the package first (Enquiry database), then record the payment.' });
-      if (o.status !== 'awaiting_payment' && !(o.status === 'awaiting_approval' && parts[2] !== 'verify')) return json(res, 409, { ok: false, message: `This order is already ${orders.ORDER_STATUS[o.status].toLowerCase()}.` });
-      if (parts[2] === 'verify') {
-        const errors = {};
-        const method = orders.METHODS[body.method] ? body.method : null;
-        const ref = clean(body.paymentRef, 60);
-        const received = Number(String(body.amount || '').replace(/[^0-9.]/g, ''));
-        if (!method) errors.method = 'Choose how it was paid.';
-        if (ref.length < 4) errors.paymentRef = 'Enter the transaction or receipt number.';
-        if (!(received > 0)) errors.amount = 'Enter the amount received.';
-        else if (Math.round(received) !== Math.round(o.amount)) errors.amount = `The order is for ${o.amountText}. Record the payment only when the full amount has been received.`;
-        if (Object.keys(errors).length) return json(res, 400, { ok: false, message: 'Please check the highlighted fields.', errors });
-        if ((await docs.find('app_orders', { status: 'paid' })).some((x) => x.payment && x.payment.ref === ref)) return json(res, 409, { ok: false, message: 'This transaction number is already recorded on another order.', errors: { paymentRef: 'Already used' } });
-        const pk = await packinfo.byId(o.planId);
-        if (!pk) return json(res, 400, { ok: false, message: 'This package no longer exists. Cancel the order and refund the payment.' });
-        const startDate = todayIST();
-        const run = orders.runFor(pk, o.months, startDate, addMonths);
-        // the new package replaces an active one of the same kind (e.g. HomePlus -> HomeElite); other kinds stay
-        const groupOf = async (id) => ((await packinfo.byId(id)) || {}).group;
-        for (const pl of await docs.find('app_plans', { personId: o.personId, product: o.product, status: 'active' })) {
-          if (pl.planId && await groupOf(pl.planId) === pk.group) await docs.update('app_plans', pl.id, { status: 'ended', endDate: startDate, endedReason: 'Replaced by order ' + o.reference, updatedAt: now() });
+      if (!(await docs.findOne('app_orders', { id: String(parts[1]) }))) throw notFound();
+      if (!['verify', 'fail', 'cancel'].includes(parts[2])) throw notFound();
+      // one change at a time per order (src/app/orderlock.js): a double-click or two admins recording
+      // the same payment can no longer activate the package twice, and a late cancel cannot undo it
+      const locked = await orderlock.withOrderLock(String(parts[1]), async () => {
+        const o = await docs.findOne('app_orders', { id: String(parts[1]) }); // read again under the lock
+        if (o.status === 'awaiting_approval' && parts[2] === 'verify') return [409, { ok: false, message: 'Approve the package first (Enquiry database), then record the payment.' }];
+        if (o.status !== 'awaiting_payment' && !(o.status === 'awaiting_approval' && parts[2] !== 'verify')) return [409, { ok: false, message: `This order is already ${orders.ORDER_STATUS[o.status].toLowerCase()}.` }];
+        if (parts[2] === 'verify') {
+          const errors = {};
+          const method = orders.METHODS[body.method] ? body.method : null;
+          const ref = clean(body.paymentRef, 60);
+          const received = Number(String(body.amount || '').replace(/[^0-9.]/g, ''));
+          if (!method) errors.method = 'Choose how it was paid.';
+          if (ref.length < 4) errors.paymentRef = 'Enter the transaction or receipt number.';
+          if (!(received > 0)) errors.amount = 'Enter the amount received.';
+          else if (Math.round(received) !== Math.round(o.amount)) errors.amount = `The order is for ${o.amountText}. Record the payment only when the full amount has been received.`;
+          if (Object.keys(errors).length) return [400, { ok: false, message: 'Please check the highlighted fields.', errors }];
+          const used = [409, { ok: false, message: 'This transaction number is already recorded on another order.', errors: { paymentRef: 'Already used' } }];
+          // orders paid before transaction numbers were reserved, then the atomic reservation itself
+          if ((await docs.find('app_orders', { status: 'paid' })).some((x) => x.payment && x.payment.ref === ref && x.id !== o.id)) return used;
+          if (!(await orderlock.claimRef(ref, o.id))) return used;
+          const pk = await packinfo.byId(o.planId);
+          if (!pk) { await orderlock.releaseRef(ref, o.id); return [400, { ok: false, message: 'This package no longer exists. Cancel the order and refund the payment.' }]; }
+          try {
+            const startDate = todayIST();
+            const run = orders.runFor(pk, o.months, startDate, addMonths);
+            // the new package replaces an active one of the same kind (e.g. HomePlus -> HomeElite); other kinds stay
+            const groupOf = async (id) => ((await packinfo.byId(id)) || {}).group;
+            for (const pl of await docs.find('app_plans', { personId: o.personId, product: o.product, status: 'active' })) {
+              if (pl.orderId !== o.id && pl.planId && await groupOf(pl.planId) === pk.group) await docs.update('app_plans', pl.id, { status: 'ended', endDate: startDate, endedReason: 'Replaced by order ' + o.reference, updatedAt: now() });
+            }
+            const approval = o.approval || null;
+            let plan;
+            const waiting = o.requestPlanId ? await docs.findOne('app_plans', { id: o.requestPlanId }) : null;
+            if (waiting && (waiting.status === 'pending' || waiting.orderId === o.id)) {
+              // the plan the customer asked for (a plan request) becomes the active package
+              plan = await docs.update('app_plans', waiting.id, { planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, updatedAt: now() });
+            } else {
+              // one plan per order: the id comes from the order, so a retry after a failure reuses it
+              plan = { id: 'plan-' + o.id, personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, createdAt: now() };
+              if (!(await docs.insertOnce('app_plans', plan))) plan = await docs.findOne('app_plans', { id: plan.id });
+            }
+            // the order becomes paid only from "awaiting payment" (compare-and-set)
+            const paid = await docs.updateIf('app_orders', o.id, { status: { $in: ['awaiting_payment'] } }, { status: 'paid', paidAt: now(), updatedAt: now(), planRowId: plan.id, payment: { mode: 'manual', method, ref, amount: received, verifiedBy: admin.id, verifiedAt: now() } });
+            if (!paid) { await orderlock.releaseRef(ref, o.id); return [409, { ok: false, message: 'This order was changed by someone else. Refresh and check it.' }]; }
+            // one payment row per order (id from the order)
+            await docs.insertOnce('app_payments', { id: 'pay-' + o.id, kind: 'payment', planId: plan.id, personId: o.personId, orderId: o.id, invoiceNo: financeMod.invoiceNo(plan), amount: received, method, ref, receivedAt: now(), recordedBy: admin.id });
+            await audit(admin.id, 'order.paid', o.personId, { reference: o.reference, method, amount: received });
+            await shared.lifecycle.announce(o.personId);
+            return [200, { ok: true, plan: planView(plan) }];
+          } catch (e) {
+            // nothing was marked paid: free the transaction number so the payment can be recorded again
+            const now2 = await docs.findOne('app_orders', { id: o.id });
+            if (!now2 || now2.status !== 'paid') await orderlock.releaseRef(ref, o.id);
+            throw e;
+          }
         }
-        const approval = o.approval || null;
-        let plan;
-        const waiting = o.requestPlanId ? await docs.findOne('app_plans', { id: o.requestPlanId }) : null;
-        if (waiting && waiting.status === 'pending') {
-          // the plan the customer asked for (a plan request) becomes the active package
-          plan = await docs.update('app_plans', waiting.id, { planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, updatedAt: now() });
-        } else {
-          plan = { id: uid(), personId: o.personId, product: o.product, planId: o.planId, status: 'active', startDate, endDate: run.endDate, months: run.months, orderId: o.id, approval, activatedBy: admin.id, createdAt: now() };
-          await docs.insert('app_plans', plan);
-        }
-        await docs.update('app_orders', o.id, { status: 'paid', paidAt: now(), updatedAt: now(), planRowId: plan.id, payment: { mode: 'manual', method, ref, amount: received, verifiedBy: admin.id, verifiedAt: now() } });
-        await docs.insert('app_payments', { id: uid(), kind: 'payment', planId: plan.id, personId: o.personId, orderId: o.id, invoiceNo: financeMod.invoiceNo(plan), amount: received, method, ref, receivedAt: now(), recordedBy: admin.id });
-        await audit(admin.id, 'order.paid', o.personId, { reference: o.reference, method, amount: received });
-        await shared.lifecycle.announce(o.personId);
-        return json(res, 200, { ok: true, plan: planView(plan) });
-      }
-      if (parts[2] === 'fail' || parts[2] === 'cancel') {
         const note = clean(body.note, 300);
-        await docs.update('app_orders', o.id, parts[2] === 'fail' ? { status: 'failed', failedNote: note || 'The payment did not go through.', updatedAt: now() } : { status: 'cancelled', cancelledBy: admin.id, updatedAt: now() });
+        const from = ['awaiting_payment', 'awaiting_approval']; // as before: fail or cancel before or after approval, never once paid
+        const done = await docs.updateIf('app_orders', o.id, { status: { $in: from } }, parts[2] === 'fail' ? { status: 'failed', failedNote: note || 'The payment did not go through.', updatedAt: now() } : { status: 'cancelled', cancelledBy: admin.id, updatedAt: now() });
+        if (!done) return [409, { ok: false, message: 'This order was changed by someone else. Refresh and check it.' }];
         await audit(admin.id, 'order.' + (parts[2] === 'fail' ? 'failed' : 'cancelled'), o.personId, { reference: o.reference });
-        return json(res, 200, { ok: true });
-      }
-      throw notFound();
+        return [200, { ok: true }];
+      });
+      if (locked.busy) return json(res, 409, { ok: false, message: 'This order is being updated right now (perhaps by another admin). Wait a moment and refresh.' });
+      return json(res, locked.value[0], locked.value[1]);
     }
 
     if (p === 'requests' && req.method === 'GET') {

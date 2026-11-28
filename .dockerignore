@@ -6,3 +6,11 @@ data/*
 !data/.gitkeep
 .git
 *.zip
+# local development artifacts: never inside the image. A copied .venv would make the document reader
+# (src/app/reportreader.js prefers .venv/bin/python3) use a Python that cannot load the image's OpenCV.
+.venv
+venv
+**/__pycache__
+**/*.pyc
+*.log
+public-backup-*

@@ -1,5 +1,13 @@
 # Render Blueprint for the KareIQ API (bookings, enquiries, admin panel) and the KareIQ dashboard (/app).
 # The websites stay on Vercel and forward /api/* and /admin* here.
+#
+# Three separate services, each with its own database (see docs/DEPLOYMENT.md):
+#   kareiq-api      PRODUCTION  APP_ENV=production, database "kareiq". autoDeploy is OFF: a push to
+#                               GitHub no longer goes live by itself; deploy by hand after staging.
+#   kareiq-staging  STAGING     APP_ENV=staging, branch "staging", database "kareiq-staging". The server
+#                               refuses to start if it is pointed at the live "kareiq" database.
+#   kareiq-demo     DEMO        APP_ENV=demo, database "kareiq-demo" (demo logins, sample data).
+# Changing this file changes nothing on Render until the Blueprint is synced in the Render dashboard.
 services:
   - type: web
     name: kareiq-api
@@ -8,18 +16,24 @@ services:
     plan: free
     region: singapore          # closest Render region to India
     healthCheckPath: /api/health
-    autoDeploy: true
+    autoDeploy: false          # production deploys only by hand (Manual Deploy), never on a push
     envVars:
+      - key: APP_ENV           # production: refuses to start without its database, demo mode or SESSION_SECRET
+        value: production
       - key: MONGODB_URI       # paste the Atlas connection string when Render asks
         sync: false
       - key: MONGODB_DB
         value: kareiq
-      - key: ADMIN_PASSWORD    # choose the admin panel password when Render asks
+      - key: ADMIN_PASSWORD    # the first office admin's password (ADMIN_EMAIL) when no office admin exists yet; not a shared login
         sync: false
       - key: SESSION_SECRET
         generateValue: true
       - key: TRUST_PROXY
         value: "true"
+      - key: TRUST_PROXY_HOPS  # proxies in front of the app that append to X-Forwarded-For (verify: docs/DEPLOYMENT.md)
+        value: "1"
+      - key: HSTS_MAX_AGE      # seconds; start at 1 day, raise to 31536000 once HTTPS is confirmed on every address
+        value: "86400"
       - key: SITE_URL          # visitors who open the Render address are sent here
         value: https://karenest.co.in
       - key: ADMIN_EMAIL       # the first office login for the dashboard (/app); its password is ADMIN_PASSWORD
@@ -32,6 +46,42 @@ services:
       # FACEBOOK_APP_SECRET in Render → Environment when you have them (never in this file or GitHub).
       # Customer cartoon with Nestu on the family Home (off until set; see README "Customer photos"):
       # CARTOON_PROVIDER = openai (with OPENAI_API_KEY) or gemini (with GEMINI_API_KEY); optional CARTOON_MODEL.
+
+  # STAGING: the same image, deployed from the "staging" branch, with its own database. Use a separate
+  # Atlas database user that can only reach "kareiq-staging" (better: a separate cluster), so this
+  # service cannot touch live data even if a variable is copied by mistake.
+  - type: web
+    name: kareiq-staging
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    branch: staging
+    healthCheckPath: /api/health
+    autoDeploy: true           # a push to the "staging" branch (never main) updates staging
+    envVars:
+      - key: APP_ENV           # staging: refuses MONGODB_DB=kareiq (the live database) and demo mode
+        value: staging
+      - key: MONGODB_URI       # the STAGING connection string (separate user / cluster), never production's
+        sync: false
+      - key: MONGODB_DB
+        value: kareiq-staging
+      - key: ADMIN_EMAIL       # the first office admin on staging
+        sync: false
+      - key: ADMIN_PASSWORD    # its password (staging only, never the production one)
+        sync: false
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: TRUST_PROXY
+        value: "true"
+      - key: TRUST_PROXY_HOPS
+        value: "1"
+      - key: HSTS_MAX_AGE
+        value: "86400"
+      - key: ALLOWED_ORIGINS   # the staging websites (e.g. Vercel preview addresses), never the live ones
+        sync: false
+      - key: OAUTH_REDIRECT_BASE # the staging service's own address
+        sync: false
 
   # The DEMO app (demo logins, sample people). Its own database "kareiq-demo" on the same Atlas
   # cluster, so demo changes are kept and never touch the live "kareiq" data. The demo website
@@ -47,6 +97,8 @@ services:
     envVars:
       - key: MONGODB_URI       # the same Atlas connection string as kareiq-api
         sync: false
+      - key: APP_ENV           # demo: the only hosted environment where demo logins exist
+        value: demo
       - key: MONGODB_DB        # never "kareiq": the server refuses to start a demo on the live database
         value: kareiq-demo
       - key: APP_DEMO
