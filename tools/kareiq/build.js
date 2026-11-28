@@ -14,7 +14,7 @@ const { FAQ, faqPageBody } = require('../shared/faq');
 
 const ROOT = path.join(__dirname, '..', '..');
 const PUB = path.join(ROOT, 'public');
-const VER = '20261102b';
+const VER = '20261126b';
 const index = fs.readFileSync(path.join(PUB, 'index.html'), 'utf8');
 
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

@@ -12,7 +12,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'public');
 const src = fs.readFileSync(path.join(__dirname, 'source.html'), 'utf8');
-const VER = '20261102b';
+const VER = '20261126c';
 const BASE = '/kare-at-home';
 // KareBalance, KareMind and Bystander wording and prices (shared by all three websites)
 const W = require('../shared/wellness');
@@ -166,6 +166,7 @@ const wellIntro = `<section class="kh-well" id="wellness" aria-labelledby="well-
         <h2 class="sec-title" id="well-title">Wellness Programmes</h2>
         <p class="sec-sub dark">For balance, mobility and mental wellbeing.</p>
         <p class="sec-text">Two structured programmes from KareWellness, the wellness home of the KareIQ family. Full programme details, packages and prices are on KareWellness.</p>
+        <a class="kw-chip" href="/karewellness/" data-site="karewellness" aria-label="KareWellness: open the KareWellness website"><img src="/img/kw-emblem.webp" alt="" width="208" height="192" loading="lazy" decoding="async"><span><b>KareWellness</b><small>Wellness across the KareIQ family</small></span></a>
       </div>
       <ul class="kh-cards two kh-well-cards">
         ${[['karebalance', 'i-physio', W.karebalance], ['karemind', 'i-person-heart', W.karemind]].map(([id, icon, g], i) => `<li class="rv" style="--d:${(0.1 + i * 0.05).toFixed(2)}s"><article class="kh-card kh-wcard ${id}"><span class="ic"><svg width="24" height="24"><use href="#${icon}"/></svg></span><span class="kick">${g.kicker}</span><b>${g.name}</b><small>${g.brief}</small><a class="btn btn-grad" ${well(id)} aria-label="Know more about ${g.name} on KareWellness">Know More ${arrow}</a></article></li>`).join('\n        ')}

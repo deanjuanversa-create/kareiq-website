@@ -76,7 +76,7 @@ write('404.html', `<!DOCTYPE html>
 <link rel="icon" type="image/png" href="/img/favicon-karehome.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Libre+Caslon+Text&family=Outfit:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="/css/page.css?v=20261028a">
+<link rel="stylesheet" href="/css/page.css?v=20261126b">
 </head>
 <body>
 <header class="top"><div class="wrap"><a href="/"><img src="/img/karehome-logo.png" alt="Kare@Home" width="1407" height="395"></a><a class="back" href="${KAREIQ}">KareIQ →</a></div></header>

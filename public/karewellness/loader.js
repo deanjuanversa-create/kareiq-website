@@ -15,7 +15,8 @@
 
   document.addEventListener('DOMContentLoaded', function () {
     var el = document.getElementById('kwLoader');
-    if (!el) return;
+    // no intro screen on this page (e.g. the 404 page): never leave the page locked under kw-intro
+    if (!el) { root.classList.remove('kw-intro'); return; }
     if (!root.classList.contains('kw-intro') || !el.animate) { finish(true); return; }
 
     var q = function (s) { return el.querySelector(s); };

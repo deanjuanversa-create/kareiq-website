@@ -18,12 +18,33 @@
 
   var year = $('#year'); if (year) year.textContent = new Date().getFullYear();
 
+  /* a price counts up once when its card is revealed, then the original text is restored */
+  function countUp(card) {
+    var b = $('.price b', card), txt = b && b.textContent, end = txt && +txt.replace(/\D/g, ''), t0 = performance.now();
+    if (!end) return;
+    b.style.width = b.getBoundingClientRect().width + 'px'; // no layout shift
+    var last = 0;
+    requestAnimationFrame(function step(now) {
+      var k = Math.max(0, Math.min(1, (now - t0) / 1200)); // the first frame's time can be just before t0
+      if (k < 1 && now - last < 48) return requestAnimationFrame(step); // ~20 digit updates a second: each one costs a layout
+      last = now;
+      b.textContent = k < 1 ? '\u20b9' + Math.round(end * (1 - Math.pow(1 - k, 3))).toLocaleString('en-IN') : txt;
+      if (k < 1) requestAnimationFrame(step); else b.style.width = '';
+    });
+  }
+
   /* reveal: only content that starts below the fold waits for the scroll */
   if (!reduce && 'IntersectionObserver' in window) {
     var io = new IntersectionObserver(function (es) {
-      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.replace('pre', 'in'); io.unobserve(e.target); } });
+      es.forEach(function (e) { if (e.isIntersecting) { e.target.classList.replace('pre', 'in'); io.unobserve(e.target); if (e.target.classList.contains('plan')) countUp(e.target); } });
     }, { rootMargin: '0px 0px 8% 0px' });
-    $$('.rv').forEach(function (el) { if (el.getBoundingClientRect().top > innerHeight * 0.92) { el.classList.add('pre'); io.observe(el); } });
+    $$('.rv').forEach(function (el) { if (el.getBoundingClientRect().top > innerHeight) { el.classList.add('pre'); io.observe(el); } });
+  }
+
+  /* the hero's background orbs pause off screen */
+  if (!reduce && 'IntersectionObserver' in window) {
+    var off = new IntersectionObserver(function (es) { es.forEach(function (e) { e.target.classList.toggle('offscreen', !e.isIntersecting); }); });
+    $$('.pg-hero').forEach(function (el) { off.observe(el); });
   }
 
   /* header shadow, progress bar, back to top */

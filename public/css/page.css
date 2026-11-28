@@ -7,7 +7,7 @@ body{margin:0;background:#fbfcfe;color:var(--ink);font:16px/1.7 "Outfit","Segoe 
 .top img{height:38px;width:auto}
 .top a.back{color:var(--teal);font-weight:500;text-decoration:none}
 main{padding-block:48px 72px}
-h1{font-family:"Libre Caslon Text",Georgia,serif;font-weight:400;font-size:clamp(32px,4vw,44px);line-height:1.15;margin:0 0 6px;color:transparent;background:var(--grad);-webkit-background-clip:text;background-clip:text;width:max-content;max-width:100%}
+h1{font-family:"Libre Caslon Text",Georgia,serif;font-weight:400;font-size:clamp(32px,4vw,44px);line-height:1.15;margin:0 0 calc(6px - var(--descent,.14em));padding-bottom:var(--descent,.14em);color:transparent;background:var(--grad);-webkit-background-clip:text;background-clip:text;width:max-content;max-width:100%}
 h2{font-size:19px;font-weight:600;margin:32px 0 6px}
 p,li{color:var(--soft)}
 .meta{color:var(--muted);font-size:14px}

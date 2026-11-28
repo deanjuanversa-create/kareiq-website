@@ -83,7 +83,7 @@ p{margin:0}
 .hero-in{position:relative;z-index:2;min-height:560px;display:flex;align-items:center;padding-block:72px 84px}
 .hero-copy{max-width:520px}
 .eyebrow{font:500 12px/1 var(--sans);letter-spacing:.24em;text-transform:uppercase;color:var(--ink-soft)}
-.hero h1{font-size:clamp(40px,5.2vw,64px);line-height:1.04;margin:22px 0 26px}
+.hero h1{font-size:clamp(40px,5.2vw,64px);line-height:1.15;margin:22px 0 26px}
 .hero h1 em{font-style:italic;background:var(--grad);-webkit-background-clip:text;background-clip:text;color:transparent;padding-right:.06em}
 .hero p.lead{font-size:17.5px;line-height:1.65;color:var(--ink-soft);max-width:46ch}
 .hero-ctas{display:flex;flex-wrap:wrap;gap:16px;margin-top:36px}
@@ -564,7 +564,7 @@ body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:70;opa
   .commit blockquote{margin-top:52px}
 }
 @media (max-width:380px){
-  .hero h1{font-size:31px}
+  .hero h1{font-size:31px;line-height:1.16}
   .btn{padding:14px 20px;font-size:14px}
 }
 
@@ -849,33 +849,33 @@ main>section.cta{padding:clamp(28px,3.5vw,48px) 0 clamp(28px,3.5vw,48px)}
 .eco-orbit{aspect-ratio:auto;max-width:520px}
 .eco-stage{position:relative;width:100%;aspect-ratio:1;container-type:inline-size}
 .eco-orbit .eco-glow{inset:8%}
-.eco-orbit .orbit{position:absolute;inset:0;animation:orbitSpin 72s linear infinite}
+/* 26 Nov 2026: the four brand logos and the lines stay still; only the bullets travel round the ring */
+.eco-orbit .orbit{position:absolute;inset:0}
 .eco-orbit .links{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
 .eco-orbit .links .ring,.eco-orbit .links .spoke{fill:none;stroke-width:.35;opacity:.75}
-.eco-orbit .links .flow{stroke-width:.45;stroke-dasharray:.8 1.8;animation:orbFlow 1.6s linear infinite;opacity:.6}
-.eco-orbit .links .comet{fill:none;stroke-width:1.1;stroke-linecap:round;stroke-dasharray:2.5 97.5;stroke-dashoffset:100;animation:comet 6s linear infinite}
+.eco-orbit .links .flow{stroke-width:.45;stroke-dasharray:.8 1.8;opacity:.6;animation:none}
+.eco-orbit .links .comet{fill:none;stroke-width:1.9;stroke-linecap:round;stroke-dasharray:.01 99.99;stroke-dashoffset:100;animation:comet 9s linear infinite}
 .eco-orbit .links .comet.c2{animation-delay:-3s}
-@keyframes orbFlow{to{stroke-dashoffset:-2.6}}
-@keyframes orbitSpin{to{transform:rotate(360deg)}}
+.eco-orbit .links .comet.c3{animation-delay:-6s}
 .eco-orbit .sat{position:absolute;width:25%;aspect-ratio:1;transform:translate(-50%,-50%)}
 .eco-orbit .s-well{left:50%;top:14%}
 .eco-orbit .s-home{left:81.18%;top:68%}
 .eco-orbit .s-nest{left:18.82%;top:68%}
-.eco-orbit .sat-in{width:100%;height:100%;animation:orbitSpin 72s linear infinite reverse}
+.eco-orbit .sat-in{width:100%;height:100%}
 .eco-orbit .node{position:relative;left:auto;top:auto;width:100%;height:100%;transform:none;padding:6%}
 .eco-orbit .node:hover{transform:scale(1.06)}
-.eco-orbit .n-iq{position:absolute;left:50%;top:50%;width:27%;height:auto;aspect-ratio:1;transform:translate(-50%,-50%);z-index:2;padding:0}
+.eco-orbit .n-iq{position:absolute;left:50%;top:50%;width:27%;height:auto;aspect-ratio:1;transform:translate(-50%,-50%);z-index:2;padding:0;animation:none}
 .eco-orbit .n-iq:hover{transform:translate(-50%,-50%) scale(1.05)}
 .eco-orbit .node b{font-size:clamp(10px,3.1cqw,17px)}
 .eco-orbit .node small{font-size:clamp(7.5px,1.85cqw,10px);line-height:1.2}
 .eco-orbit .n-well{--rb:linear-gradient(135deg,#11998e,#3b82c4 50%,#e4609e)}
 .eco-orbit .n-well .kw-mark{width:30%;height:auto}
-.eco-orbit .n-well b{background:linear-gradient(100deg,#0b7d74,#3b6fb0 55%,#c0508f);-webkit-background-clip:text;background-clip:text;color:transparent}
-.eco-orbit:hover .orbit,.eco-orbit:hover .sat-in,.eco-orbit:focus-within .orbit,.eco-orbit:focus-within .sat-in,.offscreen .eco-orbit .orbit,.offscreen .eco-orbit .sat-in{animation-play-state:paused}
+.eco-orbit .n-well b{background:linear-gradient(100deg,#08a58d 0%,#1f78c8 38%,#6a43bd 68%,#de2f72 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.eco-orbit:hover .links .comet,.eco-orbit:focus-within .links .comet,.offscreen .eco-orbit .links .comet{animation-play-state:paused}
 .eco-orbit .eco-cap{position:relative;bottom:auto;margin-top:6px}
 @media (max-width:640px){.eco-orbit{aspect-ratio:auto}.eco-orbit .node small{display:block}.eco-orbit .eco-cap{bottom:auto;margin-top:2px}}
 @media (max-width:420px){.eco-orbit .node small{display:none}}
-@media (prefers-reduced-motion:reduce){.eco-orbit .orbit,.eco-orbit .sat-in,.eco-orbit .links .flow,.eco-orbit .links .comet{animation:none}.eco-orbit .links .comet{display:none}}
+@media (prefers-reduced-motion:reduce){.eco-orbit .links .comet{animation:none;display:none}}
 
 
 /* =================== Ecosystem cards (30 Oct): KareWellness beside Kare@Home and KareNest =================== */

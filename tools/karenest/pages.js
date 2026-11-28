@@ -8,6 +8,8 @@ module.exports = function pages(L) {
   const { u, img, ico, esc } = L;
   const G = D.groups;
   // KareBalance and KareMind have no pages of their own here any more: see KareWellness
+  // the KareWellness lockup (emblem from its brand logo), linking to the KareWellness website
+  const kwChip = `<a class="kw-chip" ${L.well()} aria-label="KareWellness: open the KareWellness website"><img src="${L.img('kw-emblem.webp')}" alt="" width="208" height="192" loading="lazy" decoding="async"><span><b>KareWellness</b><small>Wellness across the KareIQ family</small></span></a>`;
   const WELL_GROUPS = ['karebalance', 'karemind'];
 
   // ---------- small building blocks ----------
@@ -540,7 +542,7 @@ ${FOCUS}
       <div class="pkgs">${D.byGroup('visit').map((p) => pkgCard(p, { compact: true })).join('')}</div>
     </section>
     <section class="pgroup rv" id="wellness" aria-labelledby="g-well">
-      <div class="pgroup-head"><div><div class="eyebrow">Wellness</div><h2 id="g-well" style="margin-top:8px">Wellness programmes</h2><p>Structured programmes for balance and mobility, and for emotional wellbeing. Full programme details, packages and prices are on KareWellness.</p></div><a class="link-arrow" ${L.well()}>Visit KareWellness${ico('arr')}</a></div>
+      <div class="pgroup-head"><div><div class="eyebrow">Wellness</div><h2 id="g-well" style="margin-top:8px">Wellness programmes</h2><p>Structured programmes for balance and mobility, and for emotional wellbeing. Full programme details, packages and prices are on KareWellness.</p>${kwChip}</div><a class="link-arrow" ${L.well()}>Visit KareWellness${ico('arr')}</a></div>
       ${wellIntros(3)}
     </section>
   </div>
@@ -619,7 +621,7 @@ ${enquiry({ title: 'Choose your pass', lede: 'Pick a pass and tell us when you\'
 
 <section class="sec" style="padding-top:30px" aria-labelledby="well-t">
   <div class="wrap">
-    <div class="sec-head rv"><h2 class="h2" id="well-t">Our wellness programmes</h2></div>
+    <div class="sec-head rv"><h2 class="h2" id="well-t">Our wellness programmes</h2>${kwChip}</div>
     ${wellIntros(3)}
   </div>
 </section>

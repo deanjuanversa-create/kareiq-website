@@ -257,6 +257,9 @@ section{position:relative}
 .foot-in{display:grid;grid-template-columns:1.2fr 1.3fr .9fr .8fr;align-items:center;gap:24px;padding-block:28px}
 .foot-in > div + div{border-left:1px solid rgba(255,255,255,.35);padding-left:28px}
 .f-brand img{height:42px;width:auto}
+/* the coloured header logo, on a light chip so it reads on the gradient footer band (26 Nov 2026) */
+.f-brand .f-logo{display:inline-flex;align-items:center;min-height:44px;padding:6px 12px;border-radius:12px;background:#fff;box-shadow:0 6px 16px -10px rgba(22,48,90,.45)}
+.f-brand .f-logo img{height:42px}
 .f-brand p{margin-top:8px;font-size:12.5px;opacity:.9}
 .f-call{display:flex;align-items:center;gap:16px}
 .f-ring{flex:none;display:grid;place-items:center;width:52px;height:52px;border-radius:50%;border:2px solid rgba(255,255,255,.85);transition:background .3s,transform .4s var(--smooth)}
@@ -905,3 +908,18 @@ main>.kh-crumbs+section{margin-top:0}
 .kh-faq-hero p{max-width:640px;margin:14px auto 0;color:var(--ink-soft)}
 .kh-faq-hero a{color:var(--blue);font-weight:600;text-decoration:underline;text-underline-offset:3px}
 .kh-faq-hero+.faq-page{padding-top:clamp(24px,3vw,40px)}
+/* Descender room (26 Nov 2026). Gradient text (background-clip:text) is painted only inside its own box, so the
+   tails of g, j, p, q and y were cut off in boxes as tall as the line; serif display headings at line-height
+   1.04-1.08 also let one line's tails touch the next line. --descent extends the paint box below the text and the
+   equal negative margin keeps the layout where it was. */
+:root{--descent:.14em}
+.sec-title,.hero-v2 h1 .ln>span{padding-bottom:var(--descent);margin-bottom:calc(-1 * var(--descent))}
+
+/* KareWellness lockup on the wellness sections (26 Nov 2026): the emblem from its brand logo and the wordmark gradient */
+.kw-chip{display:inline-flex;align-items:center;gap:12px;min-height:44px;margin-top:18px;padding:8px 16px 8px 10px;border-radius:16px;background:#fff;box-shadow:0 10px 24px -18px rgba(22,48,90,.45),inset 0 0 0 1px rgba(22,48,90,.08);color:inherit;text-decoration:none;transition:box-shadow .3s,transform .3s}
+.kw-chip img{width:42px;height:42px;object-fit:contain;flex:none}
+.kw-chip b{display:block;font:500 20px/1.1 var(--serif);letter-spacing:-.01em;background:linear-gradient(100deg,#08a58d 0%,#1f78c8 38%,#6a43bd 68%,#de2f72 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:var(--descent);margin-bottom:calc(-1 * var(--descent))}
+.kw-chip small{display:block;margin-top:4px;font:600 10px/1.2 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+@media (hover:hover) and (pointer:fine){.kw-chip:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(22,48,90,.5),inset 0 0 0 1px var(--teal)}}
+.kw-chip:focus-visible{outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.kw-chip{transition:none}.kw-chip:hover{transform:none}}

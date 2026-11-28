@@ -164,7 +164,7 @@ button{font:inherit}
 .hero-in{position:relative;min-height:600px;display:flex;align-items:center;padding-block:70px 110px}
 .hero-copy{max-width:560px;position:relative;z-index:2}
 .hero h1{font-size:clamp(2.8rem,5.6vw,5rem);margin-top:16px;font-weight:500}
-.hero h1 .ln{display:block;overflow:hidden;padding-bottom:.06em}
+.hero h1 .ln{display:block;overflow:hidden;padding-bottom:calc(.06em + var(--descent));margin-bottom:calc(-1 * var(--descent))}
 .hero h1 .ln>span{display:inline-block;animation:rise 1.1s var(--ease) both}
 .hero h1 .ln:nth-child(2)>span{animation-delay:.12s;color:var(--blue)}
 .hero h1 .ln:nth-child(3)>span{animation-delay:.24s}
@@ -1300,3 +1300,18 @@ main>section.cta{margin-top:calc(-1 * var(--r-sec))}
   .faq-topics a.on{border-color:var(--teal)}
 }
 @media (prefers-reduced-motion:reduce){.faq-search input,.faq-topics a{transition:none}}
+/* Descender room (26 Nov 2026). Gradient text (background-clip:text) is painted only inside its own box, so the
+   tails of g, j, p, q and y were cut off in boxes as tall as the line; serif display headings at line-height
+   1.04-1.08 also let one line's tails touch the next line. --descent extends the paint box below the text and the
+   equal negative margin keeps the layout where it was. */
+:root{--descent:.14em}
+.hero h1 .violet,.phero h1 .violet,.fd-copy h2 .accent{padding-bottom:var(--descent);margin-bottom:calc(-1 * var(--descent))}
+
+/* KareWellness lockup on the wellness sections (26 Nov 2026): the emblem from its brand logo and the wordmark gradient */
+.kw-chip{display:inline-flex;align-items:center;gap:12px;min-height:44px;margin-top:18px;padding:8px 16px 8px 10px;border-radius:16px;background:#fff;box-shadow:0 10px 24px -18px rgba(22,48,90,.45),inset 0 0 0 1px rgba(22,48,90,.08);color:inherit;text-decoration:none;transition:box-shadow .3s,transform .3s}
+.kw-chip img{width:42px;height:42px;object-fit:contain;flex:none}
+.kw-chip b{display:block;font:500 20px/1.1 var(--f-display);letter-spacing:-.01em;background:linear-gradient(100deg,#08a58d 0%,#1f78c8 38%,#6a43bd 68%,#de2f72 100%);-webkit-background-clip:text;background-clip:text;color:transparent;padding-bottom:var(--descent);margin-bottom:calc(-1 * var(--descent))}
+.kw-chip small{display:block;margin-top:4px;font:600 10px/1.2 var(--f-body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+@media (hover:hover) and (pointer:fine){.kw-chip:hover{transform:translateY(-2px);box-shadow:0 16px 30px -18px rgba(22,48,90,.5),inset 0 0 0 1px var(--teal)}}
+.kw-chip:focus-visible{outline-offset:3px}
+@media (prefers-reduced-motion:reduce){.kw-chip{transition:none}.kw-chip:hover{transform:none}}
